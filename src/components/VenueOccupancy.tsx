@@ -32,7 +32,7 @@ export default function VenueOccupancy() {
         (payload) => {
           console.log('Venue occupancy update:', payload)
           if (payload.new) {
-            setCurrentCount(payload.new.current_count || 0)
+            setCurrentCount((payload.new as { current_count: number }).current_count || 0)
           }
         }
       )
