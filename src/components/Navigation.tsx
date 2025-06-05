@@ -4,9 +4,11 @@ import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Navigation() {
   const pathname = usePathname()
+  const { signOut } = useAuth()
 
   const isActive = (path: string) => {
     if (path === '/incidents' && pathname === '/') {
@@ -48,18 +50,12 @@ export default function Navigation() {
             </div>
           </div>
           <div className="flex items-center">
-            <button className="p-2 rounded-full text-white hover:text-gray-200">
-              <span className="sr-only">View notifications</span>
-              {/* Add notification icon */}
+            <button 
+              onClick={() => signOut()}
+              className="ml-3 p-2 text-white hover:text-gray-200 focus:outline-none"
+            >
+              Sign Out
             </button>
-            <div className="ml-3 relative">
-              <div>
-                <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-800 focus:ring-white">
-                  <span className="sr-only">Open user menu</span>
-                  <div className="h-8 w-8 rounded-full bg-gray-300"></div>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
