@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
+import IncidentCreationModal from './IncidentCreationModal'
 import VenueOccupancy from './VenueOccupancy'
 import { supabase } from '../lib/supabase'
 import {
@@ -13,7 +14,8 @@ import {
   ClockIcon,
   CheckCircleIcon,
   UserGroupIcon,
-  HeartIcon
+  HeartIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 
 interface StatCardProps {
@@ -221,21 +223,95 @@ const StatCard: React.FC<StatCardProps> = ({
 
 export default function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [incidentStats, setIncidentStats] = useState({
+    total: 0,
+    high: 0,
+    open: 0,
+    inProgress: 0,
+    closed: 0,
+    logged: 0,
+    avgResolution: 0,
+    refusals: 0,
+    medical: 0
+  })
 
-  useEffect(() => {
-    const checkCurrentEvent = async () => {
-      const { data, error } = await supabase
+  const checkCurrentEvent = async () => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('id')
+      .eq('is_current', true)
+      .single()
+    
+    setHasCurrentEvent(!!data)
+    setCurrentEventId(data?.id || null)
+  }
+
+  const fetchIncidentStats = async () => {
+    try {
+      // Get current event first
+      const { data: currentEvent } = await supabase
         .from('events')
         .select('id')
         .eq('is_current', true)
         .single()
-      
-      setHasCurrentEvent(!!data)
-    }
 
+      if (!currentEvent) return
+
+      // Get all incidents for current event
+      const { data: incidents } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', currentEvent.id)
+
+      if (!incidents) return
+
+      const nonSitRepIncidents = incidents.filter(i => i.incident_type !== 'Sit Rep')
+      const sitRepIncidents = incidents.filter(i => i.incident_type === 'Sit Rep')
+
+      setIncidentStats({
+        total: incidents.length,
+        high: incidents.filter(i => ['Code Red', 'Code Green', 'Code Black', 'Code Pink'].includes(i.incident_type)).length,
+        open: nonSitRepIncidents.filter(i => !i.is_closed).length,
+        inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken).length,
+        closed: nonSitRepIncidents.filter(i => i.is_closed).length,
+        logged: sitRepIncidents.length,
+        avgResolution: 0,
+        refusals: incidents.filter(i => i.incident_type === 'Refusal').length,
+        medical: incidents.filter(i => ['Code Green', 'Code Purple'].includes(i.incident_type)).length
+      })
+    } catch (err) {
+      console.error('Error fetching incident stats:', err)
+    }
+  }
+
+  useEffect(() => {
     checkCurrentEvent()
+    fetchIncidentStats()
+
+    // Subscribe to incident changes
+    const subscription = supabase
+      .channel('dashboard_incident_changes')
+      .on('postgres_changes', 
+        {
+          event: '*', // Listen to all changes
+          schema: 'public',
+          table: 'incident_logs'
+        }, 
+        () => {
+          // Refresh stats when any change occurs
+          fetchIncidentStats()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (
@@ -244,7 +320,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">Incidents</h1>
         {!hasCurrentEvent && (
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsEventModalOpen(true)}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >
             Create Event
@@ -261,109 +337,107 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Incident Dashboard</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+          <button 
+            onClick={() => setIsIncidentModalOpen(true)}
+            disabled={!hasCurrentEvent}
+            className={`px-4 py-2 rounded-md ${
+              hasCurrentEvent 
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
             New Incident
           </button>
         </div>
         <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <StatCard 
-            title="Total Incidents" 
-            value={0} 
-            icon={<UsersIcon className="w-full h-full" />}
-            color="blue"
-            isSelected={selectedFilter === 'total'}
-            onClick={() => setSelectedFilter(selectedFilter === 'total' ? null : 'total')}
-            isFilterable={true}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <StatCard
+            title="Total Incidents"
+            value={incidentStats.total}
+            icon={<ClipboardDocumentCheckIcon />}
+            isFilterable={false}
           />
-          <StatCard 
-            title="High Priority" 
-            value={0} 
-            icon={<ExclamationTriangleIcon className="w-full h-full" />}
+          <StatCard
+            title="High Priority"
+            value={incidentStats.high}
+            icon={<ExclamationTriangleIcon />}
             color="red"
+            isFilterable={true}
             isSelected={selectedFilter === 'high'}
             onClick={() => setSelectedFilter(selectedFilter === 'high' ? null : 'high')}
-            isFilterable={true}
           />
-          <StatCard 
-            title="Open" 
-            value={0} 
-            icon={<FolderOpenIcon className="w-full h-full" />}
+          <StatCard
+            title="Open"
+            value={incidentStats.open}
+            icon={<FolderOpenIcon />}
             color="yellow"
+            isFilterable={true}
             isSelected={selectedFilter === 'open'}
             onClick={() => setSelectedFilter(selectedFilter === 'open' ? null : 'open')}
-            isFilterable={true}
           />
-          <StatCard 
-            title="In Progress" 
-            value={0} 
-            icon={<ClockIcon className="w-full h-full" />}
+          <StatCard
+            title="In Progress"
+            value={incidentStats.inProgress}
+            icon={<ClockIcon />}
             color="blue"
-            isSelected={selectedFilter === 'progress'}
-            onClick={() => setSelectedFilter(selectedFilter === 'progress' ? null : 'progress')}
             isFilterable={true}
+            isSelected={selectedFilter === 'inProgress'}
+            onClick={() => setSelectedFilter(selectedFilter === 'inProgress' ? null : 'inProgress')}
           />
-          <StatCard 
-            title="Closed" 
-            value={0} 
-            icon={<CheckCircleIcon className="w-full h-full" />}
+          <StatCard
+            title="Closed"
+            value={incidentStats.closed}
+            icon={<CheckCircleIcon />}
             color="green"
+            isFilterable={true}
             isSelected={selectedFilter === 'closed'}
             onClick={() => setSelectedFilter(selectedFilter === 'closed' ? null : 'closed')}
-            isFilterable={true}
           />
         </div>
 
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+        {/* Second row of stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <VenueOccupancy />
-          <StatCard 
-            title="Avg. Resolution (h)" 
-            value={0} 
-            icon={<ClockIcon className="w-full h-full" />}
-            color="blue"
-          />
-          <StatCard 
-            title="Refusals/Ejections" 
-            value={0} 
-            icon={<UsersIcon className="w-full h-full" />}
+          <StatCard
+            title="Refusals"
+            value={incidentStats.refusals}
+            icon={<UsersIcon />}
             color="red"
+            isFilterable={true}
+            isSelected={selectedFilter === 'refusals'}
+            onClick={() => setSelectedFilter(selectedFilter === 'refusals' ? null : 'refusals')}
           />
-          <StatCard 
-            title="Medical Incidents" 
-            value={0} 
-            icon={<HeartIcon className="w-full h-full" />}
+          <StatCard
+            title="Medical"
+            value={incidentStats.medical}
+            icon={<HeartIcon />}
             color="red"
+            isFilterable={true}
+            isSelected={selectedFilter === 'medical'}
+            onClick={() => setSelectedFilter(selectedFilter === 'medical' ? null : 'medical')}
           />
         </div>
 
-        {/* Red Divider */}
-        <div className="border-b-2 border-red-500 my-8"></div>
-      </div>
-
-      {/* Incident Log Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Logs</h2>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search incidents..."
-              className="w-64 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
+        {/* Incident Table */}
         <IncidentTable />
       </div>
 
       <EventCreationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isEventModalOpen}
+        onClose={() => setIsEventModalOpen(false)}
         onEventCreated={async () => {
-          setIsModalOpen(false)
-          // The CurrentEvent component will handle its own data refresh
+          setIsEventModalOpen(false)
+          await checkCurrentEvent()
+        }}
+      />
+
+      <IncidentCreationModal
+        isOpen={isIncidentModalOpen}
+        onClose={() => setIsIncidentModalOpen(false)}
+        onIncidentCreated={async () => {
+          await fetchIncidentStats()
         }}
       />
     </div>

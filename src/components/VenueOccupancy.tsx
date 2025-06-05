@@ -13,30 +13,62 @@ export default function VenueOccupancy() {
   const [currentCount, setCurrentCount] = useState<number>(0)
   const [expectedAttendance, setExpectedAttendance] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchExpectedAttendance()
-  }, [])
+    fetchCurrentEventAndOccupancy()
 
-  const fetchExpectedAttendance = async () => {
+    // Set up real-time subscription for venue_occupancy updates
+    const subscription = supabase
+      .channel('venue_occupancy_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'venue_occupancy',
+          filter: currentEventId ? `event_id=eq.${currentEventId}` : undefined
+        },
+        (payload) => {
+          console.log('Venue occupancy update:', payload)
+          if (payload.new) {
+            setCurrentCount(payload.new.current_count || 0)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [currentEventId])
+
+  const fetchCurrentEventAndOccupancy = async () => {
     try {
-      const { data: events, error } = await supabase
+      // First get the current event
+      const { data: event } = await supabase
         .from('events')
-        .select('expected_attendance')
+        .select('id, expected_attendance')
         .eq('is_current', true)
-        .limit(1)
         .single()
 
-      if (error) {
-        console.error('Error fetching expected attendance:', error)
-        return
-      }
+      if (event) {
+        setCurrentEventId(event.id)
+        setExpectedAttendance(event.expected_attendance)
 
-      if (events) {
-        setExpectedAttendance(events.expected_attendance)
+        // Then get the current occupancy
+        const { data: occupancy } = await supabase
+          .from('venue_occupancy')
+          .select('current_count')
+          .eq('event_id', event.id)
+          .single()
+
+        if (occupancy) {
+          setCurrentCount(occupancy.current_count || 0)
+        }
       }
     } catch (err) {
-      console.error('Unexpected error:', err)
+      console.error('Error fetching venue occupancy:', err)
     } finally {
       setLoading(false)
     }
