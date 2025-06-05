@@ -1,11 +1,14 @@
+'use client'
+
 import React from 'react'
-import IncidentTable from '@/components/IncidentTable'
+import Navigation from '../../components/Navigation'
+import Dashboard from '../../components/Dashboard'
 
 export default function IncidentsPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Incidents</h1>
-      <IncidentTable />
-    </div>
+    <main>
+      <Navigation />
+      <Dashboard />
+    </main>
   )
 } 

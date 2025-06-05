@@ -1,13 +1,12 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Navigation from '@/components/Navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Compact Event Control',
-  description: 'Event management system for Compact',
+  description: 'Event management and security incident tracking system',
 }
 
 export default function RootLayout({
@@ -18,11 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navigation />
-        <main className="container mx-auto px-4 py-8">
+        <div className="min-h-screen bg-gray-50">
           {children}
-        </main>
+        </div>
       </body>
     </html>
   )
-}
+} 

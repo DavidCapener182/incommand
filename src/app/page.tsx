@@ -1,5 +1,16 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Navigation from '../components/Navigation'
+import Dashboard from '../components/Dashboard'
 
 export default function Home() {
-  redirect('/incidents')
+  const router = useRouter()
+
+  useEffect(() => {
+    router.push('/incidents')
+  }, [router])
+
+  return null
 } 
