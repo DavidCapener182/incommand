@@ -2,6 +2,9 @@
 
 import WeatherCard from '@/components/WeatherCard';
 
+export default function DashboardPage() {
+  return (
+    <div>
       {/* Incident Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
@@ -96,4 +99,7 @@ import WeatherCard from '@/components/WeatherCard';
             locationName="Peninsula Square, Greenwich Peninsula, London SE10 0DX" 
           />
         </div>
-      </div> 
+      </div>
+    </div>
+  );
+} 
