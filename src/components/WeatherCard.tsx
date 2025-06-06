@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { WeatherData, getCurrentWeather, getWeatherAlerts } from '@/services/weatherService';
 import { CloudIcon, SunIcon, BoltIcon } from '@heroicons/react/24/outline';
