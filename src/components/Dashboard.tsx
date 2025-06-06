@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
 import IncidentCreationModal from './IncidentCreationModal'
 import VenueOccupancy from './VenueOccupancy'
 import { supabase } from '../lib/supabase'
+import { RealtimeChannel } from '@supabase/supabase-js'
 import {
   UsersIcon,
   ExclamationTriangleIcon,
@@ -17,6 +18,7 @@ import {
   HeartIcon,
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
+import WeatherCard from './WeatherCard'
 
 interface StatCardProps {
   title: string
@@ -236,18 +238,30 @@ export default function Dashboard() {
     logged: 0,
     avgResolution: 0,
     refusals: 0,
+    ejections: 0,
     medical: 0
   })
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
+
+  // Default coordinates for London (you can update these based on the event location)
+  const eventLocation = {
+    lat: 51.5074,
+    lon: -0.1278
+  };
 
   const checkCurrentEvent = async () => {
-    const { data, error } = await supabase
-      .from('events')
-      .select('id')
-      .eq('is_current', true)
-      .single()
-    
-    setHasCurrentEvent(!!data)
-    setCurrentEventId(data?.id || null)
+    try {
+      const { data: event } = await supabase
+        .from('events')
+        .select('id')
+        .eq('is_current', true)
+        .single()
+
+      setCurrentEventId(event?.id || null)
+      setHasCurrentEvent(!!event)
+    } catch (error) {
+      console.error('Error checking current event:', error)
+    }
   }
 
   const fetchIncidentStats = async () => {
@@ -274,13 +288,14 @@ export default function Dashboard() {
 
       setIncidentStats({
         total: incidents.length,
-        high: incidents.filter(i => ['Code Red', 'Code Green', 'Code Black', 'Code Pink'].includes(i.incident_type)).length,
+        high: incidents.filter(i => ['Ejection', 'Code Green', 'Code Black', 'Code Pink'].includes(i.incident_type)).length,
         open: nonSitRepIncidents.filter(i => !i.is_closed).length,
         inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken).length,
         closed: nonSitRepIncidents.filter(i => i.is_closed).length,
         logged: sitRepIncidents.length,
         avgResolution: 0,
         refusals: incidents.filter(i => i.incident_type === 'Refusal').length,
+        ejections: incidents.filter(i => i.incident_type === 'Ejection').length,
         medical: incidents.filter(i => ['Code Green', 'Code Purple'].includes(i.incident_type)).length
       })
     } catch (err) {
@@ -288,31 +303,40 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    checkCurrentEvent()
-    fetchIncidentStats()
+  // Cleanup function to handle unsubscribe
+  const cleanup = () => {
+    if (subscriptionRef.current) {
+      console.log('Cleaning up dashboard subscription');
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+  };
 
-    // Subscribe to incident changes
-    const subscription = supabase
-      .channel('dashboard_incident_changes')
+  useEffect(() => {
+    checkCurrentEvent();
+    fetchIncidentStats();
+
+    // Clean up any existing subscription
+    cleanup();
+
+    // Set up new subscription
+    subscriptionRef.current = supabase
+      .channel(`dashboard_incident_changes_${Date.now()}`)
       .on('postgres_changes', 
         {
-          event: '*', // Listen to all changes
+          event: '*',
           schema: 'public',
           table: 'incident_logs'
         }, 
         () => {
-          // Refresh stats when any change occurs
-          fetchIncidentStats()
+          fetchIncidentStats();
         }
       )
-      .subscribe()
+      .subscribe();
 
-    // Cleanup subscription
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+    // Cleanup on unmount
+    return cleanup;
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -351,8 +375,8 @@ export default function Dashboard() {
         </div>
         <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
         
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        {/* Stats Grid - First Row */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <StatCard
             title="Total Incidents"
             value={incidentStats.total}
@@ -378,15 +402,6 @@ export default function Dashboard() {
             onClick={() => setSelectedFilter(selectedFilter === 'open' ? null : 'open')}
           />
           <StatCard
-            title="In Progress"
-            value={incidentStats.inProgress}
-            icon={<ClockIcon />}
-            color="blue"
-            isFilterable={true}
-            isSelected={selectedFilter === 'inProgress'}
-            onClick={() => setSelectedFilter(selectedFilter === 'inProgress' ? null : 'inProgress')}
-          />
-          <StatCard
             title="Closed"
             value={incidentStats.closed}
             icon={<CheckCircleIcon />}
@@ -395,11 +410,6 @@ export default function Dashboard() {
             isSelected={selectedFilter === 'closed'}
             onClick={() => setSelectedFilter(selectedFilter === 'closed' ? null : 'closed')}
           />
-        </div>
-
-        {/* Second row of stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <VenueOccupancy />
           <StatCard
             title="Refusals"
             value={incidentStats.refusals}
@@ -410,14 +420,37 @@ export default function Dashboard() {
             onClick={() => setSelectedFilter(selectedFilter === 'refusals' ? null : 'refusals')}
           />
           <StatCard
-            title="Medical"
-            value={incidentStats.medical}
-            icon={<HeartIcon />}
+            title="Ejections"
+            value={incidentStats.ejections}
+            icon={<UsersIcon />}
             color="red"
             isFilterable={true}
-            isSelected={selectedFilter === 'medical'}
-            onClick={() => setSelectedFilter(selectedFilter === 'medical' ? null : 'medical')}
+            isSelected={selectedFilter === 'ejections'}
+            onClick={() => setSelectedFilter(selectedFilter === 'ejections' ? null : 'ejections')}
           />
+        </div>
+
+        {/* Stats Grid - Second Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-24">
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4 h-[120px] border border-gray-100">
+            <h3 className="text-gray-500 text-sm mb-2">Venue Occupancy</h3>
+            <div className="flex items-center">
+              <span className="text-2xl font-bold">3,500</span>
+              <span className="text-gray-500 ml-2">/ 3,500</span>
+            </div>
+            <div className="mt-2">
+              <div className="bg-orange-100 rounded-full h-1">
+                <div className="bg-orange-500 h-1 rounded-full w-full"></div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            <WeatherCard 
+              lat={53.4084} 
+              lon={-2.9916}
+              locationName="O2 Academy Liverpool"
+            />
+          </div>
         </div>
 
         {/* Incident Table */}

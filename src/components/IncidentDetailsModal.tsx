@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Props {
   isOpen: boolean
@@ -37,37 +38,45 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [error, setError] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [editedIncident, setEditedIncident] = useState<Partial<Incident>>({})
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
+
+  // Cleanup function to handle unsubscribe
+  const cleanup = () => {
+    if (subscriptionRef.current) {
+      console.log('Cleaning up incident details subscription');
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (isOpen && incidentId) {
-      fetchIncidentDetails()
-      setupRealtimeSubscription()
+      fetchIncidentDetails();
+
+      // Clean up any existing subscription
+      cleanup();
+
+      // Set up new subscription
+      subscriptionRef.current = supabase
+        .channel(`incident_${incidentId}_${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'incident_updates',
+            filter: `incident_id=eq.${incidentId}`
+          },
+          () => {
+            fetchIncidentDetails();
+          }
+        )
+        .subscribe();
     }
-  }, [isOpen, incidentId])
 
-  const setupRealtimeSubscription = () => {
-    if (!incidentId) return
-
-    const subscription = supabase
-      .channel(`incident_${incidentId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'incident_updates',
-          filter: `incident_id=eq.${incidentId}`
-        },
-        () => {
-          fetchIncidentDetails() // Refresh data when updates occur
-        }
-      )
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }
+    // Cleanup on unmount or when modal closes
+    return cleanup;
+  }, [isOpen, incidentId]);
 
   const fetchIncidentDetails = async () => {
     if (!incidentId) return

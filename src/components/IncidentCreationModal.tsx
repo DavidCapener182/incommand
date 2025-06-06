@@ -2,31 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-
-// Custom debounce implementation
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
-  
-  return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      timeout = null;
-      func(...args);
-    };
-    
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(later, wait);
-  };
-}
+import debounce from 'lodash/debounce'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
-  onIncidentCreated: () => void
+  onIncidentCreated: (incident?: any) => Promise<void>
 }
 
 interface IncidentFormData {
@@ -37,6 +18,8 @@ interface IncidentFormData {
   action_taken: string
   ai_input?: string
   is_closed: boolean
+  status: string
+  log_number: string
 }
 
 interface RefusalDetails {
@@ -48,27 +31,64 @@ interface RefusalDetails {
   aggressive: boolean
 }
 
+interface EjectionDetails {
+  location: string
+  description: string
+  reason: string
+  policeInformed: boolean
+  refusedReentry: boolean
+  additionalInfo: {
+    locationDetails?: string
+    personDescription?: string
+    reasonDetails?: string
+    additionalSecurity?: boolean
+  }
+}
+
+interface MedicalDetails {
+  location: string;
+  requiresAmbulance: boolean;
+  refusedTreatment: boolean;
+  transportedOffSite: boolean;
+}
+
+interface IncidentParserResult {
+  occurrence: string;
+  action_taken: string;
+  callsign_from: string;
+  incident_type: string;
+  medicalDetails?: MedicalDetails;
+  refusalDetails?: RefusalDetails;
+  ejectionDetails?: EjectionDetails;
+}
+
 const INCIDENT_TYPES = {
-  'Code Red': 'Ejection',
+  'Ejection': 'Ejection',
   'Refusal': 'Refusal',
-  'Code Green': 'Urgent Medical Incident',
-  'Code Purple': 'Non-urgent Medical Incident',
-  'Code White': 'Drugs',
-  'Code Black': 'Weapon',
+  'Medical': 'Medical',
+  'Welfare': 'Welfare',
+  'Drug Related': 'Drug Related Incident',
+  'Weapon Related': 'Weapon Related Incident',
   'Artist Movement': 'Artist Movement',
+  'Sexual Misconduct': 'Sexual Misconduct',
+  'Site Issue': 'Site Maintenance Issue',
+  'Attendance': 'Attendance Update',
+  'Timings': 'Timing Update',
+  'Lost Property': 'Lost Property',
+  'Suspicious Behaviour': 'Suspicious Behaviour',
+  'Aggressive Behaviour': 'Aggressive Behaviour',
+  'Queue Build-Up': 'Queue Build-Up',
+  'Technical Issue': 'Technical Issue',
+  'Weather Disruption': 'Weather Disruption',
   'Other': 'Other',
-  'Sit Rep': 'Sit Rep',
-  'Site Issue': 'Maintenance site issue/Cleaner',
-  'Timings': 'Timings',
-  'Code Pink': 'Sexual Conduct',
-  'Attendance': 'Attendance Update'
+  'Sit Rep': 'Situation Report'
 } as const
 
 type IncidentType = keyof typeof INCIDENT_TYPES
 
 const getIncidentColor = (type: string) => {
   switch(type) {
-    case 'Code Red': return 'bg-red-100 text-red-800'
+    case 'Ejection': return 'bg-red-100 text-red-800'
     case 'Refusal': return 'bg-yellow-100 text-yellow-800'
     case 'Code Green': return 'bg-green-100 text-green-800'
     case 'Code Purple': return 'bg-purple-100 text-purple-800'
@@ -88,9 +108,9 @@ const getFollowUpQuestions = (incidentType: string): string[] => {
   }
 
   switch (incidentType) {
-    case 'Code Red':
+    case 'Ejection':
       return [
-        'Location of incident',
+        'Location of ejection',
         'Description of person(s)',
         'Reason for ejection',
         'Additional security required?'
@@ -137,111 +157,1268 @@ const getFollowUpQuestions = (incidentType: string): string[] => {
 };
 
 const detectIncidentType = (input: string): string => {
-  const text = input.toLowerCase()
+  const text = input.toLowerCase();
   
-  // Check for timing patterns
-  if (text.match(/\b(doors|show|curfew|soundcheck)\b/i)) {
-    return 'Timings'
+  // Weather Disruption detection
+  const weatherKeywords = [
+    'heavy rain',
+    'strong winds',
+    'lightning',
+    'flooding',
+    'wet ground',
+    'stage wet',
+    'muddy',
+    'slippery',
+    'weather warning',
+    'high winds',
+    'canopy blown',
+    'gazebo down',
+    'weather affecting',
+    'tents collapsed',
+    'equipment soaked',
+    'unsafe due to rain',
+    'wind',
+    'canopy down',
+    'gazebo blown'
+  ];
+  
+  if (weatherKeywords.some(keyword => text.includes(keyword))) {
+    return 'Weather Disruption';
   }
 
-  // Check for refusal patterns first
-  if (text.match(/\b(refuse|refusing|refusal|denied entry|not allowed|won't comply|non-compliant)\b/i)) {
-    return 'Refusal'
+  // Technical Issue detection
+  const technicalKeywords = [
+    'radio not working',
+    'radio failure',
+    'no signal',
+    'comms down',
+    'scanner not working',
+    'ticket not scanning',
+    'tickets not scanning',
+    'scanning issue',
+    'scan problem',
+    'scanner issue',
+    'scanner problem',
+    'technical issue',
+    'power cut',
+    'lights off',
+    'systems offline',
+    'pa not working',
+    'generator tripped',
+    'screen down',
+    'equipment failure',
+    'printer not working',
+    'no comms',
+    'tech issue',
+    'scanner down',
+    'lights out'
+  ];
+  
+  if (technicalKeywords.some(keyword => text.includes(keyword))) {
+    return 'Technical Issue';
   }
 
-  // Check for attendance/current numbers patterns
-  const numberPattern = /\b(\d+)\s*(people|pax|capacity|attendance|entered|inside|venue)\b/i
-  const currentNumbersPattern = /\bcurrent\s*numbers?\b/i
-  const attendancePattern = /\battendance\b/i
-  if (text.match(numberPattern) || 
-      text.match(currentNumbersPattern) ||
-      text.match(attendancePattern) ||
-      text.includes('clicker')) {
-    return 'Attendance'
-  }
-
-  // Check for other sit rep patterns
-  if (text.match(/\bsit\s*rep\b/i) || 
-      text.match(/\bstatus\b/i) || 
-      text.match(/\bposition\b/i) ||
-      text.match(/\bcheck\b/i)) {
-    return 'Sit Rep'
-  }
-
-  // Medical incidents
-  if (text.includes('medical')) {
-    if (text.includes('urgent') || 
-        text.includes('emergency') || 
-        text.includes('immediate') ||
-        text.includes('critical')) {
-      return 'Code Green'
+  // Attendance update detection - check this first
+  if (/current numbers|clicker|attendance|numbers|capacity|occupancy|count/i.test(text)) {
+    // Extract any number from the text
+    const numbers = text.match(/\d+/);
+    if (numbers) {
+      return 'Attendance';
     }
-    return 'Code Purple'
   }
 
-  // Security incidents
-  if (text.includes('eject') || 
-      text.includes('remove') || 
-      text.includes('kick out') ||
-      text.includes('fighting') ||
-      text.includes('aggressive')) {
-    return 'Code Red'
+  // Suspicious Behaviour detection
+  const suspiciousKeywords = [
+    'suspicious',
+    'acting strange',
+    'unusual behaviour',
+    'loitering',
+    'following people',
+    'won\'t leave',
+    'taking pictures',
+    'trying to get in',
+    'unattended bag',
+    'unattended package',
+    'suspicious package',
+    'abandoned bag',
+    'left bag',
+    'suspicious item',
+    'unauthorised filming',
+    'recording',
+    'hanging around',
+    'watching people',
+    'scouting',
+    'refusing to move',
+    'drone'
+  ];
+
+  // Special handling for unattended bags/packages
+  const unattendedBagKeywords = [
+    'unattended bag',
+    'unattended package',
+    'suspicious package',
+    'abandoned bag',
+    'left bag',
+    'suspicious item'
+  ];
+  
+  if (suspiciousKeywords.some(keyword => text.includes(keyword))) {
+    // If it's an unattended bag, set default action to HOT protocol
+    if (unattendedBagKeywords.some(keyword => text.includes(keyword))) {
+      return 'Suspicious Behaviour';
+    }
+    return 'Suspicious Behaviour';
   }
 
-  if (text.includes('weapon') || 
-      text.includes('knife') || 
-      text.includes('gun') ||
-      text.includes('armed')) {
-    return 'Code Black'
+  // Aggressive Behaviour detection
+  const aggressiveKeywords = [
+    'aggressive',
+    'fighting',
+    'threatening',
+    'shouting',
+    'violence',
+    'hit',
+    'punched',
+    'verbal abuse',
+    'physical confrontation',
+    'rowdy',
+    'hostile',
+    'kicked off',
+    'pushed',
+    'security intervened',
+    'altercation',
+    'argument'
+  ];
+  
+  if (aggressiveKeywords.some(keyword => text.includes(keyword))) {
+    // Check for historic references
+    const historicTerms = ['previous', 'earlier', 'yesterday', 'last week', 'last time'];
+    const isHistoric = historicTerms.some(term => text.includes(term));
+    const isCurrentOrActive = /current|active|ongoing|now/i.test(text);
+    
+    if (!isHistoric || isCurrentOrActive) {
+      return 'Aggressive Behaviour';
+    }
   }
 
-  if (text.includes('drug') || 
-      text.includes('substance') || 
-      text.includes('pills') ||
-      text.includes('powder')) {
-    return 'Code White'
+  // Queue Build-Up detection
+  const queueBuildUpKeywords = [
+    'queue build',
+    'queue building',
+    'queue is',
+    'queue at',
+    'getting busy',
+    'crowding',
+    'overcrowded',
+    'congestion',
+    'large queue',
+    'backed up',
+    'bottleneck',
+    'too many people',
+    'line forming',
+    'packed',
+    'crush',
+    'gridlock',
+    'flow issue',
+    'no movement',
+    'slow moving',
+    'crowd control needed'
+  ];
+  
+  if (queueBuildUpKeywords.some(keyword => text.includes(keyword))) {
+    // Check for current tense or active conditions
+    const currentTenseIndicators = [
+      'is', 'are', 'currently', 'now', 'getting', 'becoming', 'building',
+      'forming', 'developing', 'growing', 'increasing', 'will', 'monitor'
+    ];
+    
+    const isCurrentOrActive = currentTenseIndicators.some(indicator => text.includes(indicator)) ||
+      !/was|were|earlier|previous|yesterday|last/i.test(text);
+    
+    if (isCurrentOrActive) {
+      return 'Queue Build-Up';
+    }
   }
 
-  // Artist related
-  if (text.includes('artist') || 
-      text.includes('performer') || 
-      text.includes('band') ||
-      text.includes('talent')) {
-    return 'Artist Movement'
+  // Lost Property detection
+  const lostPropertyKeywords = [
+    'lost',
+    'missing',
+    'left behind',
+    'misplaced',
+    'can\'t find',
+    'lost property',
+    'dropped',
+    'phone gone',
+    'wallet missing',
+    'left my'
+  ];
+  
+  // Check for lost property keywords but exclude if contains refusal/ejection terms
+  if (lostPropertyKeywords.some(keyword => text.includes(keyword))) {
+    // Check for exclusion terms
+    const exclusionTerms = ['refused', 'ejected', 'removed'];
+    if (!exclusionTerms.some(term => text.includes(term))) {
+      return 'Lost Property';
+    }
   }
 
-  // Site issues
-  if (text.includes('maintenance') || 
-      text.includes('broken') || 
-      text.includes('damage') ||
-      text.includes('repair') ||
-      text.includes('clean') ||
-      text.includes('spill') ||
-      text.includes('toilet') ||
-      text.includes('facility')) {
-    return 'Site Issue'
+  // Welfare incident detection
+  const welfareKeywords = [
+    'welfare',
+    'intoxicated',
+    'drunk',
+    'under the influence',
+    'distressed',
+    'confused',
+    'vulnerable',
+    'young person alone',
+    'mental health',
+    'safeguarding',
+    'crying',
+    'refused help',
+    'support needed',
+    'alone and unwell'
+  ];
+  
+  if (welfareKeywords.some(keyword => text.includes(keyword))) {
+    return 'Welfare';
   }
 
-  // Sexual conduct
-  if (text.includes('sexual') || 
-      text.includes('inappropriate touching') || 
-      text.includes('harassment')) {
-    return 'Code Pink'
+  // Medical incident detection
+  const medicalKeywords = [
+    'medical',
+    'medic',
+    'injury',
+    'injured',
+    'unwell',
+    'collapsed',
+    'bleeding',
+    'cut',
+    'hurt',
+    'passed out',
+    'seizure',
+    'fainted',
+    'chest pain',
+    'head injury',
+    'first aid',
+    'ambulance',
+    'paramedic'
+  ];
+  
+  if (medicalKeywords.some(keyword => text.includes(keyword))) {
+    return 'Medical';
   }
 
-  return 'Other'
-}
+  // Ejection incident detection
+  if (/ejected|removed|kicked out|escort(ed)? out|ejection/i.test(text)) {
+    return 'Ejection';
+  }
+
+  // Refusal incident detection
+  if (/refus(ed|al)|deny|denied|not allowed|reject(ed)?|turn(ed)? away/i.test(text)) {
+    return 'Refusal';
+  }
+
+  return 'Other';
+};
+
+const detectCallsign = (input: string): string => {
+  const text = input.toLowerCase();
+  
+  // Look for common callsign patterns
+  const callsignPatterns = [
+    /\b([rsa][0-9]+)\b/i,  // R1, S1, A1, etc.
+    /\b(response\s*[0-9]+)\b/i,  // Response 1, Response2
+    /\b(security\s*[0-9]+)\b/i,  // Security 1, Security2
+    /\b(admin\s*[0-9]+)\b/i,  // Admin 1, Admin2
+    /\b([rsa][0-9]+)\b/i,  // r1, s1, a1, etc.
+  ];
+
+  for (const pattern of callsignPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      // Standardize format (capitalize R/S/A, no space)
+      return match[1].replace(/^(response|security|admin)\s*/i, letter => letter[0].toUpperCase())
+                    .replace(/^[rsa]/i, letter => letter.toUpperCase())
+                    .toUpperCase();
+    }
+  }
+
+  return '';
+};
+
+const parseAttendanceIncident = async (input: string): Promise<IncidentParserResult | null> => {
+  // Extract number from input using various patterns
+  const numbers = input.match(/\d+/);
+  if (!numbers) return null;
+
+  const count = numbers[0];
+  const maxCapacity = 3500; // Assuming 3500 is max capacity
+  const percentage = Math.round((parseInt(count) / maxCapacity) * 100);
+  const remaining = maxCapacity - parseInt(count);
+
+  return {
+    occurrence: `Current Attendance: ${count}`,
+    action_taken: `Current occupancy at ${count} people (${percentage}% of capacity). ${remaining} people remaining to reach capacity.`,
+    callsign_from: 'Attendance',
+    incident_type: 'Attendance'
+  };
+};
+
+const formatOccurrence = (text: string) => {
+  if (!text.trim()) return '';
+  
+  // Extract key information using regex
+  const location = text.match(/at\s+the\s+([^,\.]+)/i)?.[1] || '';
+  const description = text.match(/male\s+wearing\s+([^,\.]+)/i)?.[1] || '';
+  const reason = text.match(/due\s+to\s+([^,\.]+)/i)?.[1] || '';
+  const callsign = detectCallsign(text);
+
+  // Build a more detailed occurrence
+  const parts = [];
+
+  // Main incident description
+  parts.push('Security incident resulted in ejection');
+
+  // Location information
+  if (location) {
+    parts.push(`at the ${location}`);
+  }
+
+  // Reason for ejection
+  if (reason) {
+    parts.push(`following ${reason}`);
+  }
+
+  // Subject description
+  if (description) {
+    parts.push(`Subject identified as male wearing ${description}`);
+  }
+
+  // Action taken
+  if (callsign) {
+    parts.push(`Ejection carried out by ${callsign}`);
+  }
+
+  // Join all parts and ensure proper capitalization and punctuation
+  let formatted = parts.join('. ');
+  
+  // Capitalize first letter of each sentence
+  formatted = formatted.replace(/(^\w|\.\s+\w)/g, letter => letter.toUpperCase());
+  
+  // Ensure proper spacing after punctuation
+  formatted = formatted.replace(/([.,!?])\s*/g, '$1 ');
+  
+  // Remove double spaces
+  formatted = formatted.replace(/\s+/g, ' ');
+  
+  // Fix common security terms
+  const securityTerms: {[key: string]: string} = {
+    'kicked out': 'removed',
+    'thrown out': 'removed',
+    'kicked': 'ejected',
+    'thrown': 'ejected',
+    'fighting': 'physical altercation',
+    'fight': 'physical altercation'
+  };
+  
+  Object.entries(securityTerms).forEach(([incorrect, correct]) => {
+    formatted = formatted.replace(new RegExp(`\\b${incorrect}\\b`, 'gi'), correct);
+  });
+  
+  // Ensure the text ends with proper punctuation
+  if (!/[.!?]$/.test(formatted)) {
+    formatted += '.';
+  }
+  
+  return formatted.trim();
+};
+
+const buildActionTaken = (input: string) => {
+  const text = input.toLowerCase();
+  const actions = ['Individual ejected from venue for safety and security reasons'];
+  
+  // Location context
+  const locationMatch = text.match(/at\s+the\s+([^,.]+)/i);
+  if (locationMatch) {
+    actions[0] += ` from ${locationMatch[1]} area`;
+  }
+
+  if (/fight|altercation|aggressive/i.test(text)) {
+    actions.push('Incident logged as physical altercation');
+  }
+  
+  if (/police|authorities/i.test(text)) {
+    actions.push('Police informed');
+  }
+  
+  if (/refuse|ban|not allowed/i.test(text)) {
+    actions.push('Re-entry refused');
+  }
+  
+  if (/backup|support|additional security/i.test(text)) {
+    actions.push('Additional security deployed');
+  }
+
+  return actions.join('. ') + '.';
+};
+
+const parseRefusalIncident = async (input: string): Promise<IncidentParserResult> => {
+  const text = input.toLowerCase();
+  
+  // Extract location
+  let location = '';
+  const locationMatch = text.match(/(?:at|near|by)\s+(the\s+)?([^,\.]+)(?:,|\.|$)/i);
+  if (locationMatch) {
+    location = locationMatch[2].trim();
+  }
+
+  // Extract description (looking for clothing or appearance details)
+  let description = '';
+  const clothingMatch = text.match(/(?:wearing|in)\s+([^,\.]+)(?:,|\.|$)/i);
+  const personMatch = text.match(/(?:male|female|person)\s+([^,\.]+)(?:,|\.|$)/i);
+  if (clothingMatch) {
+    description = clothingMatch[0];
+  }
+  if (personMatch) {
+    description = description ? `${description}, ${personMatch[0]}` : personMatch[0];
+  }
+
+  // Extract reason
+  let reason = '';
+  const reasonMatch = text.match(/(?:for|due to)\s+([^,\.]+)(?:,|\.|$)/i);
+  if (reasonMatch) {
+    reason = reasonMatch[1].trim();
+  }
+
+  // Detect aggression
+  const aggressive = /(?:aggress|violent|threat|fight)/i.test(text);
+
+  // Extract callsign
+  const callsign = detectCallsign(input);
+
+  // Create the refusal details
+  const refusalDetails: RefusalDetails = {
+    location: location || 'Main entrance', // Default to main entrance if not specified
+    description: description || 'Person',
+    reason: reason || 'Intoxication', // Default to intoxication if not specified
+    policeRequired: aggressive, // Set police required if aggressive
+    banned: false, // Default to false
+    aggressive: aggressive
+  };
+
+  try {
+    // Generate a more detailed occurrence using GPT
+    const response = await fetch('/api/generate-refusal-details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        location: refusalDetails.location,
+        description: refusalDetails.description,
+        reason: refusalDetails.reason,
+        aggressive: refusalDetails.aggressive
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate refusal details');
+    }
+
+    const data = await response.json();
+    
+    return {
+      refusalDetails,
+      occurrence: data.occurrence || input,
+      action_taken: data.action_taken || `Refusal logged and communicated to all radio holders. ${
+        aggressive ? 'Police assistance requested. ' : ''
+      }Security team monitoring situation.`,
+      callsign_from: callsign || '',
+      incident_type: 'Refusal'
+    };
+  } catch (error) {
+    console.error('Error generating refusal details:', error);
+    // Return basic details if AI generation fails
+    return {
+      refusalDetails,
+      occurrence: input,
+      action_taken: `Refusal logged and communicated to all radio holders. ${
+        aggressive ? 'Police assistance requested. ' : ''
+      }Security team monitoring situation.`,
+      callsign_from: callsign || '',
+      incident_type: 'Refusal'
+    };
+  }
+};
+
+const parseEjectionIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Extract description
+    let description = '';
+    const personMatch = text.match(/(?:male|female|person|individual)\s+([^,\.]+)(?:,|\.|$)/i);
+    if (personMatch) {
+      description = personMatch[0].trim();
+    }
+
+    // Extract reason
+    let reason = '';
+    const reasonMatch = text.match(/(?:for|after|due to)\s+([^,\.]+)(?:,|\.|$)/i);
+    if (reasonMatch) {
+      reason = reasonMatch[1].trim();
+    }
+
+    // Detect flags
+    const policeInformed = /(?:police|authorities)\b/i.test(text);
+    const refusedReentry = /(?:refused re-entry|banned|not allowed back)\b/i.test(text);
+    const additionalSecurity = /(?:backup|assistance|support|additional security|more staff)\b/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-ejection-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          description,
+          reason,
+          policeInformed,
+          refusedReentry,
+          additionalSecurity,
+          callsign
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate ejection details');
+      }
+
+      const data = await response.json();
+
+      const ejectionDetails: EjectionDetails = {
+        location,
+        description: description || 'Individual',
+        reason: reason || 'unacceptable behavior',
+        policeInformed,
+        refusedReentry,
+        additionalInfo: {
+          additionalSecurity
+        }
+      };
+
+      return {
+        ejectionDetails,
+        occurrence: data.occurrence || input,
+        action_taken: data.action_taken || 'Individual ejected from venue.',
+        callsign_from: callsign,
+        incident_type: 'Ejection'
+      };
+    } catch (error) {
+      console.error('Error generating ejection details:', error);
+      // Return basic details if AI generation fails
+      return {
+        ejectionDetails: {
+          location,
+          description: description || 'Individual',
+          reason: reason || 'unacceptable behavior',
+          policeInformed,
+          refusedReentry,
+          additionalInfo: {
+            additionalSecurity
+          }
+        },
+        occurrence: input,
+        action_taken: 'Individual ejected from venue.',
+        callsign_from: callsign,
+        incident_type: 'Ejection'
+      };
+    }
+  } catch (error: any) {
+    console.error('Error in parseEjectionIncident:', error);
+    return {
+      ejectionDetails: {
+        location: 'venue',
+        description: 'Individual',
+        reason: 'unacceptable behavior',
+        policeInformed: false,
+        refusedReentry: false,
+        additionalInfo: {
+          additionalSecurity: false
+        }
+      },
+      occurrence: input,
+      action_taken: 'Individual ejected from venue.',
+      callsign_from: '',
+      incident_type: 'Ejection'
+    };
+  }
+};
+
+const parseMedicalIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Detect flags
+    const requiresAmbulance = /(?:ambulance|paramedic|emergency services)\b/i.test(text);
+    const refusedTreatment = /(?:refused|declined|denies)\s+(?:treatment|assistance|help)\b/i.test(text);
+    const transportedOffSite = /(?:transported|taken|moved)\s+(?:to|off site|hospital)\b/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-medical-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          requiresAmbulance,
+          refusedTreatment,
+          transportedOffSite,
+          callsign
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate medical details');
+      }
+
+      const data = await response.json();
+
+      const medicalDetails: MedicalDetails = {
+        location,
+        requiresAmbulance,
+        refusedTreatment,
+        transportedOffSite
+      };
+
+      return {
+        medicalDetails,
+        occurrence: data.occurrence || input,
+        action_taken: data.action_taken || 'Medics dispatched to location.',
+        callsign_from: callsign,
+        incident_type: 'Medical'
+      };
+    } catch (error) {
+      console.error('Error generating medical details:', error);
+      // Return basic details if AI generation fails
+      return {
+        medicalDetails: {
+          location,
+          requiresAmbulance,
+          refusedTreatment,
+          transportedOffSite
+        },
+        occurrence: input,
+        action_taken: 'Medics dispatched to location.',
+        callsign_from: callsign,
+        incident_type: 'Medical'
+      };
+    }
+  } catch (error: any) {
+    console.error('Error in parseMedicalIncident:', error);
+    return {
+      medicalDetails: {
+        location: 'venue',
+        requiresAmbulance: false,
+        refusedTreatment: false,
+        transportedOffSite: false
+      },
+      occurrence: input,
+      action_taken: 'Medics dispatched to location.',
+      callsign_from: '',
+      incident_type: 'Medical'
+    };
+  }
+};
+
+const parseWelfareIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-welfare-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate welfare details');
+      }
+
+      const data = await response.json();
+
+      return {
+        occurrence: data.occurrence || input,
+        action_taken: data.action_taken || 'Welfare team dispatched to assess and support.',
+        callsign_from: callsign,
+        incident_type: 'Welfare'
+      };
+    } catch (error) {
+      console.error('Error generating welfare details:', error);
+      // Return basic details if AI generation fails
+      return {
+        occurrence: input,
+        action_taken: 'Welfare team dispatched to assess and support.',
+        callsign_from: callsign,
+        incident_type: 'Welfare'
+      };
+    }
+  } catch (error: any) {
+    console.error('Error in parseWelfareIncident:', error);
+    return {
+      occurrence: input,
+      action_taken: 'Welfare team dispatched to assess and support.',
+      callsign_from: '',
+      incident_type: 'Welfare'
+    };
+  }
+};
+
+const parseLostPropertyIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-lost-property-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate lost property details');
+      }
+
+      const data = await response.json();
+
+      return {
+        occurrence: data.occurrence || `Lost Property: ${input}`,
+        action_taken: data.action_taken || 'Lost property report created, awaiting update',
+        callsign_from: callsign,
+        incident_type: 'Lost Property'
+      };
+    } catch (error) {
+      console.error('Error generating lost property details:', error);
+      // Return basic details if AI generation fails
+      return {
+        occurrence: `Lost Property: ${input}`,
+        action_taken: 'Lost property report created, awaiting update',
+        callsign_from: callsign,
+        incident_type: 'Lost Property'
+      };
+    }
+  } catch (error: any) {
+    console.error('Error in parseLostPropertyIncident:', error);
+    return {
+      occurrence: `Lost Property: ${input}`,
+      action_taken: 'Lost property report created, awaiting update',
+      callsign_from: '',
+      incident_type: 'Lost Property'
+    };
+  }
+};
+
+const parseSuspiciousBehaviourIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Check if this is an unattended bag incident
+    const isUnattendedBag = /unattended bag|unattended package|suspicious package|abandoned bag|left bag|suspicious item/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-suspicious-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign,
+          isUnattendedBag
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate suspicious behaviour details');
+      }
+
+      const data = await response.json();
+
+      // Default action taken for unattended bags if GPT fails
+      const defaultActionTaken = isUnattendedBag
+        ? 'HOT protocol initiated - Hidden: Assessing, Obviously suspicious: Checking, Typical: Evaluating. Area cordoned, awaiting assessment.'
+        : 'Behaviour under observation';
+
+      return {
+        occurrence: data.occurrence || input,
+        action_taken: data.actionTaken || defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Suspicious Behaviour'
+      };
+    } catch (error) {
+      console.error('Error in suspicious behaviour GPT processing:', error);
+      // Fallback to basic formatting if GPT fails
+      const defaultActionTaken = isUnattendedBag
+        ? 'HOT protocol initiated - Hidden: Assessing, Obviously suspicious: Checking, Typical: Evaluating. Area cordoned, awaiting assessment.'
+        : 'Behaviour under observation';
+
+      return {
+        occurrence: input,
+        action_taken: defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Suspicious Behaviour'
+      };
+    }
+  } catch (error) {
+    console.error('Error in suspicious behaviour parsing:', error);
+    throw error;
+  }
+};
+
+const parseAggressiveBehaviourIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Detect key flags
+    const policeRequired = /police|authorities|emergency|backup/i.test(text);
+    const physicalViolence = /fight|punch|hit|kick|push|physical|assault/i.test(text);
+    const verbalAbuse = /shout|verbal|threat|abuse|aggressive language/i.test(text);
+    const securityIntervention = /security|intervened|removed|separated|stopped/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-aggressive-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign,
+          policeRequired,
+          physicalViolence,
+          verbalAbuse,
+          securityIntervention
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate aggressive behaviour details');
+      }
+
+      const data = await response.json();
+
+      // Default action taken based on severity
+      let defaultActionTaken = 'Security monitoring situation. ';
+      if (physicalViolence) {
+        defaultActionTaken += 'Individuals separated and situation contained. ';
+      }
+      if (policeRequired) {
+        defaultActionTaken += 'Police notified and en route. ';
+      }
+      if (securityIntervention) {
+        defaultActionTaken += 'Security team has intervened. ';
+      }
+      defaultActionTaken = defaultActionTaken.trim();
+
+      return {
+        occurrence: data.occurrence || input,
+        action_taken: data.actionTaken || defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Aggressive Behaviour'
+      };
+    } catch (error) {
+      console.error('Error in aggressive behaviour GPT processing:', error);
+      // Fallback to basic formatting if GPT fails
+      let defaultActionTaken = 'Security monitoring situation. ';
+      if (physicalViolence) {
+        defaultActionTaken += 'Individuals separated and situation contained. ';
+      }
+      if (policeRequired) {
+        defaultActionTaken += 'Police notified and en route. ';
+      }
+      if (securityIntervention) {
+        defaultActionTaken += 'Security team has intervened. ';
+      }
+      defaultActionTaken = defaultActionTaken.trim();
+
+      return {
+        occurrence: input,
+        action_taken: defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Aggressive Behaviour'
+      };
+    }
+  } catch (error) {
+    console.error('Error in aggressive behaviour parsing:', error);
+    throw error;
+  }
+};
+
+const parseQueueBuildUpIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Detect key flags
+    const interventionNeeded = /assistance|help|support|backup|response|team|staff needed|open more|additional/i.test(text);
+    const redirectionMentioned = /redirect|alternative|different|other|route|entry|gate|path/i.test(text);
+    const stableFlow = /stable|steady|maintaining|controlled|managed|moving/i.test(text);
+    const severeCrowding = /severe|critical|urgent|immediate|dangerous|crush|emergency/i.test(text);
+    const monitoringSituation = /monitor|watch|observe|assess|check/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-queue-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign,
+          interventionNeeded,
+          redirectionMentioned,
+          stableFlow,
+          severeCrowding,
+          monitoringSituation
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate queue build-up details');
+      }
+
+      const data = await response.json();
+
+      // Default action taken based on conditions
+      let defaultActionTaken = 'Monitoring ongoing, awaiting update from staff on ground. ';
+      if (interventionNeeded) {
+        defaultActionTaken = 'Response team dispatched to assist. Additional lanes to be opened based on monitoring results. ';
+      }
+      if (redirectionMentioned) {
+        defaultActionTaken += 'Crowd redirected to alternate entry point. ';
+      }
+      if (stableFlow) {
+        defaultActionTaken = 'Crowd monitored – flow maintained. ';
+      }
+      if (severeCrowding) {
+        defaultActionTaken += 'Immediate crowd control measures implemented. ';
+      }
+      if (monitoringSituation) {
+        defaultActionTaken = 'Security team monitoring situation and will implement additional measures if needed. ';
+      }
+      defaultActionTaken = defaultActionTaken.trim();
+
+      return {
+        occurrence: data.occurrence || `Queue build-up reported at ${location}`,
+        action_taken: data.actionTaken || defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Queue Build-Up'
+      };
+    } catch (error) {
+      console.error('Error in queue build-up GPT processing:', error);
+      // Fallback to basic formatting if GPT fails
+      let defaultActionTaken = 'Monitoring ongoing, awaiting update from staff on ground. ';
+      if (interventionNeeded) {
+        defaultActionTaken = 'Response team dispatched to assist. Additional lanes to be opened based on monitoring results. ';
+      }
+      if (redirectionMentioned) {
+        defaultActionTaken += 'Crowd redirected to alternate entry point. ';
+      }
+      if (stableFlow) {
+        defaultActionTaken = 'Crowd monitored – flow maintained. ';
+      }
+      if (severeCrowding) {
+        defaultActionTaken += 'Immediate crowd control measures implemented. ';
+      }
+      if (monitoringSituation) {
+        defaultActionTaken = 'Security team monitoring situation and will implement additional measures if needed. ';
+      }
+      defaultActionTaken = defaultActionTaken.trim();
+
+      return {
+        occurrence: `Queue build-up reported at ${location}`,
+        action_taken: defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Queue Build-Up'
+      };
+    }
+  } catch (error) {
+    console.error('Error in queue build-up parsing:', error);
+    throw error;
+  }
+};
+
+const parseTechnicalIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Detect key flags
+    const isResolved = /resolved|fixed|working|repaired|back up|restored/i.test(text);
+    const needsTechTeam = /tech team|engineer|specialist|support needed|escalate/i.test(text);
+    const hasWorkaround = /workaround|temporary|alternative|backup|manual|interim/i.test(text);
+    const isSiteWide = /site wide|all|everywhere|entire|whole site|multiple/i.test(text);
+    const isScanner = /scanner|scanning|ticket.*scan|scan.*ticket/i.test(text);
+    const isUrgent = /urgent|asap|immediately|priority|critical/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-technical-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign,
+          isResolved,
+          needsTechTeam,
+          hasWorkaround,
+          isSiteWide,
+          isScanner,
+          isUrgent
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate technical issue details');
+      }
+
+      const data = await response.json();
+
+      // Default action taken based on conditions
+      let defaultActionTaken = '';
+      if (isResolved) {
+        defaultActionTaken = 'Issue resolved on site';
+      } else if (needsTechTeam || isScanner) {
+        defaultActionTaken = 'Technical team notified and en route. Security team monitoring situation.';
+      } else if (hasWorkaround) {
+        defaultActionTaken = 'Temporary workaround in place – awaiting technical support';
+      } else {
+        defaultActionTaken = 'Issue logged and being investigated. Technical team notified.';
+      }
+
+      // Add urgency to action taken if needed
+      if (isUrgent && !isResolved) {
+        defaultActionTaken = 'URGENT: ' + defaultActionTaken;
+      }
+
+      // Add monitoring note for scanner issues
+      if (isScanner && !isResolved) {
+        defaultActionTaken += ' Staff advised to implement manual checks if needed.';
+      }
+
+      return {
+        occurrence: data.occurrence || `Technical issue: ${isScanner ? 'Ticket scanning system' : 'Equipment'} malfunction reported at ${location}`,
+        action_taken: data.actionTaken || defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Technical Issue'
+      };
+    } catch (error) {
+      console.error('Error in technical issue GPT processing:', error);
+      // Fallback to basic formatting if GPT fails
+      let defaultActionTaken = '';
+      if (isResolved) {
+        defaultActionTaken = 'Issue resolved on site';
+      } else if (needsTechTeam || isScanner) {
+        defaultActionTaken = 'Technical team notified and en route. Security team monitoring situation.';
+      } else if (hasWorkaround) {
+        defaultActionTaken = 'Temporary workaround in place – awaiting technical support';
+      } else {
+        defaultActionTaken = 'Issue logged and being investigated. Technical team notified.';
+      }
+
+      // Add urgency to action taken if needed
+      if (isUrgent && !isResolved) {
+        defaultActionTaken = 'URGENT: ' + defaultActionTaken;
+      }
+
+      // Add monitoring note for scanner issues
+      if (isScanner && !isResolved) {
+        defaultActionTaken += ' Staff advised to implement manual checks if needed.';
+      }
+
+      return {
+        occurrence: `Technical issue: ${isScanner ? 'Ticket scanning system' : 'Equipment'} malfunction reported at ${location}`,
+        action_taken: defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Technical Issue'
+      };
+    }
+  } catch (error) {
+    console.error('Error in technical issue parsing:', error);
+    throw error;
+  }
+};
+
+const parseWeatherDisruptionIncident = async (input: string): Promise<IncidentParserResult> => {
+  try {
+    const text = input.toLowerCase();
+    const callsign = detectCallsign(input) || '';
+    const location = extractLocation(input) || 'venue';
+
+    // Detect key flags
+    const isResolved = /contained|resolved|fixed|cleared|safe|secured/i.test(text);
+    const needsSafetyTeam = /safety|risk|assessment|unsafe|dangerous|hazard/i.test(text);
+    const requiresRouteChange = /route|divert|redirect|close|block|alternative|access/i.test(text);
+    const isUrgent = /immediate|urgent|asap|emergency|critical/i.test(text);
+    const isLightning = /lightning|thunder|strike/i.test(text);
+    const isFlooding = /flood|water|submerged|pooling/i.test(text);
+    const isWindRelated = /wind|blown|canopy|gazebo|tent/i.test(text);
+    const isSlipperyConditions = /slip|mud|wet.*ground|ground.*wet/i.test(text);
+
+    try {
+      // Generate a more detailed occurrence using GPT
+      const response = await fetch('/api/generate-weather-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          input,
+          location,
+          callsign,
+          isResolved,
+          needsSafetyTeam,
+          requiresRouteChange,
+          isUrgent,
+          isLightning,
+          isFlooding,
+          isWindRelated,
+          isSlipperyConditions
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate weather disruption details');
+      }
+
+      const data = await response.json();
+
+      // Default action taken based on conditions
+      let defaultActionTaken = '';
+      if (isResolved) {
+        defaultActionTaken = 'Hazard contained – area made safe';
+      } else if (needsSafetyTeam || isLightning) {
+        defaultActionTaken = 'Safety team notified – risk assessment ongoing';
+        if (isLightning) {
+          defaultActionTaken += '. Lightning procedure initiated.';
+        }
+      } else if (requiresRouteChange) {
+        defaultActionTaken = 'Route or operation amended due to conditions';
+      } else {
+        defaultActionTaken = 'Weather impact being monitored. Safety measures in place.';
+      }
+
+      // Add specific safety measures based on conditions
+      if (isFlooding && !isResolved) {
+        defaultActionTaken += ' Drainage team deployed. Area cordoned off.';
+      }
+      if (isWindRelated && !isResolved) {
+        defaultActionTaken += ' Structures being secured. Wind speeds monitored.';
+      }
+      if (isSlipperyConditions && !isResolved) {
+        defaultActionTaken += ' Additional matting/grip measures implemented.';
+      }
+
+      // Add urgency prefix if needed
+      if (isUrgent && !isResolved) {
+        defaultActionTaken = 'URGENT: ' + defaultActionTaken;
+      }
+
+      return {
+        occurrence: data.occurrence || `Weather disruption: ${location} affected by adverse conditions`,
+        action_taken: data.actionTaken || defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Weather Disruption'
+      };
+    } catch (error) {
+      console.error('Error in weather disruption GPT processing:', error);
+      // Fallback to basic formatting if GPT fails
+      let defaultActionTaken = '';
+      if (isResolved) {
+        defaultActionTaken = 'Hazard contained – area made safe';
+      } else if (needsSafetyTeam || isLightning) {
+        defaultActionTaken = 'Safety team notified – risk assessment ongoing';
+        if (isLightning) {
+          defaultActionTaken += '. Lightning procedure initiated.';
+        }
+      } else if (requiresRouteChange) {
+        defaultActionTaken = 'Route or operation amended due to conditions';
+      } else {
+        defaultActionTaken = 'Weather impact being monitored. Safety measures in place.';
+      }
+
+      // Add specific safety measures based on conditions
+      if (isFlooding && !isResolved) {
+        defaultActionTaken += ' Drainage team deployed. Area cordoned off.';
+      }
+      if (isWindRelated && !isResolved) {
+        defaultActionTaken += ' Structures being secured. Wind speeds monitored.';
+      }
+      if (isSlipperyConditions && !isResolved) {
+        defaultActionTaken += ' Additional matting/grip measures implemented.';
+      }
+
+      // Add urgency prefix if needed
+      if (isUrgent && !isResolved) {
+        defaultActionTaken = 'URGENT: ' + defaultActionTaken;
+      }
+
+      return {
+        occurrence: `Weather disruption: ${location} affected by adverse conditions`,
+        action_taken: defaultActionTaken,
+        callsign_from: callsign || location,
+        incident_type: 'Weather Disruption'
+      };
+    }
+  } catch (error) {
+    console.error('Error in weather disruption parsing:', error);
+    throw error;
+  }
+};
+
+// Helper function to extract location from input
+const extractLocation = (input: string): string | null => {
+  const locationMatch = input.match(/(?:at|in|near|by|from|to)\s+(the\s+)?([^,\.]+)(?:,|\.|$)/i);
+  return locationMatch ? locationMatch[2].trim() : null;
+};
 
 export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreated }: Props) {
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
-    callsign_to: '',
+    callsign_to: 'Event Control',
     occurrence: '',
     incident_type: '',
     action_taken: '',
-    ai_input: '',
-    is_closed: false
-  })
+    is_closed: false,
+    status: 'open',
+    log_number: ''
+  });
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
     description: '',
@@ -249,7 +1426,23 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     reason: '',
     banned: false,
     aggressive: false
-  })
+  });
+  const [medicalDetails, setMedicalDetails] = useState<MedicalDetails>({
+    location: '',
+    requiresAmbulance: false,
+    refusedTreatment: false,
+    transportedOffSite: false
+  });
+  const [ejectionDetails, setEjectionDetails] = useState<EjectionDetails>({
+    location: '',
+    description: '',
+    reason: '',
+    policeInformed: false,
+    refusedReentry: false,
+    additionalInfo: {
+      additionalSecurity: false
+    }
+  });
   const [showRefusalActions, setShowRefusalActions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -265,123 +1458,280 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
   // Timer ref for debouncing
   const processTimer = useRef<NodeJS.Timeout>()
 
-  // Process AI input with debouncing
-  const processAIInput = useCallback(async (input: string) => {
-    if (!input) {
-      setShowRefusalActions(false)
-      return
-    }
-
-    setProcessingAI(true)
-    try {
-      // Check for attendance-related input
-      const isAttendanceInput = input.toLowerCase().includes('current numbers') || 
-                               input.toLowerCase().includes('clicker') ||
-                               input.toLowerCase().includes('attendance');
-
-      if (isAttendanceInput) {
-        try {
-          const numberMatch = input.match(/\b(\d+)\b/);
-          
-          if (numberMatch) {
-            const currentCount = parseInt(numberMatch[1]);
-            
-            // Get current event for capacity calculation
-            const { data: currentEvent } = await supabase
-              .from('events')
-              .select('id, expected_attendance')
-              .eq('is_current', true)
-              .single();
-
-            if (currentEvent) {
-              const percentageEntered = Math.round((currentCount / currentEvent.expected_attendance) * 100);
-              const remaining = currentEvent.expected_attendance - currentCount;
-
-              // Set form data without ai_input field
-              setFormData({
-                callsign_from: 'Attendance',
-                callsign_to: 'Event Control',
-                incident_type: 'Attendance',
-                occurrence: `Current attendance ${currentCount}.`,
-                action_taken: `Current occupancy at ${currentCount} people (${percentageEntered}% of capacity). ${remaining} people remaining to reach capacity.`,
-                is_closed: false
-              });
-
-              // Update attendance in database
-              await supabase
-                .from('attendance')
-                .upsert({
-                  event_id: currentEvent.id,
-                  current_count: currentCount,
-                  percentage: percentageEntered,
-                  remaining: remaining,
-                  timestamp: new Date().toISOString()
-                }, {
-                  onConflict: 'event_id'
-                });
-            }
-          }
-        } catch (error) {
-          console.error('Error processing attendance:', error);
-        }
-        setProcessingAI(false);
+  // Create a debounced function for processing input
+  const debouncedProcessInput = useCallback(
+    debounce(async (input: string) => {
+      if (!input.trim()) {
+        setFormData(prev => ({ 
+          ...prev, 
+          occurrence: '', 
+          action_taken: '',
+          incident_type: 'Select Type',
+          callsign_from: '',
+          log_number: ''
+        }));
         return;
       }
 
-      // For non-attendance incidents, proceed with normal processing
-      const detectedType = detectIncidentType(input)
-      setShowRefusalActions(detectedType === 'Refusal')
+      try {
+        const incidentType = detectIncidentType(input);
+        const callsign = detectCallsign(input) || '';
+        const location = extractLocation(input) || '';
+        let processedData;
 
-      let correctedText = input
-        .split('. ')
-        .map(sentence => sentence.trim())
-        .map(sentence => sentence.charAt(0).toUpperCase() + sentence.slice(1))
-        .join('. ');
-      
-      if (!correctedText.endsWith('.') && !correctedText.endsWith('!') && !correctedText.endsWith('?')) {
-        correctedText += '.';
+        switch (incidentType) {
+          case 'Medical':
+            processedData = await parseMedicalIncident(input);
+            break;
+          case 'Ejection':
+            processedData = await parseEjectionIncident(input);
+            break;
+          case 'Refusal':
+            processedData = await parseRefusalIncident(input);
+            break;
+          case 'Attendance':
+            processedData = await parseAttendanceIncident(input);
+            break;
+          case 'Welfare':
+            processedData = await parseWelfareIncident(input);
+            break;
+          case 'Lost Property':
+            processedData = await parseLostPropertyIncident(input);
+            break;
+          case 'Suspicious Behaviour':
+            processedData = await parseSuspiciousBehaviourIncident(input);
+            break;
+          case 'Aggressive Behaviour':
+            processedData = await parseAggressiveBehaviourIncident(input);
+            break;
+          case 'Queue Build-Up':
+            processedData = await parseQueueBuildUpIncident(input);
+            break;
+          case 'Technical Issue':
+            processedData = await parseTechnicalIncident(input);
+            break;
+          case 'Weather Disruption':
+            processedData = await parseWeatherDisruptionIncident(input);
+            break;
+          default:
+            // Use the general incident endpoint for all other types
+            try {
+              const response = await fetch('/api/generate-incident-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  input,
+                  incident_type: incidentType,
+                  location,
+                  description: input,
+                  callsign
+                })
+              });
+
+              if (!response.ok) {
+                throw new Error('Failed to generate incident details');
+              }
+
+              const data = await response.json();
+              processedData = {
+                occurrence: data.occurrence || input,
+                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: incidentType
+              };
+            } catch (error) {
+              console.error('Error generating incident details:', error);
+              processedData = {
+                occurrence: input,
+                action_taken: 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: incidentType
+              };
+            }
+        }
+
+        // Get current event for log number generation
+        const { data: currentEvent } = await supabase
+          .from('events')
+          .select('id, event_name')
+          .eq('is_current', true)
+          .single();
+
+        if (!currentEvent) {
+          console.error('No current event found');
+          return;
+        }
+
+        // Generate log number
+        const logNumber = await generateNextLogNumber(currentEvent.event_name);
+
+        if (processedData) {
+          setFormData(prev => ({
+            ...prev,
+            occurrence: processedData.occurrence,
+            action_taken: processedData.action_taken,
+            incident_type: processedData.incident_type || incidentType,
+            callsign_from: processedData.callsign_from || prev.callsign_from,
+            log_number: logNumber
+          }));
+        } else {
+          setFormData(prev => ({ 
+            ...prev,
+            incident_type: incidentType,
+            log_number: logNumber
+          }));
+        }
+      } catch (error) {
+        console.error('Error processing input:', error);
+      }
+    }, 500),
+    []
+  );
+
+  // Handle input change
+  const handleQuickInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const input = e.target.value;
+    setFormData(prev => ({ ...prev, ai_input: input }));
+
+    // Just set the occurrence to the raw input immediately
+    setFormData(prev => ({ 
+      ...prev, 
+      occurrence: input
+    }));
+
+    // Clear any previous timer
+    if (processTimer.current) {
+      clearTimeout(processTimer.current);
+    }
+
+    // Set a new timer to process the input after 3 seconds of no typing
+    processTimer.current = setTimeout(async () => {
+      if (!input.trim()) {
+        setFormData(prev => ({ 
+          ...prev, 
+          occurrence: '', 
+          action_taken: '',
+          incident_type: 'Select Type',
+          callsign_from: '',
+          log_number: ''
+        }));
+        return;
       }
 
-      setFormData(prev => ({
-        ...prev,
-        incident_type: detectedType,
-        occurrence: correctedText,
-        action_taken: getDefaultActionTaken(detectedType, correctedText),
-        is_closed: detectedType === 'Sit Rep'
-      }));
+      // Detect incident type
+      const detectedType = detectIncidentType(input);
+      setFormData(prev => ({ ...prev, incident_type: detectedType }));
 
-    } catch (error) {
-      console.error('Error processing AI input:', error)
-      setError('Failed to process input with AI')
-    } finally {
-      setProcessingAI(false)
-    }
-  }, [])
+      // Extract callsign
+      const callsign = detectCallsign(input) || '';
+      setFormData(prev => ({ ...prev, callsign_from: callsign }));
 
-  // Handle AI input changes with debouncing
-  const handleAIInputChange = (input: string) => {
-    // Update the AI input field
-    setFormData(prev => ({ ...prev, ai_input: input }))
+      try {
+        let result: IncidentParserResult | null = null;
 
-    // Clear the timer if it exists
-    if (processTimer.current) {
-      clearTimeout(processTimer.current)
-    }
+        // Handle different incident types
+        switch (detectedType) {
+          case 'Medical':
+            result = await parseMedicalIncident(input);
+            break;
+          case 'Refusal':
+            result = await parseRefusalIncident(input);
+            break;
+          case 'Ejection':
+            result = await parseEjectionIncident(input);
+            break;
+          case 'Attendance':
+            result = await parseAttendanceIncident(input);
+            break;
+          case 'Welfare':
+            result = await parseWelfareIncident(input);
+            break;
+          case 'Lost Property':
+            result = await parseLostPropertyIncident(input);
+            break;
+          case 'Suspicious Behaviour':
+            result = await parseSuspiciousBehaviourIncident(input);
+            break;
+          case 'Aggressive Behaviour':
+            result = await parseAggressiveBehaviourIncident(input);
+            break;
+          case 'Queue Build-Up':
+            result = await parseQueueBuildUpIncident(input);
+            break;
+          case 'Technical Issue':
+            result = await parseTechnicalIncident(input);
+            break;
+          case 'Weather Disruption':
+            result = await parseWeatherDisruptionIncident(input);
+            break;
+          default:
+            // Use the general incident endpoint for all other types
+            try {
+              const response = await fetch('/api/generate-incident-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  input,
+                  incident_type: detectedType,
+                  location,
+                  description: input,
+                  callsign
+                })
+              });
 
-    // Set a new timer
-    processTimer.current = setTimeout(() => {
-      const detectedType = detectIncidentType(input)
-      
-      // Update form data with detected type
-      setFormData(prev => ({
-        ...prev,
-        incident_type: detectedType
-      }))
-      
-      // Process the input
-      processAIInput(input)
-    }, 1000) // 1 second delay
-  }
+              if (!response.ok) {
+                throw new Error('Failed to generate incident details');
+              }
+
+              const data = await response.json();
+              result = {
+                occurrence: data.occurrence || input,
+                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: detectedType
+              };
+            } catch (error) {
+              console.error('Error generating incident details:', error);
+              result = {
+                occurrence: input,
+                action_taken: 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: detectedType
+              };
+            }
+        }
+
+        if (result) {
+          setFormData(prev => ({
+            ...prev,
+            occurrence: result.occurrence,
+            action_taken: result.action_taken,
+            incident_type: result.incident_type,
+            callsign_from: result.callsign_from
+          }));
+
+          // Update additional details based on incident type
+          if (result.medicalDetails) {
+            setMedicalDetails(result.medicalDetails);
+          }
+          if (result.refusalDetails) {
+            setRefusalDetails(result.refusalDetails);
+          }
+          if (result.ejectionDetails) {
+            setEjectionDetails(result.ejectionDetails);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing quick input:', error);
+        // Set basic details on error
+        setFormData(prev => ({
+          ...prev,
+          occurrence: input,
+          action_taken: getDefaultActionTaken(detectedType, input)
+        }));
+      }
+    }, 3000); // 3 second delay
+  };
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -398,80 +1748,170 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     }
   }, [isOpen])
 
-  const generateNextLogNumber = async () => {
+  const generateNextLogNumber = async (eventName: string = '') => {
     try {
+      // Get the current count of incidents for this event
+      const { data: incidents, error: countError } = await supabase
+        .from('incident_logs')
+        .select('log_number')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (countError) {
+        console.error('Error getting incident count:', countError);
+        throw countError;
+      }
+
+      // Format the event name for the log number (e.g., "BLINK-182")
+      const eventPrefix = eventName
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/-$/, '');
+
+      // Get the last sequence number or start from 0
+      let lastSequence = 0;
+      if (incidents && incidents.length > 0 && incidents[0].log_number) {
+        const match = incidents[0].log_number.match(/-(\d+)$/);
+        if (match) {
+          lastSequence = parseInt(match[1], 10);
+        }
+      }
+
+      // Generate the next sequence number
+      const nextSequence = lastSequence + 1;
+      const sequentialNumber = String(nextSequence).padStart(3, '0');
+
+      // Combine them (e.g., "BLINK-182-001")
+      const logNumber = `${eventPrefix}-${sequentialNumber}`;
+      console.log('Generated log number:', logNumber);
+      return logNumber;
+    } catch (error) {
+      console.error('Error generating log number:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Get current event
       const { data: currentEvent } = await supabase
         .from('events')
         .select('id, event_name')
         .eq('is_current', true)
-        .single()
+        .single();
 
       if (!currentEvent) {
-        setError('No current event found')
-        return
+        throw new Error('No current event found');
       }
 
-      const { count } = await supabase
-        .from('incident_logs')
-        .select('id', { count: 'exact' })
-        .eq('event_id', currentEvent.id)
-
-      const eventPrefix = currentEvent.event_name.replace(/\s+/g, '-').toUpperCase()
-      const incidentNumber = String(count ? count + 1 : 1).padStart(3, '0')
-      setNextLogNumber(`${eventPrefix}-${incidentNumber}`)
-    } catch (err) {
-      console.error('Error generating log number:', err)
-      setError('Failed to generate log number')
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!formData.callsign_from) {
-      setMissingCallsign(true)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const { data: currentEvent } = await supabase
-        .from('events')
-        .select('id')
-        .eq('is_current', true)
-        .single()
-
-      if (!currentEvent) {
-        setError('No current event found')
-        return
+      // Generate the next log number using the event name
+      const logNumber = await generateNextLogNumber(currentEvent.event_name);
+      
+      if (!logNumber) {
+        throw new Error('Failed to generate log number');
       }
 
-      // Ensure we're using the correct incident type
+      // Get current timestamp
+      const now = new Date().toISOString();
+
+      // Prepare the incident data
       const incidentData = {
-        ...formData,
+        log_number: logNumber,
+        callsign_from: formData.callsign_from.trim(),
+        callsign_to: (formData.callsign_to || 'Event Control').trim(),
+        occurrence: formData.occurrence.trim(),
+        incident_type: formData.incident_type.trim(),
+        action_taken: (formData.action_taken || '').trim(),
+        is_closed: false,
         event_id: currentEvent.id,
-        log_number: nextLogNumber,
-        timestamp: new Date().toISOString(),
-        incident_type: formData.incident_type || detectIncidentType(formData.ai_input || '')
+        status: formData.status || 'open',
+        ai_input: formData.ai_input || null,
+        created_at: now,
+        updated_at: now,
+        timestamp: now // Keep this for backward compatibility
+      };
+
+      // First, check if the log number already exists
+      const { data: existingIncident } = await supabase
+        .from('incident_logs')
+        .select('id')
+        .eq('log_number', logNumber)
+        .single();
+
+      if (existingIncident) {
+        throw new Error('Log number already exists. Please try again.');
       }
 
-      const { error: insertError } = await supabase
+      // Insert the incident
+      const { data: insertedIncident, error: insertError } = await supabase
         .from('incident_logs')
         .insert([incidentData])
+        .select()
+        .single();
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
 
-      onIncidentCreated?.()
-      onClose()
-    } catch (err) {
-      console.error('Error creating incident:', err)
-      setError('Failed to create incident')
+      // If this is an attendance incident, also update the attendance_records table
+      if (formData.incident_type === 'Attendance') {
+        const count = parseInt(formData.occurrence.match(/\d+/)?.[0] || '0');
+        if (count > 0) {
+          const { error: attendanceError } = await supabase
+            .from('attendance_records')
+            .insert([{
+              event_id: currentEvent.id,
+              count: count,
+              timestamp: now
+            }]);
+
+          if (attendanceError) {
+            console.error('Error updating attendance record:', attendanceError);
+            // Don't throw here, as the incident was already created
+          }
+        }
+      }
+
+      console.log('Successfully created incident:', insertedIncident);
+
+      // Clear form and close modal
+      setFormData({
+        callsign_from: '',
+        callsign_to: 'Event Control',
+        occurrence: '',
+        incident_type: '',
+        action_taken: '',
+        is_closed: false,
+        status: 'open',
+        ai_input: '',
+        log_number: ''
+      });
+
+      setRefusalDetails({
+        policeRequired: false,
+        description: '',
+        location: '',
+        reason: '',
+        banned: false,
+        aggressive: false
+      });
+
+      // Call onIncidentCreated callback with the created incident and close modal
+      await onIncidentCreated(insertedIncident);
+      onClose();
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create incident. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getDefaultActionTaken = (incidentType: string, occurrence: string): string => {
     switch(incidentType) {
@@ -483,7 +1923,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
         return 'Medical team dispatched. Awaiting further updates.'
       case 'Code Purple':
         return 'Medical team notified. Monitoring situation.'
-      case 'Code Red':
+      case 'Ejection':
         return 'Security team responding. Situation being monitored.'
       case 'Refusal':
         return 'Refusal logged and communicated to all radio holders. Security team monitoring situation.'
@@ -592,8 +2032,8 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 value={formData.ai_input}
-                onChange={(e) => handleAIInputChange(e.target.value)}
-                placeholder="Type your incident details here..."
+                onChange={handleQuickInputChange}
+                placeholder="Enter incident details..."
               />
               
               {/* Quick Actions for Refusals */}

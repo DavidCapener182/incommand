@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import IncidentDetailsModal from './IncidentDetailsModal'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Incident {
-  id: string
+  id: number
   log_number: string
   timestamp: string
   callsign_from: string
@@ -14,11 +15,13 @@ interface Incident {
   incident_type: string
   action_taken: string
   is_closed: boolean
+  event_id: string
+  status: string
 }
 
 const getIncidentTypeStyle = (type: string) => {
   switch(type) {
-    case 'Code Red':
+    case 'Ejection':
       return 'bg-red-100 text-red-800'
     case 'Refusal':
       return 'bg-yellow-100 text-yellow-800'
@@ -34,6 +37,10 @@ const getIncidentTypeStyle = (type: string) => {
       return 'bg-pink-100 text-pink-800'
     case 'Attendance':
       return 'bg-gray-100 text-gray-800'
+    case 'Aggressive Behaviour':
+      return 'bg-orange-100 text-orange-800'
+    case 'Queue Build-Up':
+      return 'bg-blue-100 text-blue-800'
     default:
       return 'bg-gray-100 text-gray-800'
   }
@@ -47,109 +54,155 @@ export default function IncidentTable() {
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
+  const subscriptionRef = useRef<RealtimeChannel | null>(null)
+
+  // Cleanup function to handle unsubscribe
+  const cleanup = () => {
+    if (subscriptionRef.current) {
+      console.log('Cleaning up incident table subscription');
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+  };
 
   useEffect(() => {
-    fetchIncidents()
+    const checkCurrentEvent = async () => {
+      try {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('id')
+          .eq('is_current', true)
+          .single();
 
-    // Set up real-time subscription
-    const setupSubscription = async () => {
-      // Get current event first
-      const { data: currentEvent } = await supabase
-        .from('events')
-        .select('id')
-        .eq('is_current', true)
-        .single()
+        setCurrentEventId(eventData?.id || null);
+      } catch (err) {
+        console.error('Error checking current event:', err);
+        setCurrentEventId(null);
+      }
+    };
 
-      if (!currentEvent) return
+    checkCurrentEvent();
+  }, []);
 
-      setCurrentEventId(currentEvent.id)
+  useEffect(() => {
+    if (!currentEventId) return;
 
-      // Subscribe to changes
-      const subscription = supabase
-        .channel('incident_logs_changes')
-        .on('postgres_changes', 
-          {
-            event: '*', // Listen to all changes (insert, update, delete)
-            schema: 'public',
-            table: 'incident_logs'
-          }, 
-          (payload) => {
-            // Handle different types of changes
-            if (payload.eventType === 'INSERT') {
-              setIncidents(prev => [payload.new as Incident, ...prev])
-            } else if (payload.eventType === 'UPDATE') {
-              setIncidents(prev => 
-                prev.map(incident => 
-                  incident.id === payload.new.id ? payload.new as Incident : incident
-                )
-              )
-            } else if (payload.eventType === 'DELETE') {
-              setIncidents(prev => 
-                prev.filter(incident => incident.id !== payload.old.id)
-              )
-            }
+    const fetchIncidents = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('incident_logs')
+          .select('*')
+          .eq('event_id', currentEventId)
+          .order('timestamp', { ascending: false });
+
+        if (error) throw error;
+        setIncidents(data || []);
+      } catch (err) {
+        console.error('Error fetching incidents:', err);
+        setError('Failed to fetch incidents');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Clean up any existing subscription
+    cleanup();
+
+    // Set up new subscription with more specific filter
+    subscriptionRef.current = supabase
+      .channel(`incident_logs_${currentEventId}_${Date.now()}`)
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'incident_logs',
+          filter: `event_id=eq.${currentEventId}`
+        }, 
+        (payload) => {
+          console.log('Received incident change:', payload);
+          if (payload.eventType === 'INSERT') {
+            setIncidents(prev => [payload.new as Incident, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setIncidents(prev => 
+              prev.map(incident => {
+                if (incident.id === payload.new.id) {
+                  console.log('Updating incident:', incident.id, 'New status:', payload.new.is_closed);
+                  return { ...incident, ...payload.new };
+                }
+                return incident;
+              })
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setIncidents(prev => 
+              prev.filter(incident => incident.id !== payload.old.id)
+            );
           }
-        )
-        .subscribe()
+        }
+      )
+      .subscribe();
 
-      return () => {
-        subscription.unsubscribe()
-      }
-    }
+    fetchIncidents();
 
-    setupSubscription()
-  }, [])
+    return cleanup;
+  }, [currentEventId]);
 
-  const fetchIncidents = async () => {
+  const toggleIncidentStatus = async (incident: Incident, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (incident.incident_type === 'Attendance') return;
+
     try {
-      // Get current event first
-      const { data: currentEvent } = await supabase
-        .from('events')
-        .select('id')
-        .eq('is_current', true)
-        .single()
+      const newStatus = !incident.is_closed;
+      console.log('Toggling status for incident:', incident.id, 'New status:', newStatus);
 
-      if (!currentEvent) {
-        setIncidents([])
-        return
-      }
-
-      // Then get incidents for this event
-      const { data, error } = await supabase
-        .from('incident_logs')
-        .select('*')
-        .eq('event_id', currentEvent.id)
-        .order('timestamp', { ascending: false })
-
-      if (error) throw error
-
-      setIncidents(data || [])
-    } catch (err) {
-      console.error('Error fetching incidents:', err)
-      setError('Failed to fetch incidents')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggleIncidentStatus = async (incident: Incident) => {
-    try {
       const { error } = await supabase
         .from('incident_logs')
-        .update({ is_closed: !incident.is_closed })
-        .eq('id', incident.id)
+        .update({ 
+          is_closed: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', incident.id);
 
-      if (error) throw error
+      if (error) throw error;
 
-      await fetchIncidents()
+      // Optimistically update the local state
+      setIncidents(prev => 
+        prev.map(inc => 
+          inc.id === incident.id 
+            ? { ...inc, is_closed: newStatus }
+            : inc
+        )
+      );
+
+      // Add an update to track the status change
+      await supabase
+        .from('incident_updates')
+        .insert({
+          incident_id: incident.id,
+          update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
+          updated_by: 'Event Control'
+        });
+
     } catch (err) {
-      console.error('Error updating incident status:', err)
+      console.error('Error updating incident status:', err);
+      // Revert the optimistic update if there was an error
+      setIncidents(prev => 
+        prev.map(inc => 
+          inc.id === incident.id 
+            ? { ...inc, is_closed: incident.is_closed }
+            : inc
+        )
+      );
     }
-  }
+  };
 
   const handleIncidentClick = (incident: Incident) => {
-    setSelectedIncidentId(incident.id)
-    setIsDetailsModalOpen(true)
+    // Don't do anything for attendance incidents
+    if (incident.incident_type === 'Attendance') return;
+    
+    setSelectedIncidentId(incident.id.toString());
+    setIsDetailsModalOpen(true);
   }
 
   const handleCloseModal = () => {
@@ -189,28 +242,28 @@ export default function IncidentTable() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Log #
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Time
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       From
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       To
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Occurrence
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Action
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                   </tr>
@@ -218,57 +271,44 @@ export default function IncidentTable() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {incidents.map((incident) => (
                     <tr 
-                      key={incident.id}
-                      onClick={() => handleIncidentClick(incident)}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      key={incident.id} 
+                      onClick={() => handleIncidentClick(incident)} 
+                      className={`hover:bg-gray-50 ${incident.incident_type !== 'Attendance' ? 'cursor-pointer' : ''}`}
                     >
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                      <td className="px-2 py-1 whitespace-nowrap text-xs text-blue-600">
                         {incident.log_number}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(incident.timestamp).toLocaleTimeString('en-GB')}
+                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
+                        {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
                         {incident.callsign_from}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
                         {incident.callsign_to}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-500 relative group">
-                        <div className="line-clamp-2 max-w-md">
-                          {incident.occurrence}
-                        </div>
-                        <div className="hidden group-hover:block absolute z-50 left-0 top-full mt-1 p-2 bg-gray-800 text-white text-sm rounded shadow-lg max-w-lg whitespace-pre-wrap">
-                          {incident.occurrence}
-                        </div>
+                      <td className="px-2 py-1 text-xs text-gray-500 max-w-[200px] truncate">
+                        {incident.occurrence}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
+                      <td className="px-2 py-1 whitespace-nowrap text-xs">
+                        <span className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
                           {incident.incident_type}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-500 relative group">
-                        <div className="line-clamp-2 max-w-xs">
-                          {incident.action_taken}
-                        </div>
-                        <div className="hidden group-hover:block absolute z-50 left-0 top-full mt-1 p-2 bg-gray-800 text-white text-sm rounded shadow-lg max-w-lg whitespace-pre-wrap">
-                          {incident.action_taken}
-                        </div>
+                      <td className="px-2 py-1 text-xs text-gray-500 max-w-[200px] truncate">
+                        {incident.action_taken}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                        {incident.incident_type === 'Sit Rep' ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                      <td className="px-2 py-1 whitespace-nowrap text-xs">
+                        {incident.incident_type === 'Attendance' ? (
+                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 text-blue-800">
                             Logged
                           </span>
                         ) : (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleIncidentStatus(incident)
-                            }}
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              incident.is_closed
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            onClick={(e) => toggleIncidentStatus(incident, e)}
+                            className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                              incident.is_closed 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
                                 : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                             }`}
                           >
@@ -284,12 +324,13 @@ export default function IncidentTable() {
           </div>
         </div>
       </div>
-
-      <IncidentDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={handleCloseModal}
-        incidentId={selectedIncidentId}
-      />
+      {isDetailsModalOpen && selectedIncidentId && (
+        <IncidentDetailsModal
+          isOpen={isDetailsModalOpen}
+          incidentId={selectedIncidentId}
+          onClose={handleCloseModal}
+        />
+      )}
     </>
   )
 } 
