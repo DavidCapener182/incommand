@@ -1,3 +1,5 @@
+'use client';
+
 import WeatherCard from '@/components/WeatherCard';
 
       {/* Incident Stats Row */}
