@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import Navigation from '../../components/Navigation'
 import { supabase } from '../../lib/supabase'
 import SupabaseTest from '../../components/SupabaseTest'
 
@@ -100,7 +99,6 @@ export default function SettingsPage() {
 
   return (
     <main>
-      <Navigation />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* System Status Section */}
@@ -112,32 +110,24 @@ export default function SettingsPage() {
           {/* Current Event Section */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Current Event</h2>
-            {loading ? (
-              <p className="text-gray-600">Loading...</p>
-            ) : currentEvent ? (
-              <div className="bg-white shadow rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
-                    <p className="text-gray-600">
-                      {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
-                    </p>
-                    <div className="mt-2">
-                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                        Active Event
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowEndEventConfirm(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    End Event
-                  </button>
-                </div>
+            {currentEvent ? (
+              <div className="bg-white shadow rounded-lg p-4 mb-4">
+                <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
+                <p className="text-gray-600">
+                  {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
+                </p>
+                <span className="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                  Active Event
+                </span>
+                <button
+                  onClick={() => setShowEndEventConfirm(true)}
+                  className="ml-4 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                >
+                  End Event
+                </button>
               </div>
             ) : (
-              <p className="text-gray-600">No current event set</p>
+              <p className="text-gray-600">No current event found.</p>
             )}
           </div>
 
