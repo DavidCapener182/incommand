@@ -13,8 +13,17 @@ export interface WeatherData {
 
 export const getCurrentWeather = async (lat: number, lon: number): Promise<WeatherData> => {
   try {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
     const response = await fetch(
-      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}&_=${timestamp}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      }
     );
     
     if (!response.ok) {
@@ -38,8 +47,17 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
 
 export const getWeatherAlerts = async (lat: number, lon: number): Promise<string[]> => {
   try {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
     const response = await fetch(
-      `${BASE_URL}/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily&appid=${API_KEY}`
+      `${BASE_URL}/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily&appid=${API_KEY}&_=${timestamp}`,
+      {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      }
     );
     
     if (!response.ok) {

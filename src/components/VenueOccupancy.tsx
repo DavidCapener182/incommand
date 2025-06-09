@@ -12,7 +12,7 @@ interface Props {
 export default function VenueOccupancy({ currentEventId }: Props) {
   const [currentCount, setCurrentCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
-  const [venueCapacity, setVenueCapacity] = useState<number>(3500)
+  const [expectedAttendance, setExpectedAttendance] = useState<number>(0)
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
 
   // Cleanup function to handle unsubscribe
@@ -26,27 +26,27 @@ export default function VenueOccupancy({ currentEventId }: Props) {
 
   useEffect(() => {
     if (!currentEventId) {
-      console.log('No currentEventId provided');
-      cleanup();
-      return;
+      console.log('No currentEventId provided')
+      cleanup()
+      return
     }
 
-    console.log('Setting up venue occupancy for event:', currentEventId);
+    console.log('Setting up venue occupancy for event:', currentEventId)
 
-    // Fetch initial occupancy and venue capacity
+    // Fetch initial occupancy and expected attendance
     const fetchData = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
-        // Get venue capacity from events table
+        // Get expected attendance from events table
         const { data: eventData, error: eventError } = await supabase
           .from('events')
-          .select('venue_capacity')
+          .select('expected_attendance')
           .eq('id', currentEventId)
-          .single();
+          .single()
 
-        if (eventError) throw eventError;
-        if (eventData?.venue_capacity) {
-          setVenueCapacity(parseInt(eventData.venue_capacity));
+        if (eventError) throw eventError
+        if (eventData?.expected_attendance) {
+          setExpectedAttendance(parseInt(eventData.expected_attendance))
         }
 
         // Get latest attendance count
@@ -56,28 +56,28 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .eq('event_id', currentEventId)
           .order('timestamp', { ascending: false })
           .limit(1)
-          .single();
+          .single()
 
         if (attendanceError && attendanceError.code !== 'PGRST116') {
-          throw attendanceError;
+          throw attendanceError
         }
 
         if (attendanceData) {
-          setCurrentCount(attendanceData.count);
+          setCurrentCount(attendanceData.count)
         } else {
-          setCurrentCount(0);
+          setCurrentCount(0) // Start with 0 actual attendance
         }
       } catch (err) {
-        console.error('Error fetching occupancy data:', err);
-        setCurrentCount(0);
-        setVenueCapacity(3500);
+        console.error('Error fetching occupancy data:', err)
+        setCurrentCount(0)
+        setExpectedAttendance(0)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     // Clean up any existing subscription before creating a new one
-    cleanup();
+    cleanup()
 
     // Set up real-time subscription
     subscriptionRef.current = supabase
@@ -122,7 +122,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     return cleanup;
   }, [currentEventId]);
 
-  console.log('Render state:', { loading, currentCount, venueCapacity });
+  console.log('Render state:', { loading, currentCount, expectedAttendance });
 
   if (loading) {
     return (
@@ -158,25 +158,25 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           <div className="text-center">
             <p className="text-4xl font-bold text-gray-900">
               {currentCount.toLocaleString()}
-              <span className="text-lg text-gray-500 ml-1">/ {venueCapacity.toLocaleString()}</span>
+              <span className="text-lg text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
             </p>
             <p className="text-sm font-medium text-gray-500 mt-0.5">
               Venue Occupancy
             </p>
           </div>
-          {venueCapacity > 0 && (
+          {expectedAttendance > 0 && (
             <div className="w-full space-y-1">
               <div className="flex justify-between items-center px-1">
                 <span className="text-xs font-medium" style={{ 
-                  color: currentCount > venueCapacity ? '#ef4444' : 
-                         currentCount >= venueCapacity * 0.9 ? '#f97316' : 
+                  color: currentCount > expectedAttendance ? '#ef4444' : 
+                         currentCount >= expectedAttendance * 0.9 ? '#f97316' : 
                          '#2A3990'
                 }}>
-                  {Math.round((currentCount / venueCapacity) * 100)}%
+                  {Math.round((currentCount / expectedAttendance) * 100)}%
                 </span>
-                {currentCount > venueCapacity && (
+                {currentCount > expectedAttendance && (
                   <span className="text-xs font-medium text-red-500">
-                    Over Capacity
+                    Over Expected
                   </span>
                 )}
               </div>
@@ -184,9 +184,9 @@ export default function VenueOccupancy({ currentEventId }: Props) {
                 <div 
                   className="h-2 rounded-full transition-all duration-300" 
                   style={{ 
-                    width: `${Math.min(Math.round((currentCount / venueCapacity) * 100), 100)}%`,
-                    backgroundColor: currentCount > venueCapacity ? '#ef4444' : 
-                                   currentCount >= venueCapacity * 0.9 ? '#f97316' : 
+                    width: `${Math.min(Math.round((currentCount / expectedAttendance) * 100), 100)}%`,
+                    backgroundColor: currentCount > expectedAttendance ? '#ef4444' : 
+                                   currentCount >= expectedAttendance * 0.9 ? '#f97316' : 
                                    '#2A3990'
                   }}
                 />

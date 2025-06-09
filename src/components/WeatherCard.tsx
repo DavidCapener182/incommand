@@ -32,6 +32,12 @@ export default function WeatherCard({ lat, lon, locationName }: Props) {
 
   useEffect(() => {
     fetchWeather();
+    
+    // Refresh weather data every 5 minutes
+    const refreshInterval = setInterval(fetchWeather, 5 * 60 * 1000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(refreshInterval);
   }, [lat, lon]);
 
   if (loading || !weather) {
