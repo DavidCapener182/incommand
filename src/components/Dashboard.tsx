@@ -19,6 +19,7 @@ import {
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
+import { geocodeAddress } from '../utils/geocoding'
 
 interface StatCardProps {
   title: string
@@ -229,6 +230,15 @@ export default function Dashboard() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [currentEvent, setCurrentEvent] = useState<{
+    venue_address: string;
+    expected_attendance: string;
+    venue_capacity: string;
+  } | null>(null)
+  const [coordinates, setCoordinates] = useState<{ lat: number; lon: number }>({
+    lat: 51.5074,
+    lon: -0.1278
+  })
   const [incidentStats, setIncidentStats] = useState({
     total: 0,
     high: 0,
@@ -243,26 +253,47 @@ export default function Dashboard() {
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
 
-  // Default coordinates for London (you can update these based on the event location)
-  const eventLocation = {
-    lat: 51.5074,
-    lon: -0.1278
-  };
-
   const checkCurrentEvent = async () => {
     try {
       const { data: event } = await supabase
         .from('events')
-        .select('id')
+        .select('*')
         .eq('is_current', true)
-        .single()
+        .single();
 
-      setCurrentEventId(event?.id || null)
-      setHasCurrentEvent(!!event)
+      if (event) {
+        setHasCurrentEvent(true);
+        setCurrentEventId(event.id);
+        setCurrentEvent({
+          venue_address: event.venue_address,
+          expected_attendance: event.expected_attendance,
+          venue_capacity: event.venue_capacity
+        });
+
+        // Get coordinates for the venue address
+        if (event.venue_address) {
+          try {
+            const coords = await geocodeAddress(event.venue_address);
+            setCoordinates(coords);
+          } catch (error) {
+            console.error('Error geocoding address:', error);
+          }
+        }
+      } else {
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
+        setCurrentEvent(null);
+      }
     } catch (error) {
-      console.error('Error checking current event:', error)
+      console.error('Error checking current event:', error);
     }
-  }
+  };
+
+  useEffect(() => {
+    checkCurrentEvent();
+    const interval = setInterval(checkCurrentEvent, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchIncidentStats = async () => {
     try {
@@ -313,11 +344,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    checkCurrentEvent();
-    fetchIncidentStats();
+    fetchIncidentStats()
 
     // Clean up any existing subscription
-    cleanup();
+    cleanup()
 
     // Set up new subscription
     subscriptionRef.current = supabase
@@ -329,14 +359,14 @@ export default function Dashboard() {
           table: 'incident_logs'
         }, 
         () => {
-          fetchIncidentStats();
+          fetchIncidentStats()
         }
       )
-      .subscribe();
+      .subscribe()
 
     // Cleanup on unmount
-    return cleanup;
-  }, []);
+    return cleanup
+  }, [])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -432,25 +462,14 @@ export default function Dashboard() {
 
         {/* Stats Grid - Second Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-24">
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4 h-[120px] border border-gray-100">
-            <h3 className="text-gray-500 text-sm mb-2">Venue Occupancy</h3>
-            <div className="flex items-center">
-              <span className="text-2xl font-bold">3,500</span>
-              <span className="text-gray-500 ml-2">/ 3,500</span>
-            </div>
-            <div className="mt-2">
-              <div className="bg-orange-100 rounded-full h-1">
-                <div className="bg-orange-500 h-1 rounded-full w-full"></div>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+          <VenueOccupancy currentEventId={currentEventId} />
+          {currentEvent?.venue_address && (
             <WeatherCard 
-              lat={53.4084} 
-              lon={-2.9916}
-              locationName="O2 Academy Liverpool"
+              lat={coordinates.lat} 
+              lon={coordinates.lon} 
+              locationName={currentEvent.venue_address} 
             />
-          </div>
+          )}
         </div>
 
         {/* Incident Table */}

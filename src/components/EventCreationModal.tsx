@@ -154,6 +154,36 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     }
   };
 
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    // Remove any non-numeric characters
+    const numericValue = value.replace(/\D/g, '');
+    
+    // Format the time string
+    let formattedTime = '';
+    if (numericValue.length >= 2) {
+      // Insert colon after the first two digits
+      formattedTime = numericValue.slice(0, 2) + ':' + numericValue.slice(2, 4);
+    } else {
+      formattedTime = numericValue;
+    }
+
+    // Validate the time if we have a complete time string
+    if (formattedTime.includes(':') && formattedTime.length === 5) {
+      const [hours, minutes] = formattedTime.split(':');
+      const hoursNum = parseInt(hours, 10);
+      const minutesNum = parseInt(minutes, 10);
+      
+      if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
+        setFormData(prev => ({ ...prev, [name]: formattedTime }));
+      }
+    } else {
+      // Update the form with the partial input
+      setFormData(prev => ({ ...prev, [name]: formattedTime }));
+    }
+  };
+
   const formatDateToUK = (isoDate: string) => {
     const date = new Date(isoDate);
     return date.toLocaleDateString('en-GB', {
@@ -168,34 +198,6 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     // Ensure time is in 24-hour format
     const [hours, minutes] = time.split(':');
     return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-  };
-
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // Allow empty input
-    if (!value) {
-      setFormData(prev => ({ ...prev, [name]: '' }));
-      return;
-    }
-
-    // Allow partial input while typing
-    if (value.length <= 5) {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-
-    // Only format if we have a potentially valid time
-    if (value.includes(':') && value.length === 5) {
-      const [hours, minutes] = value.split(':');
-      // Validate hours and minutes
-      const hoursNum = parseInt(hours, 10);
-      const minutesNum = parseInt(minutes, 10);
-      
-      if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
-        const formattedTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-        setFormData(prev => ({ ...prev, [name]: formattedTime }));
-      }
-    }
   };
 
   // Clean up timeouts on unmount
@@ -313,11 +315,31 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     }
   }
 
+  const renderTimeInput = (name: string, label: string, required: boolean = false) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        name={name}
+        value={formData[name]}
+        onChange={handleTimeChange}
+        placeholder="HH:mm"
+        maxLength={5}
+        inputMode="numeric"
+        pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+        className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        required={required}
+      />
+    </div>
+  );
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <label htmlFor="event_type" className="block text-sm font-medium text-gray-700">
                 Event Type <span className="text-red-500">*</span>
@@ -342,7 +364,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         )
       case 2:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <label htmlFor="event_name" className="block text-sm font-medium text-gray-700">
                 Event Name <span className="text-red-500">*</span>
@@ -442,200 +464,73 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         )
       case 4:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Event Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="event_date"
+                  value={formData.event_date}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
+              {renderTimeInput('show_stop_meeting_time', 'Show Stop Meeting Time (24h)', true)}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderTimeInput('doors_open_time', 'Doors Opening Time (24h)', true)}
+              {renderTimeInput('main_act_start_time', `${formData.artist_name || 'Main Act'} Start Time (24h)`, true)}
+            </div>
             <div>
-              <label htmlFor="event_date" className="block text-sm font-medium text-gray-700">
-                Event Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="event_date"
-                id="event_date"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.event_date}
-                onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  const day = String(date.getDate()).padStart(2, '0');
-                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                  const year = date.getFullYear();
-                  const formattedDate = `${year}-${month}-${day}`;
-                  setFormData(prev => ({ ...prev, event_date: formattedDate }));
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Support Acts</h3>
+              {formData.support_acts.map((act, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <input
+                    type="text"
+                    value={act.act_name}
+                    onChange={(e) => {
+                      const newActs = [...formData.support_acts];
+                      newActs[index].act_name = e.target.value;
+                      setFormData(prev => ({ ...prev, support_acts: newActs }));
+                    }}
+                    placeholder="Act Name"
+                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <input
+                    type="time"
+                    value={act.start_time}
+                    onChange={(e) => {
+                      const newActs = [...formData.support_acts];
+                      newActs[index].start_time = e.target.value;
+                      setFormData(prev => ({ ...prev, support_acts: newActs }));
+                    }}
+                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    support_acts: [...prev.support_acts, { act_name: '', start_time: '' }]
+                  }));
                 }}
-              />
+                className="mt-2 inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                + Add Support Act
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="security_call_time" className="block text-sm font-medium text-gray-700">
-                  Security Call Time (24h) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="security_call_time"
-                  id="security_call_time"
-                  required
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 17:30)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.security_call_time}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
-              <div>
-                <label htmlFor="show_stop_meeting_time" className="block text-sm font-medium text-gray-700">
-                  Show Stop Meeting Time (24h) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="show_stop_meeting_time"
-                  id="show_stop_meeting_time"
-                  required
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 18:00)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.show_stop_meeting_time}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="doors_open_time" className="block text-sm font-medium text-gray-700">
-                  Doors Opening Time (24h) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="doors_open_time"
-                  id="doors_open_time"
-                  required
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 19:00)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.doors_open_time}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
-              <div>
-                <label htmlFor="main_act_start_time" className="block text-sm font-medium text-gray-700">
-                  {formData.artist_name} Start Time (24h) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="main_act_start_time"
-                  id="main_act_start_time"
-                  required
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 20:30)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.main_act_start_time}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Support Acts</label>
-              <div className="space-y-2">
-                {formData.support_acts.map((act, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={act.act_name}
-                      onChange={(e) => {
-                        const newActs = [...formData.support_acts];
-                        newActs[index].act_name = e.target.value;
-                        setFormData(prev => ({ ...prev, support_acts: newActs }));
-                      }}
-                      placeholder="Act Name"
-                      className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      value={act.start_time}
-                      pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                      placeholder="HH:mm"
-                      onChange={(e) => {
-                        const newActs = [...formData.support_acts];
-                        newActs[index].start_time = e.target.value;
-                        setFormData(prev => ({ ...prev, support_acts: newActs }));
-                      }}
-                      className="w-32 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newActs = formData.support_acts.filter((_, i) => i !== index);
-                        setFormData(prev => ({ ...prev, support_acts: newActs }));
-                      }}
-                      className="p-2 text-red-600 hover:text-red-800"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      support_acts: [...prev.support_acts, { act_name: '', start_time: '' }]
-                    }));
-                  }}
-                  className="mt-2 inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  + Add Support Act
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="show_down_time" className="block text-sm font-medium text-gray-700">
-                  Show Down Time (24h) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="show_down_time"
-                  id="show_down_time"
-                  required
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 23:00)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.show_down_time}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
-              <div>
-                <label htmlFor="curfew_time" className="block text-sm font-medium text-gray-700">
-                  Curfew Time (24h)
-                </label>
-                <input
-                  type="text"
-                  name="curfew_time"
-                  id="curfew_time"
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                  placeholder="HH:mm (e.g., 23:30)"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.curfew_time || ''}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                  aria-label="Enter time in 24-hour format (HH:mm)"
-                  maxLength={5}
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderTimeInput('show_down_time', 'Show Down Time (24h)', true)}
+              {renderTimeInput('curfew_time', 'Curfew Time (24h)')}
             </div>
           </div>
         )
