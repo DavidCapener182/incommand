@@ -1,26 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { WeatherData, getCurrentWeather, getWeatherAlerts } from '@/services/weatherService';
+import { WeatherData, getCurrentWeather } from '@/services/weatherService';
 import { CloudIcon, SunIcon, BoltIcon } from '@heroicons/react/24/outline';
+
+interface HourlyForecast {
+  time: string;
+  temp: number;
+  description: string;
+}
 
 interface Props {
   lat: number;
   lon: number;
   locationName: string;
+  eventDate: string;
+  startTime: string;
+  curfewTime: string;
 }
 
-export default function WeatherCard({ lat, lon, locationName }: Props) {
+export default function WeatherCard({ lat, lon, locationName, eventDate, startTime, curfewTime }: Props) {
+  console.log('WeatherCard coordinates:', lat, lon);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hourly, setHourly] = useState<HourlyForecast[]>([]);
 
   const fetchWeather = async () => {
     try {
       setLoading(true);
       const weatherData = await getCurrentWeather(lat, lon);
-      const alerts = await getWeatherAlerts(lat, lon);
-      setWeather({ ...weatherData, alerts });
+      setWeather(weatherData);
       setError(null);
     } catch (err) {
       console.error('Error fetching weather:', err);
@@ -30,13 +40,33 @@ export default function WeatherCard({ lat, lon, locationName }: Props) {
     }
   };
 
+  // Fetch hourly forecast for the event day
+  const fetchHourly = async () => {
+    try {
+      const params = new URLSearchParams({
+        lat: lat.toString(),
+        lon: lon.toString(),
+        event_date: eventDate,
+        start_time: startTime,
+        curfew_time: curfewTime
+      });
+      const response = await fetch(`/api/hourly-forecast?${params.toString()}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setHourly(data);
+    } catch (err) {
+      console.error('Error fetching hourly forecast:', err);
+    }
+  };
+
   useEffect(() => {
     fetchWeather();
-    
+    fetchHourly();
     // Refresh weather data every 5 minutes
-    const refreshInterval = setInterval(fetchWeather, 5 * 60 * 1000);
-    
-    // Cleanup interval on unmount
+    const refreshInterval = setInterval(() => {
+      fetchWeather();
+      fetchHourly();
+    }, 5 * 60 * 1000);
     return () => clearInterval(refreshInterval);
   }, [lat, lon]);
 
@@ -63,6 +93,10 @@ export default function WeatherCard({ lat, lon, locationName }: Props) {
         <p className="text-red-500 text-xs">{error}</p>
       </div>
     );
+  }
+
+  if (weather) {
+    console.log('WeatherCard display value:', weather);
   }
 
   const getWeatherBackground = () => {
@@ -134,9 +168,18 @@ export default function WeatherCard({ lat, lon, locationName }: Props) {
           <WeatherIcon />
         </div>
       </div>
-      {weather.alerts && weather.alerts.length > 0 && (
-        <div className="mt-2 p-2 bg-red-100 bg-opacity-60 rounded-md">
-          <p className="text-xs font-medium text-red-700">Weather Alert: {weather.alerts[0]}</p>
+      {/* Scrollable hourly forecast banner */}
+      {hourly.length > 0 && (
+        <div className="mt-4 overflow-x-auto whitespace-nowrap border-t pt-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="flex space-x-6 min-w-max">
+            {hourly.map((h, idx) => (
+              <div key={idx} className="inline-block text-center min-w-[60px]">
+                <div className="text-xs text-gray-500">{h.time}</div>
+                <div className="text-sm font-semibold">{Math.round(h.temp)}°C</div>
+                <div className="text-xs text-gray-600 truncate max-w-[60px]">{h.description}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

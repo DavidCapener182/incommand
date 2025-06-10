@@ -234,6 +234,9 @@ export default function Dashboard() {
     venue_address: string;
     expected_attendance: string;
     venue_capacity: string;
+    event_date?: string;
+    main_act_start_time?: string;
+    curfew_time?: string;
   } | null>(null)
   const [coordinates, setCoordinates] = useState<{ lat: number; lon: number }>({
     lat: 51.5074,
@@ -267,7 +270,10 @@ export default function Dashboard() {
         setCurrentEvent({
           venue_address: event.venue_address,
           expected_attendance: event.expected_attendance,
-          venue_capacity: event.venue_capacity
+          venue_capacity: event.venue_capacity,
+          event_date: event.event_date,
+          main_act_start_time: event.main_act_start_time,
+          curfew_time: event.curfew_time
         });
 
         // Get coordinates for the venue address
@@ -468,6 +474,9 @@ export default function Dashboard() {
               lat={coordinates.lat} 
               lon={coordinates.lon} 
               locationName={currentEvent.venue_address} 
+              eventDate={currentEvent.event_date || ''}
+              startTime={currentEvent.main_act_start_time || ''}
+              curfewTime={currentEvent.curfew_time || ''}
             />
           )}
         </div>

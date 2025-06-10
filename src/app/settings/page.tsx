@@ -112,19 +112,19 @@ export default function SettingsPage() {
             <h2 className="text-2xl font-bold mb-4">Current Event</h2>
             {currentEvent ? (
               <div className="bg-white shadow rounded-lg p-4 mb-4">
-                <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
-                <p className="text-gray-600">
-                  {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
-                </p>
+                    <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
+                    <p className="text-gray-600">
+                      {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
+                    </p>
                 <span className="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                  Active Event
-                </span>
-                <button
-                  onClick={() => setShowEndEventConfirm(true)}
+                        Active Event
+                      </span>
+                  <button
+                    onClick={() => setShowEndEventConfirm(true)}
                   className="ml-4 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                >
-                  End Event
-                </button>
+                  >
+                    End Event
+                  </button>
               </div>
             ) : (
               <p className="text-gray-600">No current event found.</p>
