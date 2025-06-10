@@ -104,11 +104,21 @@ export default function CurrentEvent() {
                   <span className="text-base font-semibold text-gray-900 ml-2">
                     {currentEvent.event_name}
                   </span>
-                  {currentEvent.support_acts && currentEvent.support_acts.length > 0 && (
+                  {currentEvent.support_acts && (() => {
+                    let acts = currentEvent.support_acts;
+                    if (typeof acts === 'string') {
+                      try {
+                        acts = JSON.parse(acts);
+                      } catch {
+                        acts = [];
+                      }
+                    }
+                    return Array.isArray(acts) && acts.length > 0 ? (
                     <span className="text-sm font-normal text-gray-500 ml-2">
-                      (+ {currentEvent.support_acts.length} support {currentEvent.support_acts.length === 1 ? 'act' : 'acts'})
+                        {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
                     </span>
-                  )}
+                    ) : null;
+                  })()}
                 </div>
               </div>
               <div className="flex items-center">
@@ -121,20 +131,20 @@ export default function CurrentEvent() {
               </div>
               <div className="mt-4">
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  {currentEvent.event_description || (() => {
+                  {(currentEvent.event_description || (() => {
                     const type = currentEvent.event_type.toLowerCase();
                     if (type.includes('concert')) {
-                      return `Key crowd management focus: Monitor stage barriers and potential mosh areas. Watch for crowd surge during popular songs. Ensure clear exit paths and manage entry flow at peak times.`;
+                      return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times.`;
                     } else if (type.includes('comedy')) {
-                      return `Crowd considerations: Manage seating transitions and interval queuing. Monitor bar areas during breaks. Standard entry/exit flow management required.`;
+                      return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
                     } else if (type.includes('theatre')) {
-                      return `Focus areas: Coordinated seating entry/exit, especially during intermission. Monitor merchandise areas and manage cloakroom queues.`;
+                      return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
                     } else if (type.includes('sport')) {
-                      return `Priority: Separate opposing fan sections. Enhanced monitoring at refreshment areas during breaks. Coordinate with stewards for crowd flow at key moments.`;
+                      return `Separate opposing fans and monitor refreshment areas during breaks.`;
                     } else {
-                      return `Crowd management priorities: Monitor venue capacity at key areas. Maintain clear exit routes. Regular checks of high-traffic zones required.`;
+                      return `Monitor venue capacity and maintain clear exit routes.`;
                     }
-                  })()}
+                  })()).split(/(?<=[.!?])\s+/).slice(0,2).join(' ')}
                 </p>
               </div>
             </div>

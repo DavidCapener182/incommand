@@ -8,30 +8,16 @@ export interface WeatherData {
   windSpeed: number;
   humidity: number;
   rain?: number;
-  alerts?: string[];
 }
 
 export const getCurrentWeather = async (lat: number, lon: number): Promise<WeatherData> => {
   try {
-    // Add timestamp to prevent caching
-    const timestamp = new Date().getTime();
-    const response = await fetch(
-      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}&_=${timestamp}`,
-      {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      }
-    );
-    
+    const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
     if (!response.ok) {
       throw new Error('Failed to fetch weather data');
     }
-
     const data = await response.json();
-
+    console.log('Current weather API response:', data); // Debug log
     return {
       temperature: Math.round(data.main.temp),
       description: data.weather[0].description,
@@ -42,32 +28,5 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
   } catch (error) {
     console.error('Error fetching weather:', error);
     throw error;
-  }
-};
-
-export const getWeatherAlerts = async (lat: number, lon: number): Promise<string[]> => {
-  try {
-    // Add timestamp to prevent caching
-    const timestamp = new Date().getTime();
-    const response = await fetch(
-      `${BASE_URL}/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily&appid=${API_KEY}&_=${timestamp}`,
-      {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      }
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch weather alerts');
-    }
-
-    const data = await response.json();
-    return data.alerts?.map((alert: any) => alert.event) || [];
-  } catch (error) {
-    console.error('Error fetching weather alerts:', error);
-    return [];
   }
 }; 

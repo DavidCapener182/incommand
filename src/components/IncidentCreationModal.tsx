@@ -1530,76 +1530,76 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             incident_type: 'Event Timing'
           };
         } else {
-          switch (incidentType) {
-            case 'Medical':
-              processedData = await parseMedicalIncident(input);
-              break;
-            case 'Ejection':
-              processedData = await parseEjectionIncident(input);
-              break;
-            case 'Refusal':
-              processedData = await parseRefusalIncident(input);
-              break;
-            case 'Attendance':
-              processedData = await parseAttendanceIncident(input);
-              break;
-            case 'Welfare':
-              processedData = await parseWelfareIncident(input);
-              break;
-            case 'Lost Property':
-              processedData = await parseLostPropertyIncident(input);
-              break;
-            case 'Suspicious Behaviour':
-              processedData = await parseSuspiciousBehaviourIncident(input);
-              break;
-            case 'Aggressive Behaviour':
-              processedData = await parseAggressiveBehaviourIncident(input);
-              break;
-            case 'Queue Build-Up':
-              processedData = await parseQueueBuildUpIncident(input);
-              break;
-            case 'Technical Issue':
-              processedData = await parseTechnicalIncident(input);
-              break;
-            case 'Weather Disruption':
-              processedData = await parseWeatherDisruptionIncident(input);
-              break;
-            default:
-              // Use the general incident endpoint for all other types
-              try {
-                const response = await fetch('/api/generate-incident-details', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    input,
-                    incident_type: incidentType,
-                    location,
-                    description: input,
-                    callsign
-                  })
-                });
+        switch (incidentType) {
+          case 'Medical':
+            processedData = await parseMedicalIncident(input);
+            break;
+          case 'Ejection':
+            processedData = await parseEjectionIncident(input);
+            break;
+          case 'Refusal':
+            processedData = await parseRefusalIncident(input);
+            break;
+          case 'Attendance':
+            processedData = await parseAttendanceIncident(input);
+            break;
+          case 'Welfare':
+            processedData = await parseWelfareIncident(input);
+            break;
+          case 'Lost Property':
+            processedData = await parseLostPropertyIncident(input);
+            break;
+          case 'Suspicious Behaviour':
+            processedData = await parseSuspiciousBehaviourIncident(input);
+            break;
+          case 'Aggressive Behaviour':
+            processedData = await parseAggressiveBehaviourIncident(input);
+            break;
+          case 'Queue Build-Up':
+            processedData = await parseQueueBuildUpIncident(input);
+            break;
+          case 'Technical Issue':
+            processedData = await parseTechnicalIncident(input);
+            break;
+          case 'Weather Disruption':
+            processedData = await parseWeatherDisruptionIncident(input);
+            break;
+          default:
+            // Use the general incident endpoint for all other types
+            try {
+              const response = await fetch('/api/generate-incident-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  input,
+                  incident_type: incidentType,
+                  location,
+                  description: input,
+                  callsign
+                })
+              });
 
-                if (!response.ok) {
-                  throw new Error('Failed to generate incident details');
-                }
-
-                const data = await response.json();
-                processedData = {
-                  occurrence: data.occurrence || input,
-                  action_taken: data.action_taken || 'Incident logged and being monitored.',
-                  callsign_from: callsign,
-                  incident_type: incidentType
-                };
-              } catch (error) {
-                console.error('Error generating incident details:', error);
-                processedData = {
-                  occurrence: input,
-                  action_taken: 'Incident logged and being monitored.',
-                  callsign_from: callsign,
-                  incident_type: incidentType
-                };
+              if (!response.ok) {
+                throw new Error('Failed to generate incident details');
               }
-          }
+
+              const data = await response.json();
+              processedData = {
+                occurrence: data.occurrence || input,
+                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: incidentType
+              };
+            } catch (error) {
+              console.error('Error generating incident details:', error);
+              processedData = {
+                occurrence: input,
+                action_taken: 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: incidentType
+              };
+              }
+            }
         }
 
         // Get current event for log number generation
@@ -1718,77 +1718,77 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             incident_type: 'Timings'
           };
         } else {
-          // Handle different incident types
-          switch (detectedType) {
-            case 'Medical':
-              result = await parseMedicalIncident(input);
-              break;
-            case 'Refusal':
-              result = await parseRefusalIncident(input);
-              break;
-            case 'Ejection':
-              result = await parseEjectionIncident(input);
-              break;
-            case 'Attendance':
-              result = await parseAttendanceIncident(input);
-              break;
-            case 'Welfare':
-              result = await parseWelfareIncident(input);
-              break;
-            case 'Lost Property':
-              result = await parseLostPropertyIncident(input);
-              break;
-            case 'Suspicious Behaviour':
-              result = await parseSuspiciousBehaviourIncident(input);
-              break;
-            case 'Aggressive Behaviour':
-              result = await parseAggressiveBehaviourIncident(input);
-              break;
-            case 'Queue Build-Up':
-              result = await parseQueueBuildUpIncident(input);
-              break;
-            case 'Technical Issue':
-              result = await parseTechnicalIncident(input);
-              break;
-            case 'Weather Disruption':
-              result = await parseWeatherDisruptionIncident(input);
-              break;
-            default:
-              // Use the general incident endpoint for all other types
-              try {
-                const response = await fetch('/api/generate-incident-details', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    input,
-                    incident_type: detectedType,
-                    location,
-                    description: input,
-                    callsign
-                  })
-                });
+        // Handle different incident types
+        switch (detectedType) {
+          case 'Medical':
+            result = await parseMedicalIncident(input);
+            break;
+          case 'Refusal':
+            result = await parseRefusalIncident(input);
+            break;
+          case 'Ejection':
+            result = await parseEjectionIncident(input);
+            break;
+          case 'Attendance':
+            result = await parseAttendanceIncident(input);
+            break;
+          case 'Welfare':
+            result = await parseWelfareIncident(input);
+            break;
+          case 'Lost Property':
+            result = await parseLostPropertyIncident(input);
+            break;
+          case 'Suspicious Behaviour':
+            result = await parseSuspiciousBehaviourIncident(input);
+            break;
+          case 'Aggressive Behaviour':
+            result = await parseAggressiveBehaviourIncident(input);
+            break;
+          case 'Queue Build-Up':
+            result = await parseQueueBuildUpIncident(input);
+            break;
+          case 'Technical Issue':
+            result = await parseTechnicalIncident(input);
+            break;
+          case 'Weather Disruption':
+            result = await parseWeatherDisruptionIncident(input);
+            break;
+          default:
+            // Use the general incident endpoint for all other types
+            try {
+              const response = await fetch('/api/generate-incident-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  input,
+                  incident_type: detectedType,
+                  location,
+                  description: input,
+                  callsign
+                })
+              });
 
-                if (!response.ok) {
-                  throw new Error('Failed to generate incident details');
-                }
-
-                const data = await response.json();
-                result = {
-                  occurrence: data.occurrence || input,
-                  action_taken: data.action_taken || 'Incident logged and being monitored.',
-                  callsign_from: callsign,
-                  incident_type: detectedType
-                };
-              } catch (error) {
-                console.error('Error generating incident details:', error);
-                result = {
-                  occurrence: input,
-                  action_taken: 'Incident logged and being monitored.',
-                  callsign_from: callsign,
-                  incident_type: detectedType
-                };
+              if (!response.ok) {
+                throw new Error('Failed to generate incident details');
               }
-          }
+
+              const data = await response.json();
+              result = {
+                occurrence: data.occurrence || input,
+                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: detectedType
+              };
+            } catch (error) {
+              console.error('Error generating incident details:', error);
+              result = {
+                occurrence: input,
+                action_taken: 'Incident logged and being monitored.',
+                callsign_from: callsign,
+                incident_type: detectedType
+              };
+              }
+            }
         }
 
         if (result) {
