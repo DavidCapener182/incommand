@@ -97,8 +97,14 @@ export default function DashboardPage() {
             lat={51.5033} 
             lon={0.0030} 
             locationName="Peninsula Square, Greenwich Peninsula, London SE10 0DX" 
+            eventDate="2024-01-01"
+            startTime="18:00"
+            curfewTime="23:00"
           />
         </div>
+      </div>
+      <div className="flex justify-end mb-6">
+        <a href="/callsign-assignment" className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">Manage Callsign Assignments</a>
       </div>
     </div>
   );
