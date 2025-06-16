@@ -39,6 +39,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [editMode, setEditMode] = useState(false)
   const [editedIncident, setEditedIncident] = useState<Partial<Incident>>({})
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
+  const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
+  const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -77,6 +80,50 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     // Cleanup on unmount or when modal closes
     return cleanup;
   }, [isOpen, incidentId]);
+
+  useEffect(() => {
+    // Fetch current event id
+    const fetchEvent = async () => {
+      const { data: eventData } = await supabase
+        .from('events')
+        .select('id')
+        .eq('is_current', true)
+        .single();
+      setCurrentEventId(eventData?.id || null);
+    };
+    fetchEvent();
+  }, []);
+
+  useEffect(() => {
+    if (!currentEventId) return;
+    const fetchAssignments = async () => {
+      const { data: roles } = await supabase
+        .from('callsign_roles')
+        .select('id, short_code, callsign')
+        .eq('event_id', currentEventId);
+      const { data: assignments } = await supabase
+        .from('callsign_assignments')
+        .select('callsign_role_id, assigned_name')
+        .eq('event_id', currentEventId);
+      const idToShort: Record<string, string> = {};
+      const idToCallsign: Record<string, string> = {};
+      roles?.forEach((r) => {
+        idToShort[r.id] = r.short_code;
+        idToCallsign[r.id] = r.callsign;
+      });
+      const shortToName: Record<string, string> = {};
+      const callsignToName: Record<string, string> = {};
+      assignments?.forEach((a) => {
+        const short = idToShort[a.callsign_role_id];
+        const cs = idToCallsign[a.callsign_role_id];
+        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
+        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+      });
+      setCallsignAssignments(callsignToName);
+      setCallsignShortToName(shortToName);
+    };
+    fetchAssignments();
+  }, [currentEventId]);
 
   const fetchIncidentDetails = async () => {
     if (!incidentId) return
@@ -294,11 +341,35 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">From</p>
-                      <p className="mt-1">{incident?.callsign_from}</p>
+                      <p className="mt-1">
+                        <span
+                          title={
+                            incident?.callsign_from &&
+                            (callsignShortToName[incident.callsign_from.toUpperCase()] ||
+                              callsignAssignments[incident.callsign_from.toUpperCase()] ||
+                              undefined)
+                          }
+                          className="underline decoration-dotted cursor-help"
+                        >
+                          {incident?.callsign_from}
+                        </span>
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">To</p>
-                      <p className="mt-1">{incident?.callsign_to}</p>
+                      <p className="mt-1">
+                        <span
+                          title={
+                            incident?.callsign_to &&
+                            (callsignShortToName[incident.callsign_to.toUpperCase()] ||
+                              callsignAssignments[incident.callsign_to.toUpperCase()] ||
+                              undefined)
+                          }
+                          className="underline decoration-dotted cursor-help"
+                        >
+                          {incident?.callsign_to}
+                        </span>
+                      </p>
                     </div>
                   </div>
                   <div>

@@ -2,7 +2,7 @@
 // NOTE: You must install 'react-chartjs-2' and 'chart.js' for this page to work:
 // npm install react-chartjs-2 chart.js
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
@@ -17,7 +17,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaArrowUp, FaArrowDown, FaArrowRight, FaFileExport, FaPrint, FaMapMarkerAlt, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 
 ChartJS.register(
   CategoryScale,
@@ -45,6 +45,28 @@ interface IncidentRecord {
   occurrence?: string;
 }
 
+function msToTime(duration: number | null) {
+  if (duration === null) return 'N/A';
+  let seconds = Math.floor((duration / 1000) % 60),
+    minutes = Math.floor((duration / (1000 * 60)) % 60),
+    hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  return `${hours ? hours + 'h ' : ''}${minutes}m ${seconds}s`;
+}
+
+// Loading skeleton component
+function Skeleton({ height = 24, width = '100%' }) {
+  return <div style={{ height, width }} className="bg-gray-200 animate-pulse rounded" />;
+}
+
+// Confidence bar
+function ConfidenceBar({ value }: { value: number }) {
+  return (
+    <div className="w-full h-2 bg-gray-200 rounded">
+      <div className="h-2 bg-blue-500 rounded" style={{ width: `${Math.round(value * 100)}%` }} />
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [incidentData, setIncidentData] = useState<IncidentRecord[]>([]);
@@ -56,6 +78,14 @@ export default function AnalyticsPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [heatmapData, setHeatmapData] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<{ avgResponseTimeMs: number | null; avgResolutionTimeMs: number | null }>({ avgResponseTimeMs: null, avgResolutionTimeMs: null });
+  const [predictions, setPredictions] = useState<{ likelyType: string | null; likelyLocation: string | null; likelyHour: string | null }>({ likelyType: null, likelyLocation: null, likelyHour: null });
+  const [debrief, setDebrief] = useState<{ summary: string; learningPoints: string[]; callsignSheet: any[] }>({ summary: '', learningPoints: [], callsignSheet: [] });
+  const [loadingHeatmap, setLoadingHeatmap] = useState(true);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [loadingPredictions, setLoadingPredictions] = useState(true);
+  const [loadingDebrief, setLoadingDebrief] = useState(true);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -145,6 +175,48 @@ export default function AnalyticsPage() {
     // Always return a cleanup function
     return () => {};
   }, [aiInsights]);
+
+  useEffect(() => {
+    setLoadingHeatmap(true);
+    fetch('/api/analytics/incident-heatmap').then(r => r.json()).then(d => { setHeatmapData(d); setLoadingHeatmap(false); });
+    setLoadingMetrics(true);
+    fetch('/api/analytics/performance-metrics').then(r => r.json()).then(d => { setMetrics(d); setLoadingMetrics(false); });
+    setLoadingPredictions(true);
+    fetch('/api/analytics/predictions').then(r => r.json()).then(d => { setPredictions(d); setLoadingPredictions(false); });
+    setLoadingDebrief(true);
+    fetch('/api/analytics/debrief-summary').then(r => r.json()).then(d => { setDebrief(d); setLoadingDebrief(false); });
+  }, []);
+
+  // Trend logic (dummy, replace with real trend calc if you have time series)
+  const trend = (arr: number[]) => {
+    if (arr.length < 2) return 'flat';
+    if (arr[arr.length - 1] > arr[0]) return 'up';
+    if (arr[arr.length - 1] < arr[0]) return 'down';
+    return 'flat';
+  };
+
+  // Export/print handlers (dummy)
+  const handleExport = () => {
+    // TODO: Implement PDF export using html2pdf.js or similar
+    // html2pdf(document.getElementById('debrief-report'));
+    alert('PDF export coming soon!');
+  };
+  const handlePrint = () => window.print();
+
+  // Schematic overlay for heatmap (colored dots)
+  function SchematicHeatmap() {
+    const locations = Array.from(new Set(heatmapData.map((d: any) => d.location)));
+    return (
+      <div className="relative w-full h-64 bg-gray-100 rounded">
+        {locations.map((loc, i) => (
+          <div key={loc} className="absolute left-[10%] top-[10%]" style={{ left: `${10 + i * 10}%`, top: `${10 + (i % 3) * 20}%` }}>
+            <span className="inline-block w-6 h-6 rounded-full bg-red-500 opacity-70 border-2 border-white shadow-lg" title={loc} />
+            <span className="absolute left-8 top-1 text-xs text-gray-700">{loc}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   // --- Attendance Timeline (existing, now larger) ---
   const attendanceChartData = {
@@ -310,39 +382,98 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Analytics</h1>
-      {/* AI Insight Card */}
-      <div className="mb-8">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-2">AI Insight</h2>
-          <div className="flex items-center gap-2 mb-2">
-            <button
-              aria-label="Previous insight"
-              className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-              onClick={() => setAiInsightIndex((prev) => (prev - 1 + aiInsights.length) % aiInsights.length)}
-              disabled={aiInsights.length <= 1}
-            >
-              <FaChevronLeft />
-            </button>
-            <span className="text-xs text-gray-500">
-              {aiInsights.length > 0 ? `${aiInsightIndex + 1} / ${aiInsights.length}` : ''}
-            </span>
-            <button
-              aria-label="Next insight"
-              className="p-2 rounded hover:bg-gray-100 disabled:opacity-50"
-              onClick={() => setAiInsightIndex((prev) => (prev + 1) % aiInsights.length)}
-              disabled={aiInsights.length <= 1}
-            >
-              <FaChevronRight />
-            </button>
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 md:py-8">
+      <h1 className="text-3xl font-bold mb-6 text-gray-900">Analytics Dashboard</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 mt-8">
+        {/* Incident Heatmap Widget */}
+        <div className="bg-white rounded shadow p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Incident Heatmap</h2>
+            <FaMapMarkerAlt className="text-blue-500" />
           </div>
-          {aiLoading && <p>Generating insights...</p>}
-          {aiError && <p className="text-red-500">{aiError}</p>}
-          {aiInsights.length > 0 && !aiLoading && !aiError && (
-            <div>{renderInsight(aiInsights[aiInsightIndex])}</div>
+          {loadingHeatmap ? <Skeleton height={256} /> : <SchematicHeatmap />}
+        </div>
+        {/* Performance Metrics Widget */}
+        <div className="bg-white rounded shadow p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Performance Metrics</h2>
+            <FaClock className="text-blue-500" />
+          </div>
+          {loadingMetrics ? (
+            <Skeleton height={48} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">Average Response Time: <span className="font-mono text-gray-900">{msToTime(metrics.avgResponseTimeMs)}</span>
+                {trend([metrics.avgResponseTimeMs || 0, (metrics.avgResponseTimeMs || 0) + 1000]) === 'up' && <FaArrowUp className="text-red-500" />}
+                {trend([metrics.avgResponseTimeMs || 0, (metrics.avgResponseTimeMs || 0) - 1000]) === 'down' && <FaArrowDown className="text-green-500" />}
+                {trend([metrics.avgResponseTimeMs || 0, metrics.avgResponseTimeMs || 0]) === 'flat' && <FaArrowRight className="text-gray-400" />}
+              </div>
+              <div className="flex items-center gap-2">Average Resolution Time: <span className="font-mono text-gray-900">{msToTime(metrics.avgResolutionTimeMs)}</span>
+                {trend([metrics.avgResolutionTimeMs || 0, (metrics.avgResolutionTimeMs || 0) + 1000]) === 'up' && <FaArrowUp className="text-red-500" />}
+                {trend([metrics.avgResolutionTimeMs || 0, (metrics.avgResolutionTimeMs || 0) - 1000]) === 'down' && <FaArrowDown className="text-green-500" />}
+                {trend([metrics.avgResolutionTimeMs || 0, metrics.avgResolutionTimeMs || 0]) === 'flat' && <FaArrowRight className="text-gray-400" />}
+              </div>
+            </div>
           )}
-          {aiInsights.length === 0 && !aiLoading && !aiError && <p>No insights to show yet.</p>}
+        </div>
+        {/* Trends & Predictive AI Widget */}
+        <div className="bg-white rounded shadow p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Trends & Predictive AI</h2>
+            <FaExclamationTriangle className="text-yellow-500" />
+          </div>
+          {loadingPredictions ? (
+            <Skeleton height={48} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">Most Likely Next Incident Type: <span className="font-mono text-gray-900">{predictions.likelyType || 'N/A'}</span>
+                <ConfidenceBar value={0.8} />
+              </div>
+              <div className="flex items-center gap-2">Most Likely Location: <span className="font-mono text-gray-900">{predictions.likelyLocation || 'N/A'}</span></div>
+              <div className="flex items-center gap-2">Most Likely Hour: <span className="font-mono text-gray-900">{predictions.likelyHour || 'N/A'}</span></div>
+            </div>
+          )}
+        </div>
+        {/* Debrief Summary Widget */}
+        <div className="bg-white rounded shadow p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Debrief Summary</h2>
+            <div className="flex gap-2">
+              <button onClick={handleExport} className="p-1 text-blue-500 hover:text-blue-700" aria-label="Export"><FaFileExport /></button>
+              <button onClick={handlePrint} className="p-1 text-blue-500 hover:text-blue-700" aria-label="Print"><FaPrint /></button>
+            </div>
+          </div>
+          <div id="debrief-report">
+            <div className="mb-2 text-gray-900">{debrief.summary}</div>
+            <ul className="list-disc ml-6 mb-4">
+              {(debrief.learningPoints || []).map((pt, i) => (
+                <li key={i}>{pt}</li>
+              ))}
+            </ul>
+            {(debrief.callsignSheet || []).length > 0 && (
+              <div className="overflow-x-auto">
+                <h3 className="font-semibold mb-2">Final Callsign/Radio Assignment Sheet</h3>
+                <table className="min-w-full border text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border px-2 py-1">Callsign</th>
+                      <th className="border px-2 py-1">Position</th>
+                      <th className="border px-2 py-1">Assigned Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(debrief.callsignSheet || []).map((row: any, i: number) => (
+                      <tr key={i}>
+                        <td className="border px-2 py-1 font-mono">{row.callsign}</td>
+                        <td className="border px-2 py-1">{row.position}</td>
+                        <td className="border px-2 py-1">{row.assigned_name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -420,7 +551,7 @@ export default function AnalyticsPage() {
           <p>No occupancy peaks detected (over 90% capacity).</p>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   const { event_id } = req.query;
   if (!event_id || typeof event_id !== 'string') {

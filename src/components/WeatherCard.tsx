@@ -168,20 +168,6 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
           <WeatherIcon />
         </div>
       </div>
-      {/* Scrollable hourly forecast banner */}
-      {hourly.length > 0 && (
-        <div className="mt-4 overflow-x-auto whitespace-nowrap border-t pt-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-          <div className="flex space-x-6 min-w-max">
-            {hourly.map((h, idx) => (
-              <div key={idx} className="inline-block text-center min-w-[60px]">
-                <div className="text-xs text-gray-500">{h.time}</div>
-                <div className="text-sm font-semibold">{Math.round(h.temp)}°C</div>
-                <div className="text-xs text-gray-600 truncate max-w-[60px]">{h.description}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
