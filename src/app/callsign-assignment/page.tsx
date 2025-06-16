@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 // Initial groupings and roles as per user specification
@@ -16,8 +16,7 @@ const initialGroups = [
   {
     group: "External",
     positions: [
-      { id: "a4", callsign: "ALPHA 4", short: "A4", position: "Queue Management" },
-      { id: "s1", callsign: "SIERRA 1", short: "S1", position: "Search Supervisor" },
+      { id: "s1", callsign: "SIERRA 1", short: "S1", position: "Queue Management" },
       { id: "s7", callsign: "SIERRA 7", short: "S7", position: "Access Escort" },
       { id: "s8", callsign: "SIERRA 8", short: "S8", position: "Hotel Gate" },
       { id: "s12", callsign: "SIERRA 12", short: "S12", position: "Side Gate" },
@@ -74,9 +73,138 @@ export default function CallsignAssignmentPage() {
   const [newRole, setNewRole] = useState({ callsign: "", short: "", position: "" });
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [eventId, setEventId] = useState<string | null>(null);
+  const [eventName, setEventName] = useState<string>("");
+  const [eventLoading, setEventLoading] = useState(true);
+  const [eventError, setEventError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [previousNames, setPreviousNames] = useState<Record<string, string[]>>({});
+  const [allPreviousNames, setAllPreviousNames] = useState<string[]>([]);
 
-  // Placeholder event_id (replace with real event selection logic)
-  const event_id = "demo-event-id";
+  // Fetch current event on mount
+  useEffect(() => {
+    const fetchCurrentEvent = async () => {
+      setEventLoading(true);
+      setEventError(null);
+      try {
+        const { data, error } = await supabase
+          .from("events")
+          .select("id, event_name")
+          .eq("is_current", true)
+          .single();
+        if (error) throw error;
+        if (!data) {
+          setEventError("No current event found. Please set a current event in Settings.");
+          setEventId(null);
+          setEventName("");
+        } else {
+          setEventId(data.id);
+          setEventName(data.event_name || "");
+        }
+      } catch (err: any) {
+        setEventError("Error loading event: " + (err.message || err.toString()));
+        setEventId(null);
+        setEventName("");
+      } finally {
+        setEventLoading(false);
+      }
+    };
+    fetchCurrentEvent();
+  }, []);
+
+  // Load roles and assignments from Supabase when eventId changes
+  useEffect(() => {
+    if (!eventId) return;
+    const loadRolesAndAssignments = async () => {
+      setSaveStatus("Loading saved callsigns...");
+      // Load roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("callsign_roles")
+        .select("id, area, short_code, callsign, position")
+        .eq("event_id", eventId);
+      // Load assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from("callsign_assignments")
+        .select("callsign_role_id, assigned_name")
+        .eq("event_id", eventId);
+      if (rolesError || assignmentsError) {
+        setSaveStatus("Error loading saved data");
+        return;
+      }
+      if (roles && roles.length > 0) {
+        // Group roles by area
+        const grouped: typeof groups = [];
+        const areaMap: Record<string, any[]> = {};
+        roles.forEach((r) => {
+          if (!areaMap[r.area]) areaMap[r.area] = [];
+          areaMap[r.area].push({
+            id: r.id,
+            callsign: r.callsign,
+            short: r.short_code,
+            position: r.position,
+          });
+        });
+        for (const area in areaMap) {
+          grouped.push({ group: area, positions: areaMap[area] });
+        }
+        setGroups(grouped);
+      } else {
+        setGroups(initialGroups);
+      }
+      if (assignmentsData && assignmentsData.length > 0) {
+        // Map assignments by callsign_role_id
+        const assignMap: Record<string, string> = {};
+        assignmentsData.forEach((a) => {
+          assignMap[a.callsign_role_id] = a.assigned_name;
+        });
+        setAssignments(assignMap);
+      } else {
+        setAssignments({});
+      }
+      setSaveStatus(null);
+    };
+    loadRolesAndAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]);
+
+  // Fetch previous unique names for each callsign_role_id (excluding current event)
+  useEffect(() => {
+    if (!eventId) return;
+    const fetchPreviousNames = async () => {
+      // Get all previous assignments for all roles, excluding current event
+      const { data, error } = await supabase
+        .from("callsign_assignments")
+        .select("callsign_role_id, assigned_name, assigned_at")
+        .neq("event_id", eventId)
+        .order("assigned_at", { ascending: false });
+      if (error) return;
+      // Map: callsign_role_id -> unique names (most recent first)
+      const map: Record<string, string[]> = {};
+      data?.forEach((row) => {
+        if (!row.assigned_name) return;
+        if (!map[row.callsign_role_id]) map[row.callsign_role_id] = [];
+        if (!map[row.callsign_role_id].includes(row.assigned_name)) {
+          map[row.callsign_role_id].push(row.assigned_name);
+        }
+      });
+      setPreviousNames(map);
+    };
+    fetchPreviousNames();
+  }, [eventId]);
+
+  // Fetch all unique assigned names ever used (across all callsigns/events)
+  useEffect(() => {
+    const fetchAllNames = async () => {
+      const { data, error } = await supabase
+        .from("callsign_assignments")
+        .select("assigned_name")
+        .not("assigned_name", "is", null);
+      if (error) return;
+      const names = Array.from(new Set((data || []).map((row) => row.assigned_name).filter(Boolean)));
+      setAllPreviousNames(names);
+    };
+    fetchAllNames();
+  }, []);
 
   // Assignment logic
   const handleAssign = (posId: string) => {
@@ -114,32 +242,39 @@ export default function CallsignAssignmentPage() {
 
   // Save all roles and assignments to Supabase
   const handleSaveAll = async () => {
+    if (!eventId) {
+      setSaveStatus("No current event selected.");
+      return;
+    }
     setSaving(true);
     setSaveStatus(null);
     try {
+      // Helper to check for valid UUID
+      const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
       // Flatten roles for upsert
       const roles = groups.flatMap(group =>
-        group.positions.map(pos => ({
-          event_id,
-          area: group.group,
-          short_code: pos.short,
-          callsign: pos.callsign,
-          position: pos.position,
-          // Use existing or generate a stable id for upsert
-          id: pos.id && pos.id.startsWith('id_') ? undefined : pos.id,
-        }))
+        group.positions.map(pos => {
+          const base = {
+            event_id: eventId,
+            area: group.group,
+            short_code: pos.short,
+            callsign: pos.callsign,
+            position: pos.position,
+          };
+          // Only include id if it's a valid UUID
+          if (pos.id && isUUID(pos.id)) {
+            return { ...base, id: pos.id };
+          }
+          return base;
+        })
       );
-      // Upsert roles (callsign_roles)
       const { data: upsertedRoles, error: rolesError } = await supabase
         .from("callsign_roles")
-        .upsert(roles, { onConflict: "id" })
+        .upsert(roles, { onConflict: "event_id,area,short_code" })
         .select();
       if (rolesError) throw rolesError;
-
-      // Map UI pos.id to DB id
       const idMap: Record<string, string> = {};
       upsertedRoles?.forEach((r: any) => {
-        // Try to match by callsign/short_code/area/position
         const match = groups
           .find(g => g.group === r.area)
           ?.positions.find(
@@ -150,10 +285,8 @@ export default function CallsignAssignmentPage() {
           );
         if (match) idMap[match.id] = r.id;
       });
-
-      // Prepare assignments for upsert
       const assignmentsArr = Object.entries(assignments).map(([posId, assigned_name]) => ({
-        event_id,
+        event_id: eventId,
         callsign_role_id: idMap[posId],
         assigned_name,
       }));
@@ -171,9 +304,37 @@ export default function CallsignAssignmentPage() {
     }
   };
 
+  // Filtered groups based on search
+  const filteredGroups = groups.map(group => ({
+    ...group,
+    positions: group.positions.filter(pos => {
+      const searchLower = search.toLowerCase();
+      return (
+        // removed pos.name, only use assignments for assigned status
+        pos.position?.toLowerCase().includes(searchLower) ||
+        pos.callsign?.toLowerCase().includes(searchLower) ||
+        pos.short?.toLowerCase().includes(searchLower)
+      );
+    })
+  })).filter(group => group.positions.length > 0);
+
+  // Status color helper
+  const getStatusColor = (pos: any) => {
+    if (assignments[pos.id]) return "bg-green-500"; // assigned
+    if (pos.pending) return "bg-amber-400"; // pending/temporary
+    return "bg-gray-300"; // unassigned
+  };
+
+  if (eventLoading) {
+    return <div className="max-w-5xl mx-auto py-8 text-lg">Loading current event...</div>;
+  }
+  if (eventError) {
+    return <div className="max-w-5xl mx-auto py-8 text-red-600 font-semibold">{eventError}</div>;
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Callsign Assignment Sheet (Concert)</h1>
+      <h1 className="text-2xl font-bold mb-6">Callsign Assignment Sheet{eventName ? ` — ${eventName}` : ""}</h1>
       <div className="mb-4 flex gap-4 items-center">
         <button
           className="px-4 py-2 bg-blue-700 text-white rounded shadow hover:bg-blue-800 disabled:opacity-50"
@@ -197,10 +358,17 @@ export default function CallsignAssignmentPage() {
         </div>
         <div className="text-gray-500 italic">Click a callsign to assign</div>
       </div>
-      {groups.map(group => (
-        <div key={group.group} className="mb-8">
+      <input
+        type="text"
+        placeholder="Search by name, role, or callsign..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="mb-4 w-full px-3 py-2 border rounded shadow-sm focus:outline-none focus:ring"
+      />
+      {filteredGroups.map(group => (
+        <div key={group.group} className="mb-6">
           <div className="flex items-center mb-2">
-            <h2 className="font-semibold text-lg flex-1">{group.group}</h2>
+            <h3 className="font-bold text-lg flex-1">{group.group}</h3>
             {editGroup === group.group ? (
               <>
                 <button className="px-3 py-1 bg-green-600 text-white rounded mr-2" onClick={handleSaveEdit}>Save</button>
@@ -258,21 +426,57 @@ export default function CallsignAssignmentPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {group.positions.map(pos => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {group.positions.map((pos: any) => (
                 <button
-                  key={pos.id}
-                  className={`flex items-center bg-gray-50 p-3 rounded shadow border transition hover:bg-blue-50 focus:outline-none ${assignments[pos.id] ? 'border-blue-500' : 'border-gray-200'}`}
-                  onClick={() => handleAssign(pos.id)}
-                  disabled={!currentName.trim()}
+                  key={pos.short}
+                  className={`flex items-center gap-2 p-3 bg-white rounded shadow border w-full text-left transition ${currentName.trim() ? 'cursor-pointer hover:bg-blue-50' : 'cursor-not-allowed'} ${assignments[pos.id] ? 'border-blue-500' : 'border-gray-200'}`}
+                  onClick={() => {
+                    if (!currentName.trim() || editGroup === group.group) return;
+                    handleAssign(pos.id);
+                  }}
+                  disabled={!currentName.trim() || editGroup === group.group}
                 >
-                  <span className="w-32 font-mono text-blue-700">
-                    {pos.callsign} <span className="text-xs text-gray-500">({pos.short})</span>
-                  </span>
-                  <span className="w-56 text-gray-700">{pos.position}</span>
-                  <span className="ml-auto font-semibold">
-                    {assignments[pos.id] ? assignments[pos.id] : <span className="text-gray-400">(Unassigned)</span>}
-                  </span>
+                  <span className={`inline-block w-3 h-3 rounded-full ${getStatusColor(pos)}`}></span>
+                  <span className="font-semibold">{pos.short}</span>
+                  <span className="text-gray-400">{pos.position}</span>
+                  {assignments[pos.id] ? (
+                    <span className="ml-auto text-sm text-gray-700">{assignments[pos.id]}</span>
+                  ) : (
+                    <span className="ml-auto text-sm text-gray-400 flex items-center gap-1 italic">
+                      Unassigned
+                      {(() => {
+                        const prevNames = previousNames[pos.id] || [];
+                        const prevNamesNoAssigned = prevNames.filter(n => n);
+                        const shownNames = new Set(prevNamesNoAssigned);
+                        const otherNames = allPreviousNames.filter(n => n && !shownNames.has(n)).sort((a, b) => a.localeCompare(b));
+                        return (
+                          <select
+                            className="ml-1 border rounded px-1 py-0.5 text-xs bg-gray-50 min-w-[90px] max-w-[120px] focus:outline-none"
+                            style={{ fontSize: '0.85rem', height: '1.7rem' }}
+                            onChange={e => {
+                              if (e.target.value) {
+                                setCurrentName(e.target.value === '__unassigned__' ? '' : e.target.value);
+                                handleAssign(pos.id);
+                              }
+                            }}
+                            value={"__unassigned__"}
+                          >
+                            <option value="__unassigned__">Unassigned</option>
+                            {prevNamesNoAssigned.map(name => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                            {prevNamesNoAssigned.length > 0 && otherNames.length > 0 && (
+                              <option disabled>----------</option>
+                            )}
+                            {otherNames.map(name => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        );
+                      })()}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

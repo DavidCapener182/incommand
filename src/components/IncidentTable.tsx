@@ -55,6 +55,8 @@ export default function IncidentTable() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
+  const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
+  const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -145,6 +147,41 @@ export default function IncidentTable() {
     fetchIncidents();
 
     return cleanup;
+  }, [currentEventId]);
+
+  // Fetch callsign assignments for tooltips
+  useEffect(() => {
+    if (!currentEventId) return;
+    const fetchAssignments = async () => {
+      // Get all roles
+      const { data: roles } = await supabase
+        .from('callsign_roles')
+        .select('id, short_code, callsign')
+        .eq('event_id', currentEventId);
+      // Get all assignments
+      const { data: assignments } = await supabase
+        .from('callsign_assignments')
+        .select('callsign_role_id, assigned_name')
+        .eq('event_id', currentEventId);
+      // Build mapping
+      const idToShort: Record<string, string> = {};
+      const idToCallsign: Record<string, string> = {};
+      roles?.forEach((r) => {
+        idToShort[r.id] = r.short_code;
+        idToCallsign[r.id] = r.callsign;
+      });
+      const shortToName: Record<string, string> = {};
+      const callsignToName: Record<string, string> = {};
+      assignments?.forEach((a) => {
+        const short = idToShort[a.callsign_role_id];
+        const cs = idToCallsign[a.callsign_role_id];
+        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
+        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+      });
+      setCallsignAssignments(callsignToName);
+      setCallsignShortToName(shortToName);
+    };
+    fetchAssignments();
   }, [currentEventId]);
 
   const toggleIncidentStatus = async (incident: Incident, e: React.MouseEvent) => {
@@ -282,10 +319,28 @@ export default function IncidentTable() {
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
-                        {incident.callsign_from}
+                        <span
+                          title={
+                            callsignShortToName[incident.callsign_from?.toUpperCase()] ||
+                            callsignAssignments[incident.callsign_from?.toUpperCase()] ||
+                            undefined
+                          }
+                          className="underline decoration-dotted cursor-help"
+                        >
+                          {incident.callsign_from}
+                        </span>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
-                        {incident.callsign_to}
+                        <span
+                          title={
+                            callsignShortToName[incident.callsign_to?.toUpperCase()] ||
+                            callsignAssignments[incident.callsign_to?.toUpperCase()] ||
+                            undefined
+                          }
+                          className="underline decoration-dotted cursor-help"
+                        >
+                          {incident.callsign_to}
+                        </span>
                       </td>
                       <td className="px-2 py-1 text-xs text-gray-500 max-w-[200px] truncate">
                         {incident.occurrence}

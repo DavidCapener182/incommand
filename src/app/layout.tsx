@@ -1,4 +1,5 @@
-import React from 'react'
+'use client'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -6,11 +7,6 @@ import { AuthProvider } from '../contexts/AuthContext'
 import Navigation from '../components/Navigation'
 
 const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'Compact Event Control',
-  description: 'Security incident management system',
-}
 
 export default function RootLayout({
   children,
@@ -22,7 +18,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <Navigation />
-          {children}
+          <main>{children}</main>
         </AuthProvider>
       </body>
     </html>

@@ -18,6 +18,8 @@ export default function ReportsPage() {
   const sigPadRef = useRef<any>(null);
   const [staffBriefingTime, setStaffBriefingTime] = useState<string>("-");
   const [showdownTime, setShowdownTime] = useState<string>("-");
+  const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({});
+  const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,6 +106,37 @@ export default function ReportsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!event) return;
+    const fetchAssignments = async () => {
+      const { data: roles } = await supabase
+        .from('callsign_roles')
+        .select('id, short_code, callsign')
+        .eq('event_id', event.id);
+      const { data: assignments } = await supabase
+        .from('callsign_assignments')
+        .select('callsign_role_id, assigned_name')
+        .eq('event_id', event.id);
+      const idToShort: Record<string, string> = {};
+      const idToCallsign: Record<string, string> = {};
+      roles?.forEach((r) => {
+        idToShort[r.id] = r.short_code;
+        idToCallsign[r.id] = r.callsign;
+      });
+      const shortToName: Record<string, string> = {};
+      const callsignToName: Record<string, string> = {};
+      assignments?.forEach((a) => {
+        const short = idToShort[a.callsign_role_id];
+        const cs = idToCallsign[a.callsign_role_id];
+        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
+        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+      });
+      setCallsignAssignments(callsignToName);
+      setCallsignShortToName(shortToName);
+    };
+    fetchAssignments();
+  }, [event]);
+
   // Extract times and details from logs or incidents
   const getLogTime = (keyword: string) => {
     const normKeyword = keyword.toLowerCase();
@@ -177,7 +210,20 @@ export default function ReportsPage() {
     const info = inc.details || inc.description || inc.occurrence || "No details";
     // Show incident_title if present, otherwise incident_type
     const title = inc.incident_title || inc.incident_type;
-    return <span><b>{title} ({time})</b> - {info}</span>;
+    // Tooltip for callsign_from
+    const callsignFrom = inc.callsign_from ? (
+      <span
+        title={
+          callsignShortToName[inc.callsign_from?.toUpperCase()] ||
+          callsignAssignments[inc.callsign_from?.toUpperCase()] ||
+          undefined
+        }
+        className="underline decoration-dotted cursor-help"
+      >
+        {inc.callsign_from}
+      </span>
+    ) : null;
+    return <span><b>{title} ({time})</b> - {info} {callsignFrom}</span>;
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
