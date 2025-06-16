@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [showEndEventConfirm, setShowEndEventConfirm] = useState(false)
   const [showReactivateConfirm, setShowReactivateConfirm] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchEvents = async () => {
     try {
@@ -97,6 +99,45 @@ export default function SettingsPage() {
   const currentEvent = events.find(event => event.is_current)
   const pastEvents = events.filter(event => !event.is_current)
 
+  // Delete all event data
+  const handleDeleteEvent = async (eventId: string) => {
+    setDeleting(true)
+    try {
+      // Delete attendance records
+      await supabase.from('attendance_records').delete().eq('event_id', eventId)
+      // Delete support acts
+      await supabase.from('support_acts').delete().eq('event_id', eventId)
+      // Delete callsign assignments
+      await supabase.from('callsign_assignments').delete().eq('event_id', eventId)
+      // Delete callsign roles
+      await supabase.from('callsign_roles').delete().eq('event_id', eventId)
+      // Delete event callsigns
+      await supabase.from('event_callsigns').delete().eq('event_id', eventId)
+      // Get all incident ids for this event
+      const { data: incidents } = await supabase.from('incident_logs').select('id').eq('event_id', eventId)
+      const incidentIds = (incidents || []).map((i: any) => i.id)
+      if (incidentIds.length > 0) {
+        // Delete incident_events
+        await supabase.from('incident_events').delete().in('incident_id', incidentIds)
+        // Delete incident_attachments
+        await supabase.from('incident_attachments').delete().in('incident_id', incidentIds)
+        // Delete incident_links (both directions)
+        await supabase.from('incident_links').delete().in('incident_id', incidentIds)
+        await supabase.from('incident_links').delete().in('linked_incident_id', incidentIds)
+      }
+      // Delete incident logs
+      await supabase.from('incident_logs').delete().eq('event_id', eventId)
+      // Finally, delete the event
+      await supabase.from('events').delete().eq('id', eventId)
+      setShowDeleteConfirm(null)
+      fetchEvents()
+    } catch (err: any) {
+      alert('Error deleting event: ' + (err.message || err.toString()))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <main>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -156,6 +197,12 @@ export default function SettingsPage() {
                       >
                         Reactivate Event
                       </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(event.id)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                      >
+                        Delete Event
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -214,6 +261,34 @@ export default function SettingsPage() {
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 Reactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Event Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Event?</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Are you sure you want to <span className="font-bold text-red-600">permanently delete</span> <span className="font-semibold">{events.find(e => e.id === showDeleteConfirm)?.event_name}</span> and all its data? This cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(showDeleteConfirm)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete Event'}
               </button>
             </div>
           </div>
