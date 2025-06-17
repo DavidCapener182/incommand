@@ -3,11 +3,29 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '../contexts/AuthContext'
+import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import Navigation from '../components/Navigation'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname() || '';
+
+  React.useEffect(() => {
+    if (!loading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+    if (!loading && user && pathname === '/login') {
+      router.push('/incidents');
+    }
+  }, [user, loading, pathname, router]);
+
+  if (loading) return null;
+  return <>{children}</>;
+}
 
 export default function RootLayout({
   children,
@@ -18,10 +36,15 @@ export default function RootLayout({
   const showNav = !['/login', '/signup'].includes(pathname);
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/icon.png" type="image/png" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
-          {showNav && <Navigation />}
-          <main>{children}</main>
+          <AuthGate>
+            {showNav && <Navigation />}
+            <main>{children}</main>
+          </AuthGate>
         </AuthProvider>
       </body>
     </html>
