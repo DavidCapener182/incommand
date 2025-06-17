@@ -56,7 +56,7 @@ export default function Navigation() {
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
               <Image
-                src="/compact-logo.png"
+                src="/inCommand.png"
                 alt="Compact Security Logo"
                 width={150}
                 height={40}
@@ -145,6 +145,7 @@ export default function Navigation() {
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div ref={mobileMenuRef} className="sm:hidden fixed top-0 right-0 w-64 h-full bg-[#2A3990] shadow-lg z-50 animate-slide-in flex flex-col p-6">
+          <span className="mb-6 text-2xl font-bold text-white">Menu</span>
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="self-end mb-6 p-2 text-white hover:text-gray-200 focus:outline-none"
@@ -154,7 +155,7 @@ export default function Navigation() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <Link href="/incidents" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a]" onClick={() => setMobileMenuOpen(false)}>
+          <Link href="/incidents" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left" onClick={() => setMobileMenuOpen(false)}>
             Incidents
           </Link>
           <div className="relative">
@@ -189,19 +190,19 @@ export default function Navigation() {
               window.location.href = '/callsign-assignment';
               setMobileMenuOpen(false);
             }}
-            className={`block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+            className={`block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left ${!hasCurrentEvent ? 'opacity-50' : ''}`}
           >
             Callsigns
           </button>
-          <Link href="/help" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a]" onClick={() => setMobileMenuOpen(false)}>
+          <Link href="/help" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left" onClick={() => setMobileMenuOpen(false)}>
             Help & Glossary
           </Link>
-          <Link href="/settings" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a]" onClick={() => setMobileMenuOpen(false)}>
+          <Link href="/settings" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left" onClick={() => setMobileMenuOpen(false)}>
             Settings
           </Link>
           <button
             onClick={() => { setMobileMenuOpen(false); signOut(); }}
-            className="mt-6 py-2 px-2 w-full text-white rounded focus:outline-none hover:underline"
+            className="mt-6 py-2 px-2 w-full text-white rounded focus:outline-none hover:underline text-left"
           >
             Sign Out
           </button>

@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
+import { useRouter } from 'next/navigation'
 
 interface StatCardProps {
   title: string
@@ -255,6 +256,7 @@ export default function Dashboard() {
     medical: 0
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
+  const router = useRouter()
 
   const checkCurrentEvent = async () => {
     try {
@@ -378,15 +380,31 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Incidents</h1>
-        {!hasCurrentEvent && (
-          <button
-            onClick={() => setIsEventModalOpen(true)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Create Event
-          </button>
-        )}
       </div>
+
+      {/* Modal for no current event */}
+      {!hasCurrentEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4 text-[#2A3990]">No Current Event</h2>
+            <p className="mb-6 text-gray-700 text-center">No event is currently selected. Please create a new event to get started or go to settings to manage events.</p>
+            <div className="flex flex-col space-y-3 w-full">
+              <button
+                onClick={() => setIsEventModalOpen(true)}
+                className="w-full px-4 py-2 text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] font-semibold text-lg"
+              >
+                Create New Event
+              </button>
+              <button
+                onClick={() => router.push('/settings')}
+                className="w-full px-4 py-2 text-[#2A3990] border border-[#2A3990] rounded-md hover:bg-[#f0f4ff] font-semibold text-lg"
+              >
+                Go to Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <CurrentEvent />
@@ -489,8 +507,9 @@ export default function Dashboard() {
         isOpen={isEventModalOpen}
         onClose={() => setIsEventModalOpen(false)}
         onEventCreated={async () => {
-          setIsEventModalOpen(false)
-          await checkCurrentEvent()
+          setIsEventModalOpen(false);
+          await checkCurrentEvent();
+          window.location.reload(); // Force full page reload after event creation
         }}
       />
 

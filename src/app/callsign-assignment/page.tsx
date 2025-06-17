@@ -333,7 +333,7 @@ export default function CallsignAssignmentPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
+    <div className="max-w-5xl mx-auto py-8 px-2 sm:px-4 overflow-x-auto">
       <h1 className="text-2xl font-bold mb-6">Callsign Assignment Sheet{eventName ? ` — ${eventName}` : ""}</h1>
       <div className="mb-4 flex gap-4 items-center">
         <button

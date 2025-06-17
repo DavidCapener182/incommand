@@ -36,16 +36,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#2A3990] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
-          src="/compact-logo.png"
+          src="/inCommand.png"
           alt="Compact Security Logo"
-          width={150}
-          height={150}
+          width={600}
+          height={600}
           className="mx-auto"
         />
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
           Sign in to your account
         </h2>
       </div>
@@ -116,8 +116,8 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  New to Compact Security?
+                <span className="px-2 bg-white text-[#2A3990]">
+                  New to inCommand?
                 </span>
               </div>
             </div>
