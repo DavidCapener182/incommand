@@ -326,11 +326,11 @@ export default function Dashboard() {
       const sitRepIncidents = incidents.filter(i => i.incident_type === 'Sit Rep')
 
       setIncidentStats({
-        total: incidents.length,
+        total: incidents.filter(i => i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
         high: incidents.filter(i => ['Ejection', 'Code Green', 'Code Black', 'Code Pink'].includes(i.incident_type)).length,
-        open: nonSitRepIncidents.filter(i => !i.is_closed && i.status !== 'Logged').length,
-        inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken && i.status !== 'Logged').length,
-        closed: nonSitRepIncidents.filter(i => i.is_closed && i.status !== 'Logged').length,
+        open: nonSitRepIncidents.filter(i => !i.is_closed && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
+        inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
+        closed: incidents.filter(i => i.is_closed && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
         logged: sitRepIncidents.length + nonSitRepIncidents.filter(i => i.status === 'Logged').length,
         avgResolution: 0,
         refusals: incidents.filter(i => i.incident_type === 'Refusal').length,
@@ -430,12 +430,15 @@ export default function Dashboard() {
         <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
         
         {/* Stats Grid - First Row */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
           <StatCard
             title="Total Incidents"
             value={incidentStats.total}
             icon={<ClipboardDocumentCheckIcon />}
-            isFilterable={false}
+            color="blue"
+            isFilterable={true}
+            isSelected={selectedFilter === null}
+            onClick={() => setSelectedFilter(null)}
           />
           <StatCard
             title="High Priority"
@@ -500,7 +503,7 @@ export default function Dashboard() {
         </div>
 
         {/* Incident Table */}
-        <IncidentTable />
+        <IncidentTable filter={selectedFilter || undefined} />
       </div>
 
       <EventCreationModal
