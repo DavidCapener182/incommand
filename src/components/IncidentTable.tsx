@@ -46,7 +46,7 @@ const getIncidentTypeStyle = (type: string) => {
   }
 }
 
-export default function IncidentTable() {
+export default function IncidentTable({ filter }: { filter?: string }) {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -186,13 +186,10 @@ export default function IncidentTable() {
 
   const toggleIncidentStatus = async (incident: Incident, e: React.MouseEvent) => {
     e.stopPropagation();
-    
     if (incident.incident_type === 'Attendance') return;
-
     try {
       const newStatus = !incident.is_closed;
       console.log('Toggling status for incident:', incident.id, 'New status:', newStatus);
-
       const { error } = await supabase
         .from('incident_logs')
         .update({ 
@@ -200,18 +197,7 @@ export default function IncidentTable() {
           updated_at: new Date().toISOString()
         })
         .eq('id', incident.id);
-
       if (error) throw error;
-
-      // Optimistically update the local state
-      setIncidents(prev => 
-        prev.map(inc => 
-          inc.id === incident.id 
-            ? { ...inc, is_closed: newStatus }
-            : inc
-        )
-      );
-
       // Add an update to track the status change
       await supabase
         .from('incident_updates')
@@ -220,7 +206,7 @@ export default function IncidentTable() {
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
           updated_by: 'Event Control'
         });
-
+      window.location.reload(); // Force full page reload after status change
     } catch (err) {
       console.error('Error updating incident status:', err);
       // Revert the optimistic update if there was an error
@@ -247,6 +233,28 @@ export default function IncidentTable() {
     setSelectedIncidentId(null)
   }
 
+  // Filter incidents based on the filter prop
+  const filteredIncidents = filter
+    ? incidents.filter(incident => {
+        if (filter === 'high') {
+          return ['Ejection', 'Code Green', 'Code Black', 'Code Pink'].includes(incident.incident_type);
+        }
+        if (filter === 'open') {
+          return !incident.is_closed && incident.status !== 'Logged' && incident.incident_type !== 'Sit Rep' && incident.incident_type !== 'Attendance';
+        }
+        if (filter === 'closed') {
+          return incident.is_closed && incident.status !== 'Logged' && incident.incident_type !== 'Sit Rep' && incident.incident_type !== 'Attendance';
+        }
+        if (filter === 'refusals') {
+          return incident.incident_type === 'Refusal';
+        }
+        if (filter === 'ejections') {
+          return incident.incident_type === 'Ejection';
+        }
+        return true;
+      })
+    : incidents;
+
   if (loading) {
     return (
       <div className="mt-4 bg-white shadow rounded-lg p-6">
@@ -262,7 +270,7 @@ export default function IncidentTable() {
     )
   }
 
-  if (incidents.length === 0) {
+  if (filteredIncidents.length === 0) {
     return (
       <div className="mt-4 bg-white shadow rounded-lg p-6 text-center text-gray-500">
         No incidents to display
@@ -306,7 +314,7 @@ export default function IncidentTable() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {incidents.map((incident) => (
+                  {filteredIncidents.map((incident) => (
                     <tr 
                       key={incident.id} 
                       onClick={() => handleIncidentClick(incident)} 
