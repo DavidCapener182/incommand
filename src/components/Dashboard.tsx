@@ -517,7 +517,8 @@ export default function Dashboard() {
         isOpen={isIncidentModalOpen}
         onClose={() => setIsIncidentModalOpen(false)}
         onIncidentCreated={async () => {
-          await fetchIncidentStats()
+          await fetchIncidentStats();
+          window.location.reload(); // Force full page reload after incident creation
         }}
       />
     </div>
