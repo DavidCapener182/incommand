@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
           src="/inCommand.png"
-          alt="Compact Security Logo"
+          alt="inCommand Logo"
           width={600}
           height={600}
           className="mx-auto"

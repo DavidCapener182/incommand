@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'compact-event-control',
+      name: 'incommand',
       script: 'npm',
       args: 'run dev',
       watch: ['src'],
