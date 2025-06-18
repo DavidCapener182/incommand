@@ -43,8 +43,8 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
-          src="/logo.png"
-          alt="Compact Security Logo"
+          src="/inCommand.png"
+          alt="inCommand Logo"
           width={150}
           height={150}
           className="mx-auto"

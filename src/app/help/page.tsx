@@ -25,7 +25,7 @@ export default function HelpPage() {
       <section className="mb-10">
         <h2 className="text-2xl font-semibold mb-2">About This App</h2>
         <p className="mb-4">
-          <strong>Compact Event Control</strong> is a comprehensive platform designed to help event staff and security teams manage incidents, monitor venue occupancy, and generate detailed reports and analytics. The app streamlines the process of incident reporting, data collection, and analysis, ensuring a safer and more organized event experience.
+          <strong>inCommand Event Control</strong> is a comprehensive platform designed to help event staff and security teams manage incidents, monitor venue occupancy, and generate detailed reports and analytics. The app streamlines the process of incident reporting, data collection, and analysis, ensuring a safer and more organized event experience.
         </p>
         <ul className="list-disc list-inside mb-4">
           <li>Report and track incidents in real time</li>

@@ -57,7 +57,7 @@ export default function Navigation() {
             <Link href="/" className="flex-shrink-0 flex items-center">
               <Image
                 src="/inCommand.png"
-                alt="Compact Security Logo"
+                alt="inCommand Logo"
                 width={150}
                 height={40}
                 priority

@@ -1,4 +1,4 @@
-# Compact Event Control Dashboard
+# inCommand Event Control Dashboard
 
 A modern event control dashboard for real-time incident management, analytics, and professional reporting. Built with Next.js, Supabase, and OpenAI integration.
 
@@ -15,8 +15,8 @@ A modern event control dashboard for real-time incident management, analytics, a
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/DavidCapener182/compact-event-control.git
-   cd compact-event-control
+   git clone https://github.com/DavidCapener182/incommand.git
+   cd incommand
    ```
 
 2. **Install dependencies:**
