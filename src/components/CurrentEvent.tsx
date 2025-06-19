@@ -18,6 +18,7 @@ export default function CurrentEvent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showBrief, setShowBrief] = useState(false)
 
   useEffect(() => {
     console.log('CurrentEvent component mounted')
@@ -124,22 +125,34 @@ export default function CurrentEvent() {
                 <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.event_type}</span>
               </div>
               <div className="mt-4">
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {(currentEvent.event_description || (() => {
-                    const type = currentEvent.event_type.toLowerCase();
-                    if (type.includes('concert')) {
-                      return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times.`;
-                    } else if (type.includes('comedy')) {
-                      return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
-                    } else if (type.includes('theatre')) {
-                      return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
-                    } else if (type.includes('sport')) {
-                      return `Separate opposing fans and monitor refreshment areas during breaks.`;
-                    } else {
-                      return `Monitor venue capacity and maintain clear exit routes.`;
-                    }
-                  })()).split(/(?<=[.!?])\s+/).slice(0,2).join(' ')}
-                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Security Brief</span>
+                  <button
+                    type="button"
+                    className="md:hidden text-xs text-blue-600 underline focus:outline-none"
+                    onClick={() => setShowBrief((prev) => !prev)}
+                  >
+                    {showBrief ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <div className={`${showBrief ? '' : 'hidden'} md:block`}>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-2">
+                    {(currentEvent.event_description || (() => {
+                      const type = currentEvent.event_type.toLowerCase();
+                      if (type.includes('concert')) {
+                        return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times.`;
+                      } else if (type.includes('comedy')) {
+                        return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
+                      } else if (type.includes('theatre')) {
+                        return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
+                      } else if (type.includes('sport')) {
+                        return `Separate opposing fans and monitor refreshment areas during breaks.`;
+                      } else {
+                        return `Monitor venue capacity and maintain clear exit routes.`;
+                      }
+                    })()).split(/(?<=[.!?])\s+/).slice(0,2).join(' ')}
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

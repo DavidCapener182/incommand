@@ -34,6 +34,7 @@ interface StatCardProps {
   isSelected?: boolean
   onClick?: () => void
   isFilterable?: boolean
+  className?: string
 }
 
 interface EventTiming {
@@ -105,7 +106,8 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId }) => {
           show_stop_meeting_time,
           doors_open_time,
           curfew_time,
-          event_name
+          event_name,
+          support_acts
         `)
         .eq('is_current', true)
         .eq('company_id', companyId)
@@ -119,11 +121,29 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId }) => {
 
         setArtistName(event.event_name);
 
+        // Parse support acts
+        let supportActs = [];
+        if (event.support_acts) {
+          try {
+            supportActs = typeof event.support_acts === 'string' ? 
+              JSON.parse(event.support_acts) : 
+              event.support_acts;
+          } catch (e) {
+            console.error('Error parsing support acts:', e);
+            supportActs = [];
+          }
+        }
+
         const timings: EventTiming[] = [
           { title: 'Security Call', time: event.security_call_time },
-          { title: 'Doors Open', time: event.doors_open_time },
-          { title: event.event_name, time: event.main_act_start_time },
           { title: 'Show Stop Meeting', time: event.show_stop_meeting_time },
+          { title: 'Doors Open', time: event.doors_open_time },
+          // Add support acts
+          ...supportActs.map((act: { act_name: string; start_time: string }) => ({
+            title: act.act_name,
+            time: act.start_time
+          })),
+          { title: event.event_name, time: event.main_act_start_time },
           { title: 'Show Down', time: event.show_down_time },
           { title: 'Curfew', time: event.curfew_time }
         ].filter(timing => timing.time); // Only show timings that have been set
@@ -143,15 +163,15 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId }) => {
           .filter(t => t.minutesSinceMidnight > currentTimeNumber)
           .sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
 
-        // Take only the next 3 events and mark the nearest one
-        const nextThreeTimings = futureTimings.slice(0, 3).map((timing, index) => ({
+        // Take only the next 5 events and mark the nearest one
+        const nextFiveTimings = futureTimings.slice(0, 5).map((timing, index) => ({
           title: timing.title,
           time: timing.time,
           isNext: index === 0
         }));
 
-        setEventTimings(nextThreeTimings);
-        setNextEvent(nextThreeTimings[0] || null);
+        setEventTimings(nextFiveTimings);
+        setNextEvent(nextFiveTimings[0] || null);
       }
     };
     fetchEventTimings();
@@ -208,7 +228,8 @@ const StatCard: React.FC<StatCardProps> = ({
   color = 'blue', 
   isSelected, 
   onClick, 
-  isFilterable = false 
+  isFilterable = false,
+  className
 }) => {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -217,19 +238,37 @@ const StatCard: React.FC<StatCardProps> = ({
     green: 'text-green-500',
   }
 
+  // Pulse animation when value changes
+  const [pulse, setPulse] = React.useState(false);
+  const prevValue = React.useRef(value);
+  React.useEffect(() => {
+    if (prevValue.current !== value) {
+      setPulse(true);
+      const timeout = setTimeout(() => setPulse(false), 400);
+      prevValue.current = value;
+      return () => clearTimeout(timeout);
+    }
+  }, [value]);
+
   return (
     <div 
-      className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4 
+      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 p-5 mb-2 sm:mb-0 
         ${isFilterable ? 'cursor-pointer' : ''} 
-        ${isFilterable && isSelected ? 'border-2 border-red-500' : 'border border-gray-100'}`}
+        ${isFilterable && isSelected ? 'border-2 border-blue-500' : 'border border-gray-100'}
+        active:scale-95
+        mx-1 my-2
+        select-none
+        ${className}
+      `}
       onClick={isFilterable ? onClick : undefined}
+      tabIndex={isFilterable ? 0 : -1}
+      role={isFilterable ? 'button' : undefined}
+      aria-pressed={isSelected}
     >
       <div className="flex flex-col items-center justify-center space-y-1">
-        <div className={`${colorClasses[color as keyof typeof colorClasses]} w-8 h-8`}>
-          {icon}
-        </div>
-        <p className="text-4xl font-bold text-gray-900">{value}</p>
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <div className={`${colorClasses[color as keyof typeof colorClasses]} w-9 h-9 mb-1`}>{icon}</div>
+        <p className={`text-4xl font-bold text-gray-900 ${pulse ? 'animate-pulse' : ''}`}>{value}</p>
+        <h3 className="text-base font-medium text-gray-600 mt-1">{title}</h3>
       </div>
     </div>
   )
@@ -249,7 +288,7 @@ async function fetchWhat3Words(lat: number, lon: number): Promise<string | null>
 const w3wApi = what3words(process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY || '');
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
-function What3WordsMapCard({ lat, lon, venueAddress }: { lat: number; lon: number; venueAddress: string }) {
+function What3WordsMapCard({ lat, lon, venueAddress, singleCard }: { lat: number; lon: number; venueAddress: string; singleCard: boolean }) {
   const [w3w, setW3w] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,18 +354,28 @@ function What3WordsMapCard({ lat, lon, venueAddress }: { lat: number; lon: numbe
 
   return (
     <>
-      <div className="flex gap-4 w-full">
+      {singleCard ? (
         <div
-          className="bg-blue-50 rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
-          style={{ minHeight: 0, height: '100%' }}
+          className="w-full h-full flex items-center justify-center cursor-pointer"
+          style={{ minHeight: 0 }}
           onClick={() => setModalOpen(true)}
         >
-          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+          <img src="/w3w.png" alt="What3Words" className="w-2/3 h-2/3 object-contain" />
         </div>
-        <div className="bg-gray-50 rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
-          <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
+      ) : (
+        <div className="flex gap-4 w-full">
+          <div
+            className="bg-blue-50 rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
+            style={{ minHeight: 0, height: '100%' }}
+            onClick={() => setModalOpen(true)}
+          >
+            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+          </div>
+          <div className="bg-gray-50 rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
+            <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="fixed inset-0 z-50 pointer-events-none">
         {modalOpen && (
           <button
@@ -569,48 +618,17 @@ export default function Dashboard() {
   }, [hasCurrentEvent]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Incidents</h1>
+        {/* <h1 className="text-2xl font-bold">Incidents</h1> */}
       </div>
 
-      {/* Modal for no current event */}
-      {!loadingCurrentEvent && !hasCurrentEvent && (
-        <>
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col items-center">
-              <h2 className="text-xl font-bold mb-4 text-[#2A3990]">No Current Event</h2>
-              <p className="mb-6 text-gray-700 text-center">No event is currently selected. Please create a new event to get started or go to settings to manage events.</p>
-              <div className="flex flex-col space-y-3 w-full">
-                <button
-                  onClick={() => setIsEventModalOpen(true)}
-                  className="w-full px-4 py-2 text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] font-semibold text-lg"
-                >
-                  Create New Event
-                </button>
-                <button
-                  onClick={() => router.push('/settings')}
-                  className="w-full px-4 py-2 text-[#2A3990] border border-[#2A3990] rounded-md hover:bg-[#f0f4ff] font-semibold text-lg"
-                >
-                  Go to Settings
-                </button>
-              </div>
-            </div>
-          </div>
-          <EventCreationModal
-            isOpen={isEventModalOpen}
-            onClose={() => setIsEventModalOpen(false)}
-            onEventCreated={async () => {
-              setIsEventModalOpen(false);
-              window.location.reload(); // Force full page reload after event creation
-            }}
-          />
-        </>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <CurrentEvent />
-        <TimeCard companyId={companyId} />
+      {/* Event Header - Sticky */}
+      <div className="sticky top-16 z-20 bg-white shadow-sm md:bg-transparent md:shadow-none">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          <CurrentEvent />
+          <TimeCard companyId={companyId} />
+        </div>
       </div>
       
       {/* Incident Dashboard */}
@@ -632,7 +650,7 @@ export default function Dashboard() {
         <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
         
         {/* Stats Grid - First Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-8">
           <StatCard
             title="Total Incidents"
             value={incidentStats.total}
@@ -641,6 +659,7 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === null}
             onClick={() => setSelectedFilter(null)}
+            className="min-h-[90px] md:min-h-[180px]"
           />
           <StatCard
             title="High Priority"
@@ -650,6 +669,7 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === 'high'}
             onClick={() => setSelectedFilter(selectedFilter === 'high' ? null : 'high')}
+            className="min-h-[90px] md:min-h-[180px]"
           />
           <StatCard
             title="Open"
@@ -659,6 +679,7 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === 'open'}
             onClick={() => setSelectedFilter(selectedFilter === 'open' ? null : 'open')}
+            className="min-h-[90px] md:min-h-[180px]"
           />
           <StatCard
             title="Closed"
@@ -668,6 +689,7 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === 'closed'}
             onClick={() => setSelectedFilter(selectedFilter === 'closed' ? null : 'closed')}
+            className="min-h-[90px] md:min-h-[180px]"
           />
           <StatCard
             title="Refusals"
@@ -677,6 +699,7 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === 'refusals'}
             onClick={() => setSelectedFilter(selectedFilter === 'refusals' ? null : 'refusals')}
+            className="min-h-[90px] md:min-h-[180px]"
           />
           <StatCard
             title="Ejections"
@@ -686,15 +709,16 @@ export default function Dashboard() {
             isFilterable={true}
             isSelected={selectedFilter === 'ejections'}
             onClick={() => setSelectedFilter(selectedFilter === 'ejections' ? null : 'ejections')}
+            className="min-h-[90px] md:min-h-[180px]"
           />
         </div>
 
         {/* Stats Grid - Second Row */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-24">
-          <div className="col-span-1">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 auto-rows-fr">
+          <div className="h-full w-full min-h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center">
             <VenueOccupancy currentEventId={currentEventId} />
           </div>
-          <div className="col-span-1">
+          <div className="h-full w-full min-h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center">
             {currentEvent?.venue_address && (
               <WeatherCard 
                 lat={coordinates.lat} 
@@ -706,19 +730,20 @@ export default function Dashboard() {
               />
             )}
           </div>
-          <div className="col-span-2">
-            {coordinates.lat && coordinates.lon ? (
-              <What3WordsMapCard lat={coordinates.lat} lon={coordinates.lon} venueAddress={currentEvent?.venue_address || ''} />
-            ) : (
-              <div className="h-full bg-gradient-to-br from-gray-50 via-gray-100 to-white p-4 transition-all duration-500 rounded-lg shadow flex items-center justify-center">
-                <span className="text-gray-400">No coordinates available for What3Words map</span>
-              </div>
+          <div className="h-full w-full min-h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center cursor-pointer bg-blue-50">
+            {coordinates.lat && coordinates.lon && (
+              <What3WordsMapCard lat={coordinates.lat} lon={coordinates.lon} venueAddress={currentEvent?.venue_address || ''} singleCard />
             )}
+          </div>
+          <div className="h-full w-full min-h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center bg-gray-50">
+            <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
           </div>
         </div>
 
         {/* Incident Table */}
-        <IncidentTable filter={selectedFilter || undefined} />
+        <div className="pb-24">
+          <IncidentTable filter={selectedFilter || undefined} />
+        </div>
       </div>
 
       <IncidentCreationModal
@@ -729,6 +754,16 @@ export default function Dashboard() {
           window.location.reload(); // Force full page reload after incident creation
         }}
       />
+
+      {/* Floating Action Button for New Incident (Mobile Only) */}
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+        aria-label="Report New Incident"
+        onClick={() => setIsIncidentModalOpen(true)}
+      >
+        <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
+      </button>
     </div>
   )
 } 
