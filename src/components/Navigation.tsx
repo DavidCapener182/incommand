@@ -183,6 +183,10 @@ export default function Navigation() {
               <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                 Settings
               </Link>
+              {/* Temporary Admin Button */}
+              <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
+                Admin
+              </Link>
             </div>
           </div>
           {/* User Avatar/Profile Dropdown - always far right */}
@@ -331,6 +335,10 @@ export default function Navigation() {
           </Link>
           <Link href="/settings" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left" onClick={() => setMobileMenuOpen(false)}>
             Settings
+          </Link>
+          {/* Temporary Admin Button */}
+          <Link href="/admin" className="block py-2 px-2 text-white rounded hover:bg-[#1e2a6a] text-left" onClick={() => setMobileMenuOpen(false)}>
+            Admin
           </Link>
           <button
             onClick={() => { setMobileMenuOpen(false); signOut(); }}
