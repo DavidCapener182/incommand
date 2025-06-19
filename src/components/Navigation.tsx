@@ -3,10 +3,24 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
+
+const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
+
+function getRandomGreeting() {
+  if (typeof window !== 'undefined') {
+    let greeting = sessionStorage.getItem('greeting');
+    if (!greeting) {
+      greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+      sessionStorage.setItem('greeting', greeting);
+    }
+    return greeting;
+  }
+  return GREETINGS[0];
+}
 
 export default function Navigation() {
   const pathname = usePathname() || '';
@@ -17,6 +31,10 @@ export default function Navigation() {
   const [showEventCreation, setShowEventCreation] = useState(false);
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const router = useRouter();
 
   const isActive = (path: string) => {
     if (path === '/incidents' && pathname === '/') {
@@ -37,6 +55,58 @@ export default function Navigation() {
     checkCurrentEvent();
   }, []);
 
+  // Fetch profile info as soon as user is available
+  useEffect(() => {
+    if (user) {
+      setProfileLoading(true);
+      (async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, email, company, avatar_url')
+          .eq('id', user.id)
+          .single();
+        setProfile(data);
+        setProfileLoading(false);
+      })();
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
+  // Fetch profile info when dropdown is opened (for latest info)
+  useEffect(() => {
+    if (profileDropdownOpen && user) {
+      setProfileLoading(true);
+      (async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, email, company, avatar_url')
+          .eq('id', user.id)
+          .single();
+        setProfile(data);
+        setProfileLoading(false);
+      })();
+    }
+  }, [profileDropdownOpen, user]);
+
+  function getInitials(nameOrEmail: string) {
+    if (!nameOrEmail) return '?';
+    // If it's a name with spaces, use first and last initial
+    const parts = nameOrEmail.trim().split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    // If it's an email, use first two letters before @
+    const emailPart = nameOrEmail.split('@')[0];
+    if (emailPart.length >= 2) {
+      return (emailPart[0] + emailPart[1]).toUpperCase();
+    }
+    if (emailPart.length === 1) {
+      return (emailPart[0] + emailPart[0]).toUpperCase();
+    }
+    return '?';
+  }
+
   // Close mobile menu when clicking outside
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -44,10 +114,11 @@ export default function Navigation() {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         setMobileMenuOpen(false);
       }
+      if (profileDropdownOpen) setProfileDropdownOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, profileDropdownOpen]);
 
   return (
     <nav className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
@@ -112,16 +183,77 @@ export default function Navigation() {
               <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                 Settings
               </Link>
-              {/* Desktop Sign Out Button */}
-              {user && (
-                <button
-                  onClick={signOut}
-                  className="ml-6 py-1.5 px-4 text-white rounded focus:outline-none text-sm font-medium border-none hover:underline"
-                >
-                  Sign Out
-                </button>
-              )}
             </div>
+          </div>
+          {/* User Avatar/Profile Dropdown - always far right */}
+          <div className="flex items-center ml-auto">
+            {user && (
+              <div className="relative flex items-center space-x-3">
+                {/* Welcome message with first name, left of avatar */}
+                <span className="hidden md:inline-block text-white font-semibold text-base mr-2">
+                  {getRandomGreeting()}, {(() => {
+                    if (profile?.full_name) return profile.full_name.split(' ')[0];
+                    return '';
+                  })()}
+                </span>
+                <button
+                  className="flex items-center focus:outline-none"
+                  onClick={() => setProfileDropdownOpen((open) => !open)}
+                >
+                  {profile && profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-blue-500"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
+                      {getInitials(profile?.full_name ? profile.full_name : user.email)}
+                    </div>
+                  )}
+                </button>
+                {profileDropdownOpen && (
+                  <div className="fixed right-4 top-16 w-72 bg-white rounded shadow-lg z-50 p-4 min-w-[260px] max-w-xs break-words">
+                    {profileLoading ? (
+                      <div className="text-center text-gray-500">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="flex items-center mb-3">
+                          {profile && profile.avatar_url ? (
+                            <img
+                              src={profile.avatar_url}
+                              alt="Profile"
+                              className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 mr-3"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-xl font-bold text-blue-700 border-2 border-blue-500 mr-3">
+                              {getInitials(profile?.full_name ? profile.full_name : user.email)}
+                            </div>
+                          )}
+                          <div className="flex flex-col min-w-0">
+                            <div className="font-semibold text-gray-900 truncate">{profile?.full_name || '-'}</div>
+                            <div className="text-sm text-gray-600 truncate">{profile?.email || user.email}</div>
+                            <div className="text-xs text-gray-500 truncate">{profile?.company || '-'}</div>
+                          </div>
+                        </div>
+                        <button
+                          className="w-full mb-2 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                          onClick={() => { setProfileDropdownOpen(false); router.push('/profile'); }}
+                        >
+                          Open Profile
+                        </button>
+                        <button
+                          className="w-full py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                          onClick={() => { setProfileDropdownOpen(false); signOut(); }}
+                        >
+                          Sign Out
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {/* Hamburger for mobile */}
           <div className="sm:hidden flex items-center">

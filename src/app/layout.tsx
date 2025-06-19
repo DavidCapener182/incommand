@@ -6,6 +6,7 @@ import './globals.css'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import Navigation from '../components/Navigation'
 import { usePathname, useRouter } from 'next/navigation'
+import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -15,10 +16,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
 
   React.useEffect(() => {
-    if (!loading && !user && pathname !== '/login') {
+    if (!loading && !user && !['/login', '/signup'].includes(pathname)) {
       router.push('/login');
     }
-    if (!loading && user && pathname === '/login') {
+    if (!loading && user && ['/login', '/signup'].includes(pathname)) {
       router.push('/incidents');
     }
   }, [user, loading, pathname, router]);
@@ -46,6 +47,7 @@ export default function RootLayout({
             <main>{children}</main>
           </AuthGate>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )

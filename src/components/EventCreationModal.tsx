@@ -226,6 +226,20 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         throw new Error('You must be authenticated to create an event')
       }
 
+      // Fetch company_id from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', session.user.id)
+        .single();
+      if (profileError) throw profileError;
+      if (!profile || !profile.company_id) {
+        setError('Could not determine your company. Please check your profile.');
+        setLoading(false);
+        return;
+      }
+      const company_id = profile.company_id;
+
       // Validate required fields
       const requiredFields = [
         'event_name',
@@ -247,10 +261,11 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         return
       }
 
-      // First, set all events' is_current to false
+      // First, set all events' is_current to false for this company only
       const { error: updateError } = await supabase
         .from('events')
         .update({ is_current: false })
+        .eq('company_id', company_id)
         .neq('id', '00000000-0000-0000-0000-000000000000')
 
       if (updateError) throw updateError
@@ -290,7 +305,8 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         show_stop_meeting_time: formData.show_stop_meeting_time || null,
         support_acts: formData.support_acts ? JSON.stringify(formData.support_acts) : null,
         event_description: formData.event_description || formData.description || null,
-        venue_capacity: formData.venue_capacity || null
+        venue_capacity: formData.venue_capacity || null,
+        company_id
       }
 
       const { error: insertError, data: insertedEvent } = await supabase
@@ -516,13 +532,36 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                   <input
-                    type="time"
+                    type="text"
                     value={act.start_time}
                     onChange={(e) => {
                       const newActs = [...formData.support_acts];
-                      newActs[index].start_time = e.target.value;
+                      // Use the same time validation/formatting as other time fields
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      let formattedTime = '';
+                      if (numericValue.length >= 2) {
+                        formattedTime = numericValue.slice(0, 2) + ':' + numericValue.slice(2, 4);
+                      } else {
+                        formattedTime = numericValue;
+                      }
+                      if (formattedTime.includes(':') && formattedTime.length === 5) {
+                        const [hours, minutes] = formattedTime.split(':');
+                        const hoursNum = parseInt(hours, 10);
+                        const minutesNum = parseInt(minutes, 10);
+                        if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
+                          newActs[index].start_time = formattedTime;
+                        } else {
+                          newActs[index].start_time = formattedTime;
+                        }
+                      } else {
+                        newActs[index].start_time = formattedTime;
+                      }
                       setFormData(prev => ({ ...prev, support_acts: newActs }));
                     }}
+                    placeholder="HH:mm"
+                    maxLength={5}
+                    inputMode="numeric"
+                    pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
                     className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>

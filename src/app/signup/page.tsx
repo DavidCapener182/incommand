@@ -12,16 +12,24 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [company, setCompany] = useState('')
   const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Sign up form submitted');
     setLoading(true)
     setError(null)
     setMessage(null)
 
+    if (!company.trim()) {
+      setError('Company name is required')
+      setLoading(false)
+      return
+    }
+
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -30,6 +38,18 @@ export default function SignUpPage() {
       })
 
       if (error) throw error
+
+      // Insert into profiles table
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').insert([
+          {
+            id: data.user.id,
+            email,
+            company,
+          },
+        ])
+        if (profileError) throw profileError;
+      }
 
       setMessage('Check your email for the confirmation link')
     } catch (err) {
@@ -40,16 +60,16 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#2A3990] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
           src="/inCommand.png"
           alt="inCommand Logo"
-          width={150}
-          height={150}
+          width={600}
+          height={600}
           className="mx-auto"
         />
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
           Create your account
         </h2>
       </div>
@@ -57,6 +77,24 @@ export default function SignUpPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSignUp}>
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+                Company Name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  autoComplete="organization"
+                  required
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -94,7 +132,7 @@ export default function SignUpPage() {
             </div>
 
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4 mt-2">
                 <div className="flex">
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-red-800">{error}</h3>

@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     const prompt = `Provide a concise security brief for an upcoming event featuring ${artistName} at ${venueName}. The brief should:
 	•	Summarise any previous incidents or issues related to the artist or venue, based on credible online sources or news reports.
 	•	Highlight crowd dynamics typically associated with this artist or venue (e.g., audience demographics, expected behaviour, potential flashpoints).
+	•	Include an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
+	•	Provide a very brief overview of the type of event and what security should expect (e.g., "high-energy rock concert with mosh pits likely", "family-friendly daytime festival", etc).
 	•	Mention any special considerations for security planning based on past events.
 
 Keep the brief to two paragraphs, suitable for use in an operational security handover or briefing document.`;
