@@ -28,6 +28,7 @@ interface Incident {
   is_closed: boolean
   created_at: string
   updated_at: string
+  photo_url?: string
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
@@ -42,6 +43,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [showFullImage, setShowFullImage] = useState(false)
+  const [role, setRole] = useState<string | null>(null)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -124,6 +128,31 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     };
     fetchAssignments();
   }, [currentEventId]);
+
+  useEffect(() => {
+    if (!incident || !incident.photo_url || typeof incident.photo_url !== 'string') {
+      setPhotoUrl(null);
+      return;
+    }
+    // Fetch signed URL for the image
+    const getSignedUrl = async () => {
+      const { data } = await supabase.storage.from('incident-photos').createSignedUrl(incident.photo_url as string, 60 * 60);
+      setPhotoUrl(data?.signedUrl || null);
+    };
+    getSignedUrl();
+  }, [incident]);
+
+  useEffect(() => {
+    // Fetch user role (assume AuthContext or similar is available)
+    const fetchRole = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+      const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      setRole(data?.role || null);
+    };
+    fetchRole();
+  }, []);
 
   const fetchIncidentDetails = async () => {
     if (!incidentId) return
@@ -417,6 +446,32 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                 </div>
               </div>
             </div>
+
+            {incident && incident.photo_url && photoUrl && ['admin','supervisor','manager'].includes((role||'').toLowerCase()) && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-500 mb-1">Photo Attachment</p>
+                <img
+                  src={photoUrl}
+                  alt="Incident Attachment"
+                  className="h-24 rounded border cursor-pointer select-none"
+                  style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                  onClick={() => setShowFullImage(true)}
+                  onContextMenu={e => e.preventDefault()}
+                  draggable={false}
+                />
+                {showFullImage && (
+                  <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={() => setShowFullImage(false)}>
+                    <img
+                      src={photoUrl}
+                      alt="Full Incident Attachment"
+                      className="max-h-[80vh] max-w-[90vw] rounded shadow-lg"
+                      onContextMenu={e => e.preventDefault()}
+                      draggable={false}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

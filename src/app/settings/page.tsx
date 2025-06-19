@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import SupabaseTest from '../../components/SupabaseTest'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface Event {
   id: string
@@ -13,18 +14,50 @@ interface Event {
 }
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showEndEventConfirm, setShowEndEventConfirm] = useState(false)
   const [showReactivateConfirm, setShowReactivateConfirm] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [role, setRole] = useState<string | null>(null)
+  const [logs, setLogs] = useState<any[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
 
-  const fetchEvents = async () => {
+  // Fetch company_id and role on mount
+  useEffect(() => {
+    const fetchCompanyIdAndRole = async () => {
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session) {
+        setError('You must be authenticated to view events.');
+        setLoading(false);
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id, role')
+        .eq('id', session.user.id)
+        .single();
+      if (profileError || !profile?.company_id) {
+        setError('Could not determine your company. Please check your profile.');
+        setLoading(false);
+        return;
+      }
+      setCompanyId(profile.company_id);
+      setRole(profile.role || null);
+    };
+    fetchCompanyIdAndRole();
+  }, []);
+
+  const fetchEvents = async (company_id: string) => {
     try {
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .eq('company_id', company_id)
         .order('start_datetime', { ascending: false })
 
       if (error) throw error
@@ -37,15 +70,17 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    fetchEvents()
-  }, [])
+    if (companyId) fetchEvents(companyId)
+  }, [companyId])
 
   const setCurrentEvent = async (eventId: string) => {
     try {
-      // First, set all events to not current
+      if (!companyId) return;
+      // First, set all events to not current for this company
       await supabase
         .from('events')
         .update({ is_current: false })
+        .eq('company_id', companyId)
         .neq('id', 'dummy')
 
       // Then set the selected event as current
@@ -56,17 +91,18 @@ export default function SettingsPage() {
           end_datetime: null // Clear the end datetime when reactivating
         })
         .eq('id', eventId)
+        .eq('company_id', companyId)
 
       if (error) throw error
       setShowReactivateConfirm(null)
-      fetchEvents() // Refresh the list
+      fetchEvents(companyId) // Refresh the list
     } catch (error) {
       console.error('Error setting current event:', error)
     }
   }
 
   const handleEndEvent = async () => {
-    if (!currentEvent) return
+    if (!currentEvent || !companyId) return
 
     try {
       const { error } = await supabase
@@ -76,11 +112,12 @@ export default function SettingsPage() {
           end_datetime: new Date().toISOString()
         })
         .eq('id', currentEvent.id)
+        .eq('company_id', companyId)
 
       if (error) throw error
       
       setShowEndEventConfirm(false)
-      fetchEvents() // Refresh the list
+      fetchEvents(companyId) // Refresh the list
     } catch (err) {
       console.error('Error ending event:', err)
     }
@@ -99,8 +136,38 @@ export default function SettingsPage() {
   const currentEvent = events.find(event => event.is_current)
   const pastEvents = events.filter(event => !event.is_current)
 
-  // Delete all event data
+  // Fetch logs for current event if admin
+  useEffect(() => {
+    const fetchLogs = async () => {
+      if (!role || role !== 'admin' || !currentEvent) return;
+      setLogsLoading(true);
+      const { data, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', currentEvent.id)
+        .order('created_at', { ascending: false });
+      setLogs(data || []);
+      setLogsLoading(false);
+    };
+    fetchLogs();
+  }, [role, events]);
+
+  const handleDeleteLog = async (logId: string) => {
+    if (role !== 'admin') return;
+    setDeleting(true);
+    try {
+      await supabase.from('incident_logs').delete().eq('id', logId);
+      setLogs(logs => logs.filter(l => l.id !== logId));
+    } catch (err) {
+      alert('Error deleting log: ' + ((err as Error).message || String(err)));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Delete all event data (admin only)
   const handleDeleteEvent = async (eventId: string) => {
+    if (role !== 'admin') return;
     setDeleting(true)
     try {
       // Delete attendance records
@@ -130,9 +197,9 @@ export default function SettingsPage() {
       // Finally, delete the event
       await supabase.from('events').delete().eq('id', eventId)
       setShowDeleteConfirm(null)
-      fetchEvents()
-    } catch (err: any) {
-      alert('Error deleting event: ' + (err.message || err.toString()))
+      fetchEvents(companyId)
+    } catch (err) {
+      alert('Error deleting event: ' + ((err as Error).message || String(err)))
     } finally {
       setDeleting(false)
     }
@@ -197,12 +264,14 @@ export default function SettingsPage() {
                       >
                         Reactivate Event
                       </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(event.id)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                      >
-                        Delete Event
-                      </button>
+                      {role === 'admin' && (
+                        <button
+                          onClick={() => setShowDeleteConfirm(event.id)}
+                          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                        >
+                          Delete Event
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -211,6 +280,47 @@ export default function SettingsPage() {
               <p className="text-gray-600">No past events found</p>
             )}
           </div>
+
+          {/* Logs for Current Event */}
+          {role === 'admin' && currentEvent && (
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Logs for Current Event</h2>
+              {logsLoading ? (
+                <p className="text-gray-600">Loading logs...</p>
+              ) : logs.length > 0 ? (
+                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border-b">Type</th>
+                      <th className="px-4 py-2 border-b">Occurrence</th>
+                      <th className="px-4 py-2 border-b">Created</th>
+                      <th className="px-4 py-2 border-b">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map(log => (
+                      <tr key={log.id}>
+                        <td className="px-4 py-2 border-b">{log.incident_type}</td>
+                        <td className="px-4 py-2 border-b">{log.occurrence}</td>
+                        <td className="px-4 py-2 border-b">{log.created_at ? new Date(log.created_at).toLocaleString() : ''}</td>
+                        <td className="px-4 py-2 border-b">
+                          <button
+                            onClick={() => handleDeleteLog(log.id)}
+                            className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
+                            disabled={deleting}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-gray-600">No logs found for this event.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -268,7 +378,7 @@ export default function SettingsPage() {
       )}
 
       {/* Delete Event Confirmation Modal */}
-      {showDeleteConfirm && (
+      {typeof showDeleteConfirm === 'string' ? (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Event?</h3>
@@ -284,7 +394,9 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteEvent(showDeleteConfirm)}
+                onClick={() => {
+                  if (typeof showDeleteConfirm === 'string') handleDeleteEvent(showDeleteConfirm);
+                }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
                 disabled={deleting}
               >
@@ -293,7 +405,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </main>
   )
 } 

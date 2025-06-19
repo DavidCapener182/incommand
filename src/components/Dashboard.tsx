@@ -21,6 +21,10 @@ import {
 import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '../contexts/AuthContext'
+import TrafficReportCard from './TrafficReportCard'
+import Modal from 'react-modal'
+import what3words from '@what3words/api'
 
 interface StatCardProps {
   title: string
@@ -38,7 +42,11 @@ interface EventTiming {
   isNext?: boolean
 }
 
-const TimeCard: React.FC = () => {
+interface TimeCardProps {
+  companyId: string | null;
+}
+
+const TimeCard: React.FC<TimeCardProps> = ({ companyId }) => {
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
   const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
   const [countdown, setCountdown] = useState<string>('');
@@ -85,7 +93,9 @@ const TimeCard: React.FC = () => {
   }, [nextEvent]);
 
   useEffect(() => {
+    if (!companyId) return;
     const fetchEventTimings = async () => {
+      if (!companyId) return;
       const { data: event } = await supabase
         .from('events')
         .select(`
@@ -98,6 +108,7 @@ const TimeCard: React.FC = () => {
           event_name
         `)
         .eq('is_current', true)
+        .eq('company_id', companyId)
         .single();
 
       if (event) {
@@ -143,12 +154,11 @@ const TimeCard: React.FC = () => {
         setNextEvent(nextThreeTimings[0] || null);
       }
     };
-
     fetchEventTimings();
     // Refresh timings every minute
     const refreshTimer = setInterval(fetchEventTimings, 60000);
     return () => clearInterval(refreshTimer);
-  }, []);
+  }, [currentTime, companyId]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
@@ -225,7 +235,159 @@ const StatCard: React.FC<StatCardProps> = ({
   )
 }
 
+// Add a helper to fetch What3Words address via API route (to keep API key secret)
+async function fetchWhat3Words(lat: number, lon: number): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/what3words?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+    return data.words ? data.words : null;
+  } catch {
+    return null;
+  }
+}
+
+const w3wApi = what3words(process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY || '');
+const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
+
+function What3WordsMapCard({ lat, lon, venueAddress }: { lat: number; lon: number; venueAddress: string }) {
+  const [w3w, setW3w] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchedLatLon, setSearchedLatLon] = useState<{lat: number, lon: number} | null>(null);
+  const [isValidW3W, setIsValidW3W] = useState(false);
+  const [w3wCoords, setW3wCoords] = useState<{lat: number, lon: number} | null>(null);
+
+  useEffect(() => {
+    if (lat && lon) {
+      setLoading(true);
+      fetchWhat3Words(lat, lon)
+        .then(words => setW3w(words))
+        .catch(() => setError('Could not fetch What3Words address'))
+        .finally(() => setLoading(false));
+    }
+  }, [lat, lon]);
+
+  // Validate and convert W3W input
+  useEffect(() => {
+    if (w3wRegex.test(search.trim())) {
+      setIsValidW3W(true);
+      w3wApi.convertToCoordinates({ words: search.replace(/^\/+/, '') })
+        .then((response: { coordinates?: { lat: number; lng: number } }) => {
+          if (response.coordinates) {
+            setW3wCoords({ lat: response.coordinates.lat, lon: response.coordinates.lng });
+            setError(null);
+          } else {
+            setW3wCoords(null);
+            setError('Not a real What3Words address');
+          }
+        });
+    } else {
+      setIsValidW3W(false);
+      setW3wCoords(null);
+    }
+  }, [search]);
+
+  // Handle search submit
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isValidW3W && w3wCoords) {
+      setSearchedLatLon(w3wCoords);
+      setModalOpen(true);
+    } else if (search) {
+      try {
+        const coords = await geocodeAddress(search);
+        setSearchedLatLon(coords);
+        setModalOpen(true);
+      } catch {
+        setError('Could not geocode searched location');
+      }
+    }
+  };
+
+  // Modal map URL
+  const modalLat = searchedLatLon?.lat || lat;
+  const modalLon = searchedLatLon?.lon || lon;
+  const modalMapUrl = modalLat && modalLon
+    ? `https://map.what3words.com/?maptype=roadmap&zoom=17&center=${modalLat},${modalLon}&marker=${modalLat},${modalLon}`
+    : null;
+
+  return (
+    <>
+      <div className="flex gap-4 w-full">
+        <div
+          className="bg-blue-50 rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
+          style={{ minHeight: 0, height: '100%' }}
+          onClick={() => setModalOpen(true)}
+        >
+          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+        </div>
+        <div className="bg-gray-50 rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
+          <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
+        </div>
+      </div>
+      <div className="fixed inset-0 z-50 pointer-events-none">
+        {modalOpen && (
+          <button
+            className="absolute top-16 right-4 text-gray-500 hover:text-gray-700 text-3xl z-50 pointer-events-auto bg-white rounded-full shadow-lg px-3 py-1"
+            onClick={() => { setModalOpen(false); setSearchedLatLon(null); }}
+            aria-label="Close"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+          >
+            &times;
+          </button>
+        )}
+      </div>
+      <Modal
+        isOpen={modalOpen}
+        onRequestClose={() => { setModalOpen(false); setSearchedLatLon(null); }}
+        className="fixed inset-0 flex items-center justify-center z-40"
+        overlayClassName="fixed inset-0 bg-black bg-opacity-60 z-30"
+        style={{
+          content: {
+            width: '90vw',
+            height: '90vh',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            left: '5vw',
+            top: '5vh',
+            right: 'auto',
+            bottom: 'auto',
+            padding: '0',
+            borderRadius: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        }}
+        ariaHideApp={false}
+      >
+        <div className="bg-white rounded-lg shadow-lg w-full h-full flex flex-col items-center relative">
+          {modalMapUrl ? (
+            <iframe
+              src={modalMapUrl}
+              title="What3Words Map Fullscreen"
+              width="100%"
+              height="100%"
+              style={{ border: 0, borderRadius: '1rem' }}
+              allowFullScreen
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-gray-400 bg-gray-100 rounded">No map available</div>
+          )}
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
@@ -257,15 +419,43 @@ export default function Dashboard() {
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
   const router = useRouter()
+  const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  const checkCurrentEvent = async () => {
-    try {
-      const { data: event } = await supabase
+  // Fetch company_id on mount
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (!user) return;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      if (profileError || !profile?.company_id) {
+        setError('Could not determine your company. Please check your profile.');
+        return;
+      }
+      setCompanyId(profile.company_id);
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setUserRole(profileFull?.role || null);
+    };
+    fetchCompanyId();
+  }, [user]);
+
+  useEffect(() => {
+    if (!companyId) return;
+    setLoadingCurrentEvent(true);
+    const fetchCurrentEvent = async () => {
+      const { data: event, error } = await supabase
         .from('events')
         .select('*')
         .eq('is_current', true)
+        .eq('company_id', companyId)
         .single();
-
       if (event) {
         setHasCurrentEvent(true);
         setCurrentEventId(event.id);
@@ -292,50 +482,63 @@ export default function Dashboard() {
         setCurrentEventId(null);
         setCurrentEvent(null);
       }
-    } catch (error) {
-      console.error('Error checking current event:', error);
-    }
-  };
-
-  useEffect(() => {
-    checkCurrentEvent();
-    const interval = setInterval(checkCurrentEvent, 60000); // Check every minute
-    return () => clearInterval(interval);
-  }, []);
+      setLoadingCurrentEvent(false);
+    };
+    fetchCurrentEvent();
+  }, [companyId]);
 
   const fetchIncidentStats = async () => {
+    console.log('Dashboard companyId:', companyId);
+    if (!companyId) return;
     try {
       // Get current event first
       const { data: currentEvent } = await supabase
         .from('events')
         .select('id')
         .eq('is_current', true)
+        .eq('company_id', companyId)
         .single()
+
+      console.log('Dashboard currentEvent:', currentEvent);
 
       if (!currentEvent) return
 
       // Get all incidents for current event
-      const { data: incidents } = await supabase
+      const { data: incidents, error: incidentsError } = await supabase
         .from('incident_logs')
         .select('*')
         .eq('event_id', currentEvent.id)
 
-      if (!incidents) return
+      if (incidentsError) {
+        console.error('Dashboard incidents fetch error:', incidentsError);
+      }
 
-      const nonSitRepIncidents = incidents.filter(i => i.incident_type !== 'Sit Rep')
-      const sitRepIncidents = incidents.filter(i => i.incident_type === 'Sit Rep')
+      if (!incidents || incidents.length === 0) {
+        console.log('Dashboard incidents fetch returned empty:', incidents);
+        return;
+      }
+
+      console.log('Dashboard incidents fetched:', incidents);
+
+      const nonSitRepIncidents = incidents.filter(i => i.incident_type.toLowerCase() !== 'sit rep')
+      const sitRepIncidents = incidents.filter(i => i.incident_type.toLowerCase() === 'sit rep')
+
+      const isCountable = (i: any) => {
+        const type = i.incident_type?.toLowerCase();
+        return type !== 'attendance' && type !== 'sit rep';
+      };
 
       setIncidentStats({
-        total: incidents.filter(i => i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
-        high: incidents.filter(i => ['Ejection', 'Code Green', 'Code Black', 'Code Pink'].includes(i.incident_type)).length,
-        open: nonSitRepIncidents.filter(i => !i.is_closed && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
-        inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
-        closed: incidents.filter(i => i.is_closed && i.status !== 'Logged' && i.incident_type !== 'Attendance').length,
+        total: incidents.filter(isCountable).length,
+        high: incidents.filter(i => ['ejection', 'code green', 'code black', 'code pink'].includes(i.incident_type.toLowerCase()) && !i.is_closed).length,
+        open: incidents.filter(i => isCountable(i) && !i.is_closed).length,
+        inProgress: nonSitRepIncidents.filter(i => !i.is_closed && i.action_taken && i.status !== 'Logged' && i.incident_type.toLowerCase() !== 'attendance').length,
+        closed: incidents.filter(i => isCountable(i) && i.is_closed).length,
         logged: sitRepIncidents.length + nonSitRepIncidents.filter(i => i.status === 'Logged').length,
         avgResolution: 0,
-        refusals: incidents.filter(i => i.incident_type === 'Refusal').length,
-        ejections: incidents.filter(i => i.incident_type === 'Ejection').length,
-        medical: incidents.filter(i => ['Code Green', 'Code Purple'].includes(i.incident_type)).length
+        refusals: incidents.filter(i => i.incident_type.toLowerCase() === 'refusal').length,
+        ejections: incidents.filter(i => i.incident_type.toLowerCase() === 'ejection').length,
+        medical: incidents.filter(i => ['code green', 'code purple'].includes(i.incident_type.toLowerCase())).length
       })
     } catch (err) {
       console.error('Error fetching incident stats:', err)
@@ -352,29 +555,18 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchIncidentStats()
-
-    // Clean up any existing subscription
-    cleanup()
-
-    // Set up new subscription
-    subscriptionRef.current = supabase
-      .channel(`dashboard_incident_changes_${Date.now()}`)
-      .on('postgres_changes', 
-        {
-          event: '*',
-          schema: 'public',
-          table: 'incident_logs'
-        }, 
-        () => {
-          fetchIncidentStats()
-        }
-      )
-      .subscribe()
-
+    if (!companyId) return;
+    fetchIncidentStats();
     // Cleanup on unmount
-    return cleanup
-  }, [])
+    return cleanup;
+  }, [companyId]);
+
+  // Ensure EventCreationModal never opens if there is a current event
+  useEffect(() => {
+    if (hasCurrentEvent && isEventModalOpen) {
+      setIsEventModalOpen(false);
+    }
+  }, [hasCurrentEvent]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -383,32 +575,42 @@ export default function Dashboard() {
       </div>
 
       {/* Modal for no current event */}
-      {!hasCurrentEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col items-center">
-            <h2 className="text-xl font-bold mb-4 text-[#2A3990]">No Current Event</h2>
-            <p className="mb-6 text-gray-700 text-center">No event is currently selected. Please create a new event to get started or go to settings to manage events.</p>
-            <div className="flex flex-col space-y-3 w-full">
-              <button
-                onClick={() => setIsEventModalOpen(true)}
-                className="w-full px-4 py-2 text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] font-semibold text-lg"
-              >
-                Create New Event
-              </button>
-              <button
-                onClick={() => router.push('/settings')}
-                className="w-full px-4 py-2 text-[#2A3990] border border-[#2A3990] rounded-md hover:bg-[#f0f4ff] font-semibold text-lg"
-              >
-                Go to Settings
-              </button>
+      {!loadingCurrentEvent && !hasCurrentEvent && (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full flex flex-col items-center">
+              <h2 className="text-xl font-bold mb-4 text-[#2A3990]">No Current Event</h2>
+              <p className="mb-6 text-gray-700 text-center">No event is currently selected. Please create a new event to get started or go to settings to manage events.</p>
+              <div className="flex flex-col space-y-3 w-full">
+                <button
+                  onClick={() => setIsEventModalOpen(true)}
+                  className="w-full px-4 py-2 text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] font-semibold text-lg"
+                >
+                  Create New Event
+                </button>
+                <button
+                  onClick={() => router.push('/settings')}
+                  className="w-full px-4 py-2 text-[#2A3990] border border-[#2A3990] rounded-md hover:bg-[#f0f4ff] font-semibold text-lg"
+                >
+                  Go to Settings
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+          <EventCreationModal
+            isOpen={isEventModalOpen}
+            onClose={() => setIsEventModalOpen(false)}
+            onEventCreated={async () => {
+              setIsEventModalOpen(false);
+              window.location.reload(); // Force full page reload after event creation
+            }}
+          />
+        </>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <CurrentEvent />
-        <TimeCard />
+        <TimeCard companyId={companyId} />
       </div>
       
       {/* Incident Dashboard */}
@@ -488,33 +690,36 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid - Second Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-24">
-          <VenueOccupancy currentEventId={currentEventId} />
-          {currentEvent?.venue_address && (
-            <WeatherCard 
-              lat={coordinates.lat} 
-              lon={coordinates.lon} 
-              locationName={currentEvent.venue_address} 
-              eventDate={currentEvent.event_date || ''}
-              startTime={currentEvent.main_act_start_time || ''}
-              curfewTime={currentEvent.curfew_time || ''}
-            />
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-24">
+          <div className="col-span-1">
+            <VenueOccupancy currentEventId={currentEventId} />
+          </div>
+          <div className="col-span-1">
+            {currentEvent?.venue_address && (
+              <WeatherCard 
+                lat={coordinates.lat} 
+                lon={coordinates.lon} 
+                locationName={currentEvent.venue_address} 
+                eventDate={currentEvent.event_date || ''}
+                startTime={currentEvent.main_act_start_time || ''}
+                curfewTime={currentEvent.curfew_time || ''}
+              />
+            )}
+          </div>
+          <div className="col-span-2">
+            {coordinates.lat && coordinates.lon ? (
+              <What3WordsMapCard lat={coordinates.lat} lon={coordinates.lon} venueAddress={currentEvent?.venue_address || ''} />
+            ) : (
+              <div className="h-full bg-gradient-to-br from-gray-50 via-gray-100 to-white p-4 transition-all duration-500 rounded-lg shadow flex items-center justify-center">
+                <span className="text-gray-400">No coordinates available for What3Words map</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Incident Table */}
         <IncidentTable filter={selectedFilter || undefined} />
       </div>
-
-      <EventCreationModal
-        isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        onEventCreated={async () => {
-          setIsEventModalOpen(false);
-          await checkCurrentEvent();
-          window.location.reload(); // Force full page reload after event creation
-        }}
-      />
 
       <IncidentCreationModal
         isOpen={isIncidentModalOpen}

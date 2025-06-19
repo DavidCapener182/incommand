@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import debounce from 'lodash/debounce'
+import imageCompression from 'browser-image-compression'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Props {
   isOpen: boolean
@@ -480,6 +482,15 @@ const parseAttendanceIncident = async (input: string): Promise<IncidentParserRes
   };
 };
 
+// Helper for minimal formatting
+function minimalFormatOccurrence(input: string) {
+  if (!input) return '';
+  let formatted = input.trim();
+  formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  if (!/[.!?]$/.test(formatted)) formatted += '.';
+  return formatted;
+}
+
 const formatOccurrence = (text: string) => {
   if (!text.trim()) return '';
   
@@ -643,7 +654,7 @@ const parseRefusalIncident = async (input: string): Promise<IncidentParserResult
     
     return {
       refusalDetails,
-      occurrence: data.occurrence || input,
+      occurrence: minimalFormatOccurrence(input),
       action_taken: data.action_taken || `Refusal logged and communicated to all radio holders. ${
         aggressive ? 'Police assistance requested. ' : ''
       }Security team monitoring situation.`,
@@ -655,7 +666,7 @@ const parseRefusalIncident = async (input: string): Promise<IncidentParserResult
     // Return basic details if AI generation fails
     return {
       refusalDetails,
-      occurrence: input,
+      occurrence: minimalFormatOccurrence(input),
       action_taken: `Refusal logged and communicated to all radio holders. ${
         aggressive ? 'Police assistance requested. ' : ''
       }Security team monitoring situation.`,
@@ -726,7 +737,7 @@ const parseEjectionIncident = async (input: string): Promise<IncidentParserResul
 
       return {
         ejectionDetails,
-        occurrence: data.occurrence || input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: data.action_taken || 'Individual ejected from venue.',
         callsign_from: callsign,
         incident_type: 'Ejection'
@@ -745,7 +756,7 @@ const parseEjectionIncident = async (input: string): Promise<IncidentParserResul
             additionalSecurity
           }
         },
-        occurrence: input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: 'Individual ejected from venue.',
         callsign_from: callsign,
         incident_type: 'Ejection'
@@ -764,7 +775,7 @@ const parseEjectionIncident = async (input: string): Promise<IncidentParserResul
           additionalSecurity: false
         }
       },
-      occurrence: input,
+      occurrence: minimalFormatOccurrence(input),
       action_taken: 'Individual ejected from venue.',
       callsign_from: '',
       incident_type: 'Ejection'
@@ -813,7 +824,7 @@ const parseMedicalIncident = async (input: string): Promise<IncidentParserResult
 
       return {
         medicalDetails,
-        occurrence: data.occurrence || input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: data.action_taken || 'Medics dispatched to location.',
         callsign_from: callsign,
         incident_type: 'Medical'
@@ -828,7 +839,7 @@ const parseMedicalIncident = async (input: string): Promise<IncidentParserResult
           refusedTreatment,
           transportedOffSite
         },
-        occurrence: input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: 'Medics dispatched to location.',
         callsign_from: callsign,
         incident_type: 'Medical'
@@ -843,7 +854,7 @@ const parseMedicalIncident = async (input: string): Promise<IncidentParserResult
         refusedTreatment: false,
         transportedOffSite: false
       },
-      occurrence: input,
+      occurrence: minimalFormatOccurrence(input),
       action_taken: 'Medics dispatched to location.',
       callsign_from: '',
       incident_type: 'Medical'
@@ -876,7 +887,7 @@ const parseWelfareIncident = async (input: string): Promise<IncidentParserResult
       const data = await response.json();
 
       return {
-        occurrence: data.occurrence || input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: data.action_taken || 'Welfare team dispatched to assess and support.',
         callsign_from: callsign,
         incident_type: 'Welfare'
@@ -885,7 +896,7 @@ const parseWelfareIncident = async (input: string): Promise<IncidentParserResult
       console.error('Error generating welfare details:', error);
       // Return basic details if AI generation fails
       return {
-        occurrence: input,
+        occurrence: minimalFormatOccurrence(input),
         action_taken: 'Welfare team dispatched to assess and support.',
         callsign_from: callsign,
         incident_type: 'Welfare'
@@ -894,7 +905,7 @@ const parseWelfareIncident = async (input: string): Promise<IncidentParserResult
   } catch (error: any) {
     console.error('Error in parseWelfareIncident:', error);
     return {
-      occurrence: input,
+      occurrence: minimalFormatOccurrence(input),
       action_taken: 'Welfare team dispatched to assess and support.',
       callsign_from: '',
       incident_type: 'Welfare'
@@ -927,7 +938,7 @@ const parseLostPropertyIncident = async (input: string): Promise<IncidentParserR
       const data = await response.json();
 
       return {
-        occurrence: data.occurrence || `Lost Property: ${input}`,
+        occurrence: minimalFormatOccurrence(`Lost Property: ${input}`),
         action_taken: data.action_taken || 'Lost property report created, awaiting update',
         callsign_from: callsign,
         incident_type: 'Lost Property'
@@ -936,7 +947,7 @@ const parseLostPropertyIncident = async (input: string): Promise<IncidentParserR
       console.error('Error generating lost property details:', error);
       // Return basic details if AI generation fails
       return {
-        occurrence: `Lost Property: ${input}`,
+        occurrence: minimalFormatOccurrence(`Lost Property: ${input}`),
         action_taken: 'Lost property report created, awaiting update',
         callsign_from: callsign,
         incident_type: 'Lost Property'
@@ -945,7 +956,7 @@ const parseLostPropertyIncident = async (input: string): Promise<IncidentParserR
   } catch (error: any) {
     console.error('Error in parseLostPropertyIncident:', error);
     return {
-      occurrence: `Lost Property: ${input}`,
+      occurrence: minimalFormatOccurrence(`Lost Property: ${input}`),
       action_taken: 'Lost property report created, awaiting update',
       callsign_from: '',
       incident_type: 'Lost Property'
@@ -1422,6 +1433,14 @@ const extractLocation = (input: string): string | null => {
   return locationMatch ? locationMatch[2].trim() : null;
 };
 
+// Utility to normalise artist name for log number prefix
+function normaliseArtistName(name: string) {
+  if (!name) return 'event';
+  let cleaned = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  if (cleaned.length > 9) cleaned = cleaned.slice(0, 9);
+  return cleaned;
+}
+
 export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreated }: Props) {
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
@@ -1471,6 +1490,30 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
 
   // Timer ref for debouncing
   const processTimer = useRef<NodeJS.Timeout>()
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchEvents = async () => {
+      // Get company_id from profile
+      const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+      if (!profile?.company_id) return;
+      // Fetch all events for this company
+      const { data: allEvents } = await supabase.from('events').select('id, event_name, artist_name, is_current').eq('company_id', profile.company_id).order('start_datetime', { ascending: false });
+      setEvents(allEvents || []);
+      // Default to current event
+      const current = allEvents?.find((e: any) => e.is_current);
+      setSelectedEventId(current?.id || (allEvents?.[0]?.id ?? null));
+    };
+    fetchEvents();
+  }, [user]);
 
   // Create a debounced function for processing input
   const debouncedProcessInput = useCallback(
@@ -1616,6 +1659,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
 
         // Generate log number
         const logNumber = await generateNextLogNumber(currentEvent.event_name);
+        const safeLogNumber = logNumber || '';
 
         if (processedData) {
           setFormData(prev => ({
@@ -1624,13 +1668,13 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             action_taken: processedData.action_taken,
             incident_type: processedData.incident_type || incidentType,
             callsign_from: processedData.callsign_from || prev.callsign_from,
-            log_number: logNumber
+            log_number: safeLogNumber
           }));
         } else {
           setFormData(prev => ({ 
             ...prev,
             incident_type: incidentType,
-            log_number: logNumber
+            log_number: safeLogNumber
           }));
         }
       } catch (error) {
@@ -1838,47 +1882,26 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     }
   }, [isOpen])
 
-  const generateNextLogNumber = async (eventName: string = '') => {
+  const generateNextLogNumber = async (artistName: string = '', eventId?: string) => {
     try {
-      // Get the current count of incidents for this event
-      const { data: incidents, error: countError } = await supabase
+      if (!eventId) return null;
+      // Get the current count of logs for this event
+      const { count, error: countError } = await supabase
         .from('incident_logs')
-        .select('log_number')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventId);
       if (countError) {
         console.error('Error getting incident count:', countError);
         throw countError;
       }
-
-      // Format the event name for the log number (e.g., "BLINK-182")
-      const eventPrefix = eventName
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/-$/, '');
-
-      // Get the last sequence number or start from 0
-      let lastSequence = 0;
-      if (incidents && incidents.length > 0 && incidents[0].log_number) {
-        const match = incidents[0].log_number.match(/-(\d+)$/);
-        if (match) {
-          lastSequence = parseInt(match[1], 10);
-        }
-      }
-
-      // Generate the next sequence number
-      const nextSequence = lastSequence + 1;
+      // Normalise artist name for prefix
+      const prefix = normaliseArtistName(artistName);
+      const nextSequence = (count ?? 0) + 1;
       const sequentialNumber = String(nextSequence).padStart(3, '0');
-
-      // Combine them (e.g., "BLINK-182-001")
-      const logNumber = `${eventPrefix}-${sequentialNumber}`;
-      console.log('Generated log number:', logNumber);
-      return logNumber;
+      return `${prefix}-${sequentialNumber}`;
     } catch (error) {
       console.error('Error generating log number:', error);
-      throw error;
+      return null;
     }
   };
 
@@ -1888,20 +1911,16 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     setError(null);
 
     try {
-      // Get current event
-      const { data: currentEvent } = await supabase
-        .from('events')
-        .select('id, event_name')
-        .eq('is_current', true)
-        .single();
-
-      if (!currentEvent) {
-        throw new Error('No current event found');
+      if (!selectedEventId) {
+        setError('Please select an event to log this incident.');
+        setLoading(false);
+        return;
       }
-
-      // Generate the next log number using the event name
-      const logNumber = await generateNextLogNumber(currentEvent.event_name);
-      
+      // Get selected event (include artist_name)
+      const selectedEvent = events.find(e => e.id === selectedEventId);
+      if (!selectedEvent) throw new Error('Selected event not found');
+      // Generate the next log number using the artist name
+      const logNumber = await generateNextLogNumber(selectedEvent.artist_name, selectedEventId);
       if (!logNumber) {
         throw new Error('Failed to generate log number');
       }
@@ -1918,7 +1937,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
         incident_type: formData.incident_type.trim(),
         action_taken: (formData.action_taken || '').trim(),
         is_closed: false,
-        event_id: currentEvent.id,
+        event_id: selectedEvent.id,
         status: formData.status || 'open',
         ai_input: formData.ai_input || null,
         created_at: now,
@@ -1956,7 +1975,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
           const { error: attendanceError } = await supabase
             .from('attendance_records')
             .insert([{
-              event_id: currentEvent.id,
+              event_id: selectedEvent.id,
               count: count,
               timestamp: now
             }]);
@@ -1995,6 +2014,19 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
       // Call onIncidentCreated callback with the created incident and close modal
       await onIncidentCreated(insertedIncident);
       onClose();
+
+      let photoUrl = null;
+      if (photoFile && insertedIncident) {
+        // Upload to /[eventID]/[incidentID]/[filename]
+        const ext = photoFile.name.split('.').pop();
+        const path = `${selectedEvent.id}/${insertedIncident.id}/photo.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('incident-photos').upload(path, photoFile, { upsert: true, contentType: photoFile.type });
+        if (!uploadError) {
+          photoUrl = path;
+          // Update incident log with photo_url
+          await supabase.from('incident_logs').update({ photo_url: path }).eq('id', insertedIncident.id);
+        }
+      }
     } catch (error) {
       console.error('Error creating incident:', error);
       alert(error instanceof Error ? error.message : 'Failed to create incident. Please try again.');
@@ -2083,6 +2115,34 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     }));
   }
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Validate type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/heic'];
+    if (!validTypes.includes(file.type)) {
+      setPhotoError('Only JPG, PNG, or HEIC images are allowed.');
+      return;
+    }
+    // Validate size
+    if (file.size > 5 * 1024 * 1024) {
+      // Try to compress
+      try {
+        const compressed = await imageCompression(file, { maxSizeMB: 5, maxWidthOrHeight: 1920 });
+        setPhotoFile(compressed);
+        setPhotoPreviewUrl(URL.createObjectURL(compressed));
+        setPhotoError(null);
+      } catch (err) {
+        setPhotoError('Image is too large and could not be compressed.');
+        return;
+      }
+    } else {
+      setPhotoFile(file);
+      setPhotoPreviewUrl(URL.createObjectURL(file));
+      setPhotoError(null);
+    }
+  };
+
   if (!isOpen) return null
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
@@ -2107,6 +2167,30 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>
+        )}
+
+        {events.length === 0 && (
+          <div className="mb-4 text-red-600 font-semibold">No events found. Please create an event first.</div>
+        )}
+        {events.length > 1 && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">Event</label>
+            <select
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              value={selectedEventId || ''}
+              onChange={e => setSelectedEventId(e.target.value)}
+            >
+              <option value="" disabled>Select an event</option>
+              {events.map(event => (
+                <option key={event.id} value={event.id}>
+                  {event.event_name} {event.is_current ? '(Current)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {!selectedEventId && events.length > 0 && (
+          <div className="mb-4 text-red-600 font-semibold">Please select an event to log this incident.</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -2321,6 +2405,19 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             />
           </div>
 
+          {formData.incident_type !== 'Attendance' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Attach Photo (optional, max 5MB)</label>
+              <input type="file" accept="image/jpeg,image/png,image/jpg,image/heic" onChange={handlePhotoChange} />
+              {photoError && <div className="text-red-500 text-xs mt-1">{photoError}</div>}
+              {photoPreviewUrl && (
+                <div className="mt-2">
+                  <img src={photoPreviewUrl} alt="Preview" className="h-24 rounded border" />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
@@ -2331,8 +2428,8 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             </button>
             <button
               type="submit"
-              disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={loading || !selectedEventId || events.length === 0}
             >
               {loading ? 'Creating...' : 'Create Incident'}
             </button>

@@ -25,18 +25,12 @@ export default function CurrentEvent() {
   }, [])
 
   const fetchCurrentEvent = async () => {
+    setCurrentEvent(null); // Clear any previous event info before fetching
     try {
       console.log('Starting to fetch current event...')
       const { data } = await supabase
         .from('events')
-        .select(`
-          id,
-          event_name,
-          venue_name,
-          event_type,
-          event_description,
-          support_acts
-        `)
+        .select('id, event_name, venue_name, event_type, event_description, support_acts, is_current, company_id')
         .eq('is_current', true)
         .single()
 
