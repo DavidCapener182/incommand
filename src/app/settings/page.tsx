@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
       if (error) throw error
       setShowReactivateConfirm(null)
-      fetchEvents(companyId) // Refresh the list
+      if (companyId) fetchEvents(companyId) // Refresh the list
     } catch (error) {
       console.error('Error setting current event:', error)
     }
@@ -117,7 +117,7 @@ export default function SettingsPage() {
       if (error) throw error
       
       setShowEndEventConfirm(false)
-      fetchEvents(companyId) // Refresh the list
+      if (companyId) fetchEvents(companyId) // Refresh the list
     } catch (err) {
       console.error('Error ending event:', err)
     }
@@ -197,7 +197,7 @@ export default function SettingsPage() {
       // Finally, delete the event
       await supabase.from('events').delete().eq('id', eventId)
       setShowDeleteConfirm(null)
-      fetchEvents(companyId)
+      if (companyId) fetchEvents(companyId)
     } catch (err) {
       alert('Error deleting event: ' + ((err as Error).message || String(err)))
     } finally {
