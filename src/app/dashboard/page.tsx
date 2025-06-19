@@ -4,7 +4,7 @@ import WeatherCard from '@/components/WeatherCard';
 
 export default function DashboardPage() {
   return (
-    <div>
+    <div className="pt-4 md:pt-10">
       {/* Incident Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">

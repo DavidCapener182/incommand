@@ -36,16 +36,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#2A3990] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#2A3990] flex flex-col justify-center pt-8 md:pt-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
           src="/inCommand.png"
           alt="inCommand Logo"
           width={600}
           height={600}
-          className="mx-auto"
+          className="mx-auto mb-6 md:mb-8"
         />
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+        <h2 className="mt-4 md:mt-6 text-center text-3xl font-extrabold text-white">
           Sign in to your account
         </h2>
       </div>

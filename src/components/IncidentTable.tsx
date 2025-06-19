@@ -57,6 +57,7 @@ export default function IncidentTable({ filter }: { filter?: string }) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
+  const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -280,7 +281,59 @@ export default function IncidentTable({ filter }: { filter?: string }) {
 
   return (
     <>
-      <div className="mt-4 flex flex-col">
+      {/* Mobile Card/Accordion Layout */}
+      <div className="md:hidden mt-4 space-y-3">
+        {/* Mobile Table Header */}
+        <div className="flex items-center px-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="basis-[28%]">Log #</div>
+          <div className="basis-[24%]">Type</div>
+          <div className="basis-[24%]">Time</div>
+          <div className="basis-[24%]">Status</div>
+        </div>
+        {filteredIncidents.map((incident) => (
+          <div
+            key={incident.id}
+            className="bg-white shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md"
+            onClick={() => setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="basis-[28%] font-bold text-blue-700 text-sm truncate">{incident.log_number}</div>
+              <div className="basis-[24%] flex items-center justify-center">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getIncidentTypeStyle(incident.incident_type)}`}>{incident.incident_type}</span>
+              </div>
+              <div className="basis-[24%] text-xs text-gray-500 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+              <div className="basis-[24%] flex items-center justify-end">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                  onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                >
+                  {incident.is_closed ? 'Closed' : 'Open'}
+                </span>
+              </div>
+            </div>
+            {expandedIncidentId === incident.id && (
+              <div className="mt-3 border-t pt-3 space-y-2">
+                <div>
+                  <span className="block text-xs text-gray-400 font-semibold">Occurrence</span>
+                  <span className="block text-sm text-gray-700">{incident.occurrence}</span>
+                </div>
+                <div>
+                  <span className="block text-xs text-gray-400 font-semibold">Action</span>
+                  <span className="block text-sm text-gray-700">{incident.action_taken}</span>
+                </div>
+                <div className="flex gap-4 mt-2">
+                  <span className="block text-xs text-gray-400 font-semibold">From:</span>
+                  <span className="block text-xs text-gray-700">{incident.callsign_from}</span>
+                  <span className="block text-xs text-gray-400 font-semibold">To:</span>
+                  <span className="block text-xs text-gray-700">{incident.callsign_to}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Desktop Table Layout */}
+      <div className="hidden md:flex flex-col">
         <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
             <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">

@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
   // Filter out 'Attendance' and 'Sit Rep' incidents for all widgets except attendance timeline
   const filteredIncidents = incidentData.filter((incident) => incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep');
 
-  // Fetch all relevant data and get multiple AI insights from API route
+  // Defensive fetch for AI insights
   useEffect(() => {
     const fetchAiInsights = async () => {
       if (!incidentData.length || !attendanceData.length || !eventId) return;
@@ -148,7 +148,16 @@ export default function AnalyticsPage() {
             event: eventId,
           }),
         });
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch (err) {
+          const text = await res.text();
+          console.error('Failed to parse JSON from /api/ai-insights:', text);
+          setAiError('AI insights failed to load. Invalid JSON response.');
+          setAiLoading(false);
+          return;
+        }
         setAiInsights(data.insights || []);
         setAiInsightIndex(0);
       } catch (err: any) {
@@ -176,15 +185,52 @@ export default function AnalyticsPage() {
     return () => {};
   }, [aiInsights]);
 
+  // Defensive fetch for heatmap, metrics, predictions, debrief
   useEffect(() => {
     setLoadingHeatmap(true);
-    fetch('/api/analytics/incident-heatmap').then(r => r.json()).then(d => { setHeatmapData(d); setLoadingHeatmap(false); });
+    fetch('/api/analytics/incident-heatmap').then(async r => {
+      try {
+        const d = await r.json();
+        setHeatmapData(d);
+      } catch (err) {
+        const text = await r.text();
+        console.error('Failed to parse JSON from /api/analytics/incident-heatmap:', text);
+      }
+      setLoadingHeatmap(false);
+    });
     setLoadingMetrics(true);
-    fetch('/api/analytics/performance-metrics').then(r => r.json()).then(d => { setMetrics(d); setLoadingMetrics(false); });
+    fetch('/api/analytics/performance-metrics').then(async r => {
+      try {
+        const d = await r.json();
+        setMetrics(d);
+      } catch (err) {
+        const text = await r.text();
+        console.error('Failed to parse JSON from /api/analytics/performance-metrics:', text);
+      }
+      setLoadingMetrics(false);
+    });
     setLoadingPredictions(true);
-    fetch('/api/analytics/predictions').then(r => r.json()).then(d => { setPredictions(d); setLoadingPredictions(false); });
+    fetch('/api/analytics/predictions').then(async r => {
+      try {
+        const d = await r.json();
+        setPredictions(d);
+      } catch (err) {
+        const text = await r.text();
+        console.error('Failed to parse JSON from /api/analytics/predictions:', text);
+      }
+      setLoadingPredictions(false);
+    });
     setLoadingDebrief(true);
-    fetch('/api/analytics/debrief-summary').then(r => r.json()).then(d => { setDebrief(d); setLoadingDebrief(false); });
+    fetch('/api/analytics/debrief-summary').then(async r => {
+      try {
+        const d = await r.json();
+        setDebrief(d);
+      } catch (err) {
+        const text = await r.text();
+        console.error('Failed to parse JSON from /api/analytics/debrief-summary:', text);
+      }
+      setLoadingDebrief(false);
+    });
   }, []);
 
   // Trend logic (dummy, replace with real trend calc if you have time series)
@@ -381,18 +427,133 @@ export default function AnalyticsPage() {
     }));
   }
 
+  // --- Summary Chips Data ---
+  const summaryChips = [
+    { label: 'Avg response', value: msToTime(metrics.avgResponseTimeMs) },
+    { label: 'Most likely', value: predictions.likelyType || 'N/A' },
+    { label: 'Peaks', value: peaks.length ? peaks[0].count : 'N/A' },
+    { label: 'Open', value: statusCounts['Open'] },
+    { label: 'Closed', value: statusCounts['Closed'] },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 md:py-8">
       <h1 className="text-3xl font-bold mb-6 text-gray-900">Analytics Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 mt-8">
-        {/* Incident Heatmap Widget */}
-        <div className="bg-white rounded shadow p-3 md:p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold text-gray-900">Incident Heatmap</h2>
-            <FaMapMarkerAlt className="text-blue-500" />
+
+      {/* Summary Chips Row (Mobile Only) */}
+      <div className="md:hidden flex overflow-x-auto gap-2 mb-4 pb-2 snap-x snap-mandatory">
+        {summaryChips.map((chip, i) => (
+          <div key={i} className="flex-shrink-0 bg-blue-50 text-blue-900 rounded-full px-4 py-2 text-sm font-semibold shadow snap-center border border-blue-100">
+            {chip.label}: <span className="font-bold">{chip.value}</span>
           </div>
-          {loadingHeatmap ? <Skeleton height={256} /> : <SchematicHeatmap />}
+        ))}
+      </div>
+
+      {/* Attendance Timeline (Always at Top, Full Width) */}
+      <div className="bg-white shadow rounded-lg p-6 flex flex-col justify-center mb-6">
+        <h2 className="text-lg font-semibold mb-4">Attendance Timeline</h2>
+        {loading ? (
+          <p>Loading attendance data...</p>
+        ) : attendanceData.length === 0 ? (
+          <p>No attendance data available for the current event.</p>
+        ) : (
+          <Line data={attendanceChartData} options={attendanceChartOptions} height={120} />
+        )}
+        {doorsOpenTime && (
+          <p className="mt-2 text-sm text-gray-500">Graph starts from doors open: {doorsOpenTime}</p>
+        )}
+      </div>
+
+      {/* Swipeable Analytics Cards (Mobile Only) */}
+      <div className="md:hidden flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory">
+        {/* Performance Metrics Card */}
+        <div className="min-w-[90vw] max-w-[95vw] bg-white rounded shadow p-3 snap-center">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Performance Metrics</h2>
+            <FaClock className="text-blue-500" />
+          </div>
+          {loadingMetrics ? (
+            <Skeleton height={48} />
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">Average Response Time: <span className="font-mono text-gray-900">{msToTime(metrics.avgResponseTimeMs)}</span>
+                {trend([metrics.avgResponseTimeMs || 0, (metrics.avgResponseTimeMs || 0) + 1000]) === 'up' && <FaArrowUp className="text-red-500" />}
+                {trend([metrics.avgResponseTimeMs || 0, (metrics.avgResponseTimeMs || 0) - 1000]) === 'down' && <FaArrowDown className="text-green-500" />}
+                {trend([metrics.avgResponseTimeMs || 0, metrics.avgResponseTimeMs || 0]) === 'flat' && <FaArrowRight className="text-gray-400" />}
+              </div>
+              <div className="flex items-center gap-2">Average Resolution Time: <span className="font-mono text-gray-900">{msToTime(metrics.avgResolutionTimeMs)}</span>
+                {trend([metrics.avgResolutionTimeMs || 0, (metrics.avgResolutionTimeMs || 0) + 1000]) === 'up' && <FaArrowUp className="text-red-500" />}
+                {trend([metrics.avgResolutionTimeMs || 0, (metrics.avgResolutionTimeMs || 0) - 1000]) === 'down' && <FaArrowDown className="text-green-500" />}
+                {trend([metrics.avgResolutionTimeMs || 0, metrics.avgResolutionTimeMs || 0]) === 'flat' && <FaArrowRight className="text-gray-400" />}
+              </div>
+            </div>
+          )}
         </div>
+        {/* Trends & Predictive AI Card */}
+        <div className="min-w-[90vw] max-w-[95vw] bg-white rounded shadow p-3 snap-center">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Trends & Predictive AI</h2>
+            <FaExclamationTriangle className="text-yellow-500" />
+          </div>
+          {loadingPredictions ? (
+            <Skeleton height={48} />
+          ) : (![predictions.likelyType, predictions.likelyLocation, predictions.likelyHour].some(val => val && String(val).trim())) ? (
+            <div className="bg-gray-100 text-gray-500 text-center py-8 rounded">No predictive data available.</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">Most Likely Next Incident Type: <span className="font-mono text-gray-900">{predictions.likelyType || 'N/A'}</span>
+                <ConfidenceBar value={0.8} />
+              </div>
+              <div className="flex items-center gap-2">Most Likely Location: <span className="font-mono text-gray-900">{predictions.likelyLocation || 'N/A'}</span></div>
+              <div className="flex items-center gap-2">Most Likely Hour: <span className="font-mono text-gray-900">{predictions.likelyHour || 'N/A'}</span></div>
+            </div>
+          )}
+        </div>
+        {/* Debrief Summary Card */}
+        <div className="min-w-[90vw] max-w-[95vw] bg-white rounded shadow p-3 snap-center">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-gray-900">Debrief Summary</h2>
+            <div className="flex gap-2">
+              <button onClick={handleExport} className="p-1 text-blue-500 hover:text-blue-700" aria-label="Export"><FaFileExport /></button>
+              <button onClick={handlePrint} className="p-1 text-blue-500 hover:text-blue-700" aria-label="Print"><FaPrint /></button>
+            </div>
+          </div>
+          <div id="debrief-report">
+            <div className="mb-2 text-gray-900">{debrief.summary}</div>
+            <ul className="list-disc ml-6 mb-4">
+              {(debrief.learningPoints || []).map((pt, i) => (
+                <li key={i}>{pt}</li>
+              ))}
+            </ul>
+            {(debrief.callsignSheet || []).length > 0 && (
+              <div className="overflow-x-auto">
+                <h3 className="font-semibold mb-2">Final Callsign/Radio Assignment Sheet</h3>
+                <table className="min-w-full border text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border px-2 py-1">Callsign</th>
+                      <th className="border px-2 py-1">Position</th>
+                      <th className="border px-2 py-1">Assigned Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(debrief.callsignSheet || []).map((row: any, i: number) => (
+                      <tr key={i}>
+                        <td className="border px-2 py-1 font-mono">{row.callsign}</td>
+                        <td className="border px-2 py-1">{row.position}</td>
+                        <td className="border px-2 py-1">{row.assigned_name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: Keep Grid Layout */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 mt-8">
         {/* Performance Metrics Widget */}
         <div className="bg-white rounded shadow p-3 md:p-4">
           <div className="flex items-center justify-between mb-2">
@@ -424,6 +585,8 @@ export default function AnalyticsPage() {
           </div>
           {loadingPredictions ? (
             <Skeleton height={48} />
+          ) : (![predictions.likelyType, predictions.likelyLocation, predictions.likelyHour].some(val => val && String(val).trim())) ? (
+            <div className="bg-gray-100 text-gray-500 text-center py-8 rounded">No predictive data available.</div>
           ) : (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">Most Likely Next Incident Type: <span className="font-mono text-gray-900">{predictions.likelyType || 'N/A'}</span>
@@ -478,19 +641,6 @@ export default function AnalyticsPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
         <div className="md:col-span-2 bg-white shadow rounded-lg p-6 flex flex-col justify-center">
-          <h2 className="text-lg font-semibold mb-4">Attendance Timeline</h2>
-          {loading ? (
-            <p>Loading attendance data...</p>
-          ) : attendanceData.length === 0 ? (
-            <p>No attendance data available for the current event.</p>
-          ) : (
-            <Line data={attendanceChartData} options={attendanceChartOptions} height={120} />
-          )}
-          {doorsOpenTime && (
-            <p className="mt-2 text-sm text-gray-500">Graph starts from doors open: {doorsOpenTime}</p>
-          )}
-        </div>
-        <div className="bg-white shadow rounded-lg p-6 flex flex-col justify-center">
           <h2 className="text-lg font-semibold mb-4">Incident Volume Over Time</h2>
           {loading ? <p>Loading...</p> : <Line data={incidentVolumeLineData} />}
         </div>

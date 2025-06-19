@@ -74,6 +74,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
   const [step, setStep] = useState(1)
   const descriptionTimeoutRef = useRef<NodeJS.Timeout>()
   const addressTimeoutRef = useRef<NodeJS.Timeout>()
+  const [showBrief, setShowBrief] = useState(false)
 
   const generateDescription = async (updatedFormData: EventFormData) => {
     if (!updatedFormData.venue_name || !updatedFormData.artist_name) return;
@@ -436,8 +437,17 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Security Brief</label>
-              <div className="mt-1 relative">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">Security Brief</label>
+                <button
+                  type="button"
+                  className="md:hidden text-xs text-blue-600 underline focus:outline-none"
+                  onClick={() => setShowBrief((prev) => !prev)}
+                >
+                  {showBrief ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <div className={`${showBrief ? '' : 'hidden'} md:block mt-1 relative`}>
                 <textarea
                   name="description"
                   value={formData.description || ''}

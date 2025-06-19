@@ -156,6 +156,28 @@ export default function SettingsPage() {
     if (role !== 'admin') return;
     setDeleting(true);
     try {
+      // Get the log details first to check if it's an attendance log
+      const { data: log } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('id', logId)
+        .single();
+
+      if (log && log.incident_type === 'Attendance') {
+        // Extract the count from the occurrence
+        const count = parseInt(log.occurrence.match(/\d+/)?.[0] || '0');
+        if (count > 0) {
+          // Delete the corresponding attendance record
+          await supabase
+            .from('attendance_records')
+            .delete()
+            .eq('event_id', log.event_id)
+            .eq('count', count)
+            .eq('timestamp', log.created_at);
+        }
+      }
+
+      // Delete the log itself
       await supabase.from('incident_logs').delete().eq('id', logId);
       setLogs(logs => logs.filter(l => l.id !== logId));
     } catch (err) {

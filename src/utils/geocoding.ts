@@ -1,17 +1,7 @@
 export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number }> {
   try {
-    let city = address;
-    // If the address contains 'Liverpool', use 'Liverpool' as the city
-    if (address.toLowerCase().includes('liverpool')) {
-      city = 'Liverpool';
-    } else {
-      // Try to extract the city (second last comma-separated part)
-      const parts = address.split(',').map(p => p.trim());
-      if (parts.length >= 2) {
-        city = parts[parts.length - 2];
-      }
-    }
-    const response = await fetch(`/api/geocode?address=${encodeURIComponent(city)}`);
+    // Use the full address for geocoding
+    const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
     if (!response.ok) {
       throw new Error('Failed to geocode address');
     }
