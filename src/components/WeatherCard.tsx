@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { WeatherData, getCurrentWeather } from '@/services/weatherService';
-import { CloudIcon, SunIcon, BoltIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
+import { CloudIcon, SunIcon, BoltIcon, CloudArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface HourlyForecast {
   time: string;
@@ -103,25 +103,29 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
     const desc = weather.description.toLowerCase();
     
     if (desc.includes('rain') || desc.includes('drizzle')) {
-      return <CloudArrowDownIcon className="h-10 w-10" />;
+      return <CloudArrowDownIcon className="h-10 w-10 text-blue-500" />;
     }
     if (desc.includes('thunder') || desc.includes('lightning')) {
-      return <BoltIcon className="h-10 w-10" />;
+      return <BoltIcon className="h-10 w-10 text-yellow-500" />;
     }
     if (desc.includes('snow') || desc.includes('sleet')) {
-      return <CloudIcon className="h-10 w-10" />;
-    }
-    if (desc.includes('scattered clouds') || desc.includes('few clouds')) {
-      return <SunIcon className="h-10 w-10" />;
-    }
-    if (desc.includes('broken clouds') || desc.includes('overcast clouds')) {
-      return <CloudIcon className="h-10 w-10" />;
+      return <CloudIcon className="h-10 w-10 text-blue-300" />;
     }
     if (desc.includes('clear')) {
-      return <SunIcon className="h-10 w-10" />;
+      return <SunIcon className="h-10 w-10 text-yellow-400" />;
     }
+    if (desc.includes('few clouds')) {
+      return <SunIcon className="h-10 w-10 text-yellow-400" />;
+    }
+    if (desc.includes('scattered clouds') || desc.includes('broken clouds') || desc.includes('overcast clouds')) {
+      return <CloudIcon className="h-10 w-10 text-gray-500" />;
+    }
+    if (desc.includes('mist') || desc.includes('smoke') || desc.includes('haze') || desc.includes('sand') || desc.includes('dust') || desc.includes('fog') || desc.includes('ash') || desc.includes('squall') || desc.includes('tornado')) {
+        return <ExclamationTriangleIcon className="h-10 w-10 text-gray-600" />;
+    }
+    
     // Default icon
-    return <CloudIcon className="h-10 w-10" />;
+    return <CloudIcon className="h-10 w-10 text-gray-400" />;
   };
 
   const getWindDescription = (speed: number) => {
@@ -134,15 +138,19 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-center">
-      <WeatherIcon />
-      <span className="text-5xl font-bold text-gray-800 mt-2">{Math.round(weather.temperature)}°C</span>
-      <span className="text-md text-gray-600 capitalize mt-1">{weather.description}</span>
-      <div className="text-gray-500 text-sm mt-3">
+      <div className="flex items-center justify-center">
+        <div className="hidden md:block pr-4">
+          <WeatherIcon />
+        </div>
+        <span className="text-3xl md:text-5xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
+      </div>
+      <span className="text-sm md:text-lg text-gray-600 capitalize mt-2">{weather.description}</span>
+      <div className="text-gray-500 text-xs md:text-base mt-2">
         {locationName.split(',').map((part, index) => (
-          <p key={index}>{part.trim()}</p>
+          <p key={index} className="leading-tight">{part.trim()}</p>
         ))}
       </div>
-      <div className="text-gray-500 text-sm mt-2 flex items-center">
+      <div className="text-gray-500 text-xs md:text-sm mt-2 flex items-center">
         <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>

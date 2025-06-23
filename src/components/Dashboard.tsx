@@ -16,7 +16,8 @@ import {
   CheckCircleIcon,
   UserGroupIcon,
   HeartIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
@@ -35,6 +36,8 @@ interface StatCardProps {
   onClick?: () => void
   isFilterable?: boolean
   className?: string
+  tooltip?: string
+  showPulse?: boolean
 }
 
 interface EventTiming {
@@ -45,176 +48,52 @@ interface EventTiming {
 
 interface TimeCardProps {
   companyId: string | null;
+  currentTime: string;
+  eventTimings: EventTiming[];
+  nextEvent: EventTiming | null;
+  countdown: string;
 }
 
-const TimeCard: React.FC<TimeCardProps> = ({ companyId }) => {
-  const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
-  const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
-  const [countdown, setCountdown] = useState<string>('');
-  const [nextEvent, setNextEvent] = useState<EventTiming | null>(null);
-  const [artistName, setArtistName] = useState<string>('');
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString('en-GB'));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (!nextEvent) return;
-
-    const calculateCountdown = () => {
-      const now = new Date();
-      const [hours, minutes] = nextEvent.time.split(':').map(Number);
-      const eventTime = new Date(now);
-      eventTime.setHours(hours, minutes, 0);
-
-      if (eventTime < now) {
-        eventTime.setDate(eventTime.getDate() + 1);
-      }
-
-      const diff = eventTime.getTime() - now.getTime();
-      const hours_remaining = Math.floor(diff / (1000 * 60 * 60));
-      const minutes_remaining = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds_remaining = Math.floor((diff % (1000 * 60)) / 1000);
-
-      return `${hours_remaining}h ${minutes_remaining}m ${seconds_remaining}s`;
-    };
-
-    const countdownTimer = setInterval(() => {
-      setCountdown(calculateCountdown());
-    }, 1000);
-
-    setCountdown(calculateCountdown());
-
-    return () => clearInterval(countdownTimer);
-  }, [nextEvent]);
-
-  useEffect(() => {
-    if (!companyId) return;
-    const fetchEventTimings = async () => {
-      if (!companyId) return;
-      const { data: event } = await supabase
-        .from('events')
-        .select(`
-          security_call_time,
-          main_act_start_time,
-          show_down_time,
-          show_stop_meeting_time,
-          doors_open_time,
-          curfew_time,
-          event_name,
-          support_acts
-        `)
-        .eq('is_current', true)
-        .eq('company_id', companyId)
-        .single();
-
-      if (event) {
-        const now = new Date();
-        const currentHours = now.getHours();
-        const currentMinutes = now.getMinutes();
-        const currentTimeNumber = currentHours * 60 + currentMinutes;
-
-        setArtistName(event.event_name);
-
-        // Parse support acts
-        let supportActs = [];
-        if (event.support_acts) {
-          try {
-            supportActs = typeof event.support_acts === 'string' ? 
-              JSON.parse(event.support_acts) : 
-              event.support_acts;
-          } catch (e) {
-            console.error('Error parsing support acts:', e);
-            supportActs = [];
-          }
-        }
-
-        const timings: EventTiming[] = [
-          { title: 'Security Call', time: event.security_call_time },
-          { title: 'Show Stop Meeting', time: event.show_stop_meeting_time },
-          { title: 'Doors Open', time: event.doors_open_time },
-          // Add support acts
-          ...supportActs.map((act: { act_name: string; start_time: string }) => ({
-            title: act.act_name,
-            time: act.start_time
-          })),
-          { title: event.event_name, time: event.main_act_start_time },
-          { title: 'Show Down', time: event.show_down_time },
-          { title: 'Curfew', time: event.curfew_time }
-        ].filter(timing => timing.time); // Only show timings that have been set
-
-        // Convert times to minutes since midnight for comparison
-        const timingsWithMinutes = timings.map(timing => {
-          const [hours, minutes] = timing.time.split(':').map(Number);
-          const timeInMinutes = hours * 60 + minutes;
-          return {
-            ...timing,
-            minutesSinceMidnight: timeInMinutes
-          };
-        });
-
-        // Filter to only future events and sort by time
-        const futureTimings = timingsWithMinutes
-          .filter(t => t.minutesSinceMidnight > currentTimeNumber)
-          .sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
-
-        // Take only the next 5 events and mark the nearest one
-        const nextFiveTimings = futureTimings.slice(0, 5).map((timing, index) => ({
-          title: timing.title,
-          time: timing.time,
-          isNext: index === 0
-        }));
-
-        setEventTimings(nextFiveTimings);
-        setNextEvent(nextFiveTimings[0] || null);
-      }
-    };
-    fetchEventTimings();
-    // Refresh timings every minute
-    const refreshTimer = setInterval(fetchEventTimings, 60000);
-    return () => clearInterval(refreshTimer);
-  }, [currentTime, companyId]);
-
+const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Time</h2>
-          <p className="text-3xl font-bold text-gray-900 mb-4">{currentTime}</p>
-          {nextEvent && (
-            <div className="mt-2">
-              <h3 className="text-sm font-medium text-gray-500">Time until {nextEvent.title}</h3>
-              <p className="text-lg font-bold text-blue-600">{countdown}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:block">
+            <div className="hidden md:block">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Time</h2>
+              <p className="text-3xl font-bold text-gray-900 mb-4">{currentTime}</p>
+              {nextEvent && (
+                  <div className="mt-2">
+                      <h3 className="text-sm font-medium text-gray-500">Time until {nextEvent.title}</h3>
+                      <p className="text-lg font-bold text-blue-600">{countdown}</p>
+                  </div>
+              )}
             </div>
-          )}
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Schedule</h2>
-          <div className="space-y-2">
-            {eventTimings.map((timing, index) => (
-              <div 
-                key={index} 
-                className={`flex justify-between items-center p-2 rounded ${
-                  timing.isNext ? 'bg-blue-50 border border-blue-200' : ''
-                }`}
-              >
-                <span className={`text-sm font-medium ${timing.isNext ? 'text-blue-600' : 'text-gray-500'}`}>
-                  {timing.title}
-                </span>
-                <span className={`text-sm font-bold ${timing.isNext ? 'text-blue-700' : 'text-gray-900'}`}>
-                  {timing.time}
-                </span>
-              </div>
-            ))}
-            {eventTimings.length === 0 && (
-              <p className="text-sm text-gray-500">No upcoming event timings</p>
+            <div className='hidden md:block'>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Schedule</h2>
+            </div>
+            <div className="space-y-2 mt-2">
+                {eventTimings.map((timing, index) => (
+                    <div
+                      key={index}
+                      className={`flex justify-between items-center p-2 rounded ${
+                        timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
+                      } `}
+                    >
+                      <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500'}`}>
+                        {timing.title}
+                      </span>
+                      <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900'}`}>
+                        {timing.time}
+                      </span>
+                    </div>
+                ))}
+            </div>
+             {eventTimings.length === 0 && !nextEvent && (
+                <p className="text-sm text-gray-500">No upcoming event timings</p>
             )}
-          </div>
         </div>
       </div>
     </div>
@@ -229,7 +108,9 @@ const StatCard: React.FC<StatCardProps> = ({
   isSelected, 
   onClick, 
   isFilterable = false,
-  className
+  className,
+  tooltip,
+  showPulse
 }) => {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -250,26 +131,44 @@ const StatCard: React.FC<StatCardProps> = ({
     }
   }, [value]);
 
+  const [showTooltip, setShowTooltip] = React.useState(false);
+
   return (
-    <div 
-      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 p-5 mb-2 sm:mb-0 
-        ${isFilterable ? 'cursor-pointer' : ''} 
-        ${isFilterable && isSelected ? 'border-2 border-blue-500' : 'border border-gray-100'}
-        active:scale-95
-        mx-1 my-2
-        select-none
+    <div
+      onClick={isFilterable ? onClick : undefined}
+      className={`
+        bg-white rounded-lg shadow-sm p-2 md:p-4 flex flex-col md:flex-row items-center text-center md:text-left
+        ${isFilterable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
+        ${isSelected ? 'ring-2 ring-blue-500' : ''}
+        ${pulse ? 'animate-pulse-once' : ''}
+        relative
         ${className}
       `}
-      onClick={isFilterable ? onClick : undefined}
-      tabIndex={isFilterable ? 0 : -1}
-      role={isFilterable ? 'button' : undefined}
-      aria-pressed={isSelected}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onFocus={() => setShowTooltip(true)}
+      onBlur={() => setShowTooltip(false)}
+      onTouchStart={() => setShowTooltip(v => !v)}
     >
-      <div className="flex flex-col items-center justify-center space-y-1">
-        <div className={`${colorClasses[color as keyof typeof colorClasses]} w-9 h-9 mb-1`}>{icon}</div>
-        <p className={`text-4xl font-bold text-gray-900 ${pulse ? 'animate-pulse' : ''}`}>{value}</p>
-        <h3 className="text-base font-medium text-gray-600 mt-1">{title}</h3>
+      {showPulse && (
+        <span className="absolute top-2 right-2 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+        </span>
+      )}
+      <div className="flex-shrink-0 md:mr-4 mb-2 md:mb-0">
+        {icon}
       </div>
+      <div>
+        <p className="text-xs md:text-sm font-medium text-gray-500 truncate">{title}</p>
+        <p className="mt-1 text-lg md:text-3xl font-semibold text-gray-900">{value}</p>
+      </div>
+      {/* Tooltip */}
+      {tooltip && showTooltip && (
+        <div className="absolute z-20 left-1/2 md:left-auto md:right-0 top-full mt-2 w-40 p-2 bg-gray-800 text-white text-xs rounded shadow-lg -translate-x-1/2 md:translate-x-0">
+          {tooltip}
+        </div>
+      )}
     </div>
   )
 }
@@ -436,14 +335,7 @@ export default function Dashboard() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
-  const [currentEvent, setCurrentEvent] = useState<{
-    venue_address: string;
-    expected_attendance: string;
-    venue_capacity: string;
-    event_date?: string;
-    main_act_start_time?: string;
-    curfew_time?: string;
-  } | null>(null)
+  const [currentEvent, setCurrentEvent] = useState<any | null>(null)
   const [coordinates, setCoordinates] = useState<{ lat: number; lon: number }>({
     lat: 51.5074,
     lon: -0.1278
@@ -457,13 +349,134 @@ export default function Dashboard() {
     refusals: 0,
     ejections: 0,
     medicals: 0,
+    other: 0,
+    hasOpenHighPrio: false,
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
   const router = useRouter()
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
+  const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
+  const [countdown, setCountdown] = useState<string>('');
+  const [nextEvent, setNextEvent] = useState<EventTiming | null>(null);
 
-  // Fetch company_id on mount
+  const fetchCurrentEvent = async () => {
+    if (!companyId) return;
+    setLoadingCurrentEvent(true);
+    setCurrentEvent(null);
+    try {
+      const { data } = await supabase
+        .from('events')
+        .select('*, event_name, venue_name, event_type, event_description, support_acts')
+        .eq('is_current', true)
+        .eq('company_id', companyId)
+        .single();
+
+      if (data) {
+        data.venue_name = data.venue_name
+          .split(' ')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        setCurrentEvent(data);
+        setHasCurrentEvent(true);
+        setCurrentEventId(data.id);
+        if (data.venue_address) {
+          try {
+            const coords = await geocodeAddress(data.venue_address);
+            setCoordinates(coords);
+          } catch (error) {
+            console.error('Error geocoding address:', error);
+          }
+        }
+      } else {
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('An unexpected error occurred');
+    } finally {
+      setLoadingCurrentEvent(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('en-GB'));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (nextEvent) {
+      const calculateCountdown = () => {
+        const now = new Date();
+        const [hours, minutes] = nextEvent.time.split(':').map(Number);
+        const eventTime = new Date(now);
+        eventTime.setHours(hours, minutes, 0);
+        if (eventTime < now) {
+          eventTime.setDate(eventTime.getDate() + 1);
+        }
+        const diff = eventTime.getTime() - now.getTime();
+        const hours_remaining = Math.floor(diff / (1000 * 60 * 60));
+        const minutes_remaining = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds_remaining = Math.floor((diff % (1000 * 60)) / 1000);
+        return `${hours_remaining}h ${minutes_remaining}m ${seconds_remaining}s`;
+      };
+      const countdownTimer = setInterval(() => setCountdown(calculateCountdown()), 1000);
+      setCountdown(calculateCountdown());
+      return () => clearInterval(countdownTimer);
+    }
+  }, [nextEvent]);
+
+  useEffect(() => {
+    const fetchEventTimings = async () => {
+      if (!companyId) return;
+      const { data: event } = await supabase
+        .from('events')
+        .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
+        .eq('is_current', true)
+        .eq('company_id', companyId)
+        .single();
+      if (event) {
+        const now = new Date();
+        const currentTimeNumber = now.getHours() * 60 + now.getMinutes();
+        let supportActs = [];
+        if (event.support_acts) {
+          try {
+            supportActs = typeof event.support_acts === 'string' ? JSON.parse(event.support_acts) : event.support_acts;
+          } catch (e) { console.error('Error parsing support acts:', e); supportActs = []; }
+        }
+        const timings: EventTiming[] = [
+          { title: 'Security Call', time: event.security_call_time },
+          { title: 'Show Stop Meeting', time: event.show_stop_meeting_time },
+          { title: 'Doors Open', time: event.doors_open_time },
+          ...supportActs.map((act: { act_name: string; start_time: string }) => ({ title: act.act_name, time: act.start_time })),
+          { title: event.event_name, time: event.main_act_start_time },
+          { title: 'Show Down', time: event.show_down_time },
+          { title: 'Curfew', time: event.curfew_time }
+        ].filter(timing => timing.time);
+        const timingsWithMinutes = timings.map(timing => {
+          const [hours, minutes] = timing.time.split(':').map(Number);
+          return { ...timing, minutesSinceMidnight: hours * 60 + minutes };
+        });
+        const futureTimings = timingsWithMinutes
+          .filter(t => t.minutesSinceMidnight > currentTimeNumber)
+          .sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
+        const nextTiming = futureTimings[0] || null;
+        const nextFiveTimings = futureTimings.slice(0, 5).map((t, i) => ({ ...t, isNext: i === 0 }));
+        setEventTimings(nextFiveTimings);
+        setNextEvent(nextTiming ? { ...nextTiming, isNext: true } : null);
+      }
+    };
+    if (companyId) {
+      fetchEventTimings();
+      const refreshTimer = setInterval(fetchEventTimings, 60000);
+      return () => clearInterval(refreshTimer);
+    }
+  }, [companyId]);
+
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!user) return;
@@ -488,44 +501,9 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (!companyId) return;
-    setLoadingCurrentEvent(true);
-    const fetchCurrentEvent = async () => {
-      const { data: event, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('is_current', true)
-        .eq('company_id', companyId)
-        .single();
-      if (event) {
-        setHasCurrentEvent(true);
-        setCurrentEventId(event.id);
-        setCurrentEvent({
-          venue_address: event.venue_address,
-          expected_attendance: event.expected_attendance,
-          venue_capacity: event.venue_capacity,
-          event_date: event.event_date,
-          main_act_start_time: event.main_act_start_time,
-          curfew_time: event.curfew_time
-        });
-
-        // Get coordinates for the venue address
-        if (event.venue_address) {
-          try {
-            const coords = await geocodeAddress(event.venue_address);
-            setCoordinates(coords);
-          } catch (error) {
-            console.error('Error geocoding address:', error);
-          }
-        }
-      } else {
-        setHasCurrentEvent(false);
-        setCurrentEventId(null);
-        setCurrentEvent(null);
-      }
-      setLoadingCurrentEvent(false);
-    };
-    fetchCurrentEvent();
+    if (companyId) {
+      fetchCurrentEvent();
+    }
   }, [companyId]);
 
   // This effect will run when the incident data is passed up from the table
@@ -536,13 +514,18 @@ export default function Dashboard() {
 
       const countableIncidents = incidents.filter(isCountable);
       
+      const highPriorityIncidentTypes = ['Ejection', 'Code Green', 'Code Black', 'Code Pink'];
+      const highPriorityIncidents = countableIncidents.filter(i => highPriorityIncidentTypes.includes(i.incident_type));
+      
       const total = countableIncidents.length;
-      const high = countableIncidents.filter(i => i.incident_type === 'Ejection' || i.incident_type === 'Code Green' || i.incident_type === 'Code Black' || i.incident_type === 'Code Pink').length;
+      const high = highPriorityIncidents.length;
+      const hasOpenHighPrio = highPriorityIncidents.some(i => !i.is_closed);
       const open = countableIncidents.filter(i => !i.is_closed).length;
       const closed = countableIncidents.filter(i => i.is_closed).length;
       const refusals = countableIncidents.filter(i => i.incident_type === 'Refusal').length;
       const ejections = countableIncidents.filter(i => i.incident_type === 'Ejection').length;
       const medicals = countableIncidents.filter(i => i.incident_type === 'Medical').length;
+      const other = countableIncidents.filter(i => !['Refusal', 'Ejection', 'Medical'].includes(i.incident_type)).length;
       
       setIncidentStats({
         total,
@@ -552,26 +535,72 @@ export default function Dashboard() {
         refusals,
         ejections,
         medicals,
+        other,
+        hasOpenHighPrio,
       });
     }
   }, [incidents]); // Re-run calculations when incidents data changes
 
   const handleIncidentCreated = async () => {
-    // The real-time subscription on the table will handle the update
     setIsIncidentModalOpen(false);
+    // Optionally, refresh incidents list here if needed
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-2">
-      <div className="flex justify-between items-center mb-8">
-        {/* <h1 className="text-2xl font-bold">Incidents</h1> */}
-      </div>
-
+    <div className="px-4 sm:px-6 lg:px-8 md:pt-2">
       {/* Event Header - Sticky */}
-      <div className="sticky top-16 z-20 bg-white shadow-sm md:bg-transparent md:shadow-none">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-          <CurrentEvent />
-          <TimeCard companyId={companyId} />
+      <div className="sticky top-16 z-20 bg-gray-50 md:bg-transparent md:shadow-none -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-2 md:py-0 mb-4">
+        {/* Desktop view */}
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CurrentEvent
+            currentTime={currentTime}
+            currentEvent={currentEvent}
+            loading={loadingCurrentEvent}
+            error={error}
+            onEventCreated={fetchCurrentEvent}
+          />
+          <TimeCard
+            companyId={companyId}
+            currentTime={currentTime}
+            eventTimings={eventTimings}
+            nextEvent={nextEvent}
+            countdown={countdown}
+          />
+        </div>
+
+        {/* Mobile view */}
+        <div className="md:hidden bg-white shadow-sm rounded-lg">
+          {loadingCurrentEvent && <p className="p-3">Loading event...</p>}
+          {!loadingCurrentEvent && currentEvent && (
+            <div>
+              <div className="flex justify-between items-center p-3">
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
+                  <span className="text-base font-semibold text-gray-900">{currentEvent.event_name}</span>
+                </div>
+                <span className="text-base font-bold text-gray-900">{currentTime}</span>
+              </div>
+              <hr className="border-t border-gray-200" />
+              {nextEvent ? (
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-b-lg">
+                  <span className="text-sm font-medium text-blue-600">{nextEvent.title}</span>
+                  <span className="text-sm font-bold text-blue-700">{nextEvent.time}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center p-3">No upcoming timings</p>
+              )}
+            </div>
+          )}
+          {!loadingCurrentEvent && !currentEvent && (
+            <div className="text-center py-4">
+               <h3 className="text-sm font-medium text-gray-900">
+                No Current Event
+              </h3>
+              <p className="text-sm text-gray-500">
+                No event is currently selected. Create a new event to get started.
+              </p>
+            </div>
+          )}
         </div>
       </div>
       
@@ -593,82 +622,88 @@ export default function Dashboard() {
         </div>
         <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
         
-        {/* Stats Grid - First Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4 mb-8">
-          <StatCard
-            title="Total Incidents"
-            value={incidentStats.total}
-            icon={<ClipboardDocumentCheckIcon />}
-            color="blue"
-            isFilterable={true}
-            isSelected={selectedFilter === null}
-            onClick={() => setSelectedFilter(null)}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="High Priority"
-            value={incidentStats.high}
-            icon={<ExclamationTriangleIcon />}
-            color="red"
-            isFilterable={true}
-            isSelected={selectedFilter === 'high'}
-            onClick={() => setSelectedFilter(selectedFilter === 'high' ? null : 'high')}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="Open"
-            value={incidentStats.open}
-            icon={<FolderOpenIcon />}
-            color="yellow"
-            isFilterable={true}
-            isSelected={selectedFilter === 'open'}
-            onClick={() => setSelectedFilter(selectedFilter === 'open' ? null : 'open')}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="Closed"
-            value={incidentStats.closed}
-            icon={<CheckCircleIcon />}
-            color="green"
-            isFilterable={true}
-            isSelected={selectedFilter === 'closed'}
-            onClick={() => setSelectedFilter(selectedFilter === 'closed' ? null : 'closed')}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="Refusals"
-            value={incidentStats.refusals}
-            icon={<UsersIcon />}
-            color="red"
-            isFilterable={true}
-            isSelected={selectedFilter === 'refusals'}
-            onClick={() => setSelectedFilter(selectedFilter === 'refusals' ? null : 'refusals')}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="Ejections"
-            value={incidentStats.ejections}
-            icon={<UsersIcon />}
-            color="red"
-            isFilterable={true}
-            isSelected={selectedFilter === 'ejections'}
-            onClick={() => setSelectedFilter(selectedFilter === 'ejections' ? null : 'ejections')}
-            className="h-[180px]"
-          />
-          <StatCard
-            title="Medicals"
-            value={incidentStats.medicals}
-            icon={<HeartIcon />}
-            color="pink"
-            isFilterable={true}
-            isSelected={selectedFilter === 'medicals'}
-            onClick={() => setSelectedFilter(selectedFilter === 'medicals' ? null : 'medicals')}
-            className="h-[180px]"
-          />
+        {/* Stats Grid */}
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-4 mb-6">
+            <StatCard
+                title="Total"
+                value={incidentStats.total}
+                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={selectedFilter === null}
+                onClick={() => setSelectedFilter(null)}
+                isFilterable={true}
+                tooltip="All logs including Attendance and Sit Reps."
+            />
+            <StatCard
+                title="Open"
+                value={incidentStats.open}
+                icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+                isSelected={selectedFilter === 'open'}
+                onClick={() => setSelectedFilter('open')}
+                isFilterable={true}
+                color="yellow"
+                tooltip="Incidents that are currently open."
+            />
+            <StatCard
+                title="High Prio"
+                value={incidentStats.high}
+                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                isSelected={selectedFilter === 'high'}
+                onClick={() => setSelectedFilter('high')}
+                isFilterable={true}
+                color="red"
+                tooltip="Incidents marked as high priority."
+                showPulse={incidentStats.hasOpenHighPrio}
+            />
+            <StatCard
+                title="Closed"
+                value={incidentStats.closed}
+                icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+                isSelected={selectedFilter === 'closed'}
+                onClick={() => setSelectedFilter('closed')}
+                isFilterable={true}
+                color="green"
+                tooltip="Incidents that have been closed."
+            />
+            <StatCard
+                title="Refusals"
+                value={incidentStats.refusals}
+                icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={selectedFilter === 'Refusal'}
+                onClick={() => setSelectedFilter('Refusal')}
+                isFilterable={true}
+                tooltip="Incidents where entry was refused."
+            />
+            <StatCard
+                title="Ejections"
+                value={incidentStats.ejections}
+                icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={selectedFilter === 'Ejection'}
+                onClick={() => setSelectedFilter('Ejection')}
+                isFilterable={true}
+                tooltip="Incidents where someone was ejected."
+            />
+            <StatCard
+                title="Medicals"
+                value={incidentStats.medicals}
+                icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                isSelected={selectedFilter === 'Medical'}
+                onClick={() => setSelectedFilter('Medical')}
+                isFilterable={true}
+                tooltip="Medical-related incidents."
+            />
+            <StatCard
+                title="Other"
+                value={incidentStats.other}
+                icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={selectedFilter === 'Other'}
+                onClick={() => setSelectedFilter('Other')}
+                isFilterable={true}
+                tooltip="All other incident types."
+            />
         </div>
 
         {/* Stats Grid - Second Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-8">
           <div className="h-[180px] w-full rounded-lg shadow p-4 flex flex-col items-center justify-center">
             <VenueOccupancy currentEventId={currentEventId} />
           </div>

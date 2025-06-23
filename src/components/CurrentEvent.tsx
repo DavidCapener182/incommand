@@ -13,19 +13,25 @@ interface Event {
   support_acts?: any[]
 }
 
-export default function CurrentEvent() {
-  const [currentEvent, setCurrentEvent] = useState<Event | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface CurrentEventProps {
+  currentTime?: string;
+  currentEvent: Event | null;
+  loading: boolean;
+  error: string | null;
+  onEventCreated: () => void;
+}
+
+export default function CurrentEvent({ 
+  currentTime,
+  currentEvent,
+  loading,
+  error,
+  onEventCreated,
+}: CurrentEventProps) {
   const [showModal, setShowModal] = useState(false)
   const [isBriefExpanded, setBriefExpanded] = useState(false)
   const [isBriefOverflowing, setBriefOverflowing] = useState(false)
   const briefRef = useRef<HTMLParagraphElement>(null)
-
-  useEffect(() => {
-    console.log('CurrentEvent component mounted')
-    fetchCurrentEvent()
-  }, [])
 
   useEffect(() => {
     if (currentEvent && briefRef.current) {
@@ -39,51 +45,14 @@ export default function CurrentEvent() {
     }
   }, [currentEvent, isBriefExpanded]);
 
-  const fetchCurrentEvent = async () => {
-    setCurrentEvent(null); // Clear any previous event info before fetching
-    try {
-      console.log('Starting to fetch current event...')
-      const { data } = await supabase
-        .from('events')
-        .select('id, event_name, venue_name, event_type, event_description, support_acts, is_current, company_id')
-        .eq('is_current', true)
-        .single()
-
-      console.log('Raw events response:', { data })
-
-      if (!data) {
-        console.log('No current event found')
-        setCurrentEvent(null)
-        return
-      }
-
-      // Fix venue name capitalization
-      data.venue_name = data.venue_name
-        .split(' ')
-        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ')
-
-      console.log('Setting current event:', data)
-      setCurrentEvent(data as Event)
-    } catch (err) {
-      console.error('Unexpected error:', err)
-      setError('An unexpected error occurred')
-      setCurrentEvent(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleCloseModal = () => {
     setShowModal(false)
   }
 
-  const handleEventCreated = async () => {
-    await fetchCurrentEvent()
+  const handleEventCreated = () => {
+    onEventCreated();
     setShowModal(false)
   }
-
-  console.log('Rendering with state:', { currentEvent, loading, error, showModal })
 
   if (loading) {
     return (
@@ -107,66 +76,80 @@ export default function CurrentEvent() {
         <div className="px-5 py-4">
           {currentEvent ? (
             <div className="space-y-3">
-              <div className="flex items-start">
-                <span className="text-sm font-medium text-gray-500 w-24 pt-1">Current Event</span>
-                <div>
-                  <span className="text-base font-semibold text-gray-900 ml-2">
-                    {currentEvent.event_name}
-                  </span>
-                  {currentEvent.support_acts && (() => {
-                    let acts = currentEvent.support_acts;
-                    if (typeof acts === 'string') {
-                      try {
-                        acts = JSON.parse(acts);
-                      } catch {
-                        acts = [];
-                      }
-                    }
-                    return Array.isArray(acts) && acts.length > 0 ? (
-                    <span className="text-sm font-normal text-gray-500 ml-2">
-                        {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+              <div className="flex items-start justify-between">
+                <div className="flex items-start">
+                  <span className="text-sm font-medium text-gray-500 w-24 pt-1 md:hidden">Event</span>
+                  <span className="hidden md:inline text-sm font-medium text-gray-500 w-24 pt-1">Current Event</span>
+                  <div>
+                    <span className="text-base font-semibold text-gray-900 ml-2">
+                      {currentEvent.event_name}
                     </span>
-                    ) : null;
-                  })()}
+                    <div className="hidden md:inline">
+                      {currentEvent.support_acts && (() => {
+                        let acts = currentEvent.support_acts;
+                        if (typeof acts === 'string') {
+                          try {
+                            acts = JSON.parse(acts);
+                          } catch {
+                            acts = [];
+                          }
+                        }
+                        return Array.isArray(acts) && acts.length > 0 ? (
+                        <span className="text-sm font-normal text-gray-500 ml-2">
+                            {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                        </span>
+                        ) : null;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                <div className="md:hidden">
+                  {currentTime && (
+                    <span className="text-base font-bold text-gray-900">{currentTime}</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 w-24">Venue</span>
-                <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.venue_name}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 w-24">Type</span>
-                <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.event_type}</span>
-              </div>
-              <div className="mt-4">
-                <span className="text-sm font-medium text-gray-700">Security Brief</span>
-                <p
-                  ref={briefRef}
-                  className={`text-sm text-gray-600 leading-relaxed mt-2 ${!isBriefExpanded ? 'line-clamp-3' : ''}`}
-                >
-                  {(currentEvent.event_description || (() => {
-                    const type = currentEvent.event_type.toLowerCase();
-                    if (type.includes('concert')) {
-                      return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times. Previous incidents involving Blink-182 concerts have included crowd surfing, mosh pits, and occasional instances of unruly behavior. Co-op Live has a history of successfully managing large events but has experienced occasional challenges with crowd control during high-energy performances.`;
-                    } else if (type.includes('comedy')) {
-                      return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
-                    } else if (type.includes('theatre')) {
-                      return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
-                    } else if (type.includes('sport')) {
-                      return `Separate opposing fans and monitor refreshment areas during breaks.`;
-                    } else {
-                      return `Monitor venue capacity and maintain clear exit routes.`;
-                    }
-                  })())}
-                </p>
-                {(isBriefOverflowing || isBriefExpanded) && (
-                  <button
-                    onClick={() => setBriefExpanded(!isBriefExpanded)}
-                    className="text-sm text-blue-600 hover:underline mt-1"
-                  >
-                    {isBriefExpanded ? 'Show less' : 'Show more'}
-                  </button>
-                )}
+              <div className="hidden md:block">
+                <>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-500 w-24">Venue</span>
+                    <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.venue_name}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-500 w-24">Type</span>
+                    <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.event_type}</span>
+                  </div>
+                  <div className="mt-4">
+                    <span className="text-sm font-medium text-gray-700">Security Brief</span>
+                    <p
+                      ref={briefRef}
+                      className={`text-sm text-gray-600 leading-relaxed mt-2 ${!isBriefExpanded ? 'line-clamp-3' : ''}`}
+                    >
+                      {(currentEvent.event_description || (() => {
+                        const type = currentEvent.event_type.toLowerCase();
+                        if (type.includes('concert')) {
+                          return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times. Previous incidents involving Blink-182 concerts have included crowd surfing, mosh pits, and occasional instances of unruly behavior. Co-op Live has a history of successfully managing large events but has experienced occasional challenges with crowd control during high-energy performances.`;
+                        } else if (type.includes('comedy')) {
+                          return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
+                        } else if (type.includes('theatre')) {
+                          return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
+                        } else if (type.includes('sport')) {
+                          return `Separate opposing fans and monitor refreshment areas during breaks.`;
+                        } else {
+                          return `Monitor venue capacity and maintain clear exit routes.`;
+                        }
+                      })())}
+                    </p>
+                    {(isBriefOverflowing || isBriefExpanded) && (
+                      <button
+                        onClick={() => setBriefExpanded(!isBriefExpanded)}
+                        className="text-sm text-blue-600 hover:underline mt-1"
+                      >
+                        {isBriefExpanded ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
+                  </div>
+                </>
               </div>
             </div>
           ) : (

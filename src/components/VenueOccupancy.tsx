@@ -151,11 +151,11 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           <BuildingOffice2Icon className="w-full h-full" />
         </div>
         <div className="text-center">
-          <p className="text-4xl font-bold text-gray-900">
+          <p className="text-2xl md:text-4xl font-bold text-gray-900">
             {currentCount.toLocaleString()}
-            <span className="text-lg text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
+            <span className="text-base md:text-lg text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
           </p>
-          <p className="text-sm font-medium text-gray-500 mt-0.5">
+          <p className="text-xs md:text-sm font-medium text-gray-500 mt-0.5">
             Venue Occupancy
           </p>
         </div>
