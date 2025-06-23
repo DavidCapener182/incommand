@@ -48,6 +48,8 @@ export default function RootLayout({
         <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
         <link rel="manifest" href="/manifest.json" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className={inter.className}>
         <AuthProvider>
