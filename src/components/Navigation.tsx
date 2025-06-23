@@ -343,20 +343,47 @@ export default function Navigation() {
       )}
       
       {showProfileCard && user && profile && (
-        <ProfileCard 
-          name={profile.full_name || 'User'}
-          title={profile.company || 'No company'}
-          handle={user.email}
-          status="Online"
-          contactText="Edit Profile"
-          avatarUrl={profile.avatar_url || ''}
-          showUserInfo={true}
-          enableTilt={true}
-          onContactClick={() => {
-             setShowProfileCard(false);
-             router.push('/profile');
-           }}
-        />
+        <>
+          {/* Overlay to close the card when clicking outside */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-30 z-40"
+            onClick={() => setShowProfileCard(false)}
+          />
+          {/* Dropdown ProfileCard below profile photo, fully inside screen */}
+          <div
+            className="fixed z-50"
+            style={{
+              top: '60px', // below the profile photo (which is 36px + margin)
+              right: '16px',
+              maxWidth: '360px',
+              width: '96vw',
+              minWidth: '220px',
+              maxHeight: '80vh',
+              boxSizing: 'border-box',
+              pointerEvents: 'none',
+              display: 'flex',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <div style={{ pointerEvents: 'auto', width: '100%' }}>
+              <ProfileCard 
+                name={profile.full_name || 'User'}
+                title={profile.company || 'No company'}
+                handle={user.email}
+                status="Online"
+                contactText="Edit Profile"
+                avatarUrl={profile.avatar_url || ''}
+                showUserInfo={true}
+                enableTilt={true}
+                className=""
+                onContactClick={() => {
+                  setShowProfileCard(false);
+                  router.push('/profile');
+                }}
+              />
+            </div>
+          </div>
+        </>
       )}
     </>
   )
