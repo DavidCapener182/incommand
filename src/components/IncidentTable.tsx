@@ -46,6 +46,17 @@ const getIncidentTypeStyle = (type: string) => {
   }
 }
 
+const getRowStyle = (incident: Incident) => {
+  const highPriorityTypes = ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour'];
+  if (highPriorityTypes.includes(incident.incident_type)) {
+    return 'bg-red-50 hover:bg-red-100';
+  }
+  if (!incident.is_closed && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
+    return 'bg-yellow-50 hover:bg-yellow-100';
+  }
+  return 'hover:bg-gray-50';
+};
+
 export default function IncidentTable({ filter, onDataLoaded }: { filter?: string; onDataLoaded?: (data: Incident[]) => void; }) {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -250,13 +261,13 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
         if (filter === 'closed') {
           return incident.is_closed && incident.status !== 'Logged' && incident.incident_type !== 'Sit Rep' && incident.incident_type !== 'Attendance';
         }
-        if (filter === 'refusals') {
-          return incident.incident_type === 'Refusal';
+        if (['Refusal', 'Ejection', 'Medical'].includes(filter)) {
+          return incident.incident_type === filter;
         }
-        if (filter === 'ejections') {
-          return incident.incident_type === 'Ejection';
+        if (filter === 'Other') {
+          return !['Refusal', 'Ejection', 'Medical', 'Attendance', 'Sit Rep'].includes(incident.incident_type);
         }
-        return true;
+        return false; // Return false for unhandled filters
       })
     : incidents;
 
@@ -286,18 +297,18 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
   return (
     <>
       {/* Mobile Card/Accordion Layout */}
-      <div className="md:hidden mt-4 space-y-3">
+      <div className="md:hidden mt-4 space-y-3" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
         {/* Mobile Table Header */}
-        <div className="flex items-center px-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="sticky top-0 z-10 bg-gray-50 flex items-center px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
           <div className="basis-[28%]">Log #</div>
-          <div className="basis-[24%]">Type</div>
-          <div className="basis-[24%]">Time</div>
-          <div className="basis-[24%]">Status</div>
+          <div className="basis-[24%] text-center">Type</div>
+          <div className="basis-[24%] text-center">Time</div>
+          <div className="basis-[24%] text-right">Status</div>
         </div>
         {filteredIncidents.map((incident) => (
           <div
             key={incident.id}
-            className="bg-white shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md"
+            className={`bg-white shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md ${getRowStyle(incident)}`}
             onClick={() => setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id)}
           >
             <div className="flex items-center justify-between">
@@ -307,12 +318,18 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
               </div>
               <div className="basis-[24%] text-xs text-gray-500 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
               <div className="basis-[24%] flex items-center justify-end">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
-                  onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                >
-                  {incident.is_closed ? 'Closed' : 'Open'}
-                </span>
+                {incident.incident_type === 'Attendance' ? (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                    Logged
+                  </span>
+                ) : (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                    onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                  >
+                    {incident.is_closed ? 'Closed' : 'Open'}
+                  </span>
+                )}
               </div>
             </div>
             {expandedIncidentId === incident.id && (
@@ -337,35 +354,35 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
         ))}
       </div>
       {/* Desktop Table Layout */}
-      <div className="hidden md:flex flex-col">
+      <div className="hidden md:flex flex-col mt-4" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
         <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-            <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="shadow border-b border-gray-200 sm:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Log #
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[10%]">
+                      Log
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[8%]">
                       Time
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[10%]">
                       From
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[10%]">
                       To
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[22%]">
                       Occurrence
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[12%]">
                       Type
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[20%]">
                       Action
                     </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 w-[8%]">
                       Status
                     </th>
                   </tr>
@@ -374,16 +391,16 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                   {filteredIncidents.map((incident) => (
                     <tr 
                       key={incident.id} 
-                      onClick={() => handleIncidentClick(incident)} 
-                      className={`hover:bg-gray-50 ${incident.incident_type !== 'Attendance' ? 'cursor-pointer' : ''}`}
+                      className={`cursor-pointer ${getRowStyle(incident)}`}
+                      onClick={() => handleIncidentClick(incident)}
                     >
-                      <td className="px-2 py-1 whitespace-nowrap text-xs text-blue-600">
-                        {incident.log_number}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{incident.log_number}</div>
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span
                           title={
                             callsignShortToName[incident.callsign_from?.toUpperCase()] ||
@@ -395,7 +412,7 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                           {incident.callsign_from}
                         </span>
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span
                           title={
                             callsignShortToName[incident.callsign_to?.toUpperCase()] ||
@@ -407,18 +424,18 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                           {incident.callsign_to}
                         </span>
                       </td>
-                      <td className="px-2 py-1 text-xs text-gray-500 max-w-[200px] truncate">
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={incident.occurrence}>
                         {incident.occurrence}
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
                           {incident.incident_type}
                         </span>
                       </td>
-                      <td className="px-2 py-1 text-xs text-gray-500 max-w-[200px] truncate">
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={incident.action_taken}>
                         {incident.action_taken}
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {incident.incident_type === 'Attendance' ? (
                           <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 text-blue-800">
                             Logged
