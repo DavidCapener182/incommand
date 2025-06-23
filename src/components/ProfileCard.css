@@ -486,4 +486,66 @@
     font-size: 9px;
     border-radius: 50px;
   }
+}
+
+/* Utility for small floating ProfileCard popup */
+.profilecard-popup-small {
+  width: 160px !important;
+  max-width: 90vw !important;
+  height: 240px !important;
+  max-height: 60vh !important;
+  min-width: 120px !important;
+  min-height: 160px !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+@media (max-width: 480px) {
+  .profilecard-popup-small {
+    width: 90vw !important;
+    max-width: 98vw !important;
+    height: 180px !important;
+    max-height: 50vh !important;
+    min-width: 100px !important;
+    min-height: 120px !important;
+  }
+}
+
+/* Ensure ProfileCard is small when used as popup */
+.profilecard-popup-small .pc-card-wrapper {
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+}
+.profilecard-popup-small .pc-card {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 480px) {
+  .profilecard-popup-small {
+    width: 90vw !important;
+    max-width: 98vw !important;
+    height: 180px !important;
+    max-height: 50vh !important;
+    min-width: 100px !important;
+    min-height: 120px !important;
+  }
+  .profilecard-popup-small .pc-card-wrapper,
+  .profilecard-popup-small .pc-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+  }
 } 
