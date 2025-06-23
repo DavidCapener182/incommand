@@ -12,19 +12,19 @@ function mode(arr: any[]) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
+
+  const { eventId } = req.query;
+
+  if (!eventId || typeof eventId !== 'string') {
+    return res.status(400).json({ error: 'Event ID is required.' });
+  }
+
   try {
-    // Get current event
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('id')
-      .eq('is_current', true)
-      .single();
-    if (eventError || !event) return res.status(400).json({ error: 'No current event found' });
     // Get all incidents
     const { data, error } = await supabase
       .from('incident_logs')
       .select('incident_type, location, timestamp')
-      .eq('event_id', event.id);
+      .eq('event_id', eventId);
     if (error) return res.status(400).json({ error: error.message });
     // Filter out Attendance and Sit Rep incidents
     const filtered = (data || []).filter(i => i.incident_type !== 'Attendance' && i.incident_type !== 'Sit Rep');

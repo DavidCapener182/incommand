@@ -46,7 +46,7 @@ const getIncidentTypeStyle = (type: string) => {
   }
 }
 
-export default function IncidentTable({ filter }: { filter?: string }) {
+export default function IncidentTable({ filter, onDataLoaded }: { filter?: string; onDataLoaded?: (data: Incident[]) => void; }) {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,6 +101,9 @@ export default function IncidentTable({ filter }: { filter?: string }) {
 
         if (error) throw error;
         setIncidents(data || []);
+        if (onDataLoaded) {
+          onDataLoaded(data || []);
+        }
       } catch (err) {
         console.error('Error fetching incidents:', err);
         setError('Failed to fetch incidents');
@@ -124,22 +127,23 @@ export default function IncidentTable({ filter }: { filter?: string }) {
         }, 
         (payload) => {
           console.log('Received incident change:', payload);
+          let newIncidents: Incident[] = [];
           if (payload.eventType === 'INSERT') {
-            setIncidents(prev => [payload.new as Incident, ...prev]);
+            newIncidents = [payload.new as Incident, ...incidents];
           } else if (payload.eventType === 'UPDATE') {
-            setIncidents(prev => 
-              prev.map(incident => {
+            newIncidents = incidents.map(incident => {
                 if (incident.id === payload.new.id) {
                   console.log('Updating incident:', incident.id, 'New status:', payload.new.is_closed);
                   return { ...incident, ...payload.new };
                 }
                 return incident;
-              })
-            );
+              });
           } else if (payload.eventType === 'DELETE') {
-            setIncidents(prev => 
-              prev.filter(incident => incident.id !== payload.old.id)
-            );
+            newIncidents = incidents.filter(incident => incident.id !== payload.old.id);
+          }
+          setIncidents(newIncidents);
+          if (onDataLoaded) {
+            onDataLoaded(newIncidents);
           }
         }
       )
@@ -148,7 +152,7 @@ export default function IncidentTable({ filter }: { filter?: string }) {
     fetchIncidents();
 
     return cleanup;
-  }, [currentEventId]);
+  }, [currentEventId, onDataLoaded]);
 
   // Fetch callsign assignments for tooltips
   useEffect(() => {

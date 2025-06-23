@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import EventCreationModal from './EventCreationModal'
 
@@ -18,12 +18,26 @@ export default function CurrentEvent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [showBrief, setShowBrief] = useState(false)
+  const [isBriefExpanded, setBriefExpanded] = useState(false)
+  const [isBriefOverflowing, setBriefOverflowing] = useState(false)
+  const briefRef = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     console.log('CurrentEvent component mounted')
     fetchCurrentEvent()
   }, [])
+
+  useEffect(() => {
+    if (currentEvent && briefRef.current) {
+      // Check for overflow only when not expanded
+      if (!isBriefExpanded) {
+        setBriefOverflowing(briefRef.current.scrollHeight > briefRef.current.clientHeight);
+      } else {
+        // When expanded, we can assume it was overflowing before, so keep the button
+        setBriefOverflowing(true);
+      }
+    }
+  }, [currentEvent, isBriefExpanded]);
 
   const fetchCurrentEvent = async () => {
     setCurrentEvent(null); // Clear any previous event info before fetching
@@ -125,34 +139,34 @@ export default function CurrentEvent() {
                 <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.event_type}</span>
               </div>
               <div className="mt-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Security Brief</span>
+                <span className="text-sm font-medium text-gray-700">Security Brief</span>
+                <p
+                  ref={briefRef}
+                  className={`text-sm text-gray-600 leading-relaxed mt-2 ${!isBriefExpanded ? 'line-clamp-3' : ''}`}
+                >
+                  {(currentEvent.event_description || (() => {
+                    const type = currentEvent.event_type.toLowerCase();
+                    if (type.includes('concert')) {
+                      return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times. Previous incidents involving Blink-182 concerts have included crowd surfing, mosh pits, and occasional instances of unruly behavior. Co-op Live has a history of successfully managing large events but has experienced occasional challenges with crowd control during high-energy performances.`;
+                    } else if (type.includes('comedy')) {
+                      return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
+                    } else if (type.includes('theatre')) {
+                      return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
+                    } else if (type.includes('sport')) {
+                      return `Separate opposing fans and monitor refreshment areas during breaks.`;
+                    } else {
+                      return `Monitor venue capacity and maintain clear exit routes.`;
+                    }
+                  })())}
+                </p>
+                {(isBriefOverflowing || isBriefExpanded) && (
                   <button
-                    type="button"
-                    className="md:hidden text-xs text-blue-600 underline focus:outline-none"
-                    onClick={() => setShowBrief((prev) => !prev)}
+                    onClick={() => setBriefExpanded(!isBriefExpanded)}
+                    className="text-sm text-blue-600 hover:underline mt-1"
                   >
-                    {showBrief ? 'Hide' : 'Show'}
+                    {isBriefExpanded ? 'Show less' : 'Show more'}
                   </button>
-                </div>
-                <div className={`${showBrief ? '' : 'hidden'} md:block`}>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-2">
-                    {(currentEvent.event_description || (() => {
-                      const type = currentEvent.event_type.toLowerCase();
-                      if (type.includes('concert')) {
-                        return `Monitor stage barriers and crowd surges, especially during popular songs. Ensure clear exits and manage entry flow at peak times.`;
-                      } else if (type.includes('comedy')) {
-                        return `Manage seating transitions and interval queues. Monitor bar areas during breaks.`;
-                      } else if (type.includes('theatre')) {
-                        return `Coordinate seating entry/exit and monitor merchandise and cloakroom queues.`;
-                      } else if (type.includes('sport')) {
-                        return `Separate opposing fans and monitor refreshment areas during breaks.`;
-                      } else {
-                        return `Monitor venue capacity and maintain clear exit routes.`;
-                      }
-                    })()).split(/(?<=[.!?])\s+/).slice(0,2).join(' ')}
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           ) : (

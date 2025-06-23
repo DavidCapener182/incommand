@@ -139,7 +139,7 @@ export default function SettingsPage() {
   // Fetch logs for current event if admin
   useEffect(() => {
     const fetchLogs = async () => {
-      if (!role || role !== 'admin' || !currentEvent) return;
+      if (!role || !['admin', 'superadmin'].includes(role) || !currentEvent) return;
       setLogsLoading(true);
       const { data, error } = await supabase
         .from('incident_logs')
@@ -153,7 +153,7 @@ export default function SettingsPage() {
   }, [role, events]);
 
   const handleDeleteLog = async (logId: string) => {
-    if (role !== 'admin') return;
+    if (!role || !['admin', 'superadmin'].includes(role)) return;
     setDeleting(true);
     try {
       // Get the log details first to check if it's an attendance log
@@ -189,7 +189,7 @@ export default function SettingsPage() {
 
   // Delete all event data (admin only)
   const handleDeleteEvent = async (eventId: string) => {
-    if (role !== 'admin') return;
+    if (!role || !['admin', 'superadmin'].includes(role)) return;
     setDeleting(true)
     try {
       // Delete attendance records
@@ -229,7 +229,7 @@ export default function SettingsPage() {
 
   return (
     <main>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* System Status Section */}
           <div>
@@ -242,22 +242,52 @@ export default function SettingsPage() {
             <h2 className="text-2xl font-bold mb-4">Current Event</h2>
             {currentEvent ? (
               <div className="bg-white shadow rounded-lg p-4 mb-4">
-                    <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
-                    <p className="text-gray-600">
-                      {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
-                    </p>
+                <h3 className="text-lg font-semibold">{currentEvent.event_name}</h3>
+                <p className="text-gray-600">
+                  {formatDateRange(currentEvent.start_datetime, currentEvent.end_datetime)}
+                </p>
                 <span className="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        Active Event
-                      </span>
-                  <button
-                    onClick={() => setShowEndEventConfirm(true)}
-                  className="ml-4 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                  >
-                    End Event
-                  </button>
+                  Active Event
+                </span>
+                <button
+                  onClick={() => setShowEndEventConfirm(true)}
+                  className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  End This Event
+                </button>
+
+                {/* Logs for current event */}
+                {role && ['admin', 'superadmin'].includes(role) && (
+                  <div className="mt-6">
+                    <h4 className="text-xl font-semibold mb-3">Event Logs</h4>
+                    {logsLoading ? (
+                      <p>Loading logs...</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {logs.map(log => (
+                          <div key={log.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                            <div>
+                              <p className="font-medium">{log.occurrence}</p>
+                              <p className="text-sm text-gray-500">
+                                {new Date(log.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteLog(log.id)}
+                              disabled={deleting}
+                              className="px-3 py-1 bg-red-500 text-white text-xs rounded-md hover:bg-red-600 disabled:bg-gray-400"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-gray-600">No current event found.</p>
+              <p className="text-gray-500">No event is currently active.</p>
             )}
           </div>
 
@@ -302,47 +332,6 @@ export default function SettingsPage() {
               <p className="text-gray-600">No past events found</p>
             )}
           </div>
-
-          {/* Logs for Current Event */}
-          {role === 'admin' && currentEvent && (
-            <div className="mt-8">
-              <h2 className="text-xl font-bold mb-4">Logs for Current Event</h2>
-              {logsLoading ? (
-                <p className="text-gray-600">Loading logs...</p>
-              ) : logs.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border-b">Type</th>
-                      <th className="px-4 py-2 border-b">Occurrence</th>
-                      <th className="px-4 py-2 border-b">Created</th>
-                      <th className="px-4 py-2 border-b">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logs.map(log => (
-                      <tr key={log.id}>
-                        <td className="px-4 py-2 border-b">{log.incident_type}</td>
-                        <td className="px-4 py-2 border-b">{log.occurrence}</td>
-                        <td className="px-4 py-2 border-b">{log.created_at ? new Date(log.created_at).toLocaleString() : ''}</td>
-                        <td className="px-4 py-2 border-b">
-                          <button
-                            onClick={() => handleDeleteLog(log.id)}
-                            className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
-                            disabled={deleting}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-gray-600">No logs found for this event.</p>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

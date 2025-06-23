@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { WeatherData, getCurrentWeather } from '@/services/weatherService';
-import { CloudIcon, SunIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { CloudIcon, SunIcon, BoltIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 interface HourlyForecast {
   time: string;
@@ -101,57 +101,52 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
 
   const WeatherIcon = () => {
     const desc = weather.description.toLowerCase();
+    
     if (desc.includes('rain') || desc.includes('drizzle')) {
-      return <CloudIcon className="h-8 w-8 text-blue-500" />;
+      return <CloudArrowDownIcon className="h-10 w-10" />;
     }
     if (desc.includes('thunder') || desc.includes('lightning')) {
-      return <BoltIcon className="h-8 w-8 text-yellow-500" />;
+      return <BoltIcon className="h-10 w-10" />;
     }
-    if (desc.includes('cloud')) {
-      return <CloudIcon className="h-8 w-8 text-gray-500" />;
+    if (desc.includes('snow') || desc.includes('sleet')) {
+      return <CloudIcon className="h-10 w-10" />;
+    }
+    if (desc.includes('scattered clouds') || desc.includes('few clouds')) {
+      return <SunIcon className="h-10 w-10" />;
+    }
+    if (desc.includes('broken clouds') || desc.includes('overcast clouds')) {
+      return <CloudIcon className="h-10 w-10" />;
     }
     if (desc.includes('clear')) {
-      return <SunIcon className="h-8 w-8 text-yellow-500" />;
+      return <SunIcon className="h-10 w-10" />;
     }
-    return <CloudIcon className="h-8 w-8 text-gray-500" />;
+    // Default icon
+    return <CloudIcon className="h-10 w-10" />;
   };
 
   const getWindDescription = (speed: number) => {
-    if (speed < 5) return 'Light breeze';
-    if (speed < 10) return 'Moderate wind';
-    if (speed < 20) return 'Strong wind';
-    return 'High winds';
+    const score = Math.min(Math.round(speed / 2.5), 10);
+    if (speed < 5) return `Light breeze (${score}/10)`;
+    if (speed < 10) return `Moderate wind (${score}/10)`;
+    if (speed < 20) return `Strong wind (${score}/10)`;
+    return `High winds (${score}/10)`;
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      <div className="w-full bg-white transition-all duration-500">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">{Math.round(weather.temperature)}°C</span>
-              <span className="text-sm font-medium text-gray-600 capitalize">{weather.description}</span>
-            </div>
-            <div className="text-gray-600 text-sm mt-2">
-              <span className="block font-medium text-gray-700">{locationName}</span>
-              <div className="flex items-center mt-1">
-                <svg className="h-3 w-3 mr-1 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-                <span>{getWindDescription(weather.windSpeed)} ({Math.round(weather.windSpeed)} m/s)</span>
-              </div>
-              {weather.rain !== undefined && weather.rain > 0 && (
-                <div className="flex items-center text-blue-700 mt-1">
-                  <CloudIcon className="h-3 w-3 mr-1" />
-                  <span>Rainfall: {weather.rain.toFixed(2)} mm/h</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="w-8 h-8">
-            <WeatherIcon />
-          </div>
-        </div>
+    <div className="w-full h-full flex flex-col items-center justify-center text-center">
+      <WeatherIcon />
+      <span className="text-5xl font-bold text-gray-800 mt-2">{Math.round(weather.temperature)}°C</span>
+      <span className="text-md text-gray-600 capitalize mt-1">{weather.description}</span>
+      <div className="text-gray-500 text-sm mt-3">
+        {locationName.split(',').map((part, index) => (
+          <p key={index}>{part.trim()}</p>
+        ))}
+      </div>
+      <div className="text-gray-500 text-sm mt-2 flex items-center">
+        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+        <span>{getWindDescription(weather.windSpeed)}</span>
       </div>
     </div>
   );
