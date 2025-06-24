@@ -77,6 +77,12 @@ export default function RootLayout({
           </AuthGate>
         </AuthProvider>
         <Analytics />
+        {/* Global Footer */}
+        <footer className="fixed bottom-0 left-0 w-full z-40 bg-blue-900 px-4 py-2 flex justify-between items-center text-xs text-white">
+          <span>v0.1.0</span>
+          <span>support@incommandapp.com</span>
+          <span>© 2024 InCommand</span>
+        </footer>
       </body>
     </html>
   )

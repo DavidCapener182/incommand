@@ -16,24 +16,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `Generate a professional security incident report for a venue entry refusal with the following details:
-Location: ${location}
-Description: ${description}
-Reason: ${reason}
-Aggressive behavior: ${aggressive ? 'Yes' : 'No'}
-
-Please provide:
-1. A clear, concise occurrence description (2-3 sentences)
-2. A professional action taken statement (1-2 sentences)
-
-Format the response as JSON with 'occurrence' and 'actionTaken' fields. Keep the language professional and security-focused.`;
+    const prompt = `Correct only grammar and spelling in the following incident report. Do not add, remove, or change any information. Return the corrected text as 'occurrence'.\n\nInput: ${description}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "You are a professional security incident report writer. Write clear, concise, and factual reports using appropriate security terminology. Format responses as JSON with 'occurrence' and 'actionTaken' fields."
+          content: "You are a grammar and spelling corrector. Only correct grammar and spelling. Do not add, remove, or change any information."
         },
         {
           role: "user",

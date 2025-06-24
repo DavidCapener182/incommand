@@ -403,7 +403,33 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Occurrence</p>
-                    <p className="mt-1 whitespace-pre-wrap">{incident?.occurrence}</p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {(() => {
+                        if (!incident?.occurrence) return null;
+                        // Regex to find all what3words addresses
+                        const regex = /(\/\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+)/g;
+                        const parts = incident.occurrence.split(regex);
+                        return parts.map((part, i) => {
+                          if (regex.test(part)) {
+                            return (
+                              <span
+                                key={i}
+                                className="inline-flex items-center bg-blue-50 rounded px-1 mr-1 cursor-pointer hover:bg-blue-100 active:bg-blue-200 transition-colors font-mono text-blue-700 underline"
+                                title="Click to copy what3words address"
+                                onClick={() => navigator.clipboard.writeText(part)}
+                                tabIndex={0}
+                                role="button"
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { navigator.clipboard.writeText(part); } }}
+                              >
+                                {part}
+                              </span>
+                            );
+                          } else {
+                            return <span key={i}>{part}</span>;
+                          }
+                        });
+                      })()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Action Taken</p>

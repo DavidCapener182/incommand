@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Fragment } from 'react'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
-import IncidentCreationModal from './IncidentCreationModal'
+import IncidentCreationModal, {
+  incidentTypes,
+} from './IncidentCreationModal'
 import VenueOccupancy from './VenueOccupancy'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
@@ -23,9 +25,11 @@ import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
-import TrafficReportCard from './TrafficReportCard'
 import Modal from 'react-modal'
 import what3words from '@what3words/api'
+import { Menu, Transition, Dialog } from '@headlessui/react'
+import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import AttendanceModal from './AttendanceModal'
 
 interface StatCardProps {
   title: string
@@ -52,7 +56,7 @@ interface TimeCardProps {
   eventTimings: EventTiming[];
   nextEvent: EventTiming | null;
   countdown: string;
-}
+      }
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown }) => {
   return (
@@ -60,39 +64,39 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:block">
             <div className="hidden md:block">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Time</h2>
-              <p className="text-3xl font-bold text-gray-900 mb-4">{currentTime}</p>
-              {nextEvent && (
-                  <div className="mt-2">
-                      <h3 className="text-sm font-medium text-gray-500">Time until {nextEvent.title}</h3>
-                      <p className="text-lg font-bold text-blue-600">{countdown}</p>
-                  </div>
-              )}
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Time</h2>
+          <p className="text-3xl font-bold text-gray-900 mb-4">{currentTime}</p>
+          {nextEvent && (
+            <div className="mt-2">
+              <h3 className="text-sm font-medium text-gray-500">Time until {nextEvent.title}</h3>
+              <p className="text-lg font-bold text-blue-600">{countdown}</p>
+            </div>
+          )}
             </div>
         </div>
         <div>
             <div className='hidden md:block'>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Schedule</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Schedule</h2>
             </div>
             <div className="space-y-2 mt-2">
-                {eventTimings.map((timing, index) => (
-                    <div
-                      key={index}
-                      className={`flex justify-between items-center p-2 rounded ${
+            {eventTimings.map((timing, index) => (
+              <div 
+                key={index} 
+                className={`flex justify-between items-center p-2 rounded ${
                         timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
                       } `}
-                    >
+              >
                       <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500'}`}>
-                        {timing.title}
-                      </span>
+                  {timing.title}
+                </span>
                       <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900'}`}>
-                        {timing.time}
-                      </span>
-                    </div>
-                ))}
+                  {timing.time}
+                </span>
+              </div>
+            ))}
             </div>
              {eventTimings.length === 0 && !nextEvent && (
-                <p className="text-sm text-gray-500">No upcoming event timings</p>
+              <p className="text-sm text-gray-500">No upcoming event timings</p>
             )}
         </div>
       </div>
@@ -134,11 +138,11 @@ const StatCard: React.FC<StatCardProps> = ({
   const [showTooltip, setShowTooltip] = React.useState(false);
 
   return (
-    <div
+    <div 
       onClick={isFilterable ? onClick : undefined}
       className={`
-        bg-white rounded-lg shadow-sm p-2 md:p-4 flex flex-col md:flex-row items-center text-center md:text-left
-        ${isFilterable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
+        bg-white rounded-lg border border-gray-200 shadow-md p-2 md:p-4 flex flex-col md:flex-row items-center text-center md:text-left
+        ${isFilterable ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${pulse ? 'animate-pulse-once' : ''}
         relative
@@ -188,7 +192,7 @@ const w3wApiKey = process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY;
 const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
-function What3WordsMapCard({ lat, lon, venueAddress, singleCard }: { lat: number; lon: number; venueAddress: string; singleCard: boolean }) {
+function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { lat: number; lon: number; venueAddress: string; singleCard: boolean; largeLogo: boolean }) {
   const [w3w, setW3w] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +264,11 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard }: { lat: number
           style={{ minHeight: 0 }}
           onClick={() => setModalOpen(true)}
         >
-          <img src="/w3w.png" alt="What3Words" className="w-2/3 h-2/3 object-contain" />
+          {largeLogo ? (
+            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+          ) : (
+            <img src="/w3w.png" alt="What3Words" className="w-2/3 h-2/3 object-contain" />
+          )}
         </div>
       ) : (
         <div className="flex gap-4 w-full">
@@ -269,7 +277,11 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard }: { lat: number
             style={{ minHeight: 0, height: '100%' }}
             onClick={() => setModalOpen(true)}
           >
-            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+            {largeLogo ? (
+              <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+            ) : (
+              <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+            )}
           </div>
           <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
             <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
@@ -333,6 +345,9 @@ export default function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
+  const [initialIncidentType, setInitialIncidentType] = useState<
+    string | undefined
+  >(undefined)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [currentEvent, setCurrentEvent] = useState<any | null>(null)
@@ -360,9 +375,13 @@ export default function Dashboard() {
   const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
   const [countdown, setCountdown] = useState<string>('');
   const [nextEvent, setNextEvent] = useState<EventTiming | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOccupancyModalOpen, setIsOccupancyModalOpen] = useState(false);
+  const [attendanceTimeline, setAttendanceTimeline] = useState<any[]>([]);
 
   const fetchCurrentEvent = async () => {
     if (!companyId) return;
+    setIsRefreshing(true);
     setLoadingCurrentEvent(true);
     setCurrentEvent(null);
     try {
@@ -398,6 +417,7 @@ export default function Dashboard() {
       setError('An unexpected error occurred');
     } finally {
       setLoadingCurrentEvent(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -433,6 +453,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchEventTimings = async () => {
       if (!companyId) return;
+      setIsRefreshing(true);
       const { data: event } = await supabase
         .from('events')
         .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
@@ -469,6 +490,7 @@ export default function Dashboard() {
         setEventTimings(nextFiveTimings);
         setNextEvent(nextTiming ? { ...nextTiming, isNext: true } : null);
       }
+      setIsRefreshing(false);
     };
     if (companyId) {
       fetchEventTimings();
@@ -503,7 +525,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (companyId) {
       fetchCurrentEvent();
-    }
+      }
   }, [companyId]);
 
   // This effect will run when the incident data is passed up from the table
@@ -545,6 +567,20 @@ export default function Dashboard() {
     setIsIncidentModalOpen(false);
     // Optionally, refresh incidents list here if needed
   };
+
+  // Fetch attendance timeline when modal opens
+  useEffect(() => {
+    if (isOccupancyModalOpen && currentEventId) {
+      (async () => {
+        const { data, error } = await supabase
+          .from('attendance_records')
+          .select('count, timestamp')
+          .eq('event_id', currentEventId)
+          .order('timestamp', { ascending: true });
+        if (!error && data) setAttendanceTimeline(data);
+      })();
+    }
+  }, [isOccupancyModalOpen, currentEventId]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 md:pt-2">
@@ -607,40 +643,111 @@ export default function Dashboard() {
       {/* Incident Dashboard */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Incident Dashboard</h2>
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+            Incident Dashboard
+            {isRefreshing && (
+              <span className="ml-2 text-xs text-blue-500 flex items-center animate-pulse">
+                <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce"></span>
+                <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce delay-150"></span>
+                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-300"></span>
+                <span className="ml-1">Live</span>
+              </span>
+            )}
+          </h2>
+          <div className="relative inline-flex rounded-md shadow-sm">
           <button 
-            onClick={() => setIsIncidentModalOpen(true)}
+              type="button"
+              onClick={() => {
+                setInitialIncidentType(undefined)
+                setIsIncidentModalOpen(true)
+              }}
             disabled={!hasCurrentEvent}
-            className={`px-4 py-2 rounded-md ${
+              className={`relative inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-l-md ${
               hasCurrentEvent 
-                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  ? 'bg-blue-600 hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500`}
           >
             New Incident
           </button>
+            <Menu as="div" className="-ml-px block">
+              <Menu.Button
+                disabled={!hasCurrentEvent}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md ${
+                  hasCurrentEvent
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+              >
+                <span className="sr-only">Open options</span>
+                <ChevronDownIcon
+                  className="h-5 w-5 text-white"
+                  aria-hidden="true"
+                />
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <div className="py-1 flex flex-col max-h-60 overflow-y-auto">
+                    {incidentTypes.map(type => (
+                      <Menu.Item key={type}>
+                        {({ active }) => (
+                          <a
+                            href="#"
+                            onClick={() => {
+                              setInitialIncidentType(type)
+                              setIsIncidentModalOpen(true)
+                            }}
+                            className={`
+                              ${
+                                active
+                                  ? 'bg-gray-100 text-gray-900'
+                                  : 'text-gray-700'
+                              }
+                              block px-4 py-2 text-sm w-full text-left'
+                            `}
+                          >
+                            {type}
+                          </a>
+                        )}
+                      </Menu.Item>
+                    ))}
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
+          </div>
         </div>
-        <p className="text-gray-600 mb-6">Track and manage security incidents in real-time</p>
+        <p className="text-gray-600 mb-6">
+          Track and manage security incidents in real-time
+        </p>
         
         {/* Stats Grid */}
         <div className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-4 mb-6">
-            <StatCard
+          <StatCard
                 title="Total"
-                value={incidentStats.total}
+            value={incidentStats.total}
                 icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={selectedFilter === null}
-                onClick={() => setSelectedFilter(null)}
-                isFilterable={true}
+            isSelected={selectedFilter === null}
+            onClick={() => setSelectedFilter(null)}
+            isFilterable={true}
                 tooltip="All logs including Attendance and Sit Reps."
-            />
-            <StatCard
-                title="Open"
-                value={incidentStats.open}
+          />
+          <StatCard
+            title="Open"
+            value={incidentStats.open}
                 icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
                 isSelected={selectedFilter === 'open'}
                 onClick={() => setSelectedFilter('open')}
                 isFilterable={true}
-                color="yellow"
+            color="yellow"
                 tooltip="Incidents that are currently open."
             />
             <StatCard
@@ -649,42 +756,42 @@ export default function Dashboard() {
                 icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
                 isSelected={selectedFilter === 'high'}
                 onClick={() => setSelectedFilter('high')}
-                isFilterable={true}
+            isFilterable={true}
                 color="red"
                 tooltip="Incidents marked as high priority."
                 showPulse={incidentStats.hasOpenHighPrio}
-            />
-            <StatCard
-                title="Closed"
-                value={incidentStats.closed}
+          />
+          <StatCard
+            title="Closed"
+            value={incidentStats.closed}
                 icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
                 isSelected={selectedFilter === 'closed'}
                 onClick={() => setSelectedFilter('closed')}
                 isFilterable={true}
-                color="green"
+            color="green"
                 tooltip="Incidents that have been closed."
-            />
-            <StatCard
-                title="Refusals"
-                value={incidentStats.refusals}
+          />
+          <StatCard
+            title="Refusals"
+            value={incidentStats.refusals}
                 icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
                 isSelected={selectedFilter === 'Refusal'}
                 onClick={() => setSelectedFilter('Refusal')}
-                isFilterable={true}
+            isFilterable={true}
                 tooltip="Incidents where entry was refused."
-            />
-            <StatCard
-                title="Ejections"
-                value={incidentStats.ejections}
+          />
+          <StatCard
+            title="Ejections"
+            value={incidentStats.ejections}
                 icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
                 isSelected={selectedFilter === 'Ejection'}
                 onClick={() => setSelectedFilter('Ejection')}
-                isFilterable={true}
+            isFilterable={true}
                 tooltip="Incidents where someone was ejected."
-            />
-            <StatCard
-                title="Medicals"
-                value={incidentStats.medicals}
+          />
+          <StatCard
+            title="Medicals"
+            value={incidentStats.medicals}
                 icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
                 isSelected={selectedFilter === 'Medical'}
                 onClick={() => setSelectedFilter('Medical')}
@@ -697,17 +804,20 @@ export default function Dashboard() {
                 icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
                 isSelected={selectedFilter === 'Other'}
                 onClick={() => setSelectedFilter('Other')}
-                isFilterable={true}
+            isFilterable={true}
                 tooltip="All other incident types."
-            />
+          />
         </div>
 
         {/* Stats Grid - Second Row */}
-        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-8">
-          <div className="h-[180px] w-full rounded-lg shadow p-4 flex flex-col items-center justify-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          {/* Venue Occupancy */}
+          <div className="h-[90px] md:h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center cursor-pointer" onClick={() => setIsOccupancyModalOpen(true)}>
             <VenueOccupancy currentEventId={currentEventId} />
           </div>
-          <div className="h-[180px] w-full rounded-lg shadow p-4 flex flex-col items-center justify-center">
+  
+          {/* WeatherCard - only render on md and up */}
+          <div className="hidden md:block h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center">
             {currentEvent?.venue_address && (
               <WeatherCard 
                 lat={coordinates?.lat} 
@@ -719,13 +829,15 @@ export default function Dashboard() {
               />
             )}
           </div>
-          <div className="h-[180px] w-full rounded-lg shadow p-4 flex flex-col items-center justify-center bg-white">
+  
+          <div className="h-[90px] md:h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center bg-white">
             {coordinates && (
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
                 venueAddress={currentEvent?.venue_address || ''} 
-                singleCard 
+                singleCard
+                largeLogo
               />
             )}
           </div>
@@ -744,6 +856,7 @@ export default function Dashboard() {
         isOpen={isIncidentModalOpen}
         onClose={() => setIsIncidentModalOpen(false)}
         onIncidentCreated={handleIncidentCreated}
+        initialIncidentType={initialIncidentType}
       />
 
       {/* Floating Action Button for New Incident (Mobile Only) */}
@@ -755,6 +868,9 @@ export default function Dashboard() {
       >
         <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
       </button>
+
+      {/* Venue Occupancy Modal */}
+      <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
     </div>
   )
 } 

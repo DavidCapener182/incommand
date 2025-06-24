@@ -10,6 +10,7 @@ interface Props {
   isOpen: boolean
   onClose: () => void
   onIncidentCreated: (incident?: any) => Promise<void>
+  initialIncidentType?: string
 }
 
 interface IncidentFormData {
@@ -22,6 +23,7 @@ interface IncidentFormData {
   is_closed: boolean
   status: string
   log_number: string
+  what3words: string
 }
 
 interface RefusalDetails {
@@ -69,23 +71,35 @@ const INCIDENT_TYPES = {
   'Refusal': 'Refusal',
   'Medical': 'Medical',
   'Welfare': 'Welfare',
-  'Drug Related': 'Drug Related Incident',
-  'Weapon Related': 'Weapon Related Incident',
+  'Aggressive Behaviour': 'Aggressive Behaviour',
+  'Suspicious Behaviour': 'Suspicious Behaviour',
+  'Lost Property': 'Lost Property',
+  'Attendance': 'Attendance Update',
+  'Site Issue': 'Site Issue',
+  'Tech Issue': 'Tech Issue',
+  'Environmental': 'Environmental',
+  'Other': 'Other',
+  'Alcohol / Drug Related': 'Alcohol / Drug Related',
+  'Weapon Related': 'Weapon Related',
   'Artist Movement': 'Artist Movement',
   'Sexual Misconduct': 'Sexual Misconduct',
-  'Site Issue': 'Site Maintenance Issue',
-  'Attendance': 'Attendance Update',
-  'Timings': 'Timing Update',
   'Event Timing': 'Event Timing',
-  'Lost Property': 'Lost Property',
-  'Suspicious Behaviour': 'Suspicious Behaviour',
-  'Aggressive Behaviour': 'Aggressive Behaviour',
-  'Queue Build-Up': 'Queue Build-Up',
-  'Technical Issue': 'Technical Issue',
-  'Weather Disruption': 'Weather Disruption',
-  'Other': 'Other',
-  'Sit Rep': 'Situation Report'
+  'Timings': 'Timing Update',
+  'Sit Rep': 'Situation Report',
+  'Crowd Management': 'Crowd Management',
+  'Hostile Act': 'Hostile Act',
+  'Fire Alarm': 'Fire Alarm',
+  'Noise Complaint': 'Noise Complaint',
+  'Evacuation': 'Evacuation',
+  'Counter-Terror Alert': 'Counter-Terror Alert',
+  'Entry Breach': 'Entry Breach',
+  'Theft': 'Theft',
+  'Emergency Show Stop': 'Emergency Show Stop',
+  'Animal Incident': 'Animal Incident',
+  'Missing Child/Person': 'Missing Child/Person',
 } as const
+
+export const incidentTypes = Object.keys(INCIDENT_TYPES);
 
 type IncidentType = keyof typeof INCIDENT_TYPES
 
@@ -162,6 +176,31 @@ const getFollowUpQuestions = (incidentType: string): string[] => {
 const detectIncidentType = (input: string): string => {
   const text = input.toLowerCase();
   
+  // --- MISSING CHILD/PERSON DETECTION (PRIORITY) ---
+  const missingChildPersonKeywords = [
+    'missing child',
+    'lost child',
+    'missing person',
+    'lost person',
+    'child missing',
+    'person missing',
+    'child lost',
+    'person lost',
+    'runaway child',
+    'runaway person',
+    'missing kid',
+    'lost kid',
+    'kid missing',
+    'kid lost',
+    'unaccompanied child',
+    'unaccompanied minor',
+    'missing minor',
+    'lost minor'
+  ];
+  if (missingChildPersonKeywords.some(keyword => text.includes(keyword))) {
+    return 'Missing Child/Person';
+  }
+
   // Weather Disruption detection
   const weatherKeywords = [
     'heavy rain',
@@ -357,10 +396,9 @@ const detectIncidentType = (input: string): string => {
     'left my'
   ];
   
-  // Check for lost property keywords but exclude if contains refusal/ejection terms
+  // Check for lost property keywords but exclude if contains refusal/ejection/missing child/person terms
+  const exclusionTerms = ['refused', 'ejected', 'removed', 'missing child', 'lost child', 'missing person', 'lost person', 'child missing', 'person missing', 'child lost', 'person lost', 'runaway child', 'runaway person', 'missing kid', 'lost kid', 'kid missing', 'kid lost', 'unaccompanied child', 'unaccompanied minor', 'missing minor', 'lost minor'];
   if (lostPropertyKeywords.some(keyword => text.includes(keyword))) {
-    // Check for exclusion terms
-    const exclusionTerms = ['refused', 'ejected', 'removed'];
     if (!exclusionTerms.some(term => text.includes(term))) {
       return 'Lost Property';
     }
@@ -464,13 +502,13 @@ const detectCallsign = (input: string): string => {
   return '';
 };
 
-const parseAttendanceIncident = async (input: string): Promise<IncidentParserResult | null> => {
+const parseAttendanceIncident = async (input: string, expectedAttendance: number): Promise<IncidentParserResult | null> => {
   // Extract number from input using various patterns
   const numbers = input.match(/\d+/);
   if (!numbers) return null;
 
   const count = numbers[0];
-  const maxCapacity = 3500; // Assuming 3500 is max capacity
+  const maxCapacity = expectedAttendance > 0 ? expectedAttendance : 3500;
   const percentage = Math.round((parseInt(count) / maxCapacity) * 100);
   const remaining = maxCapacity - parseInt(count);
 
@@ -1441,16 +1479,349 @@ function normaliseArtistName(name: string) {
   return cleaned;
 }
 
-export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreated }: Props) {
+// Add the INCIDENT_ACTIONS mapping at the top-level (outside the component)
+const INCIDENT_ACTIONS: Record<string, string[]> = {
+  'Ejection': [
+    'Individual removed from site',
+    'Police notified',
+    'Banned for duration of event',
+    'Details shared with all staff',
+    'First aid provided to ejected person',
+    'Physical intervention required',
+    'Incident logged with CCTV evidence',
+    'Parent/guardian informed (if under 18)',
+    'Suspect refused to leave; police intervened',
+    'Other (specify)'
+  ],
+  'Refusal': [
+    'Entry refused at gate',
+    'Reason explained to attendee',
+    'Police notified (if aggressive)',
+    'Radio communication sent',
+    'Details recorded in log',
+    'Refused due to intoxication',
+    'Refused due to lack of ticket',
+    'Refused due to banned item',
+    'Attempted re-entry after refusal',
+    'Escalated to supervisor/manager',
+    'Other'
+  ],
+  'Medical': [
+    'First aid deployed',
+    'Ambulance called',
+    'Treated on scene',
+    'Refused treatment',
+    'Hospitalised',
+    'Medical team monitoring',
+    'Family/next of kin contacted',
+    'Incident logged for insurance',
+    'Area cleared for emergency access',
+    'Medical notes attached',
+    'Defibrillator used',
+    'Other'
+  ],
+  'Welfare': [
+    'Welfare team deployed',
+    'Assessed by team',
+    'Escorted to safe area',
+    'Awaiting collection by friend/family',
+    'Provided with water/refreshments',
+    'Transport arranged',
+    'Supported until recovered',
+    'Referred to medical team',
+    'Referred to police/social services',
+    'Escalated to safeguarding lead',
+    'Mental health crisis support provided',
+    'Self-harm incident managed',
+    'Suicide risk assessed',
+    'Referred to mental health team',
+    'Family/guardian informed',
+    'Ongoing monitoring',
+    'Confidential support offered',
+    'Other'
+  ],
+  'Aggressive Behaviour': [
+    'Security intervened',
+    'Police notified',
+    'Person removed from area',
+    'De-escalation attempted',
+    'Incident logged',
+    'Medical check performed',
+    'Other'
+  ],
+  'Suspicious Behaviour': [
+    'Person monitored',
+    'Security notified',
+    'Bag searched',
+    'Police informed',
+    'CCTV reviewed',
+    'Unattended bag reported',
+    'Area evacuated',
+    'Other'
+  ],
+  'Lost Property': [
+    'Item details recorded',
+    'Owner contacted',
+    'Police notified (if required)',
+    'CCTV reviewed',
+    'Item returned to owner',
+    'Other'
+  ],
+  'Attendance': [
+    
+  ],
+  'Site Issue': [
+    'Maintenance team notified',
+    'Area cordoned off',
+    'Issue logged for repair',
+    'Temporary fix applied',
+    'Structural engineer called',
+    'Hazard signage placed',
+    'Other',
+    'Unsafe structure reported',
+    'Barrier/fence issue',
+    'Stage/platform checked',
+    'Venue management informed',
+    'Other (specify)'
+  ],
+  'Tech Issue': [
+    'Technical team dispatched',
+    'Issue escalated to IT',
+    'Temporary workaround applied',
+    'Equipment replaced',
+    'System rebooted',
+    'Other',
+    'Power outage reported',
+    'Backup generator started',
+    'Utilities provider contacted',
+    'Area evacuated (if required)',
+    'Power restored',
+    'Other (specify)'
+  ],
+  'Environmental': [
+    'Weather warning issued',
+    'Event paused',
+    'Shelter provided',
+    'Area closed due to flooding',
+    'Slips/trips monitored',
+    'Other',
+    'Hazard identified',
+    'Spill contained',
+    'Environmental team notified',
+    'Area ventilated',
+    'Other (specify)'
+  ],
+  'Other': [
+    'Other (specify)'
+  ],
+  'Alcohol / Drug Related': [
+    'Alcohol confiscated',
+    'Intoxicated person monitored',
+    'Medical team notified',
+    'Police informed',
+    'Ejection considered',
+    'Other',
+    'Drugs seized',
+    'Item bagged as evidence',
+    'Police notified',
+    'Person ejected',
+    'Drugs disposed (with witness)',
+    'Evidence log completed',
+    'Search of person conducted',
+    'Refusal to hand over drugs',
+    'Drugs found during routine search',
+    'Suspect detained for police',
+    'Tested for substance type',
+    'Other (specify)'
+  ],
+  'Weapon Related': [
+    'Weapon seized',
+    'Police notified',
+    'Evidence bagged',
+    'Person detained',
+    'Ejected from site',
+    'CCTV footage reviewed',
+    'Security supervisor informed',
+    'Incident reported to event control',
+    'Refusal to surrender weapon',
+    'Weapon handed to police',
+    'Sweep for further weapons',
+    'Other'
+  ],
+  'Artist Movement': [
+    'Artist escorted by security',
+    'Movement logged',
+    'Venue informed of movement',
+    'Cleared crowd routes for movement',
+    'Artist entered/exited stage',
+    'Secure route maintained',
+    'Artist left site',
+    'VIP vehicle used',
+    'Other',
+    'VIP escorted by security',
+    'VIP arrival/departure logged',
+    'Crowd managed for VIP',
+    'VIP entered/exited stage',
+    'VIP left site',
+    'VIP vehicle used',
+    'Other (specify)'
+  ],
+  'Sexual Misconduct': [
+    'Allegation recorded',
+    'Police notified',
+    'Person removed/separated',
+    'Support provided to victim',
+    'CCTV footage preserved',
+    'Safeguarding lead notified',
+    'Incident logged confidentially',
+    'Statement taken from victim/witness',
+    'Venue ban issued',
+    'Other'
+  ],
+  'Event Timing': [
+    'Event start time updated',
+    'Event end time updated',
+    'Curfew time updated',
+    'Other'
+  ],
+  'Crowd Management': [
+    'Crowd monitored',
+    'Barriers adjusted',
+    'Entry restricted',
+    'Additional staff deployed',
+    'Queue monitored',
+    'Barriers adjusted',
+    'Entry rate increased',
+    'Additional staff deployed',
+    'Other'
+  ],
+  'Timings': [
+    'Show timings updated',
+    'Venue timings updated',
+    'Other'
+  ],
+  'Sit Rep': [
+    'Situation report provided',
+    'Update sent to team',
+    'Other'
+  ],
+  'Hostile Act': [
+    'Police notified',
+    'Medical team deployed',
+    'Suspect detained',
+    'Area secured',
+    'CCTV reviewed',
+    'Other'
+  ],
+  'Fire Alarm': [
+    'Fire alarm activated',
+    'Evacuation started',
+    'Fire service called',
+    'Area checked',
+    'All clear given',
+    'Other'
+  ],
+  'Noise Complaint': [
+    'Noise levels monitored',
+    'Sound reduced',
+    'Complainant updated',
+    'Other'
+  ],
+  'Evacuation': [
+    'Evacuation started',
+    'Assembly point checked',
+    'All clear given',
+    'Other'
+  ],
+  'Counter-Terror Alert': [
+    'Police notified',
+    'Area secured',
+    'Staff briefed',
+    'Other'
+  ],
+  'Entry Breach': [
+    'Entry breach detected',
+    'Security responded',
+    'Person detained',
+    'Police notified',
+    'Fence repaired',
+    'Other'
+  ],
+  'Theft': [
+    'Cash handling incident recorded',
+    'Police notified',
+    'Suspect detained',
+    'CCTV reviewed',
+    'Other',
+    'Equipment reported lost',
+    'Equipment reported stolen',
+    'Police notified',
+    'CCTV reviewed',
+    'Other (specify)'
+  ],
+  'Emergency Show Stop': [
+    'Show stopped',
+    'Crowd managed away from stage',
+    'Emergency services notified',
+    'All staff briefed',
+    'Other'
+  ],
+  'Animal Incident': [
+    'Animal contained',
+    'Owner located',
+    'Animal removed from site',
+    'Incident logged',
+    'Other'
+  ],
+  'Missing Child/Person': [
+    'Missing child/person reported',
+    'Description obtained',
+    'Search initiated',
+    'Police notified',
+    'Parent/guardian informed',
+    'CCTV reviewed',
+    'Found child/person reunited',
+    'Medical check performed',
+    'Other'
+  ]
+};
+
+// Helper to get usage counts from localStorage
+function getUsageCounts() {
+  try {
+    const stored = localStorage.getItem('incidentTypeUsage');
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  // Default: all types 0
+  return Object.fromEntries(Object.keys(INCIDENT_TYPES).map(type => [type, 0]));
+}
+
+// Helper to save usage counts
+function saveUsageCounts(counts: Record<string, number>) {
+  try {
+    localStorage.setItem('incidentTypeUsage', JSON.stringify(counts));
+  } catch {}
+}
+
+export default function IncidentCreationModal({
+  isOpen,
+  onClose,
+  onIncidentCreated,
+  initialIncidentType,
+}: Props) {
+  if (!isOpen) return null;
+  // All hooks and logic come after this line
+
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
     callsign_to: 'Event Control',
     occurrence: '',
-    incident_type: '',
+    incident_type: initialIncidentType || '',
     action_taken: '',
     is_closed: false,
     status: 'open',
-    log_number: ''
+    log_number: '',
+    what3words: '///'
   });
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
@@ -1487,6 +1858,15 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     occurrence: false,
     action_taken: false
   })
+  const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
+  const [showMoreTypes, setShowMoreTypes] = useState(false);
+  const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
+
+  useEffect(() => {
+    if (initialIncidentType) {
+      setFormData(prev => ({ ...prev, incident_type: initialIncidentType }))
+    }
+  }, [initialIncidentType])
 
   // Timer ref for debouncing
   const processTimer = useRef<NodeJS.Timeout>()
@@ -1506,7 +1886,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
       const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
       if (!profile?.company_id) return;
       // Fetch all events for this company
-      const { data: allEvents } = await supabase.from('events').select('id, event_name, artist_name, is_current').eq('company_id', profile.company_id).order('start_datetime', { ascending: false });
+      const { data: allEvents } = await supabase.from('events').select('id, event_name, artist_name, is_current, expected_attendance').eq('company_id', profile.company_id).order('start_datetime', { ascending: false });
       setEvents(allEvents || []);
       // Default to current event
       const current = allEvents?.find((e: any) => e.is_current);
@@ -1584,7 +1964,9 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             processedData = await parseRefusalIncident(input);
             break;
           case 'Attendance':
-            processedData = await parseAttendanceIncident(input);
+            const selectedEvent = events.find(e => e.id === selectedEventId);
+            const expectedAttendance = selectedEvent?.expected_attendance || 3500;
+            processedData = await parseAttendanceIncident(input, expectedAttendance);
             break;
           case 'Welfare':
             processedData = await parseWelfareIncident(input);
@@ -1629,7 +2011,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
               const data = await response.json();
               processedData = {
                 occurrence: data.occurrence || input,
-                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                action_taken: data.action_taken || '',
                 callsign_from: callsign,
                 incident_type: incidentType
               };
@@ -1637,7 +2019,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
               console.error('Error generating incident details:', error);
               processedData = {
                 occurrence: input,
-                action_taken: 'Incident logged and being monitored.',
+                action_taken: '',
                 callsign_from: callsign,
                 incident_type: incidentType
               };
@@ -1694,6 +2076,21 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
       ...prev, 
       occurrence: input
     }));
+
+    // Auto-extract w3w if not manually edited
+    if (!w3wManuallyEdited) {
+      // Ensure extractW3WFromQuickInput is declared before use
+      const w3wMatch = extractW3WFromQuickInput(input) || '';
+      if (w3wMatch) {
+        setFormData(prev => {
+          // Remove any existing w3w location at the end
+          let newOccurrence = prev.occurrence.replace(/Location \(\/{0,3}[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+\)$/i, '').trim();
+          // Append the new w3w location
+          newOccurrence = newOccurrence ? `${newOccurrence} Location (${w3wMatch})` : `Location (${w3wMatch})`;
+          return { ...prev, what3words: w3wMatch, occurrence: newOccurrence };
+        });
+      }
+    }
 
     // Clear any previous timer
     if (processTimer.current) {
@@ -1774,7 +2171,9 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             result = await parseEjectionIncident(input);
             break;
           case 'Attendance':
-            result = await parseAttendanceIncident(input);
+            const selectedEvent = events.find(e => e.id === selectedEventId);
+            const expectedAttendance = selectedEvent?.expected_attendance || 3500;
+            result = await parseAttendanceIncident(input, expectedAttendance);
             break;
           case 'Welfare':
             result = await parseWelfareIncident(input);
@@ -1819,7 +2218,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
               const data = await response.json();
               result = {
                 occurrence: data.occurrence || input,
-                action_taken: data.action_taken || 'Incident logged and being monitored.',
+                action_taken: data.action_taken || '',
                 callsign_from: callsign,
                 incident_type: detectedType
               };
@@ -1827,7 +2226,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
               console.error('Error generating incident details:', error);
               result = {
                 occurrence: input,
-                action_taken: 'Incident logged and being monitored.',
+                action_taken: '',
                 callsign_from: callsign,
                 incident_type: detectedType
               };
@@ -1941,8 +2340,9 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
         status: formData.status || 'open',
         ai_input: formData.ai_input || null,
         created_at: now,
-        updated_at: now,
-        timestamp: now // Keep this for backward compatibility
+        updated_at: now, // Keep this for backward compatibility
+        timestamp: now, // Keep this for backward compatibility
+        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null
       };
 
       // First, check if the log number already exists
@@ -1999,7 +2399,8 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
         is_closed: false,
         status: 'open',
         ai_input: '',
-        log_number: ''
+        log_number: '',
+        what3words: '///'
       });
 
       setRefusalDetails({
@@ -2143,9 +2544,133 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
     }
   };
 
-  if (!isOpen) return null
+  // Add a function to reset the form to its initial state
+  const resetForm = () => {
+    setFormData({
+      callsign_from: '',
+      callsign_to: 'Event Control',
+      occurrence: '',
+      incident_type: initialIncidentType || '',
+      action_taken: '',
+      is_closed: false,
+      status: 'open',
+      log_number: '',
+      what3words: '///'
+    });
+    setRefusalDetails({
+      policeRequired: false,
+      description: '',
+      location: '',
+      reason: '',
+      banned: false,
+      aggressive: false
+    });
+    setMedicalDetails({
+      location: '',
+      requiresAmbulance: false,
+      refusedTreatment: false,
+      transportedOffSite: false
+    });
+    setEjectionDetails({
+      location: '',
+      description: '',
+      reason: '',
+      policeInformed: false,
+      refusedReentry: false,
+      additionalInfo: { additionalSecurity: false }
+    });
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setPhotoError(null);
+    setShowRefusalActions(false);
+    setFollowUpAnswers({});
+    setProcessingAI(false);
+    setMissingCallsign(false);
+    setIsEditing({ occurrence: false, action_taken: false });
+    setW3wManuallyEdited(false);
+    setShowMoreTypes(false);
+  };
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
+
+  // What3Words input logic
+
+  // Update handleW3WChange to set the manual edit flag
+  const handleW3WChange = (value: string) => {
+    setW3wManuallyEdited(true);
+    setFormData(prev => ({ ...prev, what3words: value }));
+  };
+
+  const handleW3WBlur = () => {
+    let value = formData.what3words.trim();
+    // Remove leading slashes
+    value = value.replace(/^\/*/, '');
+    // If three words separated by spaces, convert to dot format
+    const spacePattern = /^([a-zA-Z0-9]+)\s+([a-zA-Z0-9]+)\s+([a-zA-Z0-9]+)$/;
+    const dotPattern = /^([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)$/;
+    if (spacePattern.test(value)) {
+      const match = value.match(spacePattern);
+      if (match) value = `${match[1]}.${match[2]}.${match[3]}`;
+    }
+    if (dotPattern.test(value)) {
+      value = value;
+    }
+    if (value && !value.startsWith('///')) value = `///${value}`;
+    setFormData(prev => ({ ...prev, what3words: value }));
+  };
+
+  // Extract w3w from Quick Input
+  const extractW3WFromQuickInput = (input: string) => {
+    // Only match if input contains ///word.word.word
+    const regex = /\/\/\/([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)/;
+    const match = input.match(regex);
+    if (match) {
+      return `///${match[1]}.${match[2]}.${match[3]}`;
+    }
+    return null;
+  };
+
+  // Responsive incident type grid: 8x3 (desktop), 4x3 (mobile)
+  const desktopVisibleCount = 24;
+const mobileVisibleCount = 11;
+
+// Sort types by usage count (desc), then name
+const sortedIncidentTypes = React.useMemo(() => {
+  return Object.keys(INCIDENT_TYPES)
+    .sort((a, b) => {
+      const diff = (usageCounts[b] || 0) - (usageCounts[a] || 0);
+      if (diff !== 0) return diff;
+      return a.localeCompare(b);
+    });
+}, [usageCounts]);
+
+// Use sortedIncidentTypes for grid
+const desktopVisibleTypes = sortedIncidentTypes.slice(0, desktopVisibleCount);
+const mobileVisibleTypes = sortedIncidentTypes.slice(0, mobileVisibleCount);
+const desktopPlaceholdersNeeded = desktopVisibleCount - desktopVisibleTypes.length;
+const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
+
+  const handleIncidentTypeSelect = (type: string) => {
+    setFormData(prev => ({
+      ...prev,
+      incident_type: type,
+      occurrence: `${type}: `
+    }));
+    // Attendance prefill
+    if (type === 'Attendance' && !formData.ai_input) {
+      setFormData(prev => ({
+        ...prev,
+        ai_input: 'Current Attendance: '
+      }));
+    }
+    // Increment usage
+    setUsageCounts((prev: Record<string, number>) => {
+      const updated = { ...prev, [type]: (prev[type] || 0) + 1 };
+      saveUsageCounts(updated);
+      return updated;
+    });
+    document.getElementById('occurrence-input')?.focus();
+  };
 
   return (
     <div className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 ${isOpen ? '' : 'hidden'}`}>
@@ -2153,7 +2678,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">New Incident</h3>
           <button
-            onClick={onClose}
+            onClick={() => { resetForm(); onClose(); }}
             className="text-gray-400 hover:text-gray-500"
           >
             <span className="sr-only">Close</span>
@@ -2199,114 +2724,110 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             <p className="text-lg font-bold text-gray-900">{nextLogNumber}</p>
           </div>
 
+          {/* Incident Type Selection Grid */}
+          <div>
+            {/* Desktop grid */}
+            <div className="hidden md:flex flex-wrap gap-1 py-2 mb-4 w-[832px]"> {/* 8 buttons x 3 rows x 104px incl. gap */}
+              {desktopVisibleTypes.map((type, idx) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                  style={{ whiteSpace: 'normal', textAlign: 'center' }}
+                  onClick={() => handleIncidentTypeSelect(type)}
+                >
+                  {INCIDENT_TYPES[type as keyof typeof INCIDENT_TYPES]}
+                </button>
+              ))}
+              {/* Add invisible placeholders if needed */}
+              {Array.from({ length: desktopPlaceholdersNeeded }).map((_, idx) => (
+                <div key={`ph-d-${idx}`} className="w-[100px] h-[36px] invisible" />
+              ))}
+              {/* More button as the 25th spot */}
+              <div>
+                <button
+                  type="button"
+                  className="w-[100px] h-[36px] rounded border-2 border-blue-200 bg-blue-50 text-blue-800 text-xs font-medium backdrop-blur-sm flex items-center justify-center hover:border-blue-400 focus:outline-none"
+                  onClick={() => setShowMoreTypes(!showMoreTypes)}
+                >
+                  More
+                </button>
+                {showMoreTypes && (
+                  <div className="absolute z-10 mt-2 bg-white border border-blue-200 rounded shadow-lg p-2 grid grid-cols-2 gap-1">
+                    {Object.keys(INCIDENT_TYPES).slice(desktopVisibleCount).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                        style={{ whiteSpace: 'normal', textAlign: 'center' }}
+                        onClick={() => handleIncidentTypeSelect(type)}
+                      >
+                        {INCIDENT_TYPES[type as keyof typeof INCIDENT_TYPES]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Mobile grid */}
+            <div className="flex md:hidden flex-wrap gap-1 py-2 mb-4 w-[432px]"> {/* 4 buttons x 3 rows x 108px incl. gap */}
+              {mobileVisibleTypes.map((type, idx) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                  style={{ whiteSpace: 'normal', textAlign: 'center' }}
+                  onClick={() => handleIncidentTypeSelect(type)}
+                >
+                  {INCIDENT_TYPES[type as keyof typeof INCIDENT_TYPES]}
+                </button>
+              ))}
+              {/* Add invisible placeholders if needed */}
+              {Array.from({ length: mobilePlaceholdersNeeded }).map((_, idx) => (
+                <div key={`ph-m-${idx}`} className="w-[100px] h-[36px] invisible" />
+              ))}
+              {/* More button as the 13th spot */}
+              <div>
+                <button
+                  type="button"
+                  className="w-[100px] h-[36px] rounded border-2 border-blue-200 bg-blue-50 text-blue-800 text-xs font-medium backdrop-blur-sm flex items-center justify-center hover:border-blue-400 focus:outline-none"
+                  onClick={() => setShowMoreTypes(!showMoreTypes)}
+                >
+                  More
+                </button>
+                {showMoreTypes && (
+                  <div className="absolute z-10 mt-2 bg-white border border-blue-200 rounded shadow-lg p-2 grid grid-cols-2 gap-1">
+                    {Object.keys(INCIDENT_TYPES).slice(mobileVisibleCount).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                        style={{ whiteSpace: 'normal', textAlign: 'center' }}
+                        onClick={() => handleIncidentTypeSelect(type)}
+                      >
+                        {INCIDENT_TYPES[type as keyof typeof INCIDENT_TYPES]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Input Field */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Quick Input</label>
-            <div className="space-y-2">
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                value={formData.ai_input}
-                onChange={handleQuickInputChange}
-                placeholder="Enter incident details..."
-              />
-              
-              {/* Quick Actions for Refusals */}
-              {showRefusalActions && (
-                <div className="space-y-4 border-t border-gray-200 pt-4">
-                  <h4 className="font-medium text-gray-900">Refusal Details</h4>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Location</label>
-                      <input
-                        type="text"
-                        value={refusalDetails.location}
-                        onChange={(e) => {
-                          setRefusalDetails(prev => ({...prev, location: e.target.value}))
-                          updateRefusalOccurrence()
-                        }}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="e.g., Main entrance"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <input
-                        type="text"
-                        value={refusalDetails.description}
-                        onChange={(e) => {
-                          setRefusalDetails(prev => ({...prev, description: e.target.value}))
-                          updateRefusalOccurrence()
-                        }}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="e.g., Male, red shirt, jeans"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Reason</label>
-                    <input
-                      type="text"
-                      value={refusalDetails.reason}
-                      onChange={(e) => {
-                        setRefusalDetails(prev => ({...prev, reason: e.target.value}))
-                        updateRefusalOccurrence()
-                      }}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="e.g., Intoxicated, No ID"
-                    />
-                  </div>
-
-                  <div className="flex space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRefusalDetails(prev => ({...prev, policeRequired: !prev.policeRequired}))
-                        updateRefusalOccurrence()
-                      }}
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        refusalDetails.policeRequired 
-                          ? 'bg-red-100 text-red-800 hover:bg-red-200' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      Police Required
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRefusalDetails(prev => ({...prev, banned: !prev.banned}))
-                        updateRefusalOccurrence()
-                      }}
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        refusalDetails.banned 
-                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      Banned Person
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRefusalDetails(prev => ({...prev, aggressive: !prev.aggressive}))
-                        updateRefusalOccurrence()
-                      }}
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        refusalDetails.aggressive 
-                          ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      Showing Aggression
-                    </button>
-                  </div>
-                </div>
-              )}
+            <label htmlFor="quick-input" className="block text-sm font-medium text-gray-700">Quick Input</label>
+            <textarea
+              id="quick-input"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="Enter details (e.g. location, persons involved, brief summary)…"
+              value={formData.ai_input || ''}
+              onChange={handleQuickInputChange}
+              rows={2}
+            />
+            {/* Live Occurrence Preview */}
+            <div className="mt-2 text-xs text-gray-500">
+              <span className="font-semibold">Occurrence Preview:</span> {formData.occurrence}
             </div>
           </div>
 
@@ -2394,6 +2915,46 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
             />
           </div>
 
+          {/* What3Words Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">What3Words Location <span className="text-xs text-gray-400">(optional)</span></label>
+            <input
+              type="text"
+              value={formData.what3words}
+              onChange={e => { setW3wManuallyEdited(true); handleW3WChange(e.target.value); }}
+              onBlur={handleW3WBlur}
+              placeholder="e.g. ///apple.banana.cherry or apple banana cherry"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              autoComplete="off"
+            />
+            <p className="text-xs text-gray-400 mt-1">Enter a valid what3words address (e.g. ///apple.banana.cherry or three words)</p>
+          </div>
+
+          {/* Above the Action Taken textarea */}
+          {INCIDENT_ACTIONS[formData.incident_type]?.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {INCIDENT_ACTIONS[formData.incident_type].map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  className="px-3 py-1 rounded-full border-2 border-blue-300 text-blue-700 bg-blue-50 text-xs font-medium hover:bg-blue-100 focus:outline-none transition-all"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      action_taken: prev.action_taken
+                        ? prev.action_taken.trim().endsWith('.')
+                          ? prev.action_taken + ' ' + action + '.'
+                          : prev.action_taken + '. ' + action + '.'
+                        : action + '.'
+                    }));
+                  }}
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700">Action Taken</label>
             <textarea
@@ -2421,7 +2982,7 @@ export default function IncidentCreationModal({ isOpen, onClose, onIncidentCreat
           <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => { resetForm(); onClose(); }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Cancel
