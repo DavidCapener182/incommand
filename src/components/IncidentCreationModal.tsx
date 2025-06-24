@@ -2770,12 +2770,12 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
             </div>
             {/* Mobile grid */}
-            <div className="flex md:hidden flex-wrap gap-1 py-2 mb-4 w-[432px]"> {/* 4 buttons x 3 rows x 108px incl. gap */}
+            <div className="flex md:hidden flex-wrap gap-1 py-2 mb-4 w-[320px]"> {/* 5 buttons x 2 rows x 64px incl. gap */}
               {mobileVisibleTypes.map((type, idx) => (
                 <button
                   key={type}
                   type="button"
-                  className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                  className={`w-[60px] h-[28px] rounded border-2 transition-all duration-150 text-[10px] font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
                   style={{ whiteSpace: 'normal', textAlign: 'center' }}
                   onClick={() => handleIncidentTypeSelect(type)}
                 >
@@ -2784,13 +2784,13 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               ))}
               {/* Add invisible placeholders if needed */}
               {Array.from({ length: mobilePlaceholdersNeeded }).map((_, idx) => (
-                <div key={`ph-m-${idx}`} className="w-[100px] h-[36px] invisible" />
+                <div key={`ph-m-${idx}`} className="w-[60px] h-[28px] invisible" />
               ))}
               {/* More button as the 13th spot */}
               <div>
                 <button
                   type="button"
-                  className="w-[100px] h-[36px] rounded border-2 border-blue-200 bg-blue-50 text-blue-800 text-xs font-medium backdrop-blur-sm flex items-center justify-center hover:border-blue-400 focus:outline-none"
+                  className="w-[60px] h-[28px] rounded border-2 border-blue-200 bg-blue-50 text-blue-800 text-[10px] font-medium backdrop-blur-sm flex items-center justify-center hover:border-blue-400 focus:outline-none"
                   onClick={() => setShowMoreTypes(!showMoreTypes)}
                 >
                   More
@@ -2801,7 +2801,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       <button
                         key={type}
                         type="button"
-                        className={`w-[100px] h-[36px] rounded border-2 transition-all duration-150 text-xs font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
+                        className={`w-[60px] h-[28px] rounded border-2 transition-all duration-150 text-[10px] font-medium backdrop-blur-sm flex items-center justify-center ${formData.incident_type === type ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-blue-200 bg-blue-50 text-blue-800'} hover:border-blue-400 focus:outline-none`}
                         style={{ whiteSpace: 'normal', textAlign: 'center' }}
                         onClick={() => handleIncidentTypeSelect(type)}
                       >
