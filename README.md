@@ -1,6 +1,6 @@
 # inCommand (Compact Event Control)
 
-## Overview
+## Overview.
 
 inCommand is an event control dashboard built with Next.js and Supabase. It features multi-tenancy, user profiles, event/incident management, role-based permissions, and a modern, responsive UI.
 
