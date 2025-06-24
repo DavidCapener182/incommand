@@ -15,11 +15,21 @@ inCommand is an event control dashboard built with Next.js and Supabase. It feat
     - **Performance Metrics**: Tracks key performance indicators for the event.
     - **Predictive Insights**: Offers AI-based predictions for future incidents.
 - **Dashboard Cards**:
-  - **Venue Occupancy**: Live stats and progress bar.
-  - **Weather Card**: Current weather and forecast for the venue location.
-  - **What3Words Map Card**: Clickable card with What3Words logo. Opens a fullscreen modal map for the venue or searched location.
+  - **Venue Occupancy**: Live stats and progress bar. Card is now clickable to open a detailed modal.
+  - **Weather Card**: Current weather and forecast for the venue location. Hidden on mobile for a cleaner layout.
+  - **What3Words Map Card**: Clickable card with What3Words logo (now larger on mobile). Opens a fullscreen modal map for the venue or searched location.
 - **Responsive Navigation**: The navigation bar collapses into a hamburger menu on smaller screens (tablets and mobile devices) to ensure a clean layout.
 - **Live Map Modal**: Click the What3Words card to open a fullscreen map modal.
+- **Incident Creation Modal**: Incident type buttons are sorted by usage (per device/browser), and the grid always maintains its shape. Quick actions and context-aware logic are improved. Attendance quick input is pre-filled. Form resets fully on close.
+- **Incident Log Table**: Type column is always centered on mobile, and occurrence/action columns are truncated on desktop to keep the status column visible. Fully responsive and visually consistent.
+
+## Recent Improvements (June 2024)
+- Usage-based incident type sorting in the Incident Creation Modal
+- Responsive dashboard/card layout for mobile and desktop
+- WeatherCard hidden on mobile, What3Words and Venue Occupancy cards optimized for mobile
+- Venue Occupancy card opens modal on click
+- Log table truncation and type/status alignment improvements
+- General UI/UX and accessibility enhancements
 
 ## Setup
 
