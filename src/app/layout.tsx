@@ -1,3 +1,4 @@
+<div style={{background:'lime',color:'black',fontSize:'32px'}}>DEPLOY TEST - {new Date().toISOString()}</div>
 'use client'
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Metadata } from 'next'
