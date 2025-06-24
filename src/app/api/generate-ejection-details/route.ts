@@ -16,43 +16,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `Generate a professional security ejection report based on this exact input: "${input}"
-
-Additional context:
-Location: ${location}
-Description: ${description}
-Reason: ${reason}
-Police Informed: ${policeInformed ? 'Yes' : 'No'}
-Refused Re-entry: ${refusedReentry ? 'Yes' : 'No'}
-Additional Security: ${additionalSecurity ? 'Yes' : 'No'}
-Callsign: ${callsign || 'Not specified'}
-
-Please provide:
-1. An occurrence description that:
-   - Uses the EXACT information from the input
-   - Maintains all key details mentioned
-   - Formats it professionally but does not add or remove information
-2. A professional action taken statement that reflects:
-   - Ejection status
-   - Police involvement (if any)
-   - Re-entry status
-   - Additional security measures
-
-Format the response as JSON with 'occurrence' and 'actionTaken' fields. The occurrence MUST contain the actual situation described in the input.
-
-Example format:
-Input: "ejection from the venue, males fighting"
-{
-  "occurrence": "Multiple males ejected from venue following physical altercation",
-  "actionTaken": "Individuals removed from venue. Re-entry refused. Area monitored for further incidents."
-}`;
+    const prompt = `Correct only grammar and spelling in the following incident report. Do not add, remove, or change any information. Return the corrected text as 'occurrence'.\n\nInput: ${input}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "You are a professional security incident report writer. Your primary task is to format the EXACT incident details provided in the input into professional security terminology. Do not invent or remove details - use only what is explicitly stated in the input."
+          content: "You are a grammar and spelling corrector. Only correct grammar and spelling. Do not add, remove, or change any information."
         },
         {
           role: "user",

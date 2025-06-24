@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Created `CHANGELOG.md` to track project changes.
+- ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen.
 
 ## [0.1.0] - 2024-07-29
 

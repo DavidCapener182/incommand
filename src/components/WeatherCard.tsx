@@ -137,20 +137,20 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-center">
+    <div className="weather-card hidden md:block w-full h-full flex flex-col items-center justify-center text-center">
       <div className="flex items-center justify-center">
-        <div className="hidden md:block pr-4">
+        <div className="pr-4">
           <WeatherIcon />
         </div>
-        <span className="text-3xl md:text-5xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
+        <span className="text-5xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
       </div>
-      <span className="text-sm md:text-lg text-gray-600 capitalize mt-2">{weather.description}</span>
-      <div className="text-gray-500 text-xs md:text-base mt-2">
+      <span className="text-lg text-gray-600 capitalize mt-2">{weather.description}</span>
+      <div className="text-gray-500 text-base mt-2">
         {locationName.split(',').map((part, index) => (
           <p key={index} className="leading-tight">{part.trim()}</p>
         ))}
       </div>
-      <div className="text-gray-500 text-xs md:text-sm mt-2 flex items-center">
+      <div className="text-gray-500 text-sm mt-2 flex items-center">
         <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>

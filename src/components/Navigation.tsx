@@ -366,21 +366,21 @@ export default function Navigation() {
             }}
           >
             <div style={{ pointerEvents: 'auto', width: '100%' }}>
-              <ProfileCard 
-                name={profile.full_name || 'User'}
-                title={profile.company || 'No company'}
-                handle={user.email}
-                status="Online"
-                contactText="Edit Profile"
-                avatarUrl={profile.avatar_url || ''}
-                showUserInfo={true}
-                enableTilt={true}
+        <ProfileCard 
+          name={profile.full_name || 'User'}
+          title={profile.company || 'No company'}
+          handle={user.email}
+          status="Online"
+          contactText="Edit Profile"
+          avatarUrl={profile.avatar_url || ''}
+          showUserInfo={true}
+          enableTilt={true}
                 className=""
-                onContactClick={() => {
-                  setShowProfileCard(false);
-                  router.push('/profile');
-                }}
-              />
+          onContactClick={() => {
+             setShowProfileCard(false);
+             router.push('/profile');
+           }}
+        />
             </div>
           </div>
         </>

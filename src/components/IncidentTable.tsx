@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { ArrowUpIcon } from '@heroicons/react/24/outline'
 
 interface Incident {
   id: number
@@ -69,6 +70,8 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -271,6 +274,20 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
       })
     : incidents;
 
+  // Show Back to Top if many incidents and scrolled down
+  useEffect(() => {
+    const handleScroll = () => {
+      if (tableContainerRef.current) {
+        if (incidents.length > 8 && tableContainerRef.current.scrollTop > 300) setShowBackToTop(true);
+      }
+    };
+    const ref = tableContainerRef.current;
+    if (ref && filteredIncidents.length > 15) {
+      ref.addEventListener('scroll', handleScroll);
+      return () => ref.removeEventListener('scroll', handleScroll);
+    }
+  }, [incidents.length, filteredIncidents.length]);
+
   if (loading) {
     return (
       <div className="mt-4 bg-white shadow rounded-lg p-6">
@@ -297,7 +314,7 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
   return (
     <>
       {/* Mobile Card/Accordion Layout */}
-      <div className="md:hidden mt-4 space-y-3" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+      <div ref={tableContainerRef} className="md:hidden mt-4 space-y-3" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', position: 'relative' }}>
         {/* Mobile Table Header */}
         <div className="sticky top-0 z-10 bg-gray-50 flex items-center px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
           <div className="basis-[28%]">Log #</div>
@@ -310,11 +327,19 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
             key={incident.id}
             className={`bg-white shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md ${getRowStyle(incident)}`}
             onClick={() => setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id)}
+            tabIndex={0}
+            role="button"
+            aria-label={`View details for log ${incident.log_number}`}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id);
+              }
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="basis-[28%] font-bold text-blue-700 text-sm truncate">{incident.log_number}</div>
               <div className="basis-[24%] flex items-center justify-center">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getIncidentTypeStyle(incident.incident_type)}`}>{incident.incident_type}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mx-auto text-center ${getIncidentTypeStyle(incident.incident_type)}`}>{incident.incident_type}</span>
               </div>
               <div className="basis-[24%] text-xs text-gray-500 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
               <div className="basis-[24%] flex items-center justify-end">
@@ -323,12 +348,12 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                     Logged
                   </span>
                 ) : (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
-                    onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                  >
-                    {incident.is_closed ? 'Closed' : 'Open'}
-                  </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                  onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                >
+                  {incident.is_closed ? 'Closed' : 'Open'}
+                </span>
                 )}
               </div>
             </div>
@@ -352,9 +377,22 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
             )}
           </div>
         ))}
+        {/* Back to Top Button (Mobile) */}
+        {showBackToTop && (
+          <button
+            className="fixed bottom-24 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in"
+            aria-label="Back to Top"
+            tabIndex={0}
+            onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <ArrowUpIcon className="h-7 w-7" />
+          </button>
+        )}
       </div>
       {/* Desktop Table Layout */}
-      <div className="hidden md:flex flex-col mt-4" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+      <div ref={tableContainerRef} className="hidden md:flex flex-col mt-4" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', position: 'relative' }}>
         <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
             <div className="shadow border-b border-gray-200 sm:rounded-lg">
@@ -392,7 +430,7 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                     <tr 
                       key={incident.id} 
                       className={`cursor-pointer ${getRowStyle(incident)}`}
-                      onClick={() => handleIncidentClick(incident)}
+                      onClick={() => handleIncidentClick(incident)} 
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{incident.log_number}</div>
@@ -424,7 +462,7 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                           {incident.callsign_to}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={incident.occurrence}>
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs overflow-ellipsis" title={incident.occurrence}>
                         {incident.occurrence}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -432,7 +470,7 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
                           {incident.incident_type}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 truncate" title={incident.action_taken}>
+                      <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs overflow-ellipsis" title={incident.action_taken}>
                         {incident.action_taken}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -460,6 +498,19 @@ export default function IncidentTable({ filter, onDataLoaded }: { filter?: strin
             </div>
           </div>
         </div>
+        {/* Back to Top Button (Desktop) */}
+        {showBackToTop && (
+          <button
+            className="fixed bottom-24 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in"
+            aria-label="Back to Top"
+            tabIndex={0}
+            onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <ArrowUpIcon className="h-7 w-7" />
+          </button>
+        )}
       </div>
       {isDetailsModalOpen && selectedIncidentId && (
         <IncidentDetailsModal

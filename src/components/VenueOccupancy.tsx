@@ -147,7 +147,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-2 w-full">
-        <div className="text-[#2A3990] w-8 h-8">
+        <div className="hidden md:block text-[#2A3990] w-8 h-8">
           <BuildingOffice2Icon className="w-full h-full" />
         </div>
         <div className="text-center">
