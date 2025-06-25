@@ -10,15 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Created `CHANGELOG.md` to track project changes.
 - ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen.
-- New settings subpages and components for AI usage, events, notifications, and support.
-- RotatingText component for animated event type display.
+
+## [0.1.0] - 2024-07-29
+
+### Added
+- **Analytics Dashboard**: Introduced a new page at `/analytics` to provide deep insights into event data.
+- **AI-Powered Debrief Summary**: Integrated with OpenAI to automatically generate detailed event debriefs, including an event overview, attendance analysis, a table of significant incidents, and actionable learning points.
+- **Event Log Management**: Added functionality to the settings page for `admin` and `superadmin` users to view and delete individual logs for the current event.
+- **Responsive Navigation**: The main navigation bar now collapses into a hamburger menu on tablet and mobile screen sizes to improve user experience on smaller devices.
 
 ### Changed
-- Login page UI polished to match landing page style.
-- 'New to inCommand?' link moved above 'Create an account' button for logical CTA flow.
-- Restored solid blue background to login page for brand consistency.
-- Improved card, button, and text spacing for clarity and accessibility.
-- Enhanced accessibility and mobile experience across login and splash screens.
 - Updated the `README.md` to reflect the latest features and setup instructions.
 
 ### Fixed

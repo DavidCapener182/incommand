@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
+import Link from "next/link";
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -64,7 +66,78 @@ function getNewId() {
   return `id_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export default function CallsignAssignmentPage() {
+// Placeholder components for new sections
+const StaffList = () => (
+  <div className="p-8 text-gray-900 dark:text-gray-100">Staff List view coming soon...</div>
+);
+const RadioSignOut = () => (
+  <div className="p-8 text-gray-900 dark:text-gray-100">Radio Sign Out view coming soon...</div>
+);
+const ShiftRoster = () => (
+  <div className="p-8 text-gray-900 dark:text-gray-100">Shift Roster view coming soon...</div>
+);
+const Accreditation = () => (
+  <div className="p-8 text-gray-900 dark:text-gray-100">Accreditation view coming soon...</div>
+);
+
+const navItems = [
+  { name: 'Staff List', icon: UserGroupIcon, key: 'staff' },
+  { name: 'Callsign Assignment', icon: KeyIcon, key: 'callsign' },
+  { name: 'Radio Sign Out', icon: DevicePhoneMobileIcon, key: 'radio' },
+  { name: 'Shift Roster', icon: CalendarDaysIcon, key: 'shift' },
+  { name: 'Accreditation', icon: IdentificationIcon, key: 'accreditation' },
+  { name: 'Staff Management', key: 'staff-management', icon: UserGroupIcon },
+];
+
+const SKILL_OPTIONS = [
+  "Head of Security (HOS)",
+  "Deputy Head of Security",
+  "Security Manager",
+  "Supervisor",
+  "SIA Security Officer",
+  "Response Team (SIA)",
+  "Event Steward",
+  "Control Room Operator",
+  "Event Control Manager",
+  "Radio Controller",
+  "Callsign Coordinator",
+  "Welfare Officer",
+  "Welfare Team",
+  "Safeguarding Lead",
+  "Medic / Paramedic",
+  "Medical Coordinator",
+  "Traffic Marshal",
+  "Road Closure Operative",
+  "Venue Manager",
+  "Duty Manager",
+  "Site Manager",
+  "Access Control",
+  "Accreditation",
+  "Production Manager",
+  "Stage Manager",
+  "Artist Liaison",
+  "Front of House",
+  "Turnstile Operator",
+  "Fire Safety Marshal",
+  "Health & Safety",
+  "Dog Handler (K9)",
+  "CCTV Operator",
+  "Logistics Coordinator",
+  "Cleaner/Housekeeping"
+];
+
+// Add this type above StaffListView
+type StaffForm = {
+  full_name: string;
+  contact_number: string;
+  email: string;
+  skill_tags: string[];
+  notes: string;
+  active: boolean;
+};
+
+export default function StaffCommandCentre() {
+  const [activeView, setActiveView] = useState('callsign');
   const [groups, setGroups] = useState(initialGroups);
   const [currentName, setCurrentName] = useState("");
   const [assignments, setAssignments] = useState<{ [key: string]: string }>({});
@@ -325,164 +398,456 @@ export default function CallsignAssignmentPage() {
     return "bg-gray-300"; // unassigned
   };
 
-  if (eventLoading) {
-    return <div className="max-w-5xl mx-auto py-8 text-lg">Loading current event...</div>;
-  }
-  if (eventError) {
-    return <div className="max-w-5xl mx-auto py-8 text-red-600 font-semibold">{eventError}</div>;
-  }
+  return (
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+      {/* Sidebar - pixel-perfect match to settings sidebar */}
+      <aside className="hidden md:flex w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex-col shadow-lg z-10">
+        {/* Top bar with section title */}
+        <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
+          <div className="flex items-center space-x-2">
+            <UserGroupIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">Staff Command Centre</span>
+          </div>
+        </div>
+        {/* Navigation items */}
+        <nav className="flex-1 space-y-2 py-4 px-2">
+          {navItems.map((item) => {
+            const isActive = activeView === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setActiveView(item.key)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
+                  ${isActive ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
+                `}
+                aria-current={isActive ? 'page' : undefined}
+                title={item.name}
+              >
+                <item.icon className={`h-5 w-5 ${isActive ? 'text-blue-700 dark:text-blue-200' : 'text-gray-400 dark:text-blue-300'}`} />
+                {item.name}
+              </button>
+            );
+          })}
+        </nav>
+        {/* TODO: Add mobile nav/drawer for sidebar on small screens */}
+      </aside>
+      {/* Main content area */}
+      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+        <div className="w-full h-full">
+          {activeView === 'staff' && <StaffListView />}
+          {activeView === 'callsign' && <CallsignAssignmentView />}
+          {activeView === 'radio' && <RadioSignOut />}
+          {activeView === 'shift' && <ShiftRoster />}
+          {activeView === 'accreditation' && <Accreditation />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
+function CallsignAssignmentView() {
+  // Default categories
+  const defaultCategories = [
+    'Management',
+    'Internal',
+    'External',
+    'Venue Operations',
+    'Medical',
+    'Traffic',
+  ];
+  type Position = { callsign: string; position: string };
+  type Category = { name: string; positions: Position[] };
+  const [categories, setCategories] = useState<Category[]>(
+    defaultCategories.map((cat) => ({ name: cat, positions: [] }))
+  );
+  const [editingCategoryIdx, setEditingCategoryIdx] = useState<number | null>(null);
+  const [newCategory, setNewCategory] = useState('');
+  const [addingPositionCatIdx, setAddingPositionCatIdx] = useState<number | null>(null);
+  const [newPosition, setNewPosition] = useState<Position>({ callsign: '', position: '' });
+  const [editingPosition, setEditingPosition] = useState<{ catIdx: number; posIdx: number } | null>(null);
+  // Simulated staff list (placeholder)
+  const staffList = [
+    { id: 1, name: 'Alice Smith' },
+    { id: 2, name: 'Bob Jones' },
+    { id: 3, name: 'Charlie Lee' },
+    { id: 4, name: 'Dana Patel' },
+    { id: 5, name: 'Eve Kim' },
+  ];
+  // Track assignments: { [categoryIdx][positionIdx]: staffId }
+  const [assignments, setAssignments] = useState<{ [key: string]: number | null }>({});
+  // Track modal/dropdown state
+  const [assigning, setAssigning] = useState<{ catIdx: number; posIdx: number } | null>(null);
+  // Search state
+  const [search, setSearch] = useState('');
+
+  // Compute unassigned staff
+  const assignedIds = Object.values(assignments).filter(Boolean);
+  const unassignedStaff = staffList.filter((s) => !assignedIds.includes(s.id));
+
+  // Add category
+  const handleAddCategory = () => {
+    if (newCategory.trim()) {
+      setCategories([...categories, { name: newCategory.trim(), positions: [] }]);
+      setNewCategory('');
+    }
+  };
+  // Edit category
+  const handleEditCategory = (idx: number, name: string) => {
+    setCategories(categories.map((cat, i) => (i === idx ? { ...cat, name } : cat)));
+  };
+  // Delete category
+  const handleDeleteCategory = (idx: number) => {
+    setCategories(categories.filter((_, i) => i !== idx));
+  };
+  // Add position
+  const handleAddPosition = (catIdx: number) => {
+    if (newPosition.callsign.trim() && newPosition.position.trim()) {
+      setCategories(categories.map((cat, i) =>
+        i === catIdx
+          ? { ...cat, positions: [...cat.positions, { ...newPosition }] }
+          : cat
+      ));
+      setNewPosition({ callsign: '', position: '' });
+      setAddingPositionCatIdx(null);
+    }
+  };
+  // Edit position
+  const handleEditPosition = (catIdx: number, posIdx: number, callsign: string, position: string) => {
+    setCategories(categories.map((cat, i) =>
+      i === catIdx
+        ? {
+            ...cat,
+            positions: cat.positions.map((pos, j) =>
+              j === posIdx ? { callsign, position } : pos
+            ),
+          }
+        : cat
+    ));
+    setEditingPosition(null);
+  };
+  // Delete position
+  const handleDeletePosition = (catIdx: number, posIdx: number) => {
+    setCategories(categories.map((cat, i) =>
+      i === catIdx
+        ? { ...cat, positions: cat.positions.filter((_, j) => j !== posIdx) }
+        : cat
+    ));
+  };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-2 sm:px-4 overflow-x-auto">
-      <h1 className="text-2xl font-bold mb-6">Callsign Assignment Sheet{eventName ? ` — ${eventName}` : ""}</h1>
-      <div className="mb-4 flex gap-4 items-center">
-        <button
-          className="px-4 py-2 bg-blue-700 text-white rounded shadow hover:bg-blue-800 disabled:opacity-50"
-          onClick={handleSaveAll}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save All"}
+    <div className="w-full p-2">
+      {/* Search bar */}
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="text"
+          className="w-full max-w-md px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search staff to assign..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {/* TODO: Add filter buttons if needed */}
+      </div>
+      {/* Categories and positions grid (as before, but with assignment UI) */}
+      <div className="space-y-8">
+        {categories.map((cat, catIdx) => (
+          <section key={catIdx} className="">
+            <div className="mb-2 flex items-center gap-2">
+              {editingCategoryIdx === catIdx ? (
+                <>
+                  <input
+                    className="input input-bordered rounded-lg px-2 py-1 text-sm border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100"
+                    value={cat.name}
+                    onChange={e => handleEditCategory(catIdx, e.target.value)}
+                    onBlur={() => setEditingCategoryIdx(null)}
+                    autoFocus
+                  />
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">{cat.name}</h2>
+                  <button className="text-xs text-blue-600 hover:underline" onClick={() => setEditingCategoryIdx(catIdx)}>Edit</button>
+                  <button className="text-xs text-red-500 hover:underline" onClick={() => handleDeleteCategory(catIdx)}>Delete</button>
+                </>
+              )}
+              <button
+                className="ml-4 text-xs bg-blue-100 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-[#23408e] transition"
+                onClick={() => setAddingPositionCatIdx(catIdx)}
+              >
+                + Add Position
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {cat.positions.map((pos, posIdx) => {
+                const key = `${catIdx}-${posIdx}`;
+                const assignedStaff = staffList.find((s) => assignments[key] === s.id);
+                return (
+                  <div
+                    key={posIdx}
+                    className={`relative bg-white dark:bg-[#23408e] border border-gray-200 dark:border-[#2d437a] rounded-xl shadow-md p-4 flex flex-col gap-2 transition hover:shadow-lg focus-within:ring-2 focus-within:ring-blue-500 ${assignedStaff ? 'ring-2 ring-blue-400 dark:ring-blue-300' : ''}`}
+                  >
+                    <div className="font-semibold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                      {pos.callsign} <span className="text-gray-500 dark:text-blue-200 text-sm">{pos.position}</span>
+                    </div>
+                    {/* Assignment UI */}
+                    {assignedStaff ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
+                          {assignedStaff.name.split(' ').map((n) => n[0]).join('')}
+                        </span>
+                        <span className="text-gray-900 dark:text-white">{assignedStaff.name}</span>
+                        <button
+                          className="ml-auto px-2 py-1 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-[#23408e] transition"
+                          onClick={() => setAssignments((a) => ({ ...a, [key]: null }))}
+                        >
+                          Unassign
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="mt-2 px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-medium transition"
+                        onClick={() => setAssigning({ catIdx, posIdx })}
+                      >
+                        Assign Staff
+                      </button>
+                    )}
+                    {/* Assignment modal/dropdown (UI only) */}
+                    {assigning && assigning.catIdx === catIdx && assigning.posIdx === posIdx && (
+                      <div className="absolute z-20 left-0 top-full mt-2 w-full bg-white dark:bg-[#182447] border border-gray-300 dark:border-[#2d437a] rounded-lg shadow-xl p-2">
+                        <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Select staff:</div>
+                        <div className="max-h-40 overflow-y-auto">
+                          {unassignedStaff.length === 0 ? (
+                            <div className="text-gray-400 dark:text-gray-400 text-sm">No unassigned staff</div>
+                          ) : (
+                            unassignedStaff
+                              .filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+                              .map((s) => (
+                                <button
+                                  key={s.id}
+                                  className="w-full text-left px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-[#23408e] text-gray-900 dark:text-gray-100"
+                                  onClick={() => {
+                                    setAssignments((a) => ({ ...a, [key]: s.id }));
+                                    setAssigning(null);
+                                  }}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
+                                      {s.name.split(' ').map((n) => n[0]).join('')}
+                                    </span>
+                                    {s.name}
+                                  </span>
+                                </button>
+                              ))
+                          )}
+                        </div>
+                        <button
+                          className="mt-2 w-full px-3 py-1 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-[#23408e] transition"
+                          onClick={() => setAssigning(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+      {/* Unassigned staff section (placeholder) */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Unassigned Staff</h3>
+        <div className="flex flex-wrap gap-2">
+          {unassignedStaff.map((s) => (
+            <span key={s.id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 font-medium">
+              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
+                {s.name.split(' ').map((n) => n[0]).join('')}
+              </span>
+              {s.name}
+            </span>
+          ))}
+        </div>
+      </div>
+      {/* TODO: Save All button, backend integration, drag & drop, etc. */}
+    </div>
+  );
+}
+
+// --- StaffListView with Supabase integration ---
+function StaffListView() {
+  const [staff, setStaff] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [currentStaff, setCurrentStaff] = useState<any>(null);
+  const [form, setForm] = useState<StaffForm>({
+    full_name: '',
+    contact_number: '',
+    email: '',
+    skill_tags: [],
+    notes: '',
+    active: true,
+  });
+  // Fetch staff on mount
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+  async function fetchStaff() {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase.from('staff').select('*').order('full_name');
+    if (error) setError(error.message);
+    setStaff(data || []);
+    setLoading(false);
+  }
+  function openAddModal() {
+    setModalMode('add');
+    setForm({ full_name: '', contact_number: '', email: '', skill_tags: [], notes: '', active: true });
+    setShowModal(true);
+    setCurrentStaff(null);
+  }
+  function openEditModal(staffMember: any) {
+    setModalMode('edit');
+    setForm({
+      full_name: staffMember.full_name || '',
+      contact_number: staffMember.contact_number || '',
+      email: staffMember.email || '',
+      skill_tags: staffMember.skill_tags || [],
+      notes: staffMember.notes || '',
+      active: staffMember.active ?? true,
+    });
+    setCurrentStaff(staffMember);
+    setShowModal(true);
+  }
+  async function handleSave() {
+    const payload = {
+      ...form,
+      skill_tags: form.skill_tags,
+    };
+    if (modalMode === 'add') {
+      const { error } = await supabase.from('staff').insert([payload]);
+      if (error) setError(error.message);
+    } else if (modalMode === 'edit' && currentStaff) {
+      const { error } = await supabase.from('staff').update(payload).eq('id', currentStaff.id);
+      if (error) setError(error.message);
+    }
+    setShowModal(false);
+    fetchStaff();
+  }
+  async function handleDelete(staffId: string) {
+    if (!window.confirm('Are you sure you want to delete this staff member?')) return;
+    const { error } = await supabase.from('staff').delete().eq('id', staffId);
+    if (error) setError(error.message);
+    fetchStaff();
+  }
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] p-8 transition-colors duration-300">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <UserGroupIcon className="h-8 w-8 text-blue-700 dark:text-blue-300" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Staff Management</h1>
+        </div>
+        <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors">
+          <PlusIcon className="h-5 w-5" /> Add Staff
         </button>
-        {saveStatus && <span className="ml-4 text-sm font-semibold text-green-700">{saveStatus}</span>}
       </div>
-      <div className="mb-6 flex gap-4 items-end">
-        <div className="flex-1">
-          <label className="block font-semibold mb-1">Name to Assign</label>
-          <input
-            className="border px-3 py-2 rounded w-full"
-            placeholder="Enter name to assign"
-            value={currentName}
-            onChange={e => setCurrentName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
-          />
-        </div>
-        <div className="text-gray-500 italic">Click a callsign to assign</div>
-      </div>
-      <input
-        type="text"
-        placeholder="Search by name, role, or callsign..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="mb-4 w-full px-3 py-2 border rounded shadow-sm focus:outline-none focus:ring"
-      />
-      {filteredGroups.map(group => (
-        <div key={group.group} className="mb-6">
-          <div className="flex items-center mb-2">
-            <h3 className="font-bold text-lg flex-1">{group.group}</h3>
-            {editGroup === group.group ? (
-              <>
-                <button className="px-3 py-1 bg-green-600 text-white rounded mr-2" onClick={handleSaveEdit}>Save</button>
-                <button className="px-3 py-1 bg-gray-400 text-white rounded" onClick={() => setEditGroup(null)}>Cancel</button>
-              </>
-            ) : (
-              <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={() => handleEditClick(group.group, group.positions)}>Edit</button>
-            )}
-          </div>
-          {editGroup === group.group ? (
-            <div className="space-y-2">
-              {editPositions.map((pos, idx) => (
-                <div key={pos.id} className="flex gap-2 items-center">
-                  <input
-                    className="border px-2 py-1 rounded w-28 font-mono"
-                    value={pos.callsign}
-                    onChange={e => handleEditChange(idx, "callsign", e.target.value)}
-                    placeholder="Full Callsign"
-                  />
-                  <input
-                    className="border px-2 py-1 rounded w-14 font-mono"
-                    value={pos.short}
-                    onChange={e => handleEditChange(idx, "short", e.target.value)}
-                    placeholder="Short"
-                  />
-                  <input
-                    className="border px-2 py-1 rounded w-40"
-                    value={pos.position}
-                    onChange={e => handleEditChange(idx, "position", e.target.value)}
-                    placeholder="Role Name"
-                  />
-                  <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={() => handleRemoveRole(idx)}>Remove</button>
-                </div>
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full overflow-x-auto">
+        {loading ? (
+          <div className="text-center text-gray-400 dark:text-gray-300 py-8">Loading staff...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-8">{error}</div>
+        ) : staff.length === 0 ? (
+          <div className="text-center text-gray-400 dark:text-gray-300 py-8">No staff found.</div>
+        ) : (
+          <table className="min-w-full text-left">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Name</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Contact</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Email</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Skills</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Notes</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Active</th>
+                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {staff.map((s) => (
+                <tr key={s.id} className="border-b border-gray-100 dark:border-[#2d437a]">
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.full_name}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.contact_number}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.email}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{(s.skill_tags || []).join(', ')}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.notes}</td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.active ? 'Yes' : 'No'}</td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => openEditModal(s)} className="text-blue-600 dark:text-blue-300 hover:underline mr-2">Edit</button>
+                    <button onClick={() => handleDelete(s.id)} className="text-red-600 dark:text-red-400 hover:underline">Delete</button>
+                  </td>
+                </tr>
               ))}
-              <div className="flex gap-2 items-center mt-2">
-                <input
-                  className="border px-2 py-1 rounded w-28 font-mono"
-                  value={newRole.callsign}
-                  onChange={e => setNewRole({ ...newRole, callsign: e.target.value })}
-                  placeholder="Full Callsign"
-                />
-                <input
-                  className="border px-2 py-1 rounded w-14 font-mono"
-                  value={newRole.short}
-                  onChange={e => setNewRole({ ...newRole, short: e.target.value })}
-                  placeholder="Short"
-                />
-                <input
-                  className="border px-2 py-1 rounded w-40"
-                  value={newRole.position}
-                  onChange={e => setNewRole({ ...newRole, position: e.target.value })}
-                  placeholder="Role Name"
-                />
-                <button className="px-2 py-1 bg-blue-500 text-white rounded" onClick={handleAddRole}>Add</button>
+            </tbody>
+          </table>
+        )}
+      </div>
+      {/* Modal for Add/Edit Staff */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{modalMode === 'add' ? 'Add Staff' : 'Edit Staff'}</h2>
+            <form onSubmit={e => { e.preventDefault(); handleSave(); }}>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-blue-200 mb-1">Full Name</label>
+                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} required />
               </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              {group.positions.map((pos: any) => (
-                <button
-                  key={pos.short}
-                  className={`flex items-center gap-2 p-3 bg-white rounded shadow border w-full text-left transition ${currentName.trim() ? 'cursor-pointer hover:bg-blue-50' : 'cursor-not-allowed'} ${assignments[pos.id] ? 'border-blue-500' : 'border-gray-200'}`}
-                  onClick={() => {
-                    if (!currentName.trim() || editGroup === group.group) return;
-                    handleAssign(pos.id);
-                  }}
-                  disabled={!currentName.trim() || editGroup === group.group}
-                >
-                  <span className={`inline-block w-3 h-3 rounded-full ${getStatusColor(pos)}`}></span>
-                  <span className="font-semibold">{pos.short}</span>
-                  <span className="text-gray-400">{pos.position}</span>
-                  {assignments[pos.id] ? (
-                    <span className="ml-auto text-sm text-gray-700">{assignments[pos.id]}</span>
-                  ) : (
-                    <span className="ml-auto text-sm text-gray-400 flex items-center gap-1 italic">
-                      Unassigned
-                      {(() => {
-                        const prevNames = previousNames[pos.id] || [];
-                        const prevNamesNoAssigned = prevNames.filter(n => n);
-                        const shownNames = new Set(prevNamesNoAssigned);
-                        const otherNames = allPreviousNames.filter(n => n && !shownNames.has(n)).sort((a, b) => a.localeCompare(b));
-                        return (
-                          <select
-                            className="ml-1 border rounded px-1 py-0.5 text-xs bg-gray-50 min-w-[90px] max-w-[120px] focus:outline-none"
-                            style={{ fontSize: '0.85rem', height: '1.7rem' }}
-                            onChange={e => {
-                              if (e.target.value) {
-                                setCurrentName(e.target.value === '__unassigned__' ? '' : e.target.value);
-                                handleAssign(pos.id);
-                              }
-                            }}
-                            value={"__unassigned__"}
-                          >
-                            <option value="__unassigned__">Unassigned</option>
-                            {prevNamesNoAssigned.map(name => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
-                            {prevNamesNoAssigned.length > 0 && otherNames.length > 0 && (
-                              <option disabled>----------</option>
-                            )}
-                            {otherNames.map(name => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
-                          </select>
-                        );
-                      })()}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-blue-200 mb-1">Contact Number</label>
+                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.contact_number} onChange={e => setForm(f => ({ ...f, contact_number: e.target.value }))} />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-blue-200 mb-1">Email</label>
+                <input type="email" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-blue-200 mb-1">Skills</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 rounded bg-gray-50 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a]">
+                  {SKILL_OPTIONS.map(skill => (
+                    <label key={skill} className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                      <input
+                        type="checkbox"
+                        checked={form.skill_tags.includes(skill)}
+                        onChange={e => {
+                          setForm(f => ({
+                            ...f,
+                            skill_tags: e.target.checked
+                              ? [...f.skill_tags, skill]
+                              : f.skill_tags.filter(s => s !== skill)
+                          }));
+                        }}
+                      />
+                      {skill}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-blue-200 mb-1">Notes</label>
+                <textarea className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+              </div>
+              <div className="mb-4 flex items-center gap-2">
+                <input type="checkbox" id="active" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
+                <label htmlFor="active" className="text-gray-700 dark:text-blue-200">Active</label>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold">{modalMode === 'add' ? 'Add' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 } 

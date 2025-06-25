@@ -10,12 +10,14 @@ export default function AIUsagePage() {
   const { user } = useAuth();
   const role = user?.user_metadata?.role;
   if (!role || !['admin', 'superadmin', 'super'].includes(role)) {
-    return <div className="text-gray-500">You do not have permission to view this page.</div>;
+    return <div className="text-gray-500 dark:text-gray-300">You do not have permission to view this page.</div>;
   }
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">AI Usage Analytics</h1>
+    <div className="max-w-4xl mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">AI Usage Analytics</h1>
+      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
       <AIUsageAnalytics />
+      </div>
     </div>
   );
 } 

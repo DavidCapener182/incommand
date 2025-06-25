@@ -137,14 +137,14 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-center">
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
       <div className="flex items-center justify-center mb-1">
         <div className="mr-2">
           <WeatherIcon />
         </div>
-        <span className="text-2xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
+        <span className="text-2xl font-bold text-gray-800 dark:text-gray-100">{Math.round(weather.temperature)}°C</span>
       </div>
-      <span className="text-sm text-gray-600 capitalize">{weather.description}</span>
+      <span className="text-sm text-gray-600 dark:text-gray-100 capitalize">{weather.description}</span>
     </div>
   );
 } 

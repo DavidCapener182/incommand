@@ -180,22 +180,20 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-1 w-full">
         <div className="text-center">
-          <p className="text-lg md:text-2xl font-bold text-gray-900">
+          <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
             {currentCount.toLocaleString()}
-            <span className="text-xs md:text-base text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
+            <span className="text-xs md:text-base text-gray-500 dark:text-gray-100 ml-1">/ {expectedAttendance.toLocaleString()}</span>
           </p>
-          <p className="text-[10px] md:text-xs font-medium text-gray-500 mt-0.5">
+          <p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-100 mt-0.5">
             Venue Occupancy
           </p>
         </div>
         {expectedAttendance > 0 && (
           <div className="w-full space-y-0.5">
             <div className="flex justify-between items-center px-1">
-              <span className="text-[10px] font-medium" style={{ 
-                color: currentCount > expectedAttendance ? '#ef4444' : 
-                       currentCount >= expectedAttendance * 0.9 ? '#f97316' : 
-                       '#2A3990'
-              }}>
+              <span
+                className={`text-[10px] font-medium ${currentCount > expectedAttendance ? 'text-red-500' : currentCount >= expectedAttendance * 0.9 ? 'text-orange-400' : 'text-[#2A3990]'} dark:text-red-400`}
+              >
                 {Math.round((currentCount / expectedAttendance) * 100)}%
               </span>
               {currentCount > expectedAttendance && (
@@ -206,13 +204,8 @@ export default function VenueOccupancy({ currentEventId }: Props) {
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1">
               <div 
-                className="h-1 rounded-full transition-all duration-300" 
-                style={{ 
-                  width: `${Math.min(Math.round((currentCount / expectedAttendance) * 100), 100)}%`,
-                  backgroundColor: currentCount > expectedAttendance ? '#ef4444' : 
-                                 currentCount >= expectedAttendance * 0.9 ? '#f97316' : 
-                                 '#2A3990'
-                }}
+                className="h-1 rounded-full transition-all duration-300 bg-blue-600 dark:bg-red-500" 
+                style={{ width: `${Math.min(Math.round((currentCount / expectedAttendance) * 100), 100)}%` }}
               />
             </div>
           </div>

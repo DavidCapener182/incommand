@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -11,6 +11,12 @@ import IncidentCreationModal from '../components/IncidentCreationModal'
 import FloatingAIChat from '../components/FloatingAIChat'
 import { NotificationDrawerProvider, useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { supabase } from '../lib/supabase'
+import Dock from '../components/Dock'
+import { Buffer } from 'buffer';
+   if (typeof window !== 'undefined') {
+     // @ts-ignore
+     window.Buffer = Buffer;
+   }
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -36,6 +42,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
   const showNav = !['/login', '/signup'].includes(pathname);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = React.useState(false);
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
 
@@ -57,26 +64,43 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     fetchCurrentEvent();
   }, []);
 
+  // Message bubble SVG for AI Chat
+  const MessageBubbleIcon = (
+    <svg className="w-8 h-8" fill="none" stroke="white" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.436L3 21l1.436-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+    </svg>
+  );
+
   return (
     <>
       <AuthGate>
         {showNav && <Navigation />}
         <main>{children}</main>
-        {/* Global FAB for New Incident - Hidden when notification drawer is open or no current event */}
-        {showNav && !notificationDrawerOpen && hasCurrentEvent && (
-          <>
-            <button
-              type="button"
-              className="fixed bottom-6 right-24 z-[60] bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-              aria-label="Report New Incident"
-              onClick={() => setIsIncidentModalOpen(true)}
-            >
-              <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
-            </button>
-            <FloatingAIChat />
-          </>
+        {/* Docked FAB Bar at Bottom Right */}
+        {showNav && hasCurrentEvent && (
+          <Dock
+            items={[
+              {
+                icon: <img src="/icon.png" alt="New Incident" className="w-8 h-8" />,
+                label: 'New Incident',
+                onClick: () => setIsIncidentModalOpen(true),
+              },
+              {
+                icon: MessageBubbleIcon,
+                label: 'Chat/Support',
+                onClick: () => setIsAIChatOpen((v) => !v),
+              },
+            ]}
+            panelHeight={68}
+            baseItemSize={56}
+            magnification={72}
+            className="bottom-2"
+          />
         )}
-        
+        {/* Controlled AI Chat - only render when open */}
+        {isAIChatOpen && (
+          <FloatingAIChat isOpen={true} onToggle={() => setIsAIChatOpen((v) => !v)} />
+        )}
         {/* Modals - Always available */}
         {showNav && (
           <IncidentCreationModal
@@ -95,6 +119,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  if (typeof window !== 'undefined') {
+    // @ts-ignore
+    window.Buffer = Buffer;
+  }
+
   return (
     <html lang="en">
       <head>
@@ -105,18 +134,27 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className + " bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <AuthProvider>
           <NotificationDrawerProvider>
-            <LayoutContent>{children}</LayoutContent>
+            <main className="bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 min-h-screen">
+              <LayoutContent>{children}</LayoutContent>
+            </main>
           </NotificationDrawerProvider>
         </AuthProvider>
         <Analytics />
         {/* Global Footer */}
-        <footer className="fixed bottom-0 left-0 w-full z-40 bg-blue-900 px-4 py-2 flex justify-between items-center text-xs text-white">
+        <footer className="fixed bottom-0 left-0 w-full z-40 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
+          style={{
+            background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
+            boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
+            backdropFilter: 'blur(2px)'
+          }}
+        >
           <span>v0.1.0</span>
-          <span>support@incommandapp.com</span>
-          <span>© 2025 InCommand</span>
+          <span className="absolute left-1/2 transform -translate-x-1/2">
+            support@incommandapp.com
+          </span>
         </footer>
       </body>
     </html>

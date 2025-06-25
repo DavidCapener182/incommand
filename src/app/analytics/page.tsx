@@ -1,4 +1,4 @@
-'use client'
+"use client"
 // NOTE: You must install 'react-chartjs-2' and 'chart.js' for this page to work:
 // npm install react-chartjs-2 chart.js
 
@@ -102,6 +102,14 @@ function ConfidenceBar({ value }: { value: number }) {
       <div className="h-2 bg-blue-500 rounded" style={{ width: `${Math.round(value * 100)}%` }} />
     </div>
   );
+}
+
+// Helper function to get chart text color based on dark mode
+function getChartTextColor() {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
+    return '#fff';
+  }
+  return '#222';
 }
 
 export default function AnalyticsPage() {
@@ -495,19 +503,26 @@ export default function AnalyticsPage() {
     addAnnotationLine(eventDetails.main_act_start_time, 'Main Act', 'red', 'mainActLine');
   }
 
+  const isDarkMode = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   const attendanceChartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { 
+      legend: {
         position: 'top' as const,
+        labels: {
+          color: getChartTextColor(),
+        },
       },
       tooltip: {
         enabled: true,
         mode: 'index',
         intersect: false,
+        titleColor: getChartTextColor(),
+        bodyColor: getChartTextColor(),
       },
-      title: { display: true, text: 'Attendance Over Time' },
+      title: { display: true, text: 'Attendance Over Time', color: getChartTextColor() },
       annotation: {
         annotations: annotations
       }
@@ -522,11 +537,15 @@ export default function AnalyticsPage() {
             minute: 'HH:mm'
           }
         },
-        title: { display: true, text: 'Time' },
+        title: { display: true, text: 'Time', color: getChartTextColor() },
+        ticks: { color: getChartTextColor() },
+        grid: { color: getChartTextColor() === '#fff' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
       },
       y: {
-        title: { display: true, text: 'Attendance' },
+        title: { display: true, text: 'Attendance', color: getChartTextColor() },
         beginAtZero: true,
+        ticks: { color: getChartTextColor() },
+        grid: { color: getChartTextColor() === '#fff' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
       },
     },
   };
@@ -574,7 +593,11 @@ export default function AnalyticsPage() {
       legend: {
         display: true,
         position: 'bottom' as const,
+        labels: {
+          color: getChartTextColor(),
+        },
       },
+      title: { display: false, color: getChartTextColor() },
     },
     scales: {
       x: {
@@ -582,27 +605,23 @@ export default function AnalyticsPage() {
         title: {
           display: true,
           text: 'Time of Day',
-          font: {
-            weight: 'bold' as 'bold',
-          }
+          font: { weight: 'bold' as 'bold' },
+          color: getChartTextColor(),
         },
-        grid: {
-          display: false,
-        }
+        grid: { color: getChartTextColor() === '#fff' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
+        ticks: { color: getChartTextColor() },
       },
       y: {
         stacked: true,
         title: {
           display: true,
           text: 'Number of Incidents',
-           font: {
-            weight: 'bold' as 'bold',
-          }
+          font: { weight: 'bold' as 'bold' },
+          color: getChartTextColor(),
         },
         beginAtZero: true,
-        ticks: {
-          precision: 0,
-        }
+        ticks: { color: getChartTextColor(), precision: 0 },
+        grid: { color: getChartTextColor() === '#fff' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
       },
     },
   };
@@ -847,7 +866,7 @@ export default function AnalyticsPage() {
             <h1 className="text-3xl font-bold mb-6">Analytics Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 {[...Array(6)].map((_, i) => (
-                    <div key={i} className="bg-white p-6 rounded-xl shadow">
+                    <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 p-6 rounded-xl shadow">
                         <Skeleton height={20} width="50%" />
                         <Skeleton height={40} width="100%" />
           </div>
@@ -858,32 +877,32 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#10172a] py-8 px-4">
       <h1 className="text-3xl font-bold mb-6">Analytics Dashboard</h1>
       
       {/* Top Analytics Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {kpiData.map((kpi, index) => (
-            <div key={index} className="bg-white p-4 rounded-xl shadow flex flex-col justify-between hover:shadow-lg transition-shadow duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white p-4 rounded-xl shadow flex flex-col justify-between hover:shadow-lg transition-shadow duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-500">{kpi.title}</h3>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-white">{kpi.title}</h3>
                   <div className="text-lg">
                     {getKpiIcon(kpi.title)}
           </div>
                 </div>
                 {kpi.value ? (
-                  <p className="text-2xl font-bold">{kpi.value}</p>
+                  <p className="text-2xl font-bold dark:text-white">{kpi.value}</p>
                 ) : (
                   <div className="group relative">
-                    <p className="text-2xl font-bold text-gray-400">—</p>
+                    <p className="text-2xl font-bold text-gray-400 dark:text-white">—</p>
                     <span className="absolute bottom-full mb-2 hidden group-hover:block w-max bg-gray-700 text-white text-xs rounded py-1 px-2">
                       Awaiting data
                     </span>
             </div>
           )}
         </div>
-              <div className="text-xs text-gray-400 mt-2">
+              <div className="text-xs text-gray-400 dark:text-white mt-2">
                 {(() => {
                   let trend;
                   if (previousEventKpis) {
@@ -916,28 +935,28 @@ export default function AnalyticsPage() {
       {/* Main Grid for Charts and Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Attendance Chart */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Timeline</h2>
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Timeline</h2>
           <div className="flex-grow relative">
             {attendanceData.length > 0 ? (
               <Line data={attendanceChartData} options={attendanceChartOptions} />
             ) : (
-              <p className="text-center text-gray-500 py-10">No attendance data to display.</p>
+              <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
           )}
         </div>
             </div>
         {/* Attendance Log */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Log</h2>
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Log</h2>
           <div className="flex-grow overflow-y-auto">
             {attendanceData.length > 0 ? (
               <table className="w-full">
                 <thead className="sticky top-0 bg-white z-10">
                   <tr>
-                    <th className="font-semibold text-left text-gray-500 p-2">Time</th>
-                    <th className="font-semibold text-right text-gray-500 p-2">Count</th>
-                    <th className="font-semibold text-right text-gray-500 p-2">Change</th>
-                    <th className="font-semibold text-left text-gray-500 p-2 w-28"></th>
+                    <th className="font-semibold text-left text-gray-900 dark:text-white p-2">Time</th>
+                    <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Count</th>
+                    <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Change</th>
+                    <th className="font-semibold text-left text-gray-900 dark:text-white p-2 w-28"></th>
                     </tr>
                   </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -949,9 +968,9 @@ export default function AnalyticsPage() {
                       <tr key={index}>
                         <td colSpan={4} className="p-0">
                           <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
-                            <div className="p-2 text-base w-1/4">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                            <div className="p-2 text-right font-mono text-base w-1/4">{rec.count.toLocaleString()}</div>
-                            <div className="p-2 text-right font-mono text-base w-1/4">
+                            <div className="p-2 text-base w-1/4 text-gray-900 dark:text-white">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className="p-2 text-right font-mono text-base w-1/4 text-gray-900 dark:text-white">{rec.count.toLocaleString()}</div>
+                            <div className="p-2 text-right font-mono text-base w-1/4 text-gray-900 dark:text-white">
                               {change !== null ? (
                                 <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
                                   {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
@@ -961,7 +980,7 @@ export default function AnalyticsPage() {
                                 <span className="text-gray-400">-</span>
                               )}
                             </div>
-                            <div className="p-2 align-middle w-1/4">
+                            <div className="p-2 align-middle w-1/4 text-gray-900 dark:text-white">
                               <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
                                 <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
                               </div>
@@ -974,49 +993,49 @@ export default function AnalyticsPage() {
                   </tbody>
                 </table>
             ) : (
-              <p className="text-center text-gray-500 py-10">No attendance data to display.</p>
+              <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
             )}
           </div>
           <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
             {eventDetails?.expected_attendance && (
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-semibold text-gray-700">Attendance Progress</h3>
-                  <span className="font-bold text-gray-900">{Math.round(attendancePercentage)}%</span>
+                  <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
+                  <span className="font-bold text-gray-900 dark:text-white">{Math.round(attendancePercentage)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
                 </div>
-                <p className="text-right text-xs text-gray-500 mt-1">
+                <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
                   {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
                 </p>
               </div>
             )}
-            <h3 className="font-semibold mb-2 text-gray-700">Quick Stats</h3>
+            <h3 className="font-semibold mb-2 text-gray-700 dark:text-white">Quick Stats</h3>
             <div className="grid grid-cols-4 gap-4 text-center">
               <div>
-                <p className="text-gray-500">Peak</p>
-                <p className="font-bold text-lg">{peakAttendance.toLocaleString()}</p>
+                <p className="text-gray-500 dark:text-white">Peak</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{peakAttendance.toLocaleString()}</p>
           </div>
               <div>
-                <p className="text-gray-500">Average</p>
-                <p className="font-bold text-lg">{averageAttendance.toLocaleString()}</p>
+                <p className="text-gray-500 dark:text-white">Average</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{averageAttendance.toLocaleString()}</p>
         </div>
               <div>
-                <p className="text-gray-500">Median</p>
-                <p className="font-bold text-lg">{medianAttendance.toLocaleString()}</p>
+                <p className="text-gray-500 dark:text-white">Median</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{medianAttendance.toLocaleString()}</p>
       </div>
               <div>
-                <p className="text-gray-500">Peak Time</p>
-                <p className="font-bold text-lg">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                <p className="text-gray-500 dark:text-white">Peak Time</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-white">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
           </div>
               </div>
               </div>
             </div>
         {/* Live Now Card */}
-        <div className={`bg-white rounded-xl shadow p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 lg:col-span-1 min-h-[340px]`}>
+        <div className={`bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 lg:col-span-1 min-h-[340px]`}>
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Live Status</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Status</h2>
               <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${mostRecentOpen ? getPriorityColor(mostRecentOpen.priority) : 'bg-green-500'}`}>
                 {mostRecentOpen ? 'Action Required' : 'All Clear'}
               </span>
@@ -1024,14 +1043,14 @@ export default function AnalyticsPage() {
             <div className="mt-4">
               {mostRecentOpen ? (
                 <div>
-                  <p className="text-lg font-semibold">{mostRecentOpen.incident_type}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{mostRecentOpen.incident_type}</p>
+                  <p className="text-sm text-gray-500 dark:text-white">
                     {new Date(mostRecentOpen.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  <p className="text-sm mt-2">{mostRecentOpen.occurrence}</p>
+                  <p className="text-sm mt-2 text-gray-900 dark:text-white">{mostRecentOpen.occurrence}</p>
                 </div>
               ) : (
-                <p className="text-center text-gray-500 py-4">No incidents currently active.</p>
+                <p className="text-center text-gray-500 dark:text-white py-4">No incidents currently active.</p>
           )}
         </div>
           </div>
@@ -1040,30 +1059,30 @@ export default function AnalyticsPage() {
       {/* Second Row: Lower Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Merged Incident Analysis Card */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900">Incident Analysis</h2>
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Incident Analysis</h2>
           <div className="flex-grow grid grid-cols-2 gap-4">
             {/* Incident Volume Chart */}
             <div className="flex flex-col">
-              <h3 className="font-semibold text-lg text-center text-gray-800 mb-2">Volume Over Time</h3>
+              <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Volume Over Time</h3>
               <div className="flex-grow relative">
                 {filteredIncidents.length > 0 ? (
                   <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
                 ) : (
-                  <p className="text-center text-gray-500 py-10">No incident data.</p>
+                  <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
                 )}
               </div>
             </div>
             {/* Incident Types Pie */}
             <div className="flex flex-col">
-              <h3 className="font-semibold text-lg text-center text-gray-800 mb-2">Breakdown by Type</h3>
+              <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Breakdown by Type</h3>
               <div className="flex-grow relative">
               {filteredIncidents.length > 0 ? (
                   <div className="h-full w-full flex items-center justify-center">
                     <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
                   </div>
                 ) : (
-                  <p className="text-center text-gray-500 py-10">No incident data.</p>
+                  <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
           )}
         </div>
             </div>
@@ -1071,9 +1090,9 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Trends & Predictive AI */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-2xl text-gray-900">Trends</h2>
+            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Trends</h2>
             {aiInsights.length > 1 && (
               <div className="flex items-center space-x-2">
                 <button onClick={prevInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
@@ -1113,9 +1132,9 @@ export default function AnalyticsPage() {
       {/* Third Row: Heatmap & More */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Debrief Summary */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <div className="flex justify-between items-center flex-shrink-0 mb-4">
-            <h2 className="font-bold text-2xl text-gray-900">Debrief Summary</h2>
+            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Debrief Summary</h2>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => eventId && handleGenerateDebrief(eventId)}
@@ -1156,9 +1175,9 @@ export default function AnalyticsPage() {
                 <section className="mb-6">
                   <h3 className="text-lg font-semibold mb-2">Significant Incidents</h3>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border text-sm bg-white">
+                    <table className="min-w-full border text-sm bg-white dark:bg-[#23408e] text-gray-900 dark:text-white">
                       <thead>
-                        <tr className="bg-gray-50">
+                        <tr className="bg-gray-50 dark:bg-[#23408e] dark:text-white">
                           <th className="border px-3 py-2 text-left">Date</th>
                           <th className="border px-3 py-2 text-left">Type</th>
                           <th className="border px-3 py-2 text-left">Details</th>
@@ -1209,8 +1228,8 @@ export default function AnalyticsPage() {
           </div>
         </div>
         {/* Predictive Insights */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900">Predictive Insights</h2>
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Predictive Insights</h2>
             <div className="flex-grow flex items-center justify-center">
               {loadingPredictions ? (
                 <Skeleton height={80} />
@@ -1241,51 +1260,43 @@ export default function AnalyticsPage() {
 }
 
 function renderInsight(text: string) {
-  if (!text) return <span className="text-gray-400">No AI insights available.</span>;
+  if (!text) return <span className="text-gray-400 dark:text-white">No AI insights available.</span>;
 
   const lines = text.split('\n').filter(line => line.trim() !== '');
-  if (lines.length === 0) return <span className="text-gray-400">No AI insights available.</span>;
+  if (lines.length === 0) return <span className="text-gray-400 dark:text-white">No AI insights available.</span>;
 
   let summary: string | null = null;
   let listItems: string[] = [];
+  let isNumbered = false;
 
-  // Check if the first line acts as a summary/headline
-  const firstLineIsSummary = lines.length > 1 && !lines[0].trim().startsWith('*') && !lines[0].trim().startsWith('-') && !/^\d+\./.test(lines[0].trim());
-
-  if (firstLineIsSummary) {
-    summary = lines[0];
-    listItems = lines.slice(1);
-  } else {
-    listItems = lines;
+  // Parse lines for summary and list
+  for (const line of lines) {
+    if (line.match(/^[-*•]/)) {
+      listItems.push(line.replace(/^[-*•]\s*/, ''));
+    } else if (line.match(/^\d+\./)) {
+      listItems.push(line.replace(/^\d+\.\s*/, ''));
+      isNumbered = true;
+    } else if (!summary) {
+      summary = line;
+    }
   }
 
-  // Check if the list items form a bulleted or numbered list
-  const isBulleted = listItems.every(item => item.trim().startsWith('*') || item.trim().startsWith('-'));
-  const isNumbered = listItems.every(item => /^\d+\./.test(item.trim()));
+  // Clean up list items
+  const cleanListItems = (items: string[]) => items.map((item, i) => <li key={i} className="text-gray-700 dark:text-white">{item}</li>);
 
-  const cleanListItems = listItems.map(item =>
-    item.trim().replace(/^(\*|\-|\d+\.) /, '')
-  );
-
-    return (
-      <div>
-      {summary && <p className="font-semibold text-gray-800 mb-2">{summary}</p>}
-      {isNumbered ? (
-        <ol className="list-decimal list-outside ml-5 space-y-1 text-gray-700">
-          {cleanListItems.map((item, i) => <li key={i}>{item}</li>)}
-        </ol>
-      ) : isBulleted ? (
-        <ul className="list-disc list-outside ml-5 space-y-1 text-gray-700">
-          {cleanListItems.map((item, i) => <li key={i}>{item}</li>)}
-        </ul>
-      ) : (
-        <div className="space-y-2 text-gray-700">
-            {cleanListItems.map((item, i) => <p key={i}>{item}</p>)}
-        </div>
+  return (
+    <div>
+      {summary && <p className="mb-2 text-gray-700 dark:text-white">{summary}</p>}
+      {listItems.length > 0 && (
+        isNumbered ? (
+          <ol className="list-decimal list-inside space-y-1">{cleanListItems(listItems)}</ol>
+        ) : (
+          <ul className="list-disc list-inside space-y-1">{cleanListItems(listItems)}</ul>
+        )
       )}
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
 const TooltipIcon = ({ text }: { text: string }) => {
   const [showTooltip, setShowTooltip] = useState(false);

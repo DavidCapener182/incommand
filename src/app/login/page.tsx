@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -50,8 +50,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center pt-8 md:pt-12 sm:px-6 lg:px-8 bg-[#23408e] relative">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div className="min-h-screen flex flex-col items-center bg-[#23408e] relative">
+      {/* Logo with fixed top margin */}
+      <div className="w-full flex flex-col items-center mt-20">
         <Image
           src="/inCommand.png"
           alt="inCommand Logo"
@@ -59,14 +60,15 @@ export default function LoginPage() {
           height={180}
           className="mx-auto mb-6 md:mb-8 drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] h-32 w-auto object-contain"
         />
-        <div className="text-base text-blue-100 font-medium mt-2 mb-8 text-center max-w-xl mx-auto">
+        <div className="text-base text-blue-100 font-medium mb-8 text-center max-w-xl mx-auto">
           Modern incident tracking and event command for every scale of operation.
         </div>
       </div>
-      <div className="mt-2 sm:mx-auto sm:w-full sm:max-w-md w-full">
-        <div className="bg-white/80 backdrop-blur-md py-10 px-6 shadow-2xl shadow-[0_10px_32px_4px_rgba(34,41,120,0.15)] rounded-2xl w-full flex flex-col items-center">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-[#2A3990] text-center mb-2 drop-shadow-lg" style={{textShadow:'0 2px 8px rgba(34,41,120,0.10)'}}>Sign in to your account</h2>
-          <form className="space-y-6 w-full mt-6">
+      {/* Card with consistent margin below logo */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white/80 py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-blue-100">
+          <h2 className="mb-6 text-center text-2xl font-extrabold text-blue-900 drop-shadow-sm tracking-tight">Sign in to your account</h2>
+          <form className="space-y-6 w-full mt-6" onSubmit={handleLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#2A3990]">Email address</label>
               <input
@@ -77,18 +79,23 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-base"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
               />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-[#2A3990]">Password</label>
               <div className="relative">
                 <input
+                  ref={passwordRef}
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-base"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                 />
                 <button
                   type="button"

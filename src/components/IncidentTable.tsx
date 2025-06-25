@@ -603,7 +603,7 @@ export default function IncidentTable({
 
   if (loading) {
     return (
-      <div className="mt-4 bg-white shadow rounded-lg p-6">
+      <div className="mt-4 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
           <div className="space-y-3">
@@ -616,30 +616,22 @@ export default function IncidentTable({
     )
   }
 
-  if (sortedIncidents.length === 0) {
-    return (
-      <div className="mt-4 bg-white shadow rounded-lg p-6 text-center text-gray-500">
-        No incidents to display
-      </div>
-    )
-  }
-
   return (
     <>
       {/* Search Bar and Last Updated on same line */}
       <div className="mb-4 relative">
         <div className="flex items-center justify-between gap-4 mt-2 mb-1">
           {/* Search Bar - Left side */}
-          <div className="relative w-1/4">
+          <div className="relative w-1/2">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-300" aria-hidden="true" />
             </div>
             <input
               type="text"
               placeholder="Search incidents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100"
             />
             {searchQuery && (
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -672,10 +664,17 @@ export default function IncidentTable({
           </div>
         )}
       </div>
+      {/* If no incidents, show empty state below search bar */}
+      {sortedIncidents.length === 0 ? (
+        <div className="mt-4 bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
+          No incidents to display
+        </div>
+      ) : (
+        <>
       {/* Mobile Card/Accordion Layout */}
       <div ref={tableContainerRef} className="md:hidden mt-4 space-y-3 px-1" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', position: 'relative' }}>
         {/* Mobile Table Header */}
-        <div className="sticky top-0 z-10 bg-gray-600 flex items-center px-4 py-2 text-xs font-semibold text-white uppercase tracking-wider">
+            <div className="sticky top-0 z-10 bg-gray-600 dark:bg-[#1e293b] flex items-center px-4 py-2 text-xs font-semibold text-white dark:text-gray-100 uppercase tracking-wider">
           <div className="basis-[28%]">Log #</div>
           <div className="basis-[24%] text-center">Type</div>
           <div className="basis-[24%] text-center">Time</div>
@@ -684,7 +683,7 @@ export default function IncidentTable({
         {sortedIncidents.map((incident) => (
           <div
             key={incident.id}
-            className={`bg-white shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md ${getRowStyle(incident)} ${
+                className={`bg-white dark:bg-gray-800 shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md ${getRowStyle(incident)} ${
               isHighPriorityAndOpen(incident) 
                 ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow' 
                 : ''
@@ -716,17 +715,17 @@ export default function IncidentTable({
                 })()}
               </div>
               <div className="basis-[24%] flex items-center justify-center">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mx-auto text-center ${getIncidentTypeStyle(incident.incident_type)}`}>{incident.incident_type}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mx-auto text-center ${getIncidentTypeStyle(incident.incident_type)} dark:bg-gray-700 dark:text-gray-100`}>{incident.incident_type}</span>
               </div>
-              <div className="basis-[24%] text-xs text-gray-500 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                  <div className="basis-[24%] text-xs text-gray-500 dark:text-gray-300 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
               <div className="basis-[24%] flex items-center justify-end">
                 {incident.incident_type === 'Attendance' ? (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                     Logged
                   </span>
                 ) : (
                 <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                      className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}`}
                   onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
                 >
                   {incident.is_closed ? 'Closed' : 'Open'}
@@ -737,18 +736,18 @@ export default function IncidentTable({
             {expandedIncidentId === incident.id && (
               <div className="mt-3 border-t pt-3 space-y-2">
                 <div>
-                  <span className="block text-xs text-gray-400 font-semibold">Occurrence</span>
-                  <span className="block text-sm text-gray-700">{incident.occurrence}</span>
+                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">Occurrence</span>
+                      <span className="block text-sm text-gray-700 dark:text-gray-100">{incident.occurrence}</span>
                 </div>
                 <div>
-                  <span className="block text-xs text-gray-400 font-semibold">Action</span>
-                  <span className="block text-sm text-gray-700">{incident.action_taken}</span>
+                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">Action</span>
+                      <span className="block text-sm text-gray-700 dark:text-gray-100">{incident.action_taken}</span>
                 </div>
                 <div className="flex gap-4 mt-2">
-                  <span className="block text-xs text-gray-400 font-semibold">From:</span>
-                  <span className="block text-xs text-gray-700">{incident.callsign_from}</span>
-                  <span className="block text-xs text-gray-400 font-semibold">To:</span>
-                  <span className="block text-xs text-gray-700">{incident.callsign_to}</span>
+                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">From:</span>
+                      <span className="block text-xs text-gray-700 dark:text-gray-100">{incident.callsign_from}</span>
+                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">To:</span>
+                      <span className="block text-xs text-gray-700 dark:text-gray-100">{incident.callsign_to}</span>
                 </div>
               </div>
             )}
@@ -770,23 +769,23 @@ export default function IncidentTable({
       </div>
       {/* Desktop Table Layout */}
       <div ref={tableContainerRef} className="hidden md:flex flex-col mt-4" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', position: 'relative' }}>
-        <div className="sticky top-0 z-10 bg-gray-600">
+            <div className="sticky top-0 z-10 bg-gray-600 dark:bg-[#1e293b]">
           <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Log</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Time</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">From</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">To</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Occurrence</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Type</div>
-            <div className="px-2 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Action</div>
-            <div className="py-3 text-right text-xs font-medium text-white uppercase tracking-wider pr-2">Status</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Log</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Time</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">From</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">To</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Occurrence</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Type</div>
+                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Action</div>
+                <div className="py-3 text-right text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider pr-2">Status</div>
           </div>
         </div>
-        <div className="bg-white divide-y divide-gray-200 px-1">
+            <div className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 px-1">
           {sortedIncidents.map((incident, idx) => {
             let rowColor = getRowStyle(incident);
             if (rowColor === 'hover:bg-gray-50') {
-              rowColor = idx % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                  rowColor = idx % 2 === 0 ? 'bg-white dark:bg-gray-800 hover:bg-gray-50' : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600';
             }
             return (
               <div
@@ -869,14 +868,14 @@ export default function IncidentTable({
                 </div>
                 <div className="flex items-center justify-end text-sm text-gray-500 pr-2">
                         {incident.incident_type === 'Attendance' ? (
-                    <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 text-blue-800">Logged</span>
+                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">Logged</span>
                         ) : (
                           <button
                       onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
                             className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${
                               incident.is_closed 
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200' 
+                              : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200'
                             }`}
                           >
                             {incident.is_closed ? 'Closed' : 'Open'}
@@ -907,6 +906,8 @@ export default function IncidentTable({
           incidentId={selectedIncidentId}
           onClose={handleCloseModal}
         />
+          )}
+        </>
       )}
     </>
   )
