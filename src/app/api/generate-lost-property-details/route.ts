@@ -66,8 +66,8 @@ Input: "Response 1 – guest lost phone near toilets by Main Bar"
 
     // Log usage after completion
     await logAIUsage({
-      event_id: null,
-      user_id: null,
+      event_id: undefined,
+      user_id: undefined,
       endpoint: '/api/generate-lost-property-details',
       model: 'gpt-3.5-turbo',
       tokens_used: completion.usage?.total_tokens || null,
