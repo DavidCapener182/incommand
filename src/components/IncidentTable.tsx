@@ -166,7 +166,7 @@ export default function IncidentTable({
 
   useEffect(() => {
     console.log('🔍 SUBSCRIPTION USEEFFECT TRIGGERED WITH:', currentEventId, 'TYPE:', typeof currentEventId);
-    if (!currentEventId) {
+    if (!currentEventId || typeof currentEventId !== 'string' || currentEventId.trim() === '') {
       console.log('❌ NO CURRENT EVENT ID - SKIPPING SUBSCRIPTION. VALUE:', currentEventId);
       return;
     }
@@ -208,8 +208,7 @@ export default function IncidentTable({
       }
     };
 
-    // Clean up any existing subscription
-    cleanup();
+    // DO NOT call cleanup() here!
 
     // Mark this subscription as active and register toast callback
     activeSubscriptions.set(subscriptionKey, true);
@@ -219,24 +218,22 @@ export default function IncidentTable({
     }
     console.log('✅ Component', componentId.current, 'created new subscription for:', subscriptionKey);
 
-    // Set up new subscription with more specific filter
+    // Set up new subscription with a stable channel name
     console.log('🔗 SETTING UP SUPABASE SUBSCRIPTION FOR EVENT:', currentEventId);
     console.log('🔗 SUBSCRIPTION FILTER:', `event_id=eq.${currentEventId}`);
     
     // Basic connectivity verification
     console.log('🔧 Setting up real-time subscription for event', currentEventId);
     
-
-
     subscriptionRef.current = supabase
-      .channel(`incident_logs_${currentEventId}_${Date.now()}`)
+      .channel(`incident_logs_${currentEventId}`)
       .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
           table: 'incident_logs',
           filter: `event_id=eq.${currentEventId}`
-        }, 
+        },
         (payload) => {
           console.log('🔔 Real-time event:', payload.eventType, 'for incident', (payload.new as any)?.log_number || (payload.old as any)?.log_number);
           console.log('🔔 Event details:', payload.new || payload.old);

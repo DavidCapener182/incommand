@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { logAIUsage } from '@/lib/supabase';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -57,7 +58,16 @@ Input: "Response 5 – intoxicated female, confused and sitting alone, safeguard
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 250
+      max_tokens: 120
+    });
+
+    await logAIUsage({
+      event_id,
+      user_id,
+      endpoint: '/api/generate-welfare-details',
+      model: 'gpt-3.5-turbo',
+      tokens_used: completion.usage?.total_tokens || null,
+      cost_usd: null
     });
 
     const response = completion.choices[0].message.content;

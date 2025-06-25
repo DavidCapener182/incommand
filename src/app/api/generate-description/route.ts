@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { logAIUsage } from '@/lib/supabase';
 
 // Debug logging for environment variables
 console.log('API Route - Environment variables check:', {
@@ -52,7 +53,17 @@ Keep the brief to two paragraphs, suitable for use in an operational security ha
         }
       ],
       temperature: 0.7,
-      max_tokens: 250
+      max_tokens: 120
+    });
+
+    // Log usage after completion
+    await logAIUsage({
+      event_id: null,
+      user_id: null,
+      endpoint: '/api/generate-description',
+      model: 'gpt-3.5-turbo',
+      tokens_used: completion.usage?.total_tokens || null,
+      cost_usd: null // Optionally calculate if you want
     });
 
     const description = completion.choices[0].message.content;
