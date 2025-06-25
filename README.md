@@ -74,7 +74,7 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 - **Accessibility**: Improved ARIA labels and keyboard navigation
 - **State Management**: Proper context management for notifications and UI states
 
-## Recent Major Updates (December 2024)
+## Recent Major Updates (June 2025)
 
 ### Notification System Overhaul
 - **Smart Toast System**: Eliminated duplicate notifications with intelligent deduplication
