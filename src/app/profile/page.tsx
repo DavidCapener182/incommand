@@ -99,12 +99,12 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded shadow text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+        <div className="bg-white dark:bg-[#23408e] p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] text-center text-gray-900 dark:text-gray-100">
           <p>You must be signed in to view your profile.</p>
           <button
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
-            onClick={() => router.push("/login")}
+            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white rounded-lg shadow transition-colors duration-200"
+            onClick={() => router.push('/login')}
           >
             Sign in
           </button>
@@ -114,13 +114,13 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center py-12 px-4">
-      <div className="bg-white rounded-lg shadow p-8 w-full">
-        <h2 className="text-2xl font-bold mb-6 text-center">Your Profile</h2>
+    <div className="min-h-screen bg-gray-100 dark:bg-[#101c36] flex flex-col items-center justify-center py-12 px-4 transition-colors duration-300">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md text-gray-900 dark:text-gray-100 transition-colors duration-300">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">Your Profile</h2>
         {loading ? (
-          <div className="text-center text-gray-500">Loading...</div>
+          <div className="text-center text-gray-500 dark:text-gray-300">Loading...</div>
         ) : error ? (
-          <div className="text-center text-red-500">{error}</div>
+          <div className="text-center text-red-500 dark:text-red-400">{error}</div>
         ) : (
           <>
             <div className="flex flex-col items-center mb-6">
@@ -131,12 +131,12 @@ export default function ProfilePage() {
                   className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 mb-2"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-blue-200 flex items-center justify-center text-3xl font-bold text-blue-700 border-2 border-blue-500 mb-2">
+                <div className="w-24 h-24 rounded-full bg-blue-200 dark:bg-[#23408e] flex items-center justify-center text-3xl font-bold text-blue-700 dark:text-blue-200 border-2 border-blue-500 mb-2 transition-colors duration-300">
                   {getInitials(fullName || profile?.email || "")}
                 </div>
               )}
               <button
-                className="text-xs text-blue-600 underline mb-2"
+                className="text-xs text-blue-600 dark:text-blue-300 underline mb-2 transition-colors duration-200"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
               >
@@ -152,25 +152,25 @@ export default function ProfilePage() {
             </div>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Full Name</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400 sm:text-sm transition-colors duration-200"
                   placeholder="Enter your full name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Email</label>
                 <div className="mt-1">{profile?.email || user.email}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Company</label>
                 <div className="mt-1">{profile?.company || "-"}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Role</label>
                 <div className="mt-1">
                   {profile?.role
                     ? profile.role.toLowerCase() === 'admin'
@@ -180,22 +180,22 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Credits</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Credits</label>
                 <div className="mt-1">(coming soon)</div>
               </div>
               <button
                 type="submit"
-                className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white rounded-lg shadow transition-colors duration-200"
                 disabled={loading}
               >
                 Update Profile
               </button>
             </form>
             <button
-              className="w-full mt-4 py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              className="w-full mt-4 py-2 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-[#2d437a] dark:hover:bg-[#23408e] text-gray-700 dark:text-gray-100 rounded-lg shadow transition-colors duration-200"
               onClick={async () => {
                 await supabase.auth.signOut();
-                router.push("/login");
+                router.push('/login');
               }}
             >
               Log out

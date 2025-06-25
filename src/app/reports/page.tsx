@@ -258,60 +258,60 @@ export default function ReportsPage() {
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 bg-white shadow rounded-lg mt-8">
-      <h1 className="text-2xl font-bold mb-6">End of Event Report</h1>
+    <main className="max-w-3xl mx-auto px-4 py-8 bg-white dark:bg-[#23408e] shadow rounded-lg mt-8">
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">End of Event Report</h1>
       <form onSubmit={handleSubmit} className="space-y-6" id="event-report-pdf">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium">Head of Security</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Head of Security</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={headOfSecurity}
               onChange={(e) => setHeadOfSecurity(e.target.value)}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Date of Event</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Date of Event</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={event ? new Date(event.event_date).toLocaleDateString() : "-"}
               readOnly
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Event Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Event Name</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={event?.event_name || "-"}
               readOnly
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Staff Briefed & In Position</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Staff Briefed & In Position</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={getLogTime('staff briefed')}
               readOnly
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Doors Open Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Doors Open Time</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={doorsOpenTime}
               readOnly
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium">Support Act(s)</label>
-          <ul className="list-disc ml-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Support Act(s)</label>
+          <ul className="list-disc ml-6 dark:text-white">
             {supportActs.length ? supportActs.map((act, i) => {
               if ('act_name' in act) {
                 // Event support act
@@ -325,69 +325,69 @@ export default function ReportsPage() {
           </ul>
         </div>
         <div>
-          <label className="block text-sm font-medium">Main Act</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Main Act</label>
           <input
             type="text"
-            className="mt-1 block w-full border rounded px-3 py-2"
+            className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
             value={mainActName !== "-" ? `${mainActName}${mainActTime && mainActTime !== "-" ? ` (${mainActTime})` : ""}` : "-"}
             readOnly
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium">Showdown Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Showdown Time</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={showdownTime}
               readOnly
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Venue Clear Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Venue Clear Time</label>
             <input
               type="text"
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
               value={venueClearTime}
               readOnly
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium">Incident Summary</label>
-          <div className="bg-gray-50 border rounded p-4 min-h-[60px]">
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Incident Summary</label>
+          <div className="bg-gray-50 dark:bg-[#1a2a4f] border rounded p-4 min-h-[60px] dark:text-white">
             {renderSummary(aiSummary)}
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium">Incident List</label>
-          <ul className="list-disc ml-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Incident List</label>
+          <ul className="list-disc ml-6 dark:text-white">
             {filteredIncidents.length ? filteredIncidents.map((inc, i) => (
               <li key={i}>{incidentSummary(inc)}</li>
             )) : <li>No incidents recorded.</li>}
           </ul>
         </div>
         <div>
-          <label className="block text-sm font-medium">Upload Incident Report</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Upload Incident Report</label>
           <div className="flex items-center gap-2">
-            <input type="file" onChange={handleFileChange} className="block" />
-            {incidentReportFile && <span className="text-xs">{incidentReportFile.name}</span>}
+            <input type="file" onChange={handleFileChange} className="block dark:bg-[#1a2a4f] dark:text-white" />
+            {incidentReportFile && <span className="text-xs dark:text-white">{incidentReportFile.name}</span>}
             <FaUpload className="text-gray-400" />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium">Signature (type your name)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Signature (type your name)</label>
           <input
             type="text"
-            className="mt-1 block w-full border rounded px-3 py-2"
+            className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium">Signature (scribble)</label>
-          <div className="border rounded bg-white p-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Signature (scribble)</label>
+          <div className="border rounded bg-white dark:bg-[#1a2a4f] p-2">
             <SignaturePad
               ref={sigPadRef}
               canvasProps={{ width: 350, height: 100, className: "border rounded bg-gray-50" }}

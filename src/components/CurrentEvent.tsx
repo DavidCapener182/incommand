@@ -209,7 +209,7 @@ export default function CurrentEvent({
 
   return (
     <>
-      <div className="bg-white shadow sm:rounded-lg relative">
+      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-4 w-full relative">
         <div className="px-5 py-4">
           {currentEvent ? (
             <div className="space-y-3">
@@ -218,7 +218,7 @@ export default function CurrentEvent({
                   <span className="text-sm font-medium text-gray-500 w-24 pt-1 md:hidden">Event</span>
                   <span className="hidden md:inline text-sm font-medium text-gray-500 w-24 pt-1">Current Event</span>
                 <div>
-                  <span className="text-base font-semibold text-gray-900 ml-2">
+                  <span className="text-base font-semibold text-gray-900 dark:text-white ml-2">
                     {currentEvent.event_name}
                   </span>
                     <div className="hidden md:inline">
@@ -232,7 +232,7 @@ export default function CurrentEvent({
                       }
                     }
                     return Array.isArray(acts) && acts.length > 0 ? (
-                    <span className="text-sm font-normal text-gray-500 ml-2">
+                    <span className="text-sm font-normal text-gray-500 dark:text-white ml-2">
                         {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
                     </span>
                     ) : null;
@@ -242,24 +242,24 @@ export default function CurrentEvent({
                 </div>
                 <div className="md:hidden">
                   {currentTime && (
-                    <span className="text-base font-bold text-gray-900">{currentTime}</span>
+                    <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
                   )}
                 </div>
               </div>
               <div className="hidden md:block">
                 <>
               <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 w-24">Venue</span>
-                <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.venue_name}</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Venue</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 w-24">Type</span>
-                <span className="text-sm font-semibold text-gray-900 ml-2">{currentEvent.event_type}</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Type</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.event_type}</span>
               </div>
               
               {/* AI Insights - with navigation positioned at bottom of card */}
               {aiInsights.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100 pb-10">
+                <div className="mt-1 pt-1 border-t border-gray-100 pb-1">
                   <div className="min-h-[115px] max-h-[115px] overflow-hidden">
                     {aiLoading ? (
                       <div className="animate-pulse space-y-2">
@@ -283,10 +283,10 @@ export default function CurrentEvent({
                       </div>
                     ) : (
                       <div className="pb-8">
-                        <h4 className="text-sm font-bold text-gray-900 mb-2">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
                           {aiInsights[currentInsightIndex]?.title}
                         </h4>
-                        <div className="text-sm text-gray-700 leading-relaxed pr-1">
+                        <div className="text-sm text-gray-700 dark:text-white leading-relaxed pr-1">
                           {aiInsights[currentInsightIndex]?.content}
                         </div>
                       </div>
@@ -297,7 +297,7 @@ export default function CurrentEvent({
               
               {/* Navigation positioned at very bottom of entire card */}
               {!aiLoading && aiInsights.length > 0 && (
-                <div className="absolute bottom-2 left-5 right-5 flex items-center justify-center py-1 bg-white">
+                <div className="absolute left-0 right-0 bottom-3 flex items-center justify-center">
                   <div className="flex items-center space-x-2">
                     {aiInsights.length > 1 && (
                       <button

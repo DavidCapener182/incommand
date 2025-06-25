@@ -26,6 +26,42 @@ function getRandomGreeting() {
   return GREETINGS[0];
 }
 
+// Add sun/moon icons
+const SunIcon = (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.95 7.07l-1.41-1.41M6.34 6.34L4.93 4.93m12.02 0l-1.41 1.41M6.34 17.66l-1.41 1.41" />
+  </svg>
+);
+const MoonIcon = (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" />
+  </svg>
+);
+
+// Theme toggle logic
+function useTheme() {
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const setTheme = (t: 'light' | 'dark') => setThemeState(t);
+  return [theme, setTheme] as const;
+}
+
 export default function Navigation() {
   const pathname = usePathname() || '';
   const { signOut, user } = useAuth()
@@ -42,6 +78,7 @@ export default function Navigation() {
   const { isOpen: notificationDrawerOpen, setIsOpen: setNotificationDrawerOpen } = useNotificationDrawer();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const router = useRouter();
+  const [theme, setTheme] = useTheme();
 
   const isActive = (path: string) => {
     if (path === '/incidents' && pathname === '/') {
@@ -232,7 +269,7 @@ export default function Navigation() {
                   }}
                   className={`${isActive('/callsign-assignment')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium bg-transparent border-none ${!hasCurrentEvent ? 'opacity-50' : ''}`}
                 >
-                  Callsigns
+                  Staff
                 </button>
                 <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                   Help & Glossary
@@ -244,6 +281,15 @@ export default function Navigation() {
                 <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                   Admin
                 </Link>
+                {/* Theme Toggle Button */}
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="ml-4 p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {theme === 'dark' ? SunIcon : MoonIcon}
+                </button>
               </div>
             </div>
             {/* User Avatar/Profile Dropdown - always far right */}
@@ -257,16 +303,6 @@ export default function Navigation() {
                       return '';
                     })()}
                   </span>
-                  {/* If there is no current event, show logout button */}
-                  {hasCurrentEvent === false && (
-                    <button
-                      onClick={signOut}
-                      className="px-3 py-1 border border-blue-300 text-blue-700 bg-white/80 rounded-lg text-sm font-semibold ml-2 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                      title="Sign Our"
-                    >
-                      Log out
-                    </button>
-                  )}
                   {/* Profile Photo */}
                   <button
                     className="flex items-center focus:outline-none"
@@ -369,7 +405,7 @@ export default function Navigation() {
             }}
             className={`block w-full text-left py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
           >
-            Callsigns
+            Staff
           </button>
           <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
           <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>

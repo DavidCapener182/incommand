@@ -74,23 +74,23 @@ interface TimeCardProps {
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow-sm p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:block">
             <div className="hidden md:block">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Current Time</h2>
-          <p className="text-3xl font-bold text-gray-900 mb-4">{currentTime}</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Time</h2>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{currentTime}</p>
           {nextEvent && (
             <div className="mt-2">
-              <h3 className="text-sm font-medium text-gray-500">Time until {nextEvent.title}</h3>
-              <p className="text-lg font-bold text-blue-600">{countdown}</p>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
+              <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
             </div>
           )}
             </div>
         </div>
         <div>
             <div className='hidden md:block'>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Schedule</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Event Schedule</h2>
             </div>
             <div className="space-y-2 mt-2">
             {eventTimings.map((timing, index) => (
@@ -100,17 +100,17 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                         timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
                       } `}
               >
-                      <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500'}`}>
+                      <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500 dark:text-gray-100'}`}>
                   {timing.title}
                 </span>
-                      <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900'}`}>
+                      <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900 dark:text-gray-100'}`}>
                   {timing.time}
                 </span>
               </div>
             ))}
             </div>
              {eventTimings.length === 0 && !nextEvent && (
-              <p className="text-sm text-gray-500">No upcoming event timings</p>
+              <p className="text-sm text-gray-500 dark:text-gray-100">No upcoming event timings</p>
             )}
         </div>
       </div>
@@ -155,7 +155,7 @@ const StatCard: React.FC<StatCardProps> = ({
     <div 
       onClick={isFilterable ? onClick : undefined}
       className={`
-        bg-white rounded-lg border border-gray-200 shadow-md p-3 flex flex-col items-center text-center
+        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg border border-gray-200 shadow-md p-3 flex flex-col items-center text-center
         ${isFilterable ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${pulse ? 'animate-pulse-once' : ''}
@@ -179,8 +179,8 @@ const StatCard: React.FC<StatCardProps> = ({
         {icon}
       </div>
       <div className="flex flex-col items-center">
-        <p className="text-xs font-medium text-gray-500 truncate mb-1">{title}</p>
-        <p className="text-2xl font-semibold text-gray-900">{value}</p>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-100 truncate mb-1">{title}</p>
+        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
       {/* Tooltip */}
       {tooltip && showTooltip && (
@@ -235,7 +235,7 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
       ) : (
         <div className="flex gap-4 w-full">
           <div
-            className="bg-white rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
+            className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
             style={{ minHeight: 0, height: '100%' }}
             onClick={() => setModalOpen(true)}
           >
@@ -245,8 +245,8 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
               <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
             )}
           </div>
-          <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
-            <span className="text-gray-400 text-lg font-semibold">Placeholder</span>
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
+            <span className="text-gray-400 text-lg font-semibold dark:text-gray-100">Placeholder</span>
           </div>
         </div>
       )}
@@ -323,15 +323,15 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
   if (sorted.length === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center">
-        <div className="text-xs font-medium text-gray-900 mb-1">Top 3 Incident Types</div>
-        <div className="text-xs text-gray-500">No incidents yet</div>
+        <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
+        <div className="text-xs text-gray-500 dark:text-gray-100">No incidents yet</div>
       </div>
     );
   }
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
-      <div className="text-xs font-medium text-gray-900 mb-2">Top 3 Incident Types</div>
+      <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2">Top 3 Incident Types</div>
       <div className="flex flex-col gap-1 w-full px-1">
         {sorted.map(([type, count]) => {
           const styleClasses = getIncidentTypeStyle(type);
@@ -726,13 +726,15 @@ export default function Dashboard() {
               <div className="flex justify-between items-center p-3">
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
-                  <span className="text-base font-semibold text-gray-900">{currentEvent.event_name}</span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{currentEvent.event_name}</span>
                 </div>
-                <span className="text-base font-bold text-gray-900">{currentTime}</span>
+                <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
               </div>
               <hr className="border-t border-gray-200" />
               {nextEvent ? (
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-b-lg">
+                  <span className="text-sm font-medium text-blue-600 dark:text-gray-100">{nextEvent.title}</span>
+                  <span className="text-sm font-bold text-blue-700 dark:text-gray-100">{nextEvent.time}</span>
                   <span className="text-sm font-medium text-blue-600">{nextEvent.title}</span>
                   <span className="text-sm font-bold text-blue-700">{nextEvent.time}</span>
                 </div>
@@ -757,7 +759,7 @@ export default function Dashboard() {
       {/* Incident Dashboard */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
             Incident Dashboard
             {isRefreshing && (
               <span className="ml-2 text-xs text-blue-500 flex items-center animate-pulse">
@@ -839,7 +841,7 @@ export default function Dashboard() {
             </Menu>
           </div>
         </div>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 dark:text-white mb-6">
           Track and manage security incidents in real-time
         </p>
         
@@ -927,13 +929,13 @@ export default function Dashboard() {
         <div>
           {/* Mobile: Venue Occupancy full width */}
           <div className="block md:hidden mb-4">
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full" onClick={() => setIsOccupancyModalOpen(true)}>
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
           </div>
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
@@ -942,7 +944,7 @@ export default function Dashboard() {
                 largeLogo={false}
               />
             </div>
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
@@ -955,10 +957,10 @@ export default function Dashboard() {
           </div>
           {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
           <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1" onClick={() => setIsOccupancyModalOpen(true)}>
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
-            <div className="flex flex-col h-[115px] rounded-lg shadow p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="flex flex-col h-[115px] rounded-lg shadow p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100">
               {currentEvent?.venue_address && (
                 <WeatherCard 
                   lat={coordinates?.lat} 
@@ -970,7 +972,7 @@ export default function Dashboard() {
                 />
               )}
             </div>
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
@@ -979,7 +981,7 @@ export default function Dashboard() {
                 largeLogo={false}
               />
             </div>
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
