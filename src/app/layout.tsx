@@ -8,6 +8,8 @@ import Navigation from '../components/Navigation'
 import { usePathname, useRouter } from 'next/navigation'
 import { Analytics } from '@vercel/analytics/react'
 import IncidentCreationModal from '../components/IncidentCreationModal'
+import FloatingAIChat from '../components/FloatingAIChat'
+import { NotificationDrawerProvider, useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,18 +31,55 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || '';
+  const showNav = !['/login', '/signup'].includes(pathname);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
+  const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
+  
+  const handleIncidentCreated = async () => {
+    setIsIncidentModalOpen(false);
+    // Optionally: window.location.reload();
+  };
+
+  return (
+    <>
+      <AuthGate>
+        {showNav && <Navigation />}
+        <main>{children}</main>
+        {/* Global FAB for New Incident - Hidden when notification drawer is open */}
+        {showNav && !notificationDrawerOpen && (
+          <>
+            <button
+              type="button"
+              className="fixed bottom-6 right-24 z-[60] bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+              aria-label="Report New Incident"
+              onClick={() => setIsIncidentModalOpen(true)}
+            >
+              <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
+            </button>
+            <FloatingAIChat />
+          </>
+        )}
+        
+        {/* Modals - Always available */}
+        {showNav && (
+          <IncidentCreationModal
+            isOpen={isIncidentModalOpen}
+            onClose={() => setIsIncidentModalOpen(false)}
+            onIncidentCreated={handleIncidentCreated}
+          />
+        )}
+      </AuthGate>
+    </>
+  );
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname() || '';
-  const showNav = !['/login', '/signup'].includes(pathname);
-  const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
-  const handleIncidentCreated = async () => {
-    setIsIncidentModalOpen(false);
-    // Optionally: window.location.reload();
-  };
   return (
     <html lang="en">
       <head>
@@ -53,35 +92,16 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>
-          <AuthGate>
-            {showNav && <Navigation />}
-            <main>{children}</main>
-            {/* Global FAB for New Incident */}
-            {showNav && (
-              <>
-                <button
-                  type="button"
-                  className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                  aria-label="Report New Incident"
-                  onClick={() => setIsIncidentModalOpen(true)}
-                >
-                  <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
-                </button>
-                <IncidentCreationModal
-                  isOpen={isIncidentModalOpen}
-                  onClose={() => setIsIncidentModalOpen(false)}
-                  onIncidentCreated={handleIncidentCreated}
-                />
-              </>
-            )}
-          </AuthGate>
+          <NotificationDrawerProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </NotificationDrawerProvider>
         </AuthProvider>
         <Analytics />
         {/* Global Footer */}
         <footer className="fixed bottom-0 left-0 w-full z-40 bg-blue-900 px-4 py-2 flex justify-between items-center text-xs text-white">
           <span>v0.1.0</span>
           <span>support@incommandapp.com</span>
-          <span>© 2024 InCommand</span>
+          <span>© 2025 InCommand</span>
         </footer>
       </body>
     </html>

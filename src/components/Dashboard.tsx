@@ -30,6 +30,8 @@ import what3words from '@what3words/api'
 import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import AttendanceModal from './AttendanceModal'
+import { getIncidentTypeStyle } from './IncidentTable'
+import Toast, { useToast } from './Toast'
 
 interface StatCardProps {
   title: string
@@ -141,12 +143,13 @@ const StatCard: React.FC<StatCardProps> = ({
     <div 
       onClick={isFilterable ? onClick : undefined}
       className={`
-        bg-white rounded-lg border border-gray-200 shadow-md p-2 md:p-4 flex flex-col md:flex-row items-center text-center md:text-left
+        bg-white rounded-lg border border-gray-200 shadow-md p-3 flex flex-col items-center text-center
         ${isFilterable ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${pulse ? 'animate-pulse-once' : ''}
         relative
         ${className}
+        hover:shadow-xl hover:-translate-y-1 transition-all duration-200
       `}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
@@ -160,16 +163,16 @@ const StatCard: React.FC<StatCardProps> = ({
           <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
         </span>
       )}
-      <div className="flex-shrink-0 md:mr-4 mb-2 md:mb-0">
+      <div className="flex-shrink-0 mb-2">
         {icon}
       </div>
-      <div>
-        <p className="text-xs md:text-sm font-medium text-gray-500 truncate">{title}</p>
-        <p className="mt-1 text-lg md:text-3xl font-semibold text-gray-900">{value}</p>
+      <div className="flex flex-col items-center">
+        <p className="text-xs font-medium text-gray-500 truncate mb-1">{title}</p>
+        <p className="text-2xl font-semibold text-gray-900">{value}</p>
       </div>
       {/* Tooltip */}
       {tooltip && showTooltip && (
-        <div className="absolute z-20 left-1/2 md:left-auto md:right-0 top-full mt-2 w-40 p-2 bg-gray-800 text-white text-xs rounded shadow-lg -translate-x-1/2 md:translate-x-0">
+        <div className="absolute z-20 left-1/2 top-full mt-2 w-40 p-2 bg-gray-800 text-white text-xs rounded shadow-lg -translate-x-1/2">
           {tooltip}
         </div>
       )}
@@ -267,7 +270,7 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
           {largeLogo ? (
             <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
           ) : (
-            <img src="/w3w.png" alt="What3Words" className="w-2/3 h-2/3 object-contain" />
+            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
           )}
         </div>
       ) : (
@@ -338,6 +341,64 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
   );
 }
 
+// Top 3 Incident Types Card
+interface TopIncidentTypesCardProps {
+  incidents: any[];
+  onTypeClick: (type: string) => void;
+  selectedType: string | null;
+}
+
+function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncidentTypesCardProps) {
+  // Exclude Attendance and Sit Rep
+  const filtered = incidents.filter((i: any) => !['Attendance', 'Sit Rep'].includes(i.incident_type));
+  // Count by type
+  const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
+    acc[i.incident_type] = (acc[i.incident_type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  // Sort by count desc, then alphabetically
+  const sorted = (Object.entries(counts) as [string, number][]) 
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center">
+        <div className="text-xs font-medium text-gray-900 mb-1">Top 3 Incident Types</div>
+        <div className="text-xs text-gray-500">No incidents yet</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center">
+      <div className="text-xs font-medium text-gray-900 mb-2">Top 3 Incident Types</div>
+      <div className="flex flex-col gap-1 w-full px-1">
+        {sorted.map(([type, count]) => {
+          const styleClasses = getIncidentTypeStyle(type);
+          const isSelected = selectedType === type;
+          return (
+            <button
+              key={type}
+              onClick={() => onTypeClick(type)}
+              className={`flex items-center justify-between px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full max-w-full ${styleClasses} ${
+                isSelected 
+                  ? 'ring-2 ring-offset-1 ring-gray-400' 
+                  : 'hover:opacity-80'
+              }`}
+            >
+              <span className="truncate flex-1 text-left">{type}</span>
+              <span className="ml-1 font-bold">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -378,6 +439,10 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOccupancyModalOpen, setIsOccupancyModalOpen] = useState(false);
   const [attendanceTimeline, setAttendanceTimeline] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Toast notifications
+  const { messages, addToast, removeToast } = useToast();
 
   const fetchCurrentEvent = async () => {
     if (!companyId) return;
@@ -536,7 +601,21 @@ export default function Dashboard() {
 
       const countableIncidents = incidents.filter(isCountable);
       
-      const highPriorityIncidentTypes = ['Ejection', 'Code Green', 'Code Black', 'Code Pink'];
+      const highPriorityIncidentTypes = [
+        'Ejection',
+        'Code Green',
+        'Code Black',
+        'Code Pink',
+        'Aggressive Behaviour',
+        'Missing Child/Person',
+        'Hostile Act',
+        'Counter-Terror Alert',
+        'Fire Alarm',
+        'Evacuation',
+        'Medical',
+        'Suspicious Behaviour',
+        'Queue Build-Up' // Consider filtering for severe/urgent only in future
+      ];
       const highPriorityIncidents = countableIncidents.filter(i => highPriorityIncidentTypes.includes(i.incident_type));
       
       const total = countableIncidents.length;
@@ -565,7 +644,7 @@ export default function Dashboard() {
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
-    // Optionally, refresh incidents list here if needed
+    // No need to force refresh - real-time subscription will handle the update
   };
 
   // Fetch attendance timeline when modal opens
@@ -585,7 +664,7 @@ export default function Dashboard() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 md:pt-2">
       {/* Event Header - Sticky */}
-      <div className="sticky top-16 z-20 bg-gray-50 md:bg-transparent md:shadow-none -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-2 md:py-0 mb-4">
+      <div className="bg-gray-50 md:bg-transparent md:shadow-none -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-2 md:py-0 mb-4">
         {/* Desktop view */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
           <CurrentEvent
@@ -639,7 +718,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      
+
       {/* Incident Dashboard */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -810,44 +889,85 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid - Second Row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {/* Venue Occupancy */}
-          <div className="h-[90px] md:h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center cursor-pointer" onClick={() => setIsOccupancyModalOpen(true)}>
-            <VenueOccupancy currentEventId={currentEventId} />
+        <div>
+          {/* Mobile: Venue Occupancy full width */}
+          <div className="block md:hidden mb-4">
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full" onClick={() => setIsOccupancyModalOpen(true)}>
+              <VenueOccupancy currentEventId={currentEventId} />
+            </div>
           </div>
-  
-          {/* WeatherCard - only render on md and up */}
-          <div className="hidden md:block h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center">
-            {currentEvent?.venue_address && (
-              <WeatherCard 
-                lat={coordinates?.lat} 
-                lon={coordinates?.lon}
-                locationName={currentEvent.venue_address}
-                eventDate={currentEvent.event_date ?? ''} 
-                startTime={currentEvent.main_act_start_time ?? ''}
-                curfewTime={currentEvent.curfew_time ?? ''}
+          {/* Mobile: W3W and Top 3 side by side */}
+          <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              {coordinates && (
+                <What3WordsMapCard 
+                  lat={coordinates.lat} 
+                  lon={coordinates.lon} 
+                  venueAddress={currentEvent?.venue_address || ''} 
+                  singleCard
+                  largeLogo={false}
+                />
+              )}
+            </div>
+            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <TopIncidentTypesCard 
+                incidents={incidents} 
+                onTypeClick={(type: string) => {
+                  // Filter by exact incident type
+                  setSelectedFilter(type);
+                }} 
+                selectedType={selectedFilter}
               />
-            )}
+            </div>
           </div>
-  
-          <div className="h-[90px] md:h-[180px] rounded-lg shadow p-4 flex flex-col items-center justify-center bg-white">
-            {coordinates && (
-              <What3WordsMapCard 
-                lat={coordinates.lat} 
-                lon={coordinates.lon} 
-                venueAddress={currentEvent?.venue_address || ''} 
-                singleCard
-                largeLogo
+          {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
+          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1" onClick={() => setIsOccupancyModalOpen(true)}>
+              <VenueOccupancy currentEventId={currentEventId} />
+            </div>
+            <div className="flex flex-col h-[115px] rounded-lg shadow p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+              {currentEvent?.venue_address && (
+                <WeatherCard 
+                  lat={coordinates?.lat} 
+                  lon={coordinates?.lon}
+                  locationName={currentEvent.venue_address}
+                  eventDate={currentEvent.event_date ?? ''} 
+                  startTime={currentEvent.main_act_start_time ?? ''}
+                  curfewTime={currentEvent.curfew_time ?? ''}
+                />
+              )}
+            </div>
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+              {coordinates && (
+                <What3WordsMapCard 
+                  lat={coordinates.lat} 
+                  lon={coordinates.lon} 
+                  venueAddress={currentEvent?.venue_address || ''} 
+                  singleCard
+                  largeLogo={false}
+                />
+              )}
+            </div>
+            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+              <TopIncidentTypesCard 
+                incidents={incidents} 
+                onTypeClick={(type: string) => {
+                  // Filter by exact incident type
+                  setSelectedFilter(type);
+                }} 
+                selectedType={selectedFilter}
               />
-            )}
+            </div>
           </div>
         </div>
 
         {/* Incident Table */}
         <div className="pb-24">
           <IncidentTable 
-            filter={selectedFilter || undefined} 
-            onDataLoaded={setIncidents} 
+            key={refreshKey}
+            filter={typeof selectedFilter === 'string' ? selectedFilter : undefined} 
+            onDataLoaded={setIncidents}
+            onToast={addToast}
           />
         </div>
       </div>
@@ -859,18 +979,13 @@ export default function Dashboard() {
         initialIncidentType={initialIncidentType}
       />
 
-      {/* Floating Action Button for New Incident (Mobile Only) */}
-      <button
-        type="button"
-        className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-        aria-label="Report New Incident"
-        onClick={() => setIsIncidentModalOpen(true)}
-      >
-        <img src="/icon.png" alt="New Incident" className="w-full h-full object-cover rounded-full" />
-      </button>
+
 
       {/* Venue Occupancy Modal */}
       <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
+      
+      {/* Toast Notifications */}
+      <Toast messages={messages} onRemove={removeToast} />
     </div>
   )
 } 

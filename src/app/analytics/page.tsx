@@ -864,7 +864,7 @@ export default function AnalyticsPage() {
       {/* Top Analytics Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {kpiData.map((kpi, index) => (
-            <div key={index} className="bg-white p-4 rounded-xl shadow flex flex-col justify-between hover:shadow-lg transition-shadow duration-300">
+            <div key={index} className="bg-white p-4 rounded-xl shadow flex flex-col justify-between hover:shadow-lg transition-shadow duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-500">{kpi.title}</h3>
@@ -916,7 +916,7 @@ export default function AnalyticsPage() {
       {/* Main Grid for Charts and Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Attendance Chart */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Timeline</h2>
           <div className="flex-grow relative">
             {attendanceData.length > 0 ? (
@@ -927,7 +927,7 @@ export default function AnalyticsPage() {
         </div>
             </div>
         {/* Attendance Log */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Log</h2>
           <div className="flex-grow overflow-y-auto">
             {attendanceData.length > 0 ? (
@@ -946,22 +946,26 @@ export default function AnalyticsPage() {
                     const change = prevRec ? rec.count - prevRec.count : null;
                     const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
                     return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="p-2 text-base">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td className="p-2 text-right font-mono text-base">{rec.count.toLocaleString()}</td>
-                        <td className="p-2 text-right font-mono text-base">
-                          {change !== null ? (
-                            <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
-                              {Math.abs(change).toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="p-2 align-middle">
-                          <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
+                      <tr key={index}>
+                        <td colSpan={4} className="p-0">
+                          <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
+                            <div className="p-2 text-base w-1/4">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className="p-2 text-right font-mono text-base w-1/4">{rec.count.toLocaleString()}</div>
+                            <div className="p-2 text-right font-mono text-base w-1/4">
+                              {change !== null ? (
+                                <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
+                                  {Math.abs(change).toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </div>
+                            <div className="p-2 align-middle w-1/4">
+                              <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
+                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
+                              </div>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1010,7 +1014,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
         {/* Live Now Card */}
-        <div className={`bg-white rounded-xl shadow p-6 flex flex-col hover:shadow-lg transition-shadow duration-300 lg:col-span-1 min-h-[340px]`}>
+        <div className={`bg-white rounded-xl shadow p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 lg:col-span-1 min-h-[340px]`}>
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Live Status</h2>
               <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${mostRecentOpen ? getPriorityColor(mostRecentOpen.priority) : 'bg-green-500'}`}>
@@ -1036,7 +1040,7 @@ export default function AnalyticsPage() {
       {/* Second Row: Lower Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Merged Incident Analysis Card */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900">Incident Analysis</h2>
           <div className="flex-grow grid grid-cols-2 gap-4">
             {/* Incident Volume Chart */}
@@ -1067,7 +1071,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Trends & Predictive AI */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-2xl text-gray-900">Trends</h2>
             {aiInsights.length > 1 && (
@@ -1109,7 +1113,7 @@ export default function AnalyticsPage() {
       {/* Third Row: Heatmap & More */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Debrief Summary */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <div className="flex justify-between items-center flex-shrink-0 mb-4">
             <h2 className="font-bold text-2xl text-gray-900">Debrief Summary</h2>
             <div className="flex items-center space-x-2">
@@ -1205,7 +1209,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         {/* Predictive Insights */}
-        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900">Predictive Insights</h2>
             <div className="flex-grow flex items-center justify-center">
               {loadingPredictions ? (

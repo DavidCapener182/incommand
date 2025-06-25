@@ -91,9 +91,10 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           filter: `event_id=eq.${currentEventId}`
         },
         (payload) => {
-          console.log('Attendance INSERT received:', payload);
+          console.log('🔥 Attendance INSERT received:', payload);
           const newRecord = payload.new as { count: number };
           if (newRecord && typeof newRecord.count === 'number') {
+            console.log('🔥 Updating venue occupancy from', currentCount, 'to', newRecord.count);
             setCurrentCount(newRecord.count);
           }
         }
@@ -107,19 +108,50 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           filter: `event_id=eq.${currentEventId}`
         },
         (payload) => {
-          console.log('Attendance UPDATE received:', payload);
+          console.log('🔥 Attendance UPDATE received:', payload);
           const updatedRecord = payload.new as { count: number };
           if (updatedRecord && typeof updatedRecord.count === 'number') {
+            console.log('🔥 Updating venue occupancy from', currentCount, 'to', updatedRecord.count);
             setCurrentCount(updatedRecord.count);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔥 Subscription status:', status);
+      });
 
     fetchData();
 
+    // Set up a fallback polling mechanism in case real-time updates fail
+    const pollForUpdates = setInterval(async () => {
+      try {
+        const { data: attendanceData, error } = await supabase
+          .from('attendance_records')
+          .select('count')
+          .eq('event_id', currentEventId)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!error && attendanceData) {
+          setCurrentCount(prev => {
+            if (attendanceData.count !== prev) {
+              console.log('🔄 Polling found new attendance count:', attendanceData.count, '(was:', prev, ')');
+              return attendanceData.count;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        // Ignore polling errors
+      }
+    }, 30000); // Poll every 30 seconds instead of 5 to reduce flashing
+
     // Cleanup on unmount or when currentEventId changes
-    return cleanup;
+    return () => {
+      cleanup();
+      clearInterval(pollForUpdates);
+    };
   }, [currentEventId]);
 
   console.log('Render state:', { loading, currentCount, expectedAttendance });
@@ -146,23 +178,20 @@ export default function VenueOccupancy({ currentEventId }: Props) {
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
-      <div className="flex flex-col items-center justify-center space-y-2 w-full">
-        <div className="hidden md:block text-[#2A3990] w-8 h-8">
-          <BuildingOffice2Icon className="w-full h-full" />
-        </div>
+      <div className="flex flex-col items-center justify-center space-y-1 w-full">
         <div className="text-center">
-          <p className="text-2xl md:text-4xl font-bold text-gray-900">
+          <p className="text-lg md:text-2xl font-bold text-gray-900">
             {currentCount.toLocaleString()}
-            <span className="text-base md:text-lg text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
+            <span className="text-xs md:text-base text-gray-500 ml-1">/ {expectedAttendance.toLocaleString()}</span>
           </p>
-          <p className="text-xs md:text-sm font-medium text-gray-500 mt-0.5">
+          <p className="text-[10px] md:text-xs font-medium text-gray-500 mt-0.5">
             Venue Occupancy
           </p>
         </div>
         {expectedAttendance > 0 && (
-          <div className="w-full space-y-1">
+          <div className="w-full space-y-0.5">
             <div className="flex justify-between items-center px-1">
-              <span className="text-xs font-medium" style={{ 
+              <span className="text-[10px] font-medium" style={{ 
                 color: currentCount > expectedAttendance ? '#ef4444' : 
                        currentCount >= expectedAttendance * 0.9 ? '#f97316' : 
                        '#2A3990'
@@ -170,14 +199,14 @@ export default function VenueOccupancy({ currentEventId }: Props) {
                 {Math.round((currentCount / expectedAttendance) * 100)}%
               </span>
               {currentCount > expectedAttendance && (
-                <span className="text-xs font-medium text-red-500">
+                <span className="text-[10px] font-medium text-red-500">
                   Over Expected
                 </span>
               )}
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
+            <div className="w-full bg-gray-100 rounded-full h-1">
               <div 
-                className="h-2 rounded-full transition-all duration-300" 
+                className="h-1 rounded-full transition-all duration-300" 
                 style={{ 
                   width: `${Math.min(Math.round((currentCount / expectedAttendance) * 100), 100)}%`,
                   backgroundColor: currentCount > expectedAttendance ? '#ef4444' : 

@@ -137,25 +137,14 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   };
 
   return (
-    <div className="weather-card hidden md:block w-full h-full flex flex-col items-center justify-center text-center">
-      <div className="flex items-center justify-center">
-        <div className="pr-4">
+    <div className="w-full h-full flex flex-col items-center justify-center text-center">
+      <div className="flex items-center justify-center mb-1">
+        <div className="mr-2">
           <WeatherIcon />
         </div>
-        <span className="text-5xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
+        <span className="text-2xl font-bold text-gray-800">{Math.round(weather.temperature)}°C</span>
       </div>
-      <span className="text-lg text-gray-600 capitalize mt-2">{weather.description}</span>
-      <div className="text-gray-500 text-base mt-2">
-        {locationName.split(',').map((part, index) => (
-          <p key={index} className="leading-tight">{part.trim()}</p>
-        ))}
-      </div>
-      <div className="text-gray-500 text-sm mt-2 flex items-center">
-        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-        <span>{getWindDescription(weather.windSpeed)}</span>
-      </div>
+      <span className="text-sm text-gray-600 capitalize">{weather.description}</span>
     </div>
   );
 } 

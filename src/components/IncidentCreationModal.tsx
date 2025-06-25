@@ -71,7 +71,6 @@ const INCIDENT_TYPES = {
   'Refusal': 'Refusal',
   'Medical': 'Medical',
   'Welfare': 'Welfare',
-  'Aggressive Behaviour': 'Aggressive Behaviour',
   'Suspicious Behaviour': 'Suspicious Behaviour',
   'Lost Property': 'Lost Property',
   'Attendance': 'Attendance Update',
@@ -129,8 +128,7 @@ const getFollowUpQuestions = (incidentType: string): string[] => {
       return [
         'Location of ejection',
         'Description of person(s)',
-        'Reason for ejection',
-        'Additional security required?'
+        'Reason for ejection'
       ];
     case 'Code Green':
     case 'Code Purple':
@@ -339,7 +337,7 @@ const detectIncidentType = (input: string): string => {
     const isCurrentOrActive = /current|active|ongoing|now/i.test(text);
     
     if (!isHistoric || isCurrentOrActive) {
-      return 'Aggressive Behaviour';
+      return 'Suspicious Behaviour';
     }
   }
 
@@ -514,7 +512,7 @@ const parseAttendanceIncident = async (input: string, expectedAttendance: number
 
   return {
     occurrence: `Current Attendance: ${count}`,
-    action_taken: `Current occupancy at ${count} people (${percentage}% of capacity). ${remaining} people remaining to reach capacity.`,
+    action_taken: `Attendance at ${count} people (${percentage}% of capacity). ${remaining} people remaining to reach capacity.`,
     callsign_from: 'Attendance',
     incident_type: 'Attendance'
   };
@@ -1112,7 +1110,7 @@ const parseAggressiveBehaviourIncident = async (input: string): Promise<Incident
         occurrence: data.occurrence || input,
         action_taken: data.actionTaken || defaultActionTaken,
         callsign_from: callsign || location,
-        incident_type: 'Aggressive Behaviour'
+        incident_type: 'Suspicious Behaviour'
       };
     } catch (error) {
       console.error('Error in aggressive behaviour GPT processing:', error);
@@ -1133,7 +1131,7 @@ const parseAggressiveBehaviourIncident = async (input: string): Promise<Incident
         occurrence: input,
         action_taken: defaultActionTaken,
         callsign_from: callsign || location,
-        incident_type: 'Aggressive Behaviour'
+        incident_type: 'Suspicious Behaviour'
       };
     }
   } catch (error) {
@@ -1538,15 +1536,6 @@ const INCIDENT_ACTIONS: Record<string, string[]> = {
     'Family/guardian informed',
     'Ongoing monitoring',
     'Confidential support offered',
-    'Other'
-  ],
-  'Aggressive Behaviour': [
-    'Security intervened',
-    'Police notified',
-    'Person removed from area',
-    'De-escalation attempted',
-    'Incident logged',
-    'Medical check performed',
     'Other'
   ],
   'Suspicious Behaviour': [
@@ -2111,130 +2100,54 @@ export default function IncidentCreationModal({
         return;
       }
 
-      // Detect incident type
-      const detectedType = detectIncidentType(input);
+      let aiIncidentType = '';
+      let fixedOccurrence = input;
+      try {
+        // Call AI endpoint to get best incident type and grammar/spelling fix
+        const response = await fetch('/api/generate-incident-description', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input, incidentTypes: incidentTypes })
+              });
+        if (response.ok) {
+              const data = await response.json();
+          console.debug('AI response from /api/generate-incident-description:', data);
+          if (data.incidentType) aiIncidentType = data.incidentType;
+          if (data.description) fixedOccurrence = data.description;
+          // If Ejection, autofill additional fields
+          if (data.incidentType === 'Ejection' && data.ejectionInfo) {
+            setEjectionDetails(prev => ({
+              ...prev,
+              location: data.ejectionInfo.location || '',
+              description: data.ejectionInfo.description || '',
+              reason: data.ejectionInfo.reason || ''
+            }));
+            if (data.ejectionRaw) {
+              console.debug('Raw ejection extraction response:', data.ejectionRaw);
+            }
+          }
+        } else {
+          console.debug('AI endpoint returned non-OK response:', response.status);
+        }
+      } catch (err) {
+        console.debug('Error calling AI endpoint:', err);
+      }
+
+      // For attendance incidents, always use local detection and bypass AI
+      const localDetection = detectIncidentType(input);
+      const detectedType = localDetection === 'Attendance' ? 'Attendance' : (aiIncidentType || localDetection);
+      console.debug('Incident type chosen (AI or fallback):', detectedType);
       setFormData(prev => ({ ...prev, incident_type: detectedType }));
 
       // Extract callsign
       const callsign = detectCallsign(input) || '';
       setFormData(prev => ({ ...prev, callsign_from: callsign }));
 
-      try {
-        let result: IncidentParserResult | null = null;
-
-        // Custom handler for showdown
-        if (detectedType === 'Event Timing' && input.toLowerCase().includes('showdown')) {
-          result = {
-            occurrence: 'Showdown',
-            action_taken: 'The show has ended',
-            callsign_from: 'PM',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          detectedType === 'Event Timing' &&
-          (input.toLowerCase().includes('doors open') || input.toLowerCase().includes('doors green') || input.toLowerCase().includes('venue open'))
-        ) {
-          result = {
-            occurrence: 'Doors Open',
-            action_taken: 'The venue is now open and customers are entering',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          detectedType === 'Event Timing' && input.toLowerCase().includes('venue clear')
-        ) {
-          result = {
-            occurrence: 'Venue is clear of public',
-            action_taken: 'Venue Clear',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          (input.toLowerCase().includes('staff briefed') || input.toLowerCase().includes('staff briefed and in position'))
-        ) {
-          result = {
-            occurrence: 'Staff fully briefed and in position ready for doors.',
-            action_taken: 'Logged',
-            callsign_from: 'A1',
-            incident_type: 'Timings'
-          };
-        } else {
-        // Handle different incident types
-        switch (detectedType) {
-          case 'Medical':
-            result = await parseMedicalIncident(input);
-            break;
-          case 'Refusal':
-            result = await parseRefusalIncident(input);
-            break;
-          case 'Ejection':
-            result = await parseEjectionIncident(input);
-            break;
-          case 'Attendance':
-            const selectedEvent = events.find(e => e.id === selectedEventId);
-            const expectedAttendance = selectedEvent?.expected_attendance || 3500;
-            result = await parseAttendanceIncident(input, expectedAttendance);
-            break;
-          case 'Welfare':
-            result = await parseWelfareIncident(input);
-            break;
-          case 'Lost Property':
-            result = await parseLostPropertyIncident(input);
-            break;
-          case 'Suspicious Behaviour':
-            result = await parseSuspiciousBehaviourIncident(input);
-            break;
-          case 'Aggressive Behaviour':
-            result = await parseAggressiveBehaviourIncident(input);
-            break;
-          case 'Queue Build-Up':
-            result = await parseQueueBuildUpIncident(input);
-            break;
-          case 'Technical Issue':
-            result = await parseTechnicalIncident(input);
-            break;
-          case 'Weather Disruption':
-            result = await parseWeatherDisruptionIncident(input);
-            break;
-          default:
-            // Use the general incident endpoint for all other types
-            try {
-              const response = await fetch('/api/generate-incident-details', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  input,
-                  incident_type: detectedType,
-                  location,
-                  description: input,
-                  callsign
-                })
-              });
-
-              if (!response.ok) {
-                throw new Error('Failed to generate incident details');
-              }
-
-              const data = await response.json();
-              result = {
-                occurrence: data.occurrence || input,
-                action_taken: data.action_taken || '',
-                callsign_from: callsign,
-                incident_type: detectedType
-              };
-            } catch (error) {
-              console.error('Error generating incident details:', error);
-              result = {
-                occurrence: input,
-                action_taken: '',
-                callsign_from: callsign,
-                incident_type: detectedType
-              };
-              }
-            }
-        }
-
-        if (result) {
+      if (detectedType === 'Attendance') {
+        const selectedEvent = events.find(e => e.id === selectedEventId);
+        const expectedAttendance = selectedEvent?.expected_attendance || 3500;
+        const result = await parseAttendanceIncident(input, expectedAttendance);
+        if (result !== null) {
           setFormData(prev => ({
             ...prev,
             occurrence: result.occurrence,
@@ -2242,25 +2155,15 @@ export default function IncidentCreationModal({
             incident_type: result.incident_type,
             callsign_from: result.callsign_from
           }));
-
-          // Update additional details based on incident type
-          if (result.medicalDetails) {
-            setMedicalDetails(result.medicalDetails);
-          }
-          if (result.refusalDetails) {
-            setRefusalDetails(result.refusalDetails);
-          }
-          if (result.ejectionDetails) {
-            setEjectionDetails(result.ejectionDetails);
-          }
         }
-      } catch (error) {
-        console.error('Error processing quick input:', error);
-        // Set basic details on error
+      } else {
+        console.debug('Occurrence after grammar/spell check:', fixedOccurrence);
         setFormData(prev => ({
           ...prev,
-          occurrence: input,
-          action_taken: getDefaultActionTaken(detectedType, input)
+          occurrence: fixedOccurrence,
+          action_taken: '', // Do not autofill
+          incident_type: detectedType,
+          callsign_from: callsign
         }));
       }
     }, 3000); // 3 second delay
@@ -2371,19 +2274,26 @@ export default function IncidentCreationModal({
       // If this is an attendance incident, also update the attendance_records table
       if (formData.incident_type === 'Attendance') {
         const count = parseInt(formData.occurrence.match(/\d+/)?.[0] || '0');
+        console.log('🎯 Attendance incident - extracted count:', count, 'from:', formData.occurrence);
         if (count > 0) {
-          const { error: attendanceError } = await supabase
+          console.log('🎯 Inserting attendance record:', { event_id: selectedEvent.id, count, timestamp: now });
+          const { error: attendanceError, data: attendanceData } = await supabase
             .from('attendance_records')
             .insert([{
               event_id: selectedEvent.id,
               count: count,
               timestamp: now
-            }]);
+            }])
+            .select();
 
           if (attendanceError) {
-            console.error('Error updating attendance record:', attendanceError);
+            console.error('❌ Error updating attendance record:', attendanceError);
             // Don't throw here, as the incident was already created
+          } else {
+            console.log('✅ Successfully inserted attendance record:', attendanceData);
           }
+        } else {
+          console.log('⚠️ No valid count found in attendance incident');
         }
       }
 
@@ -2672,6 +2582,20 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
     document.getElementById('occurrence-input')?.focus();
   };
 
+  useEffect(() => {
+    if (formData.incident_type === 'Ejection') {
+      let baseOccurrence = formData.occurrence.split('Location:')[0].trim();
+      let details = [];
+      if (ejectionDetails.location) details.push(`Location: ${ejectionDetails.location}`);
+      if (ejectionDetails.description) details.push(`Description: ${ejectionDetails.description}`);
+      if (ejectionDetails.reason) details.push(`Reason: ${ejectionDetails.reason}`);
+      const appended = details.length > 0 ? `${baseOccurrence}${baseOccurrence ? ' ' : ''}${details.join(' ')}` : baseOccurrence;
+      if (formData.occurrence !== appended) {
+        setFormData(prev => ({ ...prev, occurrence: appended }));
+      }
+    }
+  }, [ejectionDetails.location, ejectionDetails.description, ejectionDetails.reason, formData.incident_type]);
+
   return (
     <div className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 ${isOpen ? '' : 'hidden'}`}>
       <div className="relative top-20 mx-auto p-5 border w-[95%] max-w-4xl shadow-lg rounded-md bg-white">
@@ -2887,20 +2811,52 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           {formData.incident_type !== 'Refusal' && followUpQuestions.length > 0 && (
             <div className="space-y-4 border-t border-gray-200 pt-4">
               <h4 className="font-medium text-gray-900">Additional Information</h4>
-              {followUpQuestions.map((question, index) => (
+              {formData.incident_type === 'Ejection' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Location of ejection</label>
+                    <input
+                      type="text"
+                      value={ejectionDetails.location}
+                      onChange={e => setEjectionDetails(prev => ({ ...prev, location: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description of person(s)</label>
+                    <input
+                      type="text"
+                      value={ejectionDetails.description}
+                      onChange={e => setEjectionDetails(prev => ({ ...prev, description: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Reason for ejection</label>
+                    <input
+                      type="text"
+                      value={ejectionDetails.reason}
+                      onChange={e => setEjectionDetails(prev => ({ ...prev, reason: e.target.value }))}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                followUpQuestions.map((question, index) => (
                 <div key={index}>
                   <label className="block text-sm font-medium text-gray-700">{question}</label>
                   <input
                     type="text"
                     value={followUpAnswers[question] || ''}
-                    onChange={(e) => setFollowUpAnswers(prev => ({
+                      onChange={e => setFollowUpAnswers(prev => ({
                       ...prev,
                       [question]: e.target.value
                     }))}
-                    className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
-              ))}
+                ))
+              )}
             </div>
           )}
 

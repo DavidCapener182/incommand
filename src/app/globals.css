@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+/* Custom pulse glow animation for high priority incidents */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), 0 0 60px rgba(220, 38, 38, 0.4), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* Autofill detection animation */
+@keyframes autofill {
+  to {
+    color: transparent;
+  }
+}
+
+/* Completely override autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  background-color: white !important;
+  color: #111827 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Apply autofill detection to input fields */
+input:-webkit-autofill {
+  animation-name: autofill;
+  animation-fill-mode: both;
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Line clamp utilities */
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+} 
