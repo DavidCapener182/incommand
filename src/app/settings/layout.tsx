@@ -24,7 +24,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 </div>
         <nav className="flex-1 space-y-2">
           {nav.map(item => {
-            const active = pathname === item.href || (item.href !== '/settings' && pathname.startsWith(item.href));
+            const active = pathname === item.href || (item.href !== '/settings' && pathname && pathname.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
               >
