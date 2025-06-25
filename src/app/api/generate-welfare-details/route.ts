@@ -8,7 +8,7 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { input, location, callsign } = await request.json();
+    const { input, location, callsign, event_id, user_id } = await request.json();
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
