@@ -54,7 +54,21 @@ export const createUser = async (email: string, password: string) => {
  * @param {number} params.tokens_used - The number of tokens used
  * @param {number} params.cost_usd - The estimated cost in USD
  */
-export async function logAIUsage({ event_id, user_id, endpoint, model, tokens_used, cost_usd }) {
+export async function logAIUsage({ 
+  event_id, 
+  user_id, 
+  endpoint, 
+  model, 
+  tokens_used, 
+  cost_usd 
+}: {
+  event_id?: string;
+  user_id?: string;
+  endpoint: string;
+  model: string;
+  tokens_used?: number | null;
+  cost_usd?: number | null;
+}) {
   try {
     const { error } = await supabase.from('ai_usage_logs').insert([
       {

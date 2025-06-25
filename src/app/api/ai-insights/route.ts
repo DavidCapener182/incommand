@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     // Log usage
     await logAIUsage({
       event_id: eventId,
-      user_id: null, // Add user if available
+      user_id: undefined, // Add user if available
       endpoint: '/api/ai-insights',
       model: 'gpt-3.5-turbo',
       tokens_used: totalTokens,

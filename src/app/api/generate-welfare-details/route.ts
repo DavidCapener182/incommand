@@ -61,14 +61,15 @@ Input: "Response 5 – intoxicated female, confused and sitting alone, safeguard
       max_tokens: 120
     });
 
-    await logAIUsage({
-      event_id,
-      user_id,
-      endpoint: '/api/generate-welfare-details',
-      model: 'gpt-3.5-turbo',
-      tokens_used: completion.usage?.total_tokens || null,
-      cost_usd: null
-    });
+    // Note: AI usage logging requires event_id and user_id from request
+    // await logAIUsage({
+    //   event_id,
+    //   user_id,
+    //   endpoint: '/api/generate-welfare-details',
+    //   model: 'gpt-3.5-turbo',
+    //   tokens_used: completion.usage?.total_tokens || null,
+    //   cost_usd: null
+    // });
 
     const response = completion.choices[0].message.content;
     const parsedResponse = JSON.parse(response || '{}');
