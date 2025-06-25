@@ -257,7 +257,16 @@ export default function Navigation() {
                       return '';
                     })()}
                   </span>
-                  
+                  {/* If there is no current event, show logout button */}
+                  {hasCurrentEvent === false && (
+                    <button
+                      onClick={signOut}
+                      className="px-3 py-1 border border-blue-300 text-blue-700 bg-white/80 rounded-lg text-sm font-semibold ml-2 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      title="Sign Our"
+                    >
+                      Log out
+                    </button>
+                  )}
                   {/* Profile Photo */}
                   <button
                     className="flex items-center focus:outline-none"

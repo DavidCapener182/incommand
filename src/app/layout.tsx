@@ -10,6 +10,7 @@ import { Analytics } from '@vercel/analytics/react'
 import IncidentCreationModal from '../components/IncidentCreationModal'
 import FloatingAIChat from '../components/FloatingAIChat'
 import { NotificationDrawerProvider, useNotificationDrawer } from '../contexts/NotificationDrawerContext'
+import { supabase } from '../lib/supabase'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -36,19 +37,33 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const showNav = !['/login', '/signup'].includes(pathname);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
-  
+  const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
+
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
     // Optionally: window.location.reload();
   };
+
+  useEffect(() => {
+    // Fetch current event on mount
+    const fetchCurrentEvent = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('id')
+        .eq('is_current', true)
+        .single();
+      setHasCurrentEvent(!!data);
+    };
+    fetchCurrentEvent();
+  }, []);
 
   return (
     <>
       <AuthGate>
         {showNav && <Navigation />}
         <main>{children}</main>
-        {/* Global FAB for New Incident - Hidden when notification drawer is open */}
-        {showNav && !notificationDrawerOpen && (
+        {/* Global FAB for New Incident - Hidden when notification drawer is open or no current event */}
+        {showNav && !notificationDrawerOpen && hasCurrentEvent && (
           <>
             <button
               type="button"

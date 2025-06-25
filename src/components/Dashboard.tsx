@@ -20,6 +20,7 @@ import {
   HeartIcon,
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
@@ -32,6 +33,17 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import AttendanceModal from './AttendanceModal'
 import { getIncidentTypeStyle } from './IncidentTable'
 import Toast, { useToast } from './Toast'
+import FloatingAIChat from './FloatingAIChat'
+import { AnimatePresence, motion } from 'framer-motion'
+import RotatingText from './RotatingText'
+
+// <style>
+// {`
+//   .splash-bg {
+//     background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.08) 0%, rgba(35,64,142,1) 80%), #23408e;
+//   }
+// `}
+// </style>
 
 interface StatCardProps {
   title: string
@@ -196,61 +208,8 @@ const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
 function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { lat: number; lon: number; venueAddress: string; singleCard: boolean; largeLogo: boolean }) {
-  const [w3w, setW3w] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
   const [searchedLatLon, setSearchedLatLon] = useState<{lat: number, lon: number} | null>(null);
-  const [isValidW3W, setIsValidW3W] = useState(false);
-  const [w3wCoords, setW3wCoords] = useState<{lat: number, lon: number} | null>(null);
-
-  useEffect(() => {
-    if (lat && lon) {
-      setLoading(true);
-      fetchWhat3Words(lat, lon)
-        .then(words => setW3w(words))
-        .catch(() => setError('Could not fetch What3Words address'))
-        .finally(() => setLoading(false));
-    }
-  }, [lat, lon]);
-
-  // Validate and convert W3W input
-  useEffect(() => {
-    if (w3wApi && w3wRegex.test(search.trim())) {
-      setIsValidW3W(true);
-      w3wApi.convertToCoordinates({ words: search.replace(/^\/+/, '') })
-        .then((response: { coordinates?: { lat: number; lng: number } }) => {
-          if (response.coordinates) {
-            setW3wCoords({ lat: response.coordinates.lat, lon: response.coordinates.lng });
-            setError(null);
-          } else {
-            setW3wCoords(null);
-            setError('Not a real What3Words address');
-          }
-        });
-    } else {
-      setIsValidW3W(false);
-      setW3wCoords(null);
-    }
-  }, [search]);
-
-  // Handle search submit
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isValidW3W && w3wCoords) {
-      setSearchedLatLon(w3wCoords);
-      setModalOpen(true);
-    } else if (search) {
-      try {
-        const coords = await geocodeAddress(search);
-        setSearchedLatLon(coords);
-        setModalOpen(true);
-      } catch {
-        setError('Could not geocode searched location');
-      }
-    }
-  };
 
   // Modal map URL
   const modalLat = searchedLatLon?.lat || lat;
@@ -443,6 +402,31 @@ export default function Dashboard() {
   
   // Toast notifications
   const { messages, addToast, removeToast } = useToast();
+
+  // Add a state for showing the event creation modal if not already present
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+
+  // Event types to cycle through
+  const eventTypes = [
+    'Concerts',
+    'Sports Events',
+    'Conferences',
+    'Festivals',
+    'Exhibitions',
+    'Theatre Shows',
+    'Parades',
+    'Ceremonies',
+    'Community Gatherings',
+    'Charity Event',
+    'Corporate Event',
+  ];
+  const [eventTypeIndex, setEventTypeIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEventTypeIndex((i) => (i + 1) % eventTypes.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchCurrentEvent = async () => {
     if (!companyId) return;
@@ -660,6 +644,57 @@ export default function Dashboard() {
       })();
     }
   }, [isOccupancyModalOpen, currentEventId]);
+
+  // Splash screen if no current event
+  if (!currentEvent) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#23408e] z-50 min-h-screen splash-bg">
+        <img src="/inCommand.png" alt="inCommand Logo" className="h-32 w-auto mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]" />
+        {/* Create + Event type on same line under logo */}
+        <div className="flex flex-row items-center justify-center mb-8 gap-4">
+          <span className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg md:drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]">Event Control for</span>
+          <RotatingText
+            items={eventTypes}
+            interval={2000}
+            className="bg-white rounded-xl px-6 py-2 shadow-lg flex items-center justify-center min-w-[160px] min-h-[40px] font-extrabold text-2xl md:text-3xl"
+          />
+        </div>
+        <div className="text-base text-blue-100 font-medium mt-2 mb-8 text-center max-w-xl mx-auto">
+          Modern incident tracking and event command for every scale of operation.
+        </div>
+        <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-md rounded-2xl p-8 flex flex-col items-center mt-10 shadow-2xl shadow-[0_10px_32px_4px_rgba(34,41,120,0.15)]">
+          <button 
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white text-xl font-bold py-4 rounded-xl shadow-xl mb-4 transition hover:scale-[1.02] focus-visible:ring-4 focus-visible:ring-blue-300 outline-none hover:shadow-2xl hover:-translate-y-1 hover:ring-2 hover:ring-blue-400"
+            onClick={() => setShowCreateEvent(true)}
+          >
+            <PlusIcon className="h-6 w-6 mr-2" /> Start New Event
+          </button>
+          <button 
+            className="w-full flex items-center justify-center gap-2 border border-blue-300 text-blue-700 font-semibold py-3 rounded-xl bg-white/60 hover:bg-blue-50 transition focus-visible:ring-4 focus-visible:ring-blue-300 outline-none"
+            onClick={() => router.push('/settings/events')}
+          >
+            <ClockIcon className="h-5 w-5 mr-2" /> Open Previous Events
+          </button>
+        </div>
+        {showCreateEvent && (
+          <EventCreationModal isOpen={showCreateEvent} onClose={() => setShowCreateEvent(false)} onEventCreated={fetchCurrentEvent} />
+        )}
+        {/* Floating AI Chat and Create New Incident Button */}
+        {hasCurrentEvent && (
+          <div className="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
+            <FloatingAIChat />
+            <button
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg text-lg"
+              onClick={() => {}}
+            >
+              Create New Incident
+            </button>
+          </div>
+        )}
+        <div className="absolute bottom-2 right-4 text-xs text-blue-100 opacity-70 select-none">v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 md:pt-2">
@@ -899,15 +934,13 @@ export default function Dashboard() {
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
             <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              {coordinates && (
-                <What3WordsMapCard 
-                  lat={coordinates.lat} 
-                  lon={coordinates.lon} 
-                  venueAddress={currentEvent?.venue_address || ''} 
-                  singleCard
-                  largeLogo={false}
-                />
-              )}
+              <What3WordsMapCard 
+                lat={coordinates.lat} 
+                lon={coordinates.lon} 
+                venueAddress={currentEvent?.venue_address || ''} 
+                singleCard
+                largeLogo={false}
+              />
             </div>
             <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <TopIncidentTypesCard 
@@ -938,15 +971,13 @@ export default function Dashboard() {
               )}
             </div>
             <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
-              {coordinates && (
-                <What3WordsMapCard 
-                  lat={coordinates.lat} 
-                  lon={coordinates.lon} 
-                  venueAddress={currentEvent?.venue_address || ''} 
-                  singleCard
-                  largeLogo={false}
-                />
-              )}
+              <What3WordsMapCard 
+                lat={coordinates.lat} 
+                lon={coordinates.lon} 
+                venueAddress={currentEvent?.venue_address || ''} 
+                singleCard
+                largeLogo={false}
+              />
             </div>
             <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
               <TopIncidentTypesCard 

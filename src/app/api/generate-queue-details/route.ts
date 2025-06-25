@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { logAIUsage } from '@/lib/supabase';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -54,7 +55,17 @@ If monitoring is mentioned, emphasize the proactive nature of the monitoring.`;
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 500
+      max_tokens: 120
+    });
+
+    // Log usage after completion
+    await logAIUsage({
+      event_id: null,
+      user_id: null,
+      endpoint: '/api/generate-queue-details',
+      model: 'gpt-3.5-turbo',
+      tokens_used: completion.usage?.total_tokens || null,
+      cost_usd: null
     });
 
     const response = completion.choices[0].message.content;

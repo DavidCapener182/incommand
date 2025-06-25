@@ -1,12 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { supabase, logAIUsage } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
+
+function getHourKey(date: Date): string {
+  // Returns a string like '2024-07-25T14:00:00Z' for the hour
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d.toISOString();
+}
+
+async function getEventTimings(eventId: string) {
+  // Fetch security_call_time and curfew_time for the event
+  const { data, error } = await supabase
+    .from('events')
+    .select('security_call_time, curfew_time, event_date')
+    .eq('id', eventId)
+    .single();
+  if (error || !data) return null;
+  return data;
+}
+
+function isWithinWindow(
+  now: Date,
+  eventDate: string,
+  securityCall: string,
+  curfew: string
+): boolean {
+  // eventDate: 'YYYY-MM-DD', securityCall/curfew: 'HH:mm'
+  if (!eventDate || !securityCall || !curfew) return false;
+  const eventDay = eventDate.split('T')[0];
+  const secCall = new Date(`${eventDay}T${securityCall}:00Z`);
+  const curfewTime = new Date(`${eventDay}T${curfew}:00Z`);
+  const start = new Date(secCall.getTime() - 60 * 60 * 1000); // 1 hour before
+  const end = new Date(curfewTime.getTime() + 60 * 60 * 1000); // 1 hour after
+  return now >= start && now <= end;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { incidents, attendance, event } = await req.json();
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const eventId = event;
+    if (!eventId) return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
+
+    // Get event timings
+    const timings = await getEventTimings(eventId);
+    if (!timings) return NextResponse.json({ error: 'Event timings not found' }, { status: 400 });
+
+    const now = new Date();
+    const hourKey = getHourKey(now);
+
+    // Check if within allowed window
+    if (!isWithinWindow(now, timings.event_date, timings.security_call_time, timings.curfew_time)) {
+      return NextResponse.json({ error: 'AI Insights only available during event window.' }, { status: 403 });
+    }
+
+    // Check cache
+    const { data: cached, error: cacheError } = await supabase
+      .from('ai_insights_cache')
+      .select('insights, updated_at')
+      .eq('event_id', eventId)
+      .eq('hour', hourKey)
+      .single();
+    if (cached && cached.insights) {
+      return NextResponse.json({ insights: cached.insights, cached: true });
+    }
 
     // Prepare prompts for multiple insights
     const prompts = [
@@ -16,17 +75,41 @@ export async function POST(req: NextRequest) {
       `Are there any recommendations for the event team based on these incidents and attendance? ${JSON.stringify(incidents)} ${JSON.stringify(attendance)}`
     ];
 
-    // Run all prompts in parallel
-    const completions = await Promise.all(prompts.map(prompt =>
-      openai.chat.completions.create({
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    let totalTokens = 0;
+    let totalCost = 0;
+    const completions = await Promise.all(prompts.map(async (prompt) => {
+      const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200,
-      })
-    ));
+        max_tokens: 150,
+      });
+      // Estimate tokens and cost (gpt-3.5-turbo: $0.50/1M input, $1.50/1M output)
+      const usage = completion.usage || { total_tokens: 150 };
+      totalTokens += usage.total_tokens;
+      totalCost += (usage.total_tokens / 1000000) * 1.5; // rough output cost only
+      return completion.choices[0]?.message?.content || 'No insight generated.';
+    }));
 
-    const insights = completions.map(c => c.choices[0]?.message?.content || 'No insight generated.');
-    return NextResponse.json({ insights });
+    // Cache the result
+    await supabase.from('ai_insights_cache').upsert({
+      event_id: eventId,
+      hour: hourKey,
+      insights: completions,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'event_id, hour' });
+
+    // Log usage
+    await logAIUsage({
+      event_id: eventId,
+      user_id: null, // Add user if available
+      endpoint: '/api/ai-insights',
+      model: 'gpt-3.5-turbo',
+      tokens_used: totalTokens,
+      cost_usd: totalCost,
+    });
+
+    return NextResponse.json({ insights: completions, cached: false });
   } catch (error) {
     console.error('AI Insights error:', error);
     return NextResponse.json({ error: 'Failed to generate AI insight.' }, { status: 500 });

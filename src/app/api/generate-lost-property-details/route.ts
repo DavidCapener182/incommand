@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { logAIUsage } from '@/lib/supabase';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -57,11 +58,21 @@ Input: "Response 1 – guest lost phone near toilets by Main Bar"
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 250
+      max_tokens: 120
     });
 
     const response = completion.choices[0].message.content;
     const parsedResponse = JSON.parse(response || '{}');
+
+    // Log usage after completion
+    await logAIUsage({
+      event_id: null,
+      user_id: null,
+      endpoint: '/api/generate-lost-property-details',
+      model: 'gpt-3.5-turbo',
+      tokens_used: completion.usage?.total_tokens || null,
+      cost_usd: null // Optionally calculate if you want
+    });
 
     return NextResponse.json({
       occurrence: parsedResponse.occurrence || `Lost Property: ${input}`,

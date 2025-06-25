@@ -1,0 +1,38 @@
+.rotating-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 1.5rem;
+  padding: 0.5em 1.5em;
+  min-width: 120px;
+  min-height: 2.5em;
+  box-shadow: 0 2px 8px rgba(26, 58, 139, 0.06);
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), min-width 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s, box-shadow 0.3s;
+  width: auto;
+}
+
+.rotating-text-inner {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1A3A8B;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s cubic-bezier(0.4,0,0.2,1);
+  will-change: transform, opacity;
+  text-align: center;
+  min-width: 80px;
+}
+
+.rotating-text-up {
+  transform: translateY(0) rotateX(0deg);
+  opacity: 1;
+}
+
+.rotating-text-down {
+  transform: translateY(-40%) rotateX(90deg);
+  opacity: 0;
+}
+
+.splash-bg {
+  background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.08) 0%, rgba(35,64,142,1) 80%), #23408e;
+} 
