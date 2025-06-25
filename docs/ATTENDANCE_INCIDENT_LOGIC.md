@@ -37,7 +37,7 @@ const remaining = maxCapacity - parseInt(count);
 
 return {
   occurrence: `Current Attendance: ${count}`,
-  action_taken: `Current occupancy at ${count} people (${percentage}% of capacity). ${remaining} people remaining to reach capacity.`,
+  action_taken: `Attendance at ${count} people (${percentage}% of capacity). ${remaining} people remaining to reach capacity.`,
   callsign_from: 'Attendance',
   incident_type: 'Attendance'
 };

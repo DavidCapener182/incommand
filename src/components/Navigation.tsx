@@ -8,7 +8,9 @@ import { useAuth } from '../contexts/AuthContext'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
 import ProfileCard from './ProfileCard'
+import NotificationDrawer from './NotificationDrawer'
 import './ProfileCard.css'
+import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 
 const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
 
@@ -37,6 +39,8 @@ export default function Navigation() {
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const { isOpen: notificationDrawerOpen, setIsOpen: setNotificationDrawerOpen } = useNotificationDrawer();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const router = useRouter();
 
   const isActive = (path: string) => {
@@ -123,6 +127,55 @@ export default function Navigation() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [mobileMenuOpen, profileDropdownOpen]);
 
+  // Get last viewed timestamp for filtering notifications
+  const getLastViewedTimestamp = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastViewedNotifications') || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    }
+    return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  };
+
+  // Check for unread notifications using timestamp filtering
+  useEffect(() => {
+    const checkUnreadNotifications = async () => {
+      try {
+        const lastViewed = getLastViewedTimestamp();
+        
+        // Fetch actual recent actions using timestamp filter to get real count
+        const response = await fetch(`/api/notifications/recent-actions?lastViewed=${encodeURIComponent(lastViewed)}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Count actual unread notifications
+          const unreadCount = data.actions?.length || 0;
+          setUnreadNotifications(unreadCount);
+        } else {
+          // Fallback to 0 if API fails
+          setUnreadNotifications(0);
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error);
+        setUnreadNotifications(0);
+      }
+    };
+
+    checkUnreadNotifications();
+    
+    // Check every 30 seconds for new notifications
+    const interval = setInterval(checkUnreadNotifications, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAllNotificationsRead = () => {
+    setUnreadNotifications(0);
+    // In production, this would also update the backend
+  };
+
+  const handleClearAllNotifications = () => {
+    setUnreadNotifications(0);
+    // In production, this would clear all notifications from the backend
+  };
+
   return (
     <>
       <nav className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
@@ -204,6 +257,8 @@ export default function Navigation() {
                       return '';
                     })()}
                   </span>
+                  
+                  {/* Profile Photo */}
                   <button
                     className="flex items-center focus:outline-none"
                     onClick={() => setShowProfileCard(true)}
@@ -218,6 +273,24 @@ export default function Navigation() {
                       <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
                         {getInitials(profile?.full_name ? profile.full_name : user.email)}
                       </div>
+                    )}
+                  </button>
+
+                  {/* Notification Bell - now on the right side of profile */}
+                  <button
+                    onClick={() => setNotificationDrawerOpen(true)}
+                    className="relative p-2 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-md transition-colors duration-150"
+                    aria-label="Open notifications"
+                  >
+                    {/* Bell Icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5" />
+                    </svg>
+                    {/* Notification Badge */}
+                    {unreadNotifications > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full min-w-[20px] h-5 animate-pulse">
+                        {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                      </span>
                     )}
                   </button>
                 </div>
@@ -292,6 +365,43 @@ export default function Navigation() {
           <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
           <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>
           <Link href="/admin" className={`${isActive('/admin')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Admin</Link>
+          
+          {/* AI Assistant for Mobile */}
+          <button
+            onClick={() => {
+              setNotificationDrawerOpen(true);
+              setMobileMenuOpen(false);
+              // Switch to chat tab when opening from mobile menu
+              setTimeout(() => {
+                const chatTab = document.querySelector('[role="tab"][aria-controls="chat-panel"]');
+                if (chatTab) {
+                  (chatTab as HTMLElement).click();
+                }
+              }, 100);
+            }}
+            className="flex items-center w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span>AI Assistant</span>
+          </button>
+
+          {/* Notification Bell for Mobile */}
+          <button
+            onClick={() => {
+              setNotificationDrawerOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="flex items-center justify-between w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
+          >
+            <span>Notifications</span>
+            {unreadNotifications > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5">
+                {unreadNotifications > 99 ? '99+' : unreadNotifications}
+              </span>
+            )}
+          </button>
 
           <div className="mt-auto">
             <button onClick={() => {
@@ -385,6 +495,15 @@ export default function Navigation() {
           </div>
         </>
       )}
+
+      {/* Notification Drawer */}
+      <NotificationDrawer
+        isOpen={notificationDrawerOpen}
+        onClose={() => setNotificationDrawerOpen(false)}
+        unreadCount={unreadNotifications}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+        onClearAll={handleClearAllNotifications}
+      />
     </>
   )
 } 

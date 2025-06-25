@@ -12,16 +12,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const emailRef = React.useRef<HTMLInputElement>(null)
+  const passwordRef = React.useRef<HTMLInputElement>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    // Get values directly from the input elements to handle autofill
+    const emailValue = emailRef.current?.value || email
+    const passwordValue = passwordRef.current?.value || password
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: emailValue,
+        password: passwordValue,
       })
 
       if (error) throw error
@@ -59,14 +65,21 @@ export default function LoginPage() {
               </label>
               <div className="mt-1">
                 <input
+                  ref={emailRef}
                   id="email"
                   name="email"
                   type="email"
-                  autoComplete="email"
+                  autoComplete="off"
                   required
-                  value={email}
+                  defaultValue={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={{
+                    WebkitBoxShadow: '0 0 0 1000px white inset !important',
+                    WebkitTextFillColor: '#111827 !important',
+                    backgroundColor: 'white !important',
+                    color: '#111827 !important'
+                  }}
                 />
               </div>
             </div>
@@ -77,14 +90,21 @@ export default function LoginPage() {
               </label>
               <div className="mt-1">
                 <input
+                  ref={passwordRef}
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="off"
                   required
-                  value={password}
+                  defaultValue={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={{
+                    WebkitBoxShadow: '0 0 0 1000px white inset !important',
+                    WebkitTextFillColor: '#111827 !important',
+                    backgroundColor: 'white !important',
+                    color: '#111827 !important'
+                  }}
                 />
               </div>
             </div>
