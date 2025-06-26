@@ -228,61 +228,55 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: {
     <>
       <div
         className="w-full h-full flex items-center justify-center cursor-pointer"
-        style={{ minHeight: 0 }}
         onClick={() => setModalOpen(true)}
       >
-        {largeLogo ? (
-          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-        ) : (
-          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-        )}
+        <img 
+          src="/w3w.png" 
+          alt="What3Words" 
+          className="max-w-full max-h-full object-contain"
+          onError={(e) => {
+            console.error('Error loading w3w image:', e);
+            e.currentTarget.style.display = 'none';
+          }}
+        />
       </div>
-      <div className="fixed inset-0 z-50 pointer-events-none">
-        {modalOpen && (
-          <button
-            className="absolute top-16 right-4 text-gray-500 hover:text-gray-700 text-3xl z-50 pointer-events-auto bg-white rounded-full shadow-lg px-3 py-1"
-            onClick={() => { setModalOpen(false); setSearchedLatLon(null); }}
-            aria-label="Close"
-            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
-          >
-            &times;
-          </button>
-        )}
-      </div>
-      <Modal
-        isOpen={modalOpen}
-        onRequestClose={() => { setModalOpen(false); setSearchedLatLon(null); }}
-        contentLabel="What3Words Map"
-        className="bg-transparent p-0 w-full h-full flex items-center justify-center"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-        ariaHideApp={false}
-      >
-        <div className="relative w-11/12 h-5/6">
-          <button
-            onClick={() => setModalOpen(false)}
-            className="absolute top-0 right-0 -mt-9 -mr-10 z-10 bg-gray-800 text-white rounded-full p-2 shadow-lg hover:bg-gray-700 transition-colors"
-            aria-label="Close map"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-          <div className="bg-transparent rounded-lg overflow-hidden w-full h-full">
-            {modalMapUrl ? (
-              <iframe
-                src={modalMapUrl}
-                className="w-full h-full border-none rounded-lg"
-                title="What3Words Map"
-                allow="geolocation"
-              ></iframe>
-            ) : (
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <p>Loading map...</p>
-              </div>
-            )}
+      
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onRequestClose={() => { setModalOpen(false); setSearchedLatLon(null); }}
+          contentLabel="What3Words Map"
+          className="bg-transparent p-0 w-full h-full flex items-center justify-center"
+          overlayClassName="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          ariaHideApp={false}
+        >
+          <div className="relative w-11/12 h-5/6">
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-0 right-0 -mt-9 -mr-10 z-10 bg-gray-800 text-white rounded-full p-2 shadow-lg hover:bg-gray-700 transition-colors"
+              aria-label="Close map"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+            <div className="bg-transparent rounded-lg overflow-hidden w-full h-full">
+              {modalMapUrl ? (
+                <iframe
+                  src={modalMapUrl}
+                  className="w-full h-full border-none rounded-lg"
+                  title="What3Words Map"
+                  allow="geolocation"
+                ></iframe>
+              ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <p>Loading map...</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </>
   );
 }
@@ -295,52 +289,80 @@ interface TopIncidentTypesCardProps {
 }
 
 function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncidentTypesCardProps) {
-  // Exclude Attendance and Sit Rep
-  const filtered = incidents.filter((i: any) => !['Attendance', 'Sit Rep'].includes(i.incident_type));
-  // Count by type
-  const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
-    acc[i.incident_type] = (acc[i.incident_type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  // Sort by count desc, then alphabetically
-  const sorted = (Object.entries(counts) as [string, number][]) 
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 3);
+  try {
+    // Ensure incidents is an array
+    const safeIncidents = Array.isArray(incidents) ? incidents : [];
+    
+    // Exclude Attendance and Sit Rep
+    const filtered = safeIncidents.filter((i: any) => 
+      i && i.incident_type && !['Attendance', 'Sit Rep'].includes(i.incident_type)
+    );
+    
+    // Count by type
+    const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
+      if (i.incident_type) {
+        acc[i.incident_type] = (acc[i.incident_type] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Sort by count desc, then alphabetically
+    const sorted = (Object.entries(counts) as [string, number][]) 
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 3);
 
-  if (sorted.length === 0) {
+    if (sorted.length === 0) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center p-2">
+          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
+        </div>
+      );
+    }
+
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center">
+      <div className="w-full h-full flex flex-col items-center justify-center p-2">
+        <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">Top 3 Incident Types</div>
+        <div className="flex flex-col gap-1 w-full">
+          {sorted.map(([type, count]) => {
+            try {
+              const styleClasses = getIncidentTypeStyle(type);
+              const isSelected = selectedType === type;
+              return (
+                <button
+                  key={type}
+                  onClick={() => onTypeClick(type)}
+                  className={`flex items-center justify-between px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full ${styleClasses} ${
+                    isSelected 
+                      ? 'ring-2 ring-offset-1 ring-gray-400' 
+                      : 'hover:opacity-80'
+                  }`}
+                >
+                  <span className="truncate flex-1 text-left">{type}</span>
+                  <span className="ml-1 font-bold">{count}</span>
+                </button>
+              );
+            } catch (error) {
+              console.error('Error rendering incident type button:', error, type);
+              return (
+                <div key={type} className="px-2 py-1 text-xs text-gray-500">
+                  {type}: {count}
+                </div>
+              );
+            }
+          })}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error in TopIncidentTypesCard:', error);
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-2">
         <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
-        <div className="text-xs text-gray-500 dark:text-gray-100">No incidents yet</div>
+        <div className="text-xs text-red-500">Error loading data</div>
       </div>
     );
   }
-
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2">Top 3 Incident Types</div>
-      <div className="flex flex-col gap-1 w-full px-1">
-        {sorted.map(([type, count]) => {
-          const styleClasses = getIncidentTypeStyle(type);
-          const isSelected = selectedType === type;
-          return (
-            <button
-              key={type}
-              onClick={() => onTypeClick(type)}
-              className={`flex items-center justify-between px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full max-w-full ${styleClasses} ${
-                isSelected 
-                  ? 'ring-2 ring-offset-1 ring-gray-400' 
-                  : 'hover:opacity-80'
-              }`}
-            >
-              <span className="truncate flex-1 text-left">{type}</span>
-              <span className="ml-1 font-bold">{count}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 
@@ -959,7 +981,7 @@ export default function Dashboard() {
                 />
               )}
             </div>
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 cursor-pointer">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
