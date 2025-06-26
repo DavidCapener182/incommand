@@ -137,7 +137,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   };
 
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300">
       <div className="flex items-center justify-center mb-1">
         <div className="mr-2">
           <WeatherIcon />

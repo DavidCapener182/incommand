@@ -74,7 +74,7 @@ interface TimeCardProps {
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown }) => {
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow-sm p-4">
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:block">
             <div className="hidden md:block">
@@ -155,7 +155,7 @@ const StatCard: React.FC<StatCardProps> = ({
     <div 
       onClick={isFilterable ? onClick : undefined}
       className={`
-        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg border border-gray-200 shadow-md p-3 flex flex-col items-center text-center
+        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center transition-colors duration-300
         ${isFilterable ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${pulse ? 'animate-pulse-once' : ''}
@@ -207,7 +207,16 @@ const w3wApiKey = process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY;
 const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
-function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { lat: number; lon: number; venueAddress: string; singleCard: boolean; largeLogo: boolean }) {
+function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo, incidents, selectedFilter, onTypeClick }: { 
+  lat: number; 
+  lon: number; 
+  venueAddress: string; 
+  singleCard: boolean; 
+  largeLogo: boolean;
+  incidents?: any[];
+  selectedFilter?: string | null;
+  onTypeClick?: (type: string) => void;
+}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchedLatLon, setSearchedLatLon] = useState<{lat: number, lon: number} | null>(null);
 
@@ -235,7 +244,7 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
       ) : (
         <div className="flex gap-4 w-full">
           <div
-            className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-4 flex items-center justify-center cursor-pointer w-1/2"
+                            className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex items-center justify-center cursor-pointer w-1/2 transition-colors duration-300"
             style={{ minHeight: 0, height: '100%' }}
             onClick={() => setModalOpen(true)}
           >
@@ -245,8 +254,19 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
               <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
             )}
           </div>
-          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-4 flex items-center justify-center w-1/2" style={{ minHeight: 0, height: '100%' }}>
-            <span className="text-gray-400 text-lg font-semibold dark:text-gray-100">Placeholder</span>
+                      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex items-center justify-center w-1/2 transition-colors duration-300" style={{ minHeight: 0, height: '100%' }}>
+            {incidents && onTypeClick ? (
+              <TopIncidentTypesCard
+                incidents={incidents}
+                onTypeClick={onTypeClick}
+                selectedType={selectedFilter || null}
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
+                <div className="text-xs text-gray-500 dark:text-gray-100">No incidents yet</div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -697,9 +717,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 md:pt-2">
-      {/* Event Header - Sticky */}
-      <div className="bg-gray-50 md:bg-transparent md:shadow-none -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-2 md:py-0 mb-4">
+    <div className="p-6 md:p-8">
+              {/* Event Header - Sticky */}
+        <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-6">
         {/* Desktop view */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
           <CurrentEvent
@@ -719,7 +739,7 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile view */}
-        <div className="md:hidden bg-white shadow-sm rounded-lg">
+        <div className="md:hidden bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] transition-colors duration-300">
           {loadingCurrentEvent && <p className="p-3">Loading event...</p>}
           {!loadingCurrentEvent && currentEvent && (
             <div>
@@ -778,22 +798,22 @@ export default function Dashboard() {
                 setIsIncidentModalOpen(true)
               }}
             disabled={!hasCurrentEvent}
-              className={`relative inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-l-md ${
+              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white rounded-l-xl shadow-lg ${
               hasCurrentEvent 
-                  ? 'bg-blue-600 hover:bg-blue-700'
+                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+              } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors duration-200`}
           >
             New Incident
           </button>
             <Menu as="div" className="-ml-px block">
               <Menu.Button
                 disabled={!hasCurrentEvent}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md ${
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-xl shadow-lg ${
                   hasCurrentEvent
-                    ? 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors duration-200`}
               >
                 <span className="sr-only">Open options</span>
                 <ChevronDownIcon
@@ -929,13 +949,13 @@ export default function Dashboard() {
         <div>
           {/* Mobile: Venue Occupancy full width */}
           <div className="block md:hidden mb-4">
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
           </div>
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
@@ -944,7 +964,7 @@ export default function Dashboard() {
                 largeLogo={false}
               />
             </div>
-            <div className="h-[115px] rounded-lg shadow p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
@@ -955,12 +975,12 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
-          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
+          {/* Desktop: Venue, Weather, W3W+Top3 in a single row */}
+          <div className="hidden md:grid grid-cols-3 gap-4 mb-8">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
-            <div className="flex flex-col h-[115px] rounded-lg shadow p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100">
+            <div className="flex flex-col h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100">
               {currentEvent?.venue_address && (
                 <WeatherCard 
                   lat={coordinates?.lat} 
@@ -972,25 +992,19 @@ export default function Dashboard() {
                 />
               )}
             </div>
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-2">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
                 venueAddress={currentEvent?.venue_address || ''} 
-                singleCard
+                singleCard={false}
                 largeLogo={false}
+                incidents={incidents}
+                selectedFilter={selectedFilter}
+                onTypeClick={(type: string) => setSelectedFilter(type)}
               />
             </div>
-            <div className="h-[115px] rounded-lg shadow p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
-              <TopIncidentTypesCard 
-                incidents={incidents} 
-                onTypeClick={(type: string) => {
-                  // Filter by exact incident type
-                  setSelectedFilter(type);
-                }} 
-                selectedType={selectedFilter}
-              />
-            </div>
+
           </div>
         </div>
 

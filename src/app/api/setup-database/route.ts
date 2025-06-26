@@ -114,6 +114,58 @@ export async function POST() {
       return NextResponse.json({ error: 'Failed to create profiles table' }, { status: 500 });
     }
 
+    // Create staff table
+    const { error: staffError } = await supabase.rpc('exec', {
+      sql: `
+        CREATE TABLE IF NOT EXISTS staff (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          full_name TEXT NOT NULL,
+          contact_number TEXT,
+          email TEXT,
+          skill_tags TEXT[] DEFAULT '{}',
+          notes TEXT,
+          active BOOLEAN DEFAULT TRUE,
+          company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Add RLS policies for staff
+        ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+
+        CREATE POLICY "Staff are viewable by authenticated users" ON staff
+          FOR SELECT USING (auth.role() = 'authenticated');
+
+        CREATE POLICY "Staff are insertable by authenticated users" ON staff
+          FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+        CREATE POLICY "Staff are updatable by authenticated users" ON staff
+          FOR UPDATE USING (auth.role() = 'authenticated');
+
+        CREATE POLICY "Staff are deletable by authenticated users" ON staff
+          FOR DELETE USING (auth.role() = 'authenticated');
+
+        -- Create an updated_at trigger for staff
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          NEW.updated_at = NOW();
+          RETURN NEW;
+        END;
+        $$ language 'plpgsql';
+
+        CREATE TRIGGER update_staff_updated_at
+          BEFORE UPDATE ON staff
+          FOR EACH ROW
+          EXECUTE PROCEDURE update_updated_at_column();
+      `
+    });
+
+    if (staffError) {
+      console.error('Error creating staff table:', staffError);
+      return NextResponse.json({ error: 'Failed to create staff table' }, { status: 500 });
+    }
+
     return NextResponse.json({ message: 'Database setup completed successfully' });
   } catch (error) {
     console.error('Error in database setup:', error);

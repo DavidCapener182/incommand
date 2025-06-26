@@ -4,18 +4,18 @@ import { UserGroupIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 export default function StaffManagementPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] p-8 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] p-6 md:p-8 transition-colors duration-300">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <UserGroupIcon className="h-8 w-8 text-blue-700 dark:text-blue-300" />
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Staff Management</h1>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors">
+        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors duration-200">
           <PlusIcon className="h-5 w-5" />
           Add Staff
         </button>
       </div>
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full overflow-x-auto">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full overflow-x-auto transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
         <table className="min-w-full text-left">
           <thead>
             <tr>

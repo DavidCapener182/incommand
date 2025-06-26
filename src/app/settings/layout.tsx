@@ -21,7 +21,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const rawPathname = usePathname();
   const pathname = rawPathname || '';
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
       <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
   <div className="flex items-center space-x-2">
@@ -47,7 +47,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           })}
         </nav>
       </aside>
-      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">{children}</main>
+      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">{children}</main>
     </div>
   );
 } 

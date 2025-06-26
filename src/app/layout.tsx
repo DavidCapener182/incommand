@@ -38,6 +38,71 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Component to show company name in footer
+function CompanyFooter() {
+  const { user } = useAuth();
+  const [companyName, setCompanyName] = useState<string>('');
+  const pathname = usePathname() || '';
+  const showFooter = !['/login', '/signup'].includes(pathname);
+
+  useEffect(() => {
+    if (!user || !showFooter) return;
+
+    const fetchCompanyName = async () => {
+      try {
+        // Get user's company_id from profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile?.company_id) {
+          console.log('No company found for user');
+          return;
+        }
+
+        // Get company name
+        const { data: company, error: companyError } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', profile.company_id)
+          .single();
+
+        if (companyError) {
+          console.error('Error fetching company:', companyError);
+          return;
+        }
+
+        setCompanyName(company?.name || '');
+      } catch (err) {
+        console.error('Error fetching company name:', err);
+      }
+    };
+
+    fetchCompanyName();
+  }, [user, showFooter]);
+
+  if (!showFooter) return null;
+
+  return (
+    <footer className="fixed bottom-0 left-0 w-full z-40 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
+      style={{
+        background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
+        boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
+        backdropFilter: 'blur(2px)'
+      }}
+    >
+      <span>
+        v0.1.0{companyName && ` Build for ${companyName}`}
+      </span>
+      <span className="absolute left-1/2 transform -translate-x-1/2">
+        support@incommandapp.com
+      </span>
+    </footer>
+  );
+}
+
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
   const showNav = !['/login', '/signup'].includes(pathname);
@@ -75,7 +140,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <>
       <AuthGate>
         {showNav && <Navigation />}
-        <main>{children}</main>
+        <main className="min-h-screen bg-gray-50 dark:bg-[#15192c]">{children}</main>
         {/* Docked FAB Bar at Bottom Right */}
         {showNav && hasCurrentEvent && (
           <Dock
@@ -110,6 +175,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           />
         )}
       </AuthGate>
+      <CompanyFooter />
     </>
   );
 }
@@ -143,19 +209,6 @@ export default function RootLayout({
           </NotificationDrawerProvider>
         </AuthProvider>
         <Analytics />
-        {/* Global Footer */}
-        <footer className="fixed bottom-0 left-0 w-full z-40 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
-          style={{
-            background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
-            boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
-            backdropFilter: 'blur(2px)'
-          }}
-        >
-          <span>v0.1.0</span>
-          <span className="absolute left-1/2 transform -translate-x-1/2">
-            support@incommandapp.com
-          </span>
-        </footer>
       </body>
     </html>
   )

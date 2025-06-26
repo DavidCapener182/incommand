@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabase, logAIUsage } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +12,18 @@ function getHourKey(date: Date): string {
 }
 
 async function getEventTimings(eventId: string) {
+  // Create server-side supabase client
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+  
   // Fetch security_call_time and curfew_time for the event
   const { data, error } = await supabase
     .from('events')
@@ -40,6 +52,18 @@ function isWithinWindow(
 
 export async function POST(req: NextRequest) {
   try {
+    // Create server-side supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
     const { incidents, attendance, event } = await req.json();
     const eventId = event;
     if (!eventId) return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
@@ -99,15 +123,19 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'event_id, hour' });
 
-    // Log usage
-    await logAIUsage({
-      event_id: eventId,
-      user_id: undefined, // Add user if available
-      endpoint: '/api/ai-insights',
-      model: 'gpt-3.5-turbo',
-      tokens_used: totalTokens,
-      cost_usd: totalCost,
-    });
+    // Log usage (simplified for now since logAIUsage function needs server-side client)
+    try {
+      await supabase.from('ai_usage').insert({
+        event_id: eventId,
+        endpoint: '/api/ai-insights',
+        model: 'gpt-3.5-turbo',
+        tokens_used: totalTokens,
+        cost_usd: totalCost,
+        created_at: new Date().toISOString()
+      });
+    } catch (logError) {
+      console.warn('Failed to log AI usage:', logError);
+    }
 
     return NextResponse.json({ insights: completions, cached: false });
   } catch (error) {
