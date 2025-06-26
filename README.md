@@ -1,5 +1,28 @@
 # inCommand (Event Control)
 
+## June 2025: Group Chat & Mobile Drawer Overhaul
+
+### Group Chat UI/UX Improvements
+- **Sidebar Drawer (Mobile):**
+  - Drawer now starts directly below the app bar (inCommand logo) using `top-[64px]` and `h-[calc(100vh-64px)]`.
+  - Overlay and drawer never overlap the app bar; always match the visible chat window area.
+  - No more top-0 or h-full on mobile drawer/overlay; all offsets are consistent and responsive.
+  - Drawer content matches desktop sidebar, including event header, group lists, and add group button.
+  - Selecting a group closes the drawer and opens the chat.
+- **Overlay:**
+  - Semi-transparent overlay covers the app when drawer is open, blocks interaction, and closes drawer on tap.
+- **Chat Window & Drawer Polish:**
+  - Drawer and overlay always perfectly aligned with chat area.
+  - No border radius on top of drawer for true mobile UX.
+  - Only one panel visible/interactable at a time on mobile.
+- **General Group Chat Enhancements:**
+  - Sidebar hierarchy, active state, and quick access improvements.
+  - Chat header with member list, tooltips, and improved accessibility.
+  - Message window bubble styling, date/time, read receipts, avatars, and mentions dropdown.
+  - Input bar accessibility, keyboard shortcuts, and dynamic info tooltips.
+  - Toast notifications for new messages, with click-to-jump and deduplication.
+  - Responsive design for both desktop and mobile, including floating action button and member modal.
+
 ## Overview
 
 inCommand is a comprehensive event control dashboard built with Next.js and Supabase. It features multi-tenancy, user profiles, event/incident management, role-based permissions, real-time notifications, AI-powered insights, and a modern, responsive UI designed for professional event management.
