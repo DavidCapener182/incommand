@@ -34,6 +34,23 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
   - Real-time badge with unread count and animations
 - **Real-time Subscriptions**: Live incident updates with toast notifications for new incidents and status changes
 
+### Staff Management & Operations
+- **Modern Callsign Assignment**: 
+  - Card-based interface with color-coded departments
+  - Visual status indicators and staff avatars with skill badges
+  - Real-time assignment with dropdown menus and search functionality
+  - Responsive design supporting 1-8 column layouts
+- **Department Management**: Full CRUD operations with custom colors and categories
+- **Staff Database**: Company-isolated staff records with role and skill tracking
+- **Available Staff Display**: Compact cards with hover tooltips showing qualifications
+
+### Super Admin & Business Intelligence
+- **Development Tracking**: Comprehensive cost tracking system for development hours and AI usage
+- **ROI Analytics**: Break-even analysis and profitability projections
+- **Subscription Modeling**: Revenue forecasting with £25/month pricing structure
+- **Business Metrics**: Real-time investment tracking with detailed cost breakdowns
+- **Super Admin Access**: Restricted to authorized email addresses with full system oversight
+
 ### Analytics Dashboard
 - **Incident Heatmap**: Visualizes incident locations to identify hotspots
 - **Performance Metrics**: Tracks key performance indicators for events
@@ -76,29 +93,55 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 
 ## Recent Major Updates (June 2025)
 
+### Development Tracking & Business Intelligence (Latest)
+- **Development Cost Tracking**: Comprehensive system for tracking development hours and AI usage costs
+  - Super admin dashboard with ROI projections and break-even analysis
+  - Automatic cost calculation (£40/hour development, AI usage tracking)
+  - Subscription revenue modeling (£25/month per subscriber)
+  - Real-time investment tracking with profitability timeline
+- **EventPricingCalculator**: Interactive pricing component for subscription modeling
+- **Business Metrics**: Complete development lifecycle tracking with cost transparency
+
+### Staff Management & Callsign Assignment Overhaul
+- **Modern Callsign Interface**: Complete redesign with card-based layout
+  - Color-coded department cards (Management=Purple, Security=Blue, etc.)
+  - Visual status indicators (green checkmarks, orange warnings)
+  - Staff avatars with initials and skill badges (SIA, First Aid, etc.)
+  - Responsive grid layout (1-8 columns based on screen size)
+- **Enhanced Staff Management**: 
+  - Company-isolated staff data with proper Supabase integration
+  - Real-time staff assignment with dropdown menus
+  - Available staff display with hover tooltips for skills
+  - Drag & drop assignment capabilities
+- **Department Management**: Full CRUD operations for departments
+  - Custom department creation with color selection (9 muted color options)
+  - Edit/delete functionality with confirmation dialogs
+  - Dynamic category management system
+
+### Dashboard & UI Improvements
+- **Fixed Dashboard Layout**: Resolved TopIncidentTypesCard compilation errors
+- **Separated Card Components**: What3Words and Top 3 Incident Types now properly separated
+- **Company Footer**: Dynamic company name display from user profiles
+- **Navigation Cleanup**: Removed redundant "Staff Management" from sidebar
+- **Responsive Design**: Enhanced mobile layout with proper card spacing
+
+### Technical Infrastructure
+- **Database Schema Enhancements**: 
+  - New `dev_sessions` and `ai_usage` tables for cost tracking
+  - Improved `staff` table with company isolation
+  - Enhanced audit logging capabilities
+- **API Route Expansion**:
+  - `/api/seed-dev-data` - Development data seeding
+  - `/api/seed-subscription-data` - Subscription data management
+  - `/api/setup-dev-tables` - Database table creation
+  - `/api/setup-subscription-table` - Subscription infrastructure
+- **Server-Side Improvements**: Fixed AI insights API with proper Supabase client configuration
+
 ### Notification System Overhaul
 - **Smart Toast System**: Eliminated duplicate notifications with intelligent deduplication
 - **Notification Drawer**: Complete activity feed with AI insights and real-time updates
 - **Persistent Tracking**: localStorage-based read notification management
 - **Enhanced UX**: Proper positioning, animations, and user feedback
-
-### AI Integration Expansion
-- **OpenAI-Powered Summaries**: Comprehensive event analysis using GPT-4o-mini
-- **Intelligent Chat Assistant**: Context-aware AI support with conversation history
-- **Dynamic Insights**: Auto-rotating AI insights with manual navigation controls
-- **Attendance Intelligence**: AI analysis of venue capacity patterns and peak times
-
-### UI/UX Improvements
-- **Floating Action Buttons**: Context-aware visibility management
-- **Enhanced Typography**: Bold text formatting and improved readability
-- **Responsive Design**: Mobile-first approach with optimized layouts
-- **Visual Consistency**: Unified design language across all components
-
-### Performance & Reliability
-- **Build Stability**: Resolved persistent webpack and module loading issues
-- **API Optimization**: Improved error handling and response times
-- **Real-time Reliability**: Enhanced subscription management and connection stability
-- **Production Deployment**: Automated Vercel deployment with proper CI/CD
 
 ## Technology Stack
 
