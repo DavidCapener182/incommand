@@ -16,6 +16,8 @@ export interface ToastMessage {
   message: string
   duration?: number
   urgent?: boolean
+  onClick?: () => void
+  meta?: any // e.g., { messageId: string }
 }
 
 interface ToastProps {
@@ -91,12 +93,16 @@ export default function Toast({ messages, onRemove }: ToastProps) {
         return (
           <div
             key={message.id}
-            className={`${getToastStyles(message.type, message.urgent)} p-4 transition-all duration-300 transform animate-slide-in-right`}
+            className={`${getToastStyles(message.type, message.urgent)} p-4 transition-all duration-300 transform animate-slide-in-right ${message.onClick ? 'cursor-pointer hover:shadow-xl hover:bg-blue-100/60' : ''}`}
             style={{
               ...(message.urgent && {
                 boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2)',
               })
             }}
+            onClick={message.onClick}
+            tabIndex={message.onClick ? 0 : undefined}
+            role={message.onClick ? 'button' : undefined}
+            aria-label={message.title}
           >
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -113,7 +119,8 @@ export default function Toast({ messages, onRemove }: ToastProps) {
               <div className="ml-4 flex-shrink-0 flex">
                 <button
                   className={`inline-flex rounded-md ${textStyles.message} hover:opacity-75 focus:outline-none`}
-                  onClick={() => onRemove(message.id)}
+                  onClick={e => { e.stopPropagation(); onRemove(message.id); }}
+                  aria-label="Dismiss notification"
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
