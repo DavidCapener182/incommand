@@ -1,4 +1,4 @@
-# inCommand (Compact Event Control)
+# inCommand (Event Control)
 
 ## Overview
 
