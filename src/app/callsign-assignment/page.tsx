@@ -81,12 +81,11 @@ const Accreditation = () => (
 );
 
 const navItems = [
-  { name: 'Staff List', icon: UserGroupIcon, key: 'staff' },
+  { name: 'Staff Management', icon: UserGroupIcon, key: 'staff' },
   { name: 'Callsign Assignment', icon: KeyIcon, key: 'callsign' },
   { name: 'Radio Sign Out', icon: DevicePhoneMobileIcon, key: 'radio' },
   { name: 'Shift Roster', icon: CalendarDaysIcon, key: 'shift' },
   { name: 'Accreditation', icon: IdentificationIcon, key: 'accreditation' },
-  { name: 'Staff Management', key: 'staff-management', icon: UserGroupIcon },
 ];
 
 const SKILL_OPTIONS = [
@@ -95,19 +94,15 @@ const SKILL_OPTIONS = [
   "Security Manager",
   "Supervisor",
   "SIA Security Officer",
-  "Response Team (SIA)",
-  "Event Steward",
+  "(SIA)",
+  "Steward",
   "Control Room Operator",
   "Event Control Manager",
   "Radio Controller",
-  "Callsign Coordinator",
-  "Welfare Officer",
   "Welfare Team",
-  "Safeguarding Lead",
   "Medic / Paramedic",
-  "Medical Coordinator",
   "Traffic Marshal",
-  "Road Closure Operative",
+  "Traffic Management",
   "Venue Manager",
   "Duty Manager",
   "Site Manager",
@@ -117,17 +112,16 @@ const SKILL_OPTIONS = [
   "Stage Manager",
   "Artist Liaison",
   "Front of House",
-  "Turnstile Operator",
-  "Fire Safety Marshal",
+  "Fire Steward",
   "Health & Safety",
   "Dog Handler (K9)",
   "CCTV Operator",
   "Logistics Coordinator",
-  "Cleaner/Housekeeping"
 ];
 
 // Add this type above StaffListView
 type StaffForm = {
+  id?: string;
   full_name: string;
   contact_number: string;
   email: string;
@@ -399,14 +393,14 @@ export default function StaffCommandCentre() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
       {/* Sidebar - pixel-perfect match to settings sidebar */}
       <aside className="hidden md:flex w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex-col shadow-lg z-10">
         {/* Top bar with section title */}
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
           <div className="flex items-center space-x-2">
             <UserGroupIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Staff Command Centre</span>
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">Staffing Centre</span>
           </div>
         </div>
         {/* Navigation items */}
@@ -432,7 +426,7 @@ export default function StaffCommandCentre() {
         {/* TODO: Add mobile nav/drawer for sidebar on small screens */}
       </aside>
       {/* Main content area */}
-      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
         <div className="w-full h-full">
           {activeView === 'staff' && <StaffListView />}
           {activeView === 'callsign' && <CallsignAssignmentView />}
@@ -447,368 +441,1078 @@ export default function StaffCommandCentre() {
 
 // --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
 function CallsignAssignmentView() {
-  // Default categories
+  // Default categories with better structure
   const defaultCategories = [
-    'Management',
-    'Internal',
-    'External',
-    'Venue Operations',
-    'Medical',
-    'Traffic',
+    { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
+    { id: 2, name: 'Internal Security', color: 'bg-blue-400', positions: [] },
+    { id: 3, name: 'External Security', color: 'bg-green-400', positions: [] },
+    { id: 4, name: 'Venue Operations', color: 'bg-orange-400', positions: [] },
+    { id: 5, name: 'Medical & Welfare', color: 'bg-red-400', positions: [] },
+    { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
   ];
-  type Position = { callsign: string; position: string };
-  type Category = { name: string; positions: Position[] };
-  const [categories, setCategories] = useState<Category[]>(
-    defaultCategories.map((cat) => ({ name: cat, positions: [] }))
+
+  type Position = { 
+    id: string;
+    callsign: string; 
+    position: string;
+    assignedStaff?: number;
+    required?: boolean;
+  };
+  
+  type Category = { 
+    id: number;
+    name: string; 
+    color: string;
+    positions: Position[] 
+  };
+
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [showAddPositionModal, setShowAddPositionModal] = useState(false);
+  const [editingPosition, setEditingPosition] = useState<Position | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+
+  // Real staff data from Supabase
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [loadingStaff, setLoadingStaff] = useState(true);
+
+  // Load staff data from Supabase
+  useEffect(() => {
+    fetchUserCompany();
+  }, []);
+
+  useEffect(() => {
+    if (userCompanyId) {
+      fetchStaff();
+    }
+  }, [userCompanyId]);
+
+  async function fetchUserCompany() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (profile?.company_id) {
+        setUserCompanyId(profile.company_id);
+      } else {
+        console.log("No company ID available, skipping staff fetch");
+      }
+    } catch (error) {
+      console.error("Error fetching user company:", error);
+    }
+  }
+
+  async function fetchStaff() {
+    if (!userCompanyId) {
+      console.log("No company ID available, skipping staff fetch");
+      return;
+    }
+    
+    setLoadingStaff(true);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, full_name, skill_tags, notes, active')
+        .eq('company_id', userCompanyId)
+        .eq('active', true)
+        .order('full_name');
+      
+      if (error) throw error;
+
+      const formattedStaff = data?.map(staff => ({
+        id: staff.id,
+        name: staff.full_name,
+        role: staff.skill_tags?.[0] || 'Staff Member',
+        skills: staff.skill_tags || [],
+        avatar: '👤'
+      })) || [];
+
+      setStaffList(formattedStaff);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+    } finally {
+      setLoadingStaff(false);
+    }
+  }
+
+  // Get assigned staff IDs
+  const assignedStaffIds = categories.flatMap(cat => 
+    cat.positions.map(pos => pos.assignedStaff).filter(Boolean)
   );
-  const [editingCategoryIdx, setEditingCategoryIdx] = useState<number | null>(null);
-  const [newCategory, setNewCategory] = useState('');
-  const [addingPositionCatIdx, setAddingPositionCatIdx] = useState<number | null>(null);
-  const [newPosition, setNewPosition] = useState<Position>({ callsign: '', position: '' });
-  const [editingPosition, setEditingPosition] = useState<{ catIdx: number; posIdx: number } | null>(null);
-  // Simulated staff list (placeholder)
-  const staffList = [
-    { id: 1, name: 'Alice Smith' },
-    { id: 2, name: 'Bob Jones' },
-    { id: 3, name: 'Charlie Lee' },
-    { id: 4, name: 'Dana Patel' },
-    { id: 5, name: 'Eve Kim' },
-  ];
-  // Track assignments: { [categoryIdx][positionIdx]: staffId }
-  const [assignments, setAssignments] = useState<{ [key: string]: number | null }>({});
-  // Track modal/dropdown state
-  const [assigning, setAssigning] = useState<{ catIdx: number; posIdx: number } | null>(null);
-  // Search state
-  const [search, setSearch] = useState('');
 
-  // Compute unassigned staff
-  const assignedIds = Object.values(assignments).filter(Boolean);
-  const unassignedStaff = staffList.filter((s) => !assignedIds.includes(s.id));
+  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id));
 
-  // Add category
-  const handleAddCategory = () => {
-    if (newCategory.trim()) {
-      setCategories([...categories, { name: newCategory.trim(), positions: [] }]);
-      setNewCategory('');
-    }
-  };
-  // Edit category
-  const handleEditCategory = (idx: number, name: string) => {
-    setCategories(categories.map((cat, i) => (i === idx ? { ...cat, name } : cat)));
-  };
-  // Delete category
-  const handleDeleteCategory = (idx: number) => {
-    setCategories(categories.filter((_, i) => i !== idx));
-  };
-  // Add position
-  const handleAddPosition = (catIdx: number) => {
-    if (newPosition.callsign.trim() && newPosition.position.trim()) {
-      setCategories(categories.map((cat, i) =>
-        i === catIdx
-          ? { ...cat, positions: [...cat.positions, { ...newPosition }] }
-          : cat
-      ));
-      setNewPosition({ callsign: '', position: '' });
-      setAddingPositionCatIdx(null);
-    }
-  };
-  // Edit position
-  const handleEditPosition = (catIdx: number, posIdx: number, callsign: string, position: string) => {
-    setCategories(categories.map((cat, i) =>
-      i === catIdx
+  // Filter positions based on global search
+  const filteredCategories = categories.map(category => ({
+    ...category,
+    positions: category.positions.filter(position => 
+      position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
+    )
+  })).filter(category => 
+    category.positions.length > 0 || globalSearch === ''
+  );
+
+  // Assign staff to position
+  const assignStaff = (categoryId: number, positionId: string, staffId: number) => {
+    setCategories(prev => prev.map(cat => 
+      cat.id === categoryId 
         ? {
             ...cat,
-            positions: cat.positions.map((pos, j) =>
-              j === posIdx ? { callsign, position } : pos
-            ),
+            positions: cat.positions.map(pos => 
+              pos.id === positionId 
+                ? { ...pos, assignedStaff: staffId }
+                : pos
+            )
+          }
+          : cat
+      ));
+    setPendingChanges(true);
+  };
+
+  // Unassign staff from position
+  const unassignStaff = (categoryId: number, positionId: string) => {
+    setCategories(prev => prev.map(cat => 
+      cat.id === categoryId 
+        ? {
+            ...cat,
+            positions: cat.positions.map(pos => 
+              pos.id === positionId 
+                ? { ...pos, assignedStaff: undefined }
+                : pos
+            )
           }
         : cat
     ));
-    setEditingPosition(null);
-  };
-  // Delete position
-  const handleDeletePosition = (catIdx: number, posIdx: number) => {
-    setCategories(categories.map((cat, i) =>
-      i === catIdx
-        ? { ...cat, positions: cat.positions.filter((_, j) => j !== posIdx) }
-        : cat
-    ));
+    setPendingChanges(true);
   };
 
+  // Add new position
+  const addPosition = (categoryId: number, position: Omit<Position, 'id'>) => {
+    const newPosition = {
+      ...position,
+      id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+    
+    setCategories(prev => prev.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, positions: [...cat.positions, newPosition] }
+        : cat
+    ));
+    setPendingChanges(true);
+  };
+
+  // Add new category
+  const addCategory = (name: string, color: string) => {
+    const newId = Math.max(...categories.map(c => c.id)) + 1;
+    const newCategory = {
+      id: newId,
+      name,
+      color,
+      positions: []
+    };
+    setCategories(prev => [...prev, newCategory]);
+    setPendingChanges(true);
+  };
+
+  // Edit category
+  const editCategory = (categoryId: number, name: string, color: string) => {
+    setCategories(prev => prev.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, name, color }
+        : cat
+    ));
+    setPendingChanges(true);
+  };
+
+  // Delete category
+  const deleteCategory = (categoryId: number) => {
+    setCategories(prev => prev.filter(cat => cat.id !== categoryId));
+    setPendingChanges(true);
+  };
+
+  // Save all changes
+  const saveChanges = () => {
+    // TODO: Save to database
+    console.log('Saving changes:', categories);
+    setPendingChanges(false);
+    // Show success toast
+  };
+
+  if (loadingStaff) {
   return (
-    <div className="w-full p-2">
-      {/* Search bar */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-gray-600 dark:text-gray-300">Loading staff data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
+      {/* Sticky Header with Search */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] shadow-sm">
+        <div className="px-6 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <span className="text-white font-bold">📋</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-300">Manage staff assignments and callsigns</p>
+              </div>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-96">
+              <div className="relative flex-1">
         <input
           type="text"
-          className="w-full max-w-md px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Search staff to assign..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {/* TODO: Add filter buttons if needed */}
+                  placeholder="Search by callsign, role, or staff name..."
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
       </div>
-      {/* Categories and positions grid (as before, but with assignment UI) */}
-      <div className="space-y-8">
-        {categories.map((cat, catIdx) => (
-          <section key={catIdx} className="">
-            <div className="mb-2 flex items-center gap-2">
-              {editingCategoryIdx === catIdx ? (
-                <>
-                  <input
-                    className="input input-bordered rounded-lg px-2 py-1 text-sm border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100"
-                    value={cat.name}
-                    onChange={e => handleEditCategory(catIdx, e.target.value)}
-                    onBlur={() => setEditingCategoryIdx(null)}
-                    autoFocus
-                  />
-                </>
-              ) : (
-                <>
-                  <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">{cat.name}</h2>
-                  <button className="text-xs text-blue-600 hover:underline" onClick={() => setEditingCategoryIdx(catIdx)}>Edit</button>
-                  <button className="text-xs text-red-500 hover:underline" onClick={() => handleDeleteCategory(catIdx)}>Delete</button>
-                </>
-              )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
               <button
-                className="ml-4 text-xs bg-blue-100 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-[#23408e] transition"
-                onClick={() => setAddingPositionCatIdx(catIdx)}
+                onClick={() => setShowAddCategoryModal(true)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-lg transition-colors"
               >
-                + Add Position
+                + Department
+              </button>
+              <button
+                onClick={() => setShowAddPositionModal(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded-lg transition-colors"
+              >
+                + Position
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {cat.positions.map((pos, posIdx) => {
-                const key = `${catIdx}-${posIdx}`;
-                const assignedStaff = staffList.find((s) => assignments[key] === s.id);
-                return (
-                  <div
-                    key={posIdx}
-                    className={`relative bg-white dark:bg-[#23408e] border border-gray-200 dark:border-[#2d437a] rounded-xl shadow-md p-4 flex flex-col gap-2 transition hover:shadow-lg focus-within:ring-2 focus-within:ring-blue-500 ${assignedStaff ? 'ring-2 ring-blue-400 dark:ring-blue-300' : ''}`}
-                  >
-                    <div className="font-semibold text-gray-900 dark:text-white text-lg flex items-center gap-2">
-                      {pos.callsign} <span className="text-gray-500 dark:text-blue-200 text-sm">{pos.position}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {categories.reduce((sum, cat) => sum + cat.positions.length, 0)}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-300">Total Positions</div>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {assignedStaffIds.length}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-300">Assigned</div>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {categories.reduce((sum, cat) => sum + cat.positions.length, 0) - assignedStaffIds.length}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-300">Vacant</div>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {unassignedStaff.length}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-300">Available Staff</div>
+          </div>
+        </div>
+
+        {/* Available Staff Section */}
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 mb-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Available Staff</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-300">Drag and drop staff to assign them to positions</p>
+            </div>
+            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1 rounded-full font-medium">
+              {unassignedStaff.length} available
+            </span>
+          </div>
+          
+          {unassignedStaff.length === 0 ? (
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+              <div className="text-lg mb-1">👥</div>
+              <div className="font-medium text-sm mb-1">All staff assigned</div>
+              <div className="text-xs">Great job! All available staff have been assigned to positions.</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+              {unassignedStaff.map((staff) => (
+                <div
+                  key={staff.id}
+                  className="relative bg-gray-50 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg p-2 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500 group"
+                  title={`${staff.name}${staff.skills && staff.skills.length > 0 ? '\nSkills: ' + staff.skills.join(', ') : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs flex-shrink-0">
+                      {staff.name.split(' ').map((n: string) => n[0]).join('')}
                     </div>
-                    {/* Assignment UI */}
+                    <div className="font-medium text-gray-900 dark:text-white text-xs truncate">{staff.name}</div>
+                  </div>
+                  
+                  {/* Tooltip */}
+                  {staff.skills && staff.skills.length > 0 && (
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                      <div className="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
+                        <div className="font-medium mb-1">{staff.name}</div>
+                        <div className="text-gray-300">Skills: {staff.skills.join(', ')}</div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Department Cards */}
+        <div className="space-y-3">
+          {filteredCategories.map((category) => (
+            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              {/* Department Header - Made Much Smaller */}
+              <div className={`${category.color} px-4 py-2`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-white">{category.name}</h2>
+                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+                      {category.positions.length} positions
+                    </span>
+                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+                      {category.positions.filter(p => p.assignedStaff).length} assigned
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+              <button
+                      onClick={() => {
+                        setEditingCategory(category);
+                        setShowEditCategoryModal(true);
+                      }}
+                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      title="Edit Department"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedCategory(category.id);
+                        setShowAddPositionModal(true);
+                      }}
+                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      title="Add Position"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+              </button>
+            </div>
+                </div>
+              </div>
+
+              {/* Positions Grid */}
+              <div className="p-3">
+                {category.positions.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <div className="text-2xl mb-1">📝</div>
+                    <div className="text-sm font-medium mb-1">No positions yet</div>
+                    <div className="text-xs">Click the + button above to add positions to this department</div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+                    {category.positions.map((position) => {
+                      const assignedStaff = position.assignedStaff 
+                        ? staffList.find(s => s.id === position.assignedStaff)
+                        : null;
+
+                return (
+                        <PositionCard
+                          key={position.id}
+                          position={position}
+                          assignedStaff={assignedStaff}
+                          category={category}
+                          unassignedStaff={unassignedStaff}
+                          onAssign={(staffId) => assignStaff(category.id, position.id, staffId)}
+                          onUnassign={() => unassignStaff(category.id, position.id)}
+                          onEdit={() => setEditingPosition(position)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Fixed Save Bar */}
+      {pendingChanges && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <span className="font-medium">You have unsaved changes</span>
+            <button
+              onClick={saveChanges}
+              className="bg-white text-blue-600 px-4 py-1 rounded font-medium hover:bg-gray-100 transition-colors"
+            >
+              Save Changes
+            </button>
+                    </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      <AddPositionModal
+        isOpen={showAddPositionModal}
+        onClose={() => {
+          setShowAddPositionModal(false);
+          setSelectedCategory(null);
+        }}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onAdd={addPosition}
+      />
+
+      <EditPositionModal
+        isOpen={!!editingPosition}
+        position={editingPosition}
+        onClose={() => setEditingPosition(null)}
+        onSave={(updatedPosition) => {
+          // Update position logic here
+          setEditingPosition(null);
+          setPendingChanges(true);
+        }}
+      />
+
+      <AddCategoryModal
+        isOpen={showAddCategoryModal}
+        onClose={() => setShowAddCategoryModal(false)}
+        onAdd={addCategory}
+      />
+
+      <EditCategoryModal
+        isOpen={showEditCategoryModal}
+        category={editingCategory}
+        onClose={() => {
+          setShowEditCategoryModal(false);
+          setEditingCategory(null);
+        }}
+        onEdit={editCategory}
+        onDelete={deleteCategory}
+      />
+    </div>
+  );
+}
+
+// Position Card Component
+function PositionCard({ 
+  position, 
+  assignedStaff, 
+  category, 
+  unassignedStaff, 
+  onAssign, 
+  onUnassign, 
+  onEdit 
+}: {
+  position: any;
+  assignedStaff: any;
+  category: any;
+  unassignedStaff: any[];
+  onAssign: (staffId: number) => void;
+  onUnassign: () => void;
+  onEdit: () => void;
+}) {
+  const [showAssignMenu, setShowAssignMenu] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showAssignMenu) {
+        const target = event.target as Element;
+        if (!target.closest('.assign-dropdown-container')) {
+          setShowAssignMenu(false);
+        }
+      }
+    };
+
+    if (showAssignMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showAssignMenu]);
+
+  return (
+    <div className={`relative bg-white dark:bg-[#182447] rounded-lg border-2 transition-all duration-200 hover:shadow-lg ${
+      assignedStaff 
+        ? 'border-green-300 dark:border-green-600 shadow-md' 
+        : 'border-gray-200 dark:border-[#2d437a] hover:border-blue-300 dark:hover:border-blue-500'
+    }`}>
+      {/* Status Indicator */}
+      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+        assignedStaff ? 'bg-green-500' : 'bg-orange-400'
+      }`}>
+        {assignedStaff ? '✓' : '!'}
+      </div>
+
+      <div className="p-2">
+        {/* Header with Callsign & Position */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">{position.callsign}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 truncate">{position.position}</div>
+          </div>
+          <button
+            onClick={onEdit}
+            className="ml-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex-shrink-0"
+            title="Edit position"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Assigned Staff */}
                     {assignedStaff ? (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
-                          {assignedStaff.name.split(' ').map((n) => n[0]).join('')}
-                        </span>
-                        <span className="text-gray-900 dark:text-white">{assignedStaff.name}</span>
+          <div className="mb-2">
+            <div className="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
+              <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center text-green-700 dark:text-green-200 font-bold text-xs flex-shrink-0">
+                {assignedStaff.name.split(' ').map((n: string) => n[0]).join('')}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-green-900 dark:text-green-100 text-xs truncate">{assignedStaff.name}</div>
+              </div>
                         <button
-                          className="ml-auto px-2 py-1 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-[#23408e] transition"
-                          onClick={() => setAssignments((a) => ({ ...a, [key]: null }))}
+                onClick={onUnassign}
+                className="w-4 h-4 rounded-full bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400 text-xs font-bold transition-colors flex-shrink-0"
+                title="Unassign staff"
                         >
-                          Unassign
+                ×
                         </button>
+            </div>
                       </div>
                     ) : (
+          <div className="mb-2">
+            <div className="p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-700 text-center">
+              <div className="text-orange-600 dark:text-orange-300 text-xs font-medium">Vacant</div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {!assignedStaff && (
+          <div className="flex gap-1">
+            <div className="relative flex-1 assign-dropdown-container" style={{ zIndex: showAssignMenu ? 60 : 'auto' }}>
                       <button
-                        className="mt-2 px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-medium transition"
-                        onClick={() => setAssigning({ catIdx, posIdx })}
+                onClick={() => setShowAssignMenu(!showAssignMenu)}
+                className="w-full px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded transition-colors"
                       >
-                        Assign Staff
+                Assign
                       </button>
-                    )}
-                    {/* Assignment modal/dropdown (UI only) */}
-                    {assigning && assigning.catIdx === catIdx && assigning.posIdx === posIdx && (
-                      <div className="absolute z-20 left-0 top-full mt-2 w-full bg-white dark:bg-[#182447] border border-gray-300 dark:border-[#2d437a] rounded-lg shadow-xl p-2">
-                        <div className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Select staff:</div>
-                        <div className="max-h-40 overflow-y-auto">
+              
+              {/* Assignment Dropdown */}
+              {showAssignMenu && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg shadow-xl max-h-48 overflow-y-auto" style={{ zIndex: 9999 }}>
                           {unassignedStaff.length === 0 ? (
-                            <div className="text-gray-400 dark:text-gray-400 text-sm">No unassigned staff</div>
+                    <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No available staff</div>
                           ) : (
-                            unassignedStaff
-                              .filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-                              .map((s) => (
+                    unassignedStaff.map((staff) => (
                                 <button
-                                  key={s.id}
-                                  className="w-full text-left px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-[#23408e] text-gray-900 dark:text-gray-100"
+                        key={staff.id}
                                   onClick={() => {
-                                    setAssignments((a) => ({ ...a, [key]: s.id }));
-                                    setAssigning(null);
-                                  }}
-                                >
-                                  <span className="inline-flex items-center gap-2">
-                                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
-                                      {s.name.split(' ').map((n) => n[0]).join('')}
-                                    </span>
-                                    {s.name}
-                                  </span>
+                          onAssign(staff.id);
+                          setShowAssignMenu(false);
+                        }}
+                        className="w-full text-left p-2 hover:bg-gray-50 dark:hover:bg-[#2d437a] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
+                            {staff.name.split(' ').map((n: string) => n[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white text-xs">{staff.name}</div>
+                          </div>
+                        </div>
                                 </button>
                               ))
                           )}
                         </div>
-                        <button
-                          className="mt-2 w-full px-3 py-1 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-[#23408e] transition"
-                          onClick={() => setAssigning(null)}
-                        >
-                          Cancel
-                        </button>
+              )}
+            </div>
                       </div>
                     )}
                   </div>
-                );
-              })}
             </div>
-          </section>
-        ))}
+  );
+}
+
+// Add Position Modal Component
+function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd }: {
+  isOpen: boolean;
+  onClose: () => void;
+  categories: any[];
+  selectedCategory: number | null;
+  onAdd: (categoryId: number, position: any) => void;
+}) {
+  const [formData, setFormData] = useState({
+    callsign: '',
+    position: '',
+    categoryId: selectedCategory || categories[0]?.id || 1,
+    required: false
+  });
+
+  useEffect(() => {
+    if (selectedCategory) {
+      setFormData(prev => ({ ...prev, categoryId: selectedCategory }));
+    }
+  }, [selectedCategory]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.callsign.trim() && formData.position.trim()) {
+      onAdd(formData.categoryId, {
+        callsign: formData.callsign.trim(),
+        position: formData.position.trim(),
+        required: formData.required
+      });
+      setFormData({ callsign: '', position: '', categoryId: categories[0]?.id || 1, required: false });
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add New Position</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Department
+            </label>
+            <select
+              value={formData.categoryId}
+              onChange={(e) => setFormData(prev => ({ ...prev, categoryId: Number(e.target.value) }))}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
       </div>
-      {/* Unassigned staff section (placeholder) */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Unassigned Staff</h3>
-        <div className="flex flex-wrap gap-2">
-          {unassignedStaff.map((s) => (
-            <span key={s.id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 font-medium">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 font-bold">
-                {s.name.split(' ').map((n) => n[0]).join('')}
-              </span>
-              {s.name}
-            </span>
-          ))}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Callsign
+            </label>
+            <input
+              type="text"
+              value={formData.callsign}
+              onChange={(e) => setFormData(prev => ({ ...prev, callsign: e.target.value }))}
+              placeholder="e.g., ALPHA-1, BRAVO-2"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+        </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Position/Role
+            </label>
+            <input
+              type="text"
+              value={formData.position}
+              onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
+              placeholder="e.g., Door Supervisor, Control Room Operator"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+      </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="required"
+              checked={formData.required}
+              onChange={(e) => setFormData(prev => ({ ...prev, required: e.target.checked }))}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="required" className="text-sm text-gray-700 dark:text-gray-200">
+              Critical position (must be filled)
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100">Cancel</button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold">Add Position</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Edit Position Modal Component (placeholder)
+function EditPositionModal({ isOpen, position, onClose, onSave }: {
+  isOpen: boolean;
+  position: any;
+  onClose: () => void;
+  onSave: (position: any) => void;
+}) {
+  if (!isOpen || !position) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Position</h2>
+        {/* Edit form would go here */}
+        <div className="flex gap-3 pt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-[#2d437a] hover:bg-gray-300 dark:hover:bg-[#23408e] rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </div>
-      {/* TODO: Save All button, backend integration, drag & drop, etc. */}
     </div>
   );
 }
 
 // --- StaffListView with Supabase integration ---
 function StaffListView() {
-  const [staff, setStaff] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
-  const [currentStaff, setCurrentStaff] = useState<any>(null);
-  const [form, setForm] = useState<StaffForm>({
-    full_name: '',
-    contact_number: '',
-    email: '',
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState<StaffForm>({
+    full_name: "",
+    contact_number: "",
+    email: "",
     skill_tags: [],
-    notes: '',
+    notes: "",
     active: true,
   });
-  // Fetch staff on mount
+  const [staff, setStaff] = useState<any[]>([]);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+
   useEffect(() => {
-    fetchStaff();
+    fetchUserCompany();
   }, []);
-  async function fetchStaff() {
-    setLoading(true);
-    setError(null);
-    const { data, error } = await supabase.from('staff').select('*').order('full_name');
-    if (error) setError(error.message);
-    setStaff(data || []);
-    setLoading(false);
-  }
-  function openAddModal() {
-    setModalMode('add');
-    setForm({ full_name: '', contact_number: '', email: '', skill_tags: [], notes: '', active: true });
-    setShowModal(true);
-    setCurrentStaff(null);
-  }
-  function openEditModal(staffMember: any) {
-    setModalMode('edit');
-    setForm({
-      full_name: staffMember.full_name || '',
-      contact_number: staffMember.contact_number || '',
-      email: staffMember.email || '',
-      skill_tags: staffMember.skill_tags || [],
-      notes: staffMember.notes || '',
-      active: staffMember.active ?? true,
-    });
-    setCurrentStaff(staffMember);
-    setShowModal(true);
-  }
-  async function handleSave() {
-    const payload = {
-      ...form,
-      skill_tags: form.skill_tags,
-    };
-    if (modalMode === 'add') {
-      const { error } = await supabase.from('staff').insert([payload]);
-      if (error) setError(error.message);
-    } else if (modalMode === 'edit' && currentStaff) {
-      const { error } = await supabase.from('staff').update(payload).eq('id', currentStaff.id);
-      if (error) setError(error.message);
+
+  useEffect(() => {
+    if (userCompanyId) {
+      fetchStaff();
     }
-    setShowModal(false);
-    fetchStaff();
+  }, [userCompanyId]);
+
+  async function fetchUserCompany() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (profile?.company_id) {
+        setUserCompanyId(profile.company_id);
+      } else {
+        console.log("No company ID available, skipping staff fetch");
+      }
+    } catch (error) {
+      console.error("Error fetching user company:", error);
+    }
   }
+
+  async function fetchStaff() {
+    if (!userCompanyId) {
+      console.log("No company ID available, skipping staff fetch");
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('company_id', userCompanyId)
+        .order('full_name');
+      
+      if (error) {
+        console.error('Error fetching staff:', error);
+        setStaff([]);
+      } else {
+    setStaff(data || []);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching staff:', err);
+      setStaff([]);
+    }
+  }
+
+  function openAddModal() {
+    setCurrentStaff({
+      full_name: "",
+      contact_number: "",
+      email: "",
+      skill_tags: [],
+      notes: "",
+      active: true,
+    });
+    setIsAddModalOpen(true);
+  }
+
+  function openEditModal(staffMember: any) {
+    setCurrentStaff({
+      ...staffMember,
+      skill_tags: staffMember.skill_tags || [],
+    });
+    setIsEditModalOpen(true);
+  }
+
+  async function handleSave() {
+    if (!userCompanyId) {
+      alert("No company found. Please contact support.");
+      return;
+    }
+
+    try {
+      if (currentStaff.id) {
+        // Update existing staff
+        const { error } = await supabase
+          .from("staff")
+          .update({
+            full_name: currentStaff.full_name,
+            contact_number: currentStaff.contact_number,
+            email: currentStaff.email,
+            skill_tags: currentStaff.skill_tags,
+            notes: currentStaff.notes,
+            active: currentStaff.active,
+          })
+          .eq("id", currentStaff.id);
+
+        if (error) throw error;
+      } else {
+        // Create new staff
+        const { error } = await supabase
+          .from("staff")
+          .insert({
+            full_name: currentStaff.full_name,
+            contact_number: currentStaff.contact_number,
+            email: currentStaff.email,
+            skill_tags: currentStaff.skill_tags,
+            notes: currentStaff.notes,
+            active: currentStaff.active,
+            company_id: userCompanyId,
+          });
+
+        if (error) throw error;
+      }
+
+    fetchStaff();
+      setIsAddModalOpen(false);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error saving staff:", error);
+      alert("Error saving staff. Please try again.");
+  }
+  }
+
   async function handleDelete(staffId: string) {
-    if (!window.confirm('Are you sure you want to delete this staff member?')) return;
-    const { error } = await supabase.from('staff').delete().eq('id', staffId);
-    if (error) setError(error.message);
+    if (!confirm("Are you sure you want to delete this staff member?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("staff")
+        .delete()
+        .eq("id", staffId);
+
+      if (error) throw error;
     fetchStaff();
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      alert("Error deleting staff. Please try again.");
   }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] p-8 transition-colors duration-300">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <UserGroupIcon className="h-8 w-8 text-blue-700 dark:text-blue-300" />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Staff Management</h1>
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Staff Management</h2>
+          <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
         </div>
-        <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors">
-          <PlusIcon className="h-5 w-5" /> Add Staff
+        <button
+          onClick={openAddModal}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          <PlusIcon className="h-5 w-5" />
+          Add Staff
         </button>
       </div>
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full overflow-x-auto">
-        {loading ? (
-          <div className="text-center text-gray-400 dark:text-gray-300 py-8">Loading staff...</div>
-        ) : error ? (
-          <div className="text-center text-red-500 py-8">{error}</div>
-        ) : staff.length === 0 ? (
-          <div className="text-center text-gray-400 dark:text-gray-300 py-8">No staff found.</div>
-        ) : (
-          <table className="min-w-full text-left">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Name</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Contact</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Email</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Skills</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Notes</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Active</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Actions</th>
+
+      {staff.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No staff found</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">Get started by adding your first team member</p>
+          <button
+            onClick={openAddModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            Add First Staff Member
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-[#2d437a]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Skills
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
               </tr>
             </thead>
-            <tbody>
-              {staff.map((s) => (
-                <tr key={s.id} className="border-b border-gray-100 dark:border-[#2d437a]">
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.full_name}</td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.contact_number}</td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.email}</td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{(s.skill_tags || []).join(', ')}</td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.notes}</td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{s.active ? 'Yes' : 'No'}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => openEditModal(s)} className="text-blue-600 dark:text-blue-300 hover:underline mr-2">Edit</button>
-                    <button onClick={() => handleDelete(s.id)} className="text-red-600 dark:text-red-400 hover:underline">Delete</button>
+              <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                {staff.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a]">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                          <span className="text-blue-700 dark:text-blue-200 font-medium text-sm">
+                            {member.full_name.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {member.full_name}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {member.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {member.contact_number || 'Not provided'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {(member.skill_tags || []).map((skill: string) => (
+                          <span
+                            key={skill}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        member.active 
+                          ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
+                          : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
+                      }`}>
+                        {member.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button
+                        onClick={() => openEditModal(member)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(member.id)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
+                      >
+                        Delete
+                      </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
       </div>
-      {/* Modal for Add/Edit Staff */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{modalMode === 'add' ? 'Add Staff' : 'Edit Staff'}</h2>
+        </div>
+      )}
+
+      {/* Add/Edit Staff Modal */}
+      {(isAddModalOpen || isEditModalOpen) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+              {isAddModalOpen ? 'Add New Staff Member' : 'Edit Staff Member'}
+            </h2>
             <form onSubmit={e => { e.preventDefault(); handleSave(); }}>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-blue-200 mb-1">Full Name</label>
-                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} required />
+                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={currentStaff.full_name} onChange={e => setCurrentStaff(f => ({ ...f, full_name: e.target.value }))} required />
               </div>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-blue-200 mb-1">Contact Number</label>
-                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.contact_number} onChange={e => setForm(f => ({ ...f, contact_number: e.target.value }))} />
+                <input type="text" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={currentStaff.contact_number} onChange={e => setCurrentStaff(f => ({ ...f, contact_number: e.target.value }))} />
               </div>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-blue-200 mb-1">Email</label>
-                <input type="email" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                <input type="email" className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={currentStaff.email} onChange={e => setCurrentStaff(f => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-blue-200 mb-1">Skills</label>
@@ -817,9 +1521,9 @@ function StaffListView() {
                     <label key={skill} className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
                       <input
                         type="checkbox"
-                        checked={form.skill_tags.includes(skill)}
+                        checked={currentStaff.skill_tags.includes(skill)}
                         onChange={e => {
-                          setForm(f => ({
+                          setCurrentStaff(f => ({
                             ...f,
                             skill_tags: e.target.checked
                               ? [...f.skill_tags, skill]
@@ -834,20 +1538,261 @@ function StaffListView() {
               </div>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-blue-200 mb-1">Notes</label>
-                <textarea className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+                <textarea className="w-full rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2" value={currentStaff.notes} onChange={e => setCurrentStaff(f => ({ ...f, notes: e.target.value }))} />
               </div>
               <div className="mb-4 flex items-center gap-2">
-                <input type="checkbox" id="active" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
+                <input type="checkbox" id="active" checked={currentStaff.active} onChange={e => setCurrentStaff(f => ({ ...f, active: e.target.checked }))} />
                 <label htmlFor="active" className="text-gray-700 dark:text-blue-200">Active</label>
               </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold">{modalMode === 'add' ? 'Add' : 'Save'}</button>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  {isAddModalOpen ? 'Add Staff' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    setIsEditModalOpen(false);
+                  }}
+                  className="flex-1 bg-gray-300 dark:bg-[#2d437a] hover:bg-gray-400 dark:hover:bg-[#1e3555] text-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Add Category Modal Component
+function AddCategoryModal({ isOpen, onClose, onAdd }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (name: string, color: string) => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    color: 'bg-blue-400'
+  });
+
+  const colorOptions = [
+    { value: 'bg-blue-400', label: 'Blue', color: 'bg-blue-400' },
+    { value: 'bg-purple-400', label: 'Purple', color: 'bg-purple-400' },
+    { value: 'bg-green-400', label: 'Green', color: 'bg-green-400' },
+    { value: 'bg-red-400', label: 'Red', color: 'bg-red-400' },
+    { value: 'bg-orange-400', label: 'Orange', color: 'bg-orange-400' },
+    { value: 'bg-amber-400', label: 'Amber', color: 'bg-amber-400' },
+    { value: 'bg-teal-400', label: 'Teal', color: 'bg-teal-400' },
+    { value: 'bg-slate-400', label: 'Slate', color: 'bg-slate-400' },
+    { value: 'bg-stone-400', label: 'Stone', color: 'bg-stone-400' },
+  ];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name.trim()) {
+      onAdd(formData.name.trim(), formData.color);
+      setFormData({ name: '', color: 'bg-blue-400' });
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add New Department</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Department Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., Security Operations"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              Color Theme
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {colorOptions.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, color: option.value }))}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    formData.color === option.value 
+                      ? 'border-blue-500 ring-2 ring-blue-200' 
+                      : 'border-gray-300 dark:border-[#2d437a] hover:border-blue-300'
+                  }`}
+                >
+                  <div className={`${option.color} h-6 w-full rounded mb-1`}></div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">{option.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Add Department
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-300 dark:bg-[#2d437a] hover:bg-gray-400 dark:hover:bg-[#1e3555] text-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Edit Category Modal Component
+function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
+  isOpen: boolean;
+  category: any;
+  onClose: () => void;
+  onEdit: (categoryId: number, name: string, color: string) => void;
+  onDelete: (categoryId: number) => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    color: 'bg-blue-400'
+  });
+
+  const colorOptions = [
+    { value: 'bg-blue-400', label: 'Blue', color: 'bg-blue-400' },
+    { value: 'bg-purple-400', label: 'Purple', color: 'bg-purple-400' },
+    { value: 'bg-green-400', label: 'Green', color: 'bg-green-400' },
+    { value: 'bg-red-400', label: 'Red', color: 'bg-red-400' },
+    { value: 'bg-orange-400', label: 'Orange', color: 'bg-orange-400' },
+    { value: 'bg-amber-400', label: 'Amber', color: 'bg-amber-400' },
+    { value: 'bg-teal-400', label: 'Teal', color: 'bg-teal-400' },
+    { value: 'bg-slate-400', label: 'Slate', color: 'bg-slate-400' },
+    { value: 'bg-stone-400', label: 'Stone', color: 'bg-stone-400' },
+  ];
+
+  useEffect(() => {
+    if (category) {
+      setFormData({
+        name: category.name,
+        color: category.color
+      });
+    }
+  }, [category]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name.trim() && category) {
+      onEdit(category.id, formData.name.trim(), formData.color);
+      onClose();
+    }
+  };
+
+  const handleDelete = () => {
+    if (category && confirm(`Are you sure you want to delete "${category.name}"? This will also delete all positions in this department.`)) {
+      onDelete(category.id);
+      onClose();
+    }
+  };
+
+  if (!isOpen || !category) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Department</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Department Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., Security Operations"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              Color Theme
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {colorOptions.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, color: option.value }))}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    formData.color === option.value 
+                      ? 'border-blue-500 ring-2 ring-blue-200' 
+                      : 'border-gray-300 dark:border-[#2d437a] hover:border-blue-300'
+                  }`}
+                >
+                  <div className={`${option.color} h-6 w-full rounded mb-1`}></div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">{option.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Danger Zone</h3>
+            <p className="text-sm text-red-600 dark:text-red-300 mb-3">
+              Deleting this department will also remove all positions within it. This action cannot be undone.
+            </p>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="text-sm bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded font-medium transition-colors"
+            >
+              Delete Department
+            </button>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-300 dark:bg-[#2d437a] hover:bg-gray-400 dark:hover:bg-[#1e3555] text-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 

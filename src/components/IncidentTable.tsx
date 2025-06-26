@@ -603,7 +603,7 @@ export default function IncidentTable({
 
   if (loading) {
     return (
-      <div className="mt-4 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+      <div className="mt-4 bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300">
         <div className="animate-pulse space-y-4">
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
           <div className="space-y-3">
@@ -666,7 +666,7 @@ export default function IncidentTable({
       </div>
       {/* If no incidents, show empty state below search bar */}
       {sortedIncidents.length === 0 ? (
-        <div className="mt-4 bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
+        <div className="mt-4 bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 text-center text-gray-500 dark:text-gray-400 transition-colors duration-300">
           No incidents to display
         </div>
       ) : (

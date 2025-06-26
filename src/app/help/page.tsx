@@ -2,8 +2,8 @@ import React from 'react';
 
 const HelpPage = () => {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#101c36] p-4 md:p-8 transition-colors duration-300">
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-2xl rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] p-6 md:p-8 transition-colors duration-300">
+      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a] hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
         <header className="mb-10 border-b border-gray-200 dark:border-[#2d437a] pb-6">
           <h1 className="text-4xl font-bold text-gray-800 dark:text-white flex items-center">
             <span className="material-icons text-blue-600 dark:text-blue-300 mr-3 text-5xl">help_outline</span>
@@ -40,7 +40,7 @@ const HelpPage = () => {
               <span className="text-lg text-gray-800 dark:text-gray-100">Secure authentication and user management</span>
             </li>
           </ul>
-          <p className="text-lg leading-relaxed bg-blue-50 dark:bg-[#1a2a57] dark:text-blue-100 p-4 rounded-xl border border-blue-200 dark:border-[#2d437a] shadow-sm">
+          <p className="text-lg leading-relaxed bg-blue-50 dark:bg-[#1a2a57] dark:text-blue-100 p-4 rounded-xl border border-blue-200 dark:border-[#2d437a] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
             For further assistance, please contact your system administrator or refer to the documentation provided by your organization.
           </p>
         </section>
@@ -53,7 +53,7 @@ const HelpPage = () => {
             {glossaryItems.map(({ title, description, icon }, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-6 rounded-xl shadow-md border border-gray-100 dark:border-[#3451a1] hover:shadow-lg transition-shadow duration-300"
+                className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-6 rounded-xl shadow-xl border border-gray-100 dark:border-[#3451a1] hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
               >
                 <div className="flex items-center mb-2">
                   <span className={`material-icons text-blue-700 dark:text-blue-300 mr-2`}>{icon}</span>

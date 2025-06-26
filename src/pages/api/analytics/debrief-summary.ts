@@ -17,20 +17,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { data, error } = await supabase
       .from('debriefs')
-      .select('ai_summary, notes, callsign_sheet')
+      .select('ai_summary, callsign_sheet')
       .eq('event_id', eventId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') { // PostgREST error for "No rows found"
-        return res.status(404).json({ summary: '', notes: '', callsignSheet: [] });
+        return res.status(404).json({ summary: '', callsignSheet: [] });
       }
       throw error;
     }
 
     return res.status(200).json({
       summary: data.ai_summary || '',
-      notes: data.notes || '',
       callsignSheet: data.callsign_sheet || [],
     });
 

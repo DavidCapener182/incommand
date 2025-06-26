@@ -88,37 +88,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get recent audit logs (if they exist) that are newer than lastViewed
-    const { data: auditLogs, error: auditError } = await supabase
-      .from('audit_logs')
-      .select(`
-        id,
-        action,
-        table_name,
-        record_id,
-        created_at,
-        profiles!audit_logs_user_id_fkey (
-          full_name
-        )
-      `)
-      .gt('created_at', lastViewedDate.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(Math.min(limit, 10));
+    try {
+      const { data: auditLogs, error: auditError } = await supabase
+        .from('audit_logs')
+        .select(`
+          id,
+          action,
+          table_name,
+          record_id,
+          created_at,
+          profiles!audit_logs_user_id_fkey (
+            full_name
+          )
+        `)
+        .gt('created_at', lastViewedDate.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(Math.min(limit, 10));
 
-    if (auditError && auditError.code !== 'PGRST116') { // PGRST116 = table doesn't exist
-      console.error('Error fetching audit logs:', auditError);
-    } else if (auditLogs) {
-      auditLogs.forEach(log => {
-        actions.push({
-          id: `audit-${log.id}`,
-          type: 'audit',
-          icon: getAuditIcon(log.action),
-          title: `${log.action} ${log.table_name}`,
-          description: `Record ID: ${log.record_id}`,
-          timestamp: log.created_at,
-          userName: (log.profiles as any)?.full_name || 'System',
-          priority: 'low',
+      if (auditError) {
+        // Table doesn't exist or other error - just skip audit logs
+        console.warn('Audit logs not available:', auditError.message);
+      } else if (auditLogs) {
+        auditLogs.forEach(log => {
+          actions.push({
+            id: `audit-${log.id}`,
+            type: 'audit',
+            icon: getAuditIcon(log.action),
+            title: `${log.action} ${log.table_name}`,
+            description: `Record ID: ${log.record_id}`,
+            timestamp: log.created_at,
+            userName: (log.profiles as any)?.full_name || 'System',
+            priority: 'low',
+          });
         });
-      });
+      }
+    } catch (auditQueryError) {
+      // Silently skip audit logs if table doesn't exist
+      console.warn('Audit logs table not available');
     }
 
     // Sort all actions by timestamp (newest first)

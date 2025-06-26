@@ -42,7 +42,7 @@ export default function EjectionsCard() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300">
         <h2 className="text-lg font-semibold mb-2">Ejections</h2>
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -75,7 +75,7 @@ export default function EjectionsCard() {
   };
 
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 rounded-lg shadow p-6">
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold">Ejections</h2>

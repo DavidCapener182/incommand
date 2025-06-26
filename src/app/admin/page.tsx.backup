@@ -15,12 +15,10 @@ import {
   CodeBracketIcon,
   ClockIcon,
   CurrencyDollarIcon,
-  ChartPieIcon,
-  CalculatorIcon
+  ChartPieIcon
 } from '@heroicons/react/24/outline';
 import UserManagementModal from '@/components/UserManagementModal';
 import CompanyCreationModal from '@/components/CompanyCreationModal';
-import EventPricingCalculator from '@/components/EventPricingCalculator';
 
 interface Company {
   id: string;
@@ -154,13 +152,27 @@ interface DevSettings {
   subscription_price_yearly: number;
   per_event_price: number;
   target_subscribers: number;
-  // Tiered pricing (5 tiers + arena premium)
+  // Tiered pricing (5 tiers)
   per_event_price_light: number;      // 1-3 events/month
   per_event_price_casual: number;     // 4-8 events/month
   per_event_price_regular: number;    // 9-15 events/month  
   per_event_price_frequent: number;   // 16-25 events/month
   per_event_price_enterprise: number; // 26+ events/month
-  per_event_price_enterprise_arena: number; // 26+ events/month for venues 20k+ capacity
+  // Enterprise premium for large venues
+  enterprise_premium_multiplier: number; // Multiplier for 20,000+ capacity venues
+  // Capacity-based pricing - base price and multipliers
+  base_event_price: number;           // Base price (e.g., £75)
+  capacity_small_multiplier: number;  // x1
+  capacity_medium_multiplier: number; // x1.5
+  capacity_large_multiplier: number;  // x2
+  capacity_major_multiplier: number;  // x4
+  capacity_mega_multiplier: number;   // x15
+  // Capacity minimums
+  capacity_small_minimum: number;     // £75
+  capacity_medium_minimum: number;    // £100
+  capacity_large_minimum: number;     // £200
+  capacity_major_minimum: number;     // £400
+  capacity_mega_minimum: number;      // £1,000
   // Cost estimates
   cost_per_customer_yearly: number;
   cost_per_event: number;
@@ -172,6 +184,7 @@ interface DevSettings {
   subscribers_regular: number;        // 9-15 events/month
   subscribers_frequent: number;       // 16-25 events/month
   subscribers_enterprise: number;     // 26+ events/month
+  subscribers_arena: number;          // Large venues 20,000+ capacity
 }
 
 const navigation = [
@@ -179,7 +192,6 @@ const navigation = [
   { name: 'User Management', icon: UserGroupIcon, id: 'users' },
   { name: 'Companies', icon: BuildingOfficeIcon, id: 'companies' },
   { name: 'Events', icon: CalendarIcon, id: 'events' },
-  { name: 'Pricing Calculator', icon: CalculatorIcon, id: 'pricing' },
   { name: 'Development Tracking', icon: CodeBracketIcon, id: 'development' },
   { name: 'Billing & Subscriptions', icon: CreditCardIcon, id: 'billing' },
   { name: 'Audit Logs', icon: ClipboardDocumentListIcon, id: 'audit' },
@@ -218,17 +230,31 @@ const AdminPage = () => {
   const [subscriptionCosts, setSubscriptionCosts] = useState<SubscriptionCost[]>([]);
   const [devSettings, setDevSettings] = useState<DevSettings>({
     hourly_rate: 40,
-    subscription_price_monthly: 487.5,
+    subscription_price_monthly: 500,
     subscription_price_yearly: 5000,
     per_event_price: 75, // Average of all tiers
     target_subscribers: 100,
-    // Tiered pricing (5 tiers + arena premium)
-    per_event_price_light: 150,      // Premium for light usage (1-3 events)
-    per_event_price_casual: 125,     // High rate (4-8 events) 
-    per_event_price_regular: 100,    // Standard rate (9-15 events)
-    per_event_price_frequent: 75,    // Volume discount (16-25 events)
-    per_event_price_enterprise: 50,  // Enterprise rate (26+ events)
-    per_event_price_enterprise_arena: 75, // Arena premium (26+ events, 20k+ capacity)
+    // Tiered pricing (5 tiers)
+    per_event_price_light: 250,      // Premium for light usage (1-3 events)
+    per_event_price_casual: 200,     // High rate (4-8 events) 
+    per_event_price_regular: 156,    // Standard rate (9-15 events)
+    per_event_price_frequent: 125,   // Volume discount (16-25 events)
+    per_event_price_enterprise: 94,  // Enterprise rate (26+ events)
+    // Enterprise premium for large venues
+    enterprise_premium_multiplier: 1.5, // 50% premium for 20,000+ capacity venues
+    // Capacity-based pricing - base price and multipliers
+    base_event_price: 75,           // Base price
+    capacity_small_multiplier: 1,   // x1
+    capacity_medium_multiplier: 1.5, // x1.5
+    capacity_large_multiplier: 2,   // x2
+    capacity_major_multiplier: 4,   // x4
+    capacity_mega_multiplier: 15,   // x15
+    // Capacity minimums
+    capacity_small_minimum: 75,     // £75
+    capacity_medium_minimum: 100,   // £100
+    capacity_large_minimum: 200,    // £200
+    capacity_major_minimum: 400,    // £400
+    capacity_mega_minimum: 1000,    // £1,000
     // Cost estimates
     cost_per_customer_yearly: 500, // Server, support, etc.
     cost_per_event: 5,              // Processing, storage per event
@@ -239,17 +265,53 @@ const AdminPage = () => {
     subscribers_casual: 15,          // Casual customers (4-8/month)
     subscribers_regular: 10,         // Regular customers (9-15/month)
     subscribers_frequent: 5,         // Frequent customers (16-25/month)
-    subscribers_enterprise: 2        // Enterprise customers (26+/month)
+    subscribers_enterprise: 2,       // Enterprise customers (26+/month)
+    subscribers_arena: 1             // Large venues 20,000+ capacity
   });
 
-  // Auto-calculate monthly price based on yearly price with 17% discount
+  // Auto-calculate monthly price based on yearly price with 20% markup
   const calculateMonthlyFromYearly = (yearlyPrice: number) => {
-    return Math.round((yearlyPrice / 12) * 100) / 100; // Round to 2 decimal places
+    return Math.round((yearlyPrice / 12) * 1.2 * 100) / 100; // Round to 2 decimal places
   };
 
-  // Auto-calculate what the monthly plan price should be (17% higher than yearly equivalent)
+  // Auto-calculate what the monthly plan price should be (20% higher than yearly equivalent)
   const calculateMonthlyPlanPrice = (yearlyPrice: number) => {
-    return Math.round((yearlyPrice / 12) * 1.17 * 100) / 100; // Round to 2 decimal places
+    return Math.round((yearlyPrice / 12) * 1.2 * 100) / 100; // Round to 2 decimal places
+  };
+
+  // Calculate capacity-based event price: max(base_price × multiplier, minimum)
+  const calculateCapacityPrice = (capacity: number, settings: DevSettings) => {
+    let multiplier: number;
+    let minimum: number;
+    
+    if (capacity >= 50000) {
+      multiplier = settings.capacity_mega_multiplier;
+      minimum = settings.capacity_mega_minimum;
+    } else if (capacity >= 20000) {
+      multiplier = settings.capacity_major_multiplier;
+      minimum = settings.capacity_major_minimum;
+    } else if (capacity >= 5000) {
+      multiplier = settings.capacity_large_multiplier;
+      minimum = settings.capacity_large_minimum;
+    } else if (capacity >= 1000) {
+      multiplier = settings.capacity_medium_multiplier;
+      minimum = settings.capacity_medium_minimum;
+    } else {
+      multiplier = settings.capacity_small_multiplier;
+      minimum = settings.capacity_small_minimum;
+    }
+    
+    const calculatedPrice = settings.base_event_price * multiplier;
+    return Math.max(calculatedPrice, minimum);
+  };
+
+  // Get capacity tier name
+  const getCapacityTier = (capacity: number) => {
+    if (capacity >= 50000) return "Mega (50K+)";
+    if (capacity >= 20000) return "Major (20K-50K)";
+    if (capacity >= 5000) return "Large (5K-20K)";
+    if (capacity >= 1000) return "Medium (1K-5K)";
+    return "Small (1-999)";
   };
   const [devMetrics, setDevMetrics] = useState<DevMetrics>({
     total_hours: 0,
@@ -269,19 +331,12 @@ const AdminPage = () => {
     end_time: '',
     description: '',
     category: 'development' as const,
-    hourly_rate: 15 // Will be updated from database
+    hourly_rate: 40 // £40/hour in GBP
   });
-  const [newSubscription, setNewSubscription] = useState<{
-    service_name: string;
-    cost: number;
-    billing_period: 'monthly' | 'yearly' | 'one-time';
-    start_date: string;
-    end_date: string;
-    description: string;
-  }>({
+  const [newSubscription, setNewSubscription] = useState({
     service_name: '',
     cost: 0,
-    billing_period: 'monthly',
+    billing_period: 'monthly' as const,
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     description: ''
@@ -322,28 +377,24 @@ const AdminPage = () => {
     };
   }, [])
 
-  // Calculate pricing whenever yearly price changes
-  const calculatePricing = (yearlyPrice: number) => {
-    // Monthly price is yearly / 12 * 1.20 (20% premium to make yearly more attractive)
-    const monthlyPrice = Math.round((yearlyPrice / 12) * 1.20 * 100) / 100;
+  // Calculate tiered pricing on initial load
+  useEffect(() => {
+    const yearlyPrice = 5000; // Default yearly price
+    // Calculate monthly price with 20% markup to make yearly more attractive
+    const yearlyEquivalentMonthly = yearlyPrice / 12;
+    const monthlyPrice = Math.round(yearlyEquivalentMonthly * 1.20 * 100) / 100;
     
-    // Per-event pricing strategy based on monthly price
-    // Break-even point: if someone uses 5 events/month, they should consider monthly subscription
-    const breakEvenRate = monthlyPrice / 5; // Monthly subscription becomes attractive at 5 events
-    
-    // 5-tier per-event pricing
-    const perEventLight = Math.round(breakEvenRate * 2.0 * 100) / 100;      // 200% - Very high for 1-3 events
-    const perEventCasual = Math.round(breakEvenRate * 1.6 * 100) / 100;     // 160% - High for 4-8 events  
-    const perEventRegular = Math.round(breakEvenRate * 1.3 * 100) / 100;    // 130% - Standard for 9-15 events
-    const perEventFrequent = Math.round(breakEvenRate * 1.1 * 100) / 100;   // 110% - Small discount for 16-25 events
-    const perEventEnterprise = Math.round(breakEvenRate * 0.9 * 100) / 100; // 90% - Volume discount for 26+ events
-    
-    // Enterprise premium for venues over 20,000 capacity (add 50% to all per-event rates)
-    const perEventEnterpriseArena = Math.round(perEventEnterprise * 1.5 * 100) / 100;
-    
+    // Calculate 5-tier per-event pricing based on monthly price
+    const baseEventPrice = monthlyPrice / 8; // Base calculation - break-even at 8 events
+    const perEventLight = Math.round(baseEventPrice * 4.0 * 100) / 100;      // 400% - Very high for 1-3 events
+    const perEventCasual = Math.round(baseEventPrice * 3.2 * 100) / 100;     // 320% - High for 4-8 events  
+    const perEventRegular = Math.round(baseEventPrice * 2.5 * 100) / 100;    // 250% - Standard for 9-15 events
+    const perEventFrequent = Math.round(baseEventPrice * 2.0 * 100) / 100;   // 200% - Discount for 16-25 events
+    const perEventEnterprise = Math.round(baseEventPrice * 1.5 * 100) / 100; // 150% - Volume rate for 26+ events
     const perEventAverage = Math.round((perEventLight + perEventCasual + perEventRegular + perEventFrequent + perEventEnterprise) / 5 * 100) / 100;
     
-    return {
+    setDevSettings(prev => ({ 
+      ...prev, 
       subscription_price_yearly: yearlyPrice,
       subscription_price_monthly: monthlyPrice,
       per_event_price: perEventAverage,
@@ -351,27 +402,9 @@ const AdminPage = () => {
       per_event_price_casual: perEventCasual,
       per_event_price_regular: perEventRegular,
       per_event_price_frequent: perEventFrequent,
-      per_event_price_enterprise: perEventEnterprise,
-      per_event_price_enterprise_arena: perEventEnterpriseArena
-    };
-  };
-
-  // Calculate initial pricing
-  useEffect(() => {
-    const initialPricing = calculatePricing(5000); // Default £5000 yearly
-    setDevSettings(prev => ({ 
-      ...prev, 
-      ...initialPricing
+      per_event_price_enterprise: perEventEnterprise
     }));
   }, []) // Only run on initial load
-
-  // Update newSession hourly rate when devSettings changes
-  useEffect(() => {
-    setNewSession(prev => ({
-      ...prev,
-      hourly_rate: devSettings.hourly_rate
-    }));
-  }, [devSettings.hourly_rate])
 
   const checkSuperAdmin = async () => {
     try {
@@ -747,30 +780,12 @@ const AdminPage = () => {
         .from('dev_settings')
         .select('*');
 
-      let currentSettings: DevSettings = {
+      let currentSettings = {
         hourly_rate: 40,
         subscription_price_monthly: 25,
         subscription_price_yearly: 250,
         per_event_price: 15,
-        target_subscribers: 100,
-        // Tiered pricing defaults
-        per_event_price_light: 150,
-        per_event_price_casual: 125,
-        per_event_price_regular: 100,
-        per_event_price_frequent: 75,
-        per_event_price_enterprise: 50,
-        per_event_price_enterprise_arena: 75,
-        // Cost estimates defaults
-        cost_per_customer_yearly: 500,
-        cost_per_event: 5,
-        // Subscriber projections defaults
-        subscribers_monthly: 20,
-        subscribers_yearly: 50,
-        subscribers_light: 30,
-        subscribers_casual: 15,
-        subscribers_regular: 10,
-        subscribers_frequent: 5,
-        subscribers_enterprise: 2
+        target_subscribers: 100
       };
 
       if (settingsError && settingsError.code !== 'PGRST116') {
@@ -789,31 +804,13 @@ const AdminPage = () => {
           subscription_price_monthly: autoCalculatedMonthly, // Auto-calculate from yearly
           subscription_price_yearly: yearlyPrice,
           per_event_price: settings.per_event_price || 15,
-          target_subscribers: settings.target_subscribers || 100,
-          // Tiered pricing defaults
-          per_event_price_light: settings.per_event_price_light || 150,
-          per_event_price_casual: settings.per_event_price_casual || 125,
-          per_event_price_regular: settings.per_event_price_regular || 100,
-          per_event_price_frequent: settings.per_event_price_frequent || 75,
-          per_event_price_enterprise: settings.per_event_price_enterprise || 50,
-          per_event_price_enterprise_arena: settings.per_event_price_enterprise_arena || 75,
-          // Cost estimates defaults
-          cost_per_customer_yearly: settings.cost_per_customer_yearly || 500,
-          cost_per_event: settings.cost_per_event || 5,
-          // Subscriber projections defaults
-          subscribers_monthly: settings.subscribers_monthly || 20,
-          subscribers_yearly: settings.subscribers_yearly || 50,
-          subscribers_light: settings.subscribers_light || 30,
-          subscribers_casual: settings.subscribers_casual || 15,
-          subscribers_regular: settings.subscribers_regular || 10,
-          subscribers_frequent: settings.subscribers_frequent || 5,
-          subscribers_enterprise: settings.subscribers_enterprise || 2
+          target_subscribers: settings.target_subscribers || 100
         };
         setDevSettings(currentSettings);
       }
 
       // Calculate metrics with the current settings (no AI usage data)
-      calculateDevMetricsWithSettings(sessionsData || [], subscriptionData || [], currentSettings);
+      calculateDevMetricsWithSettings(sessionsData || [], [], subscriptionData || [], currentSettings);
     } catch (error) {
       console.error('Error fetching development data:', error);
     }
@@ -825,8 +822,7 @@ const AdminPage = () => {
 
   const calculateDevMetricsWithSettings = (sessions: DevSession[], subscriptions: SubscriptionCost[] = [], settings: DevSettings) => {
     const totalHours = sessions.reduce((sum, session) => sum + session.duration_hours, 0);
-    // Recalculate total cost using current hourly rate instead of stored total_cost
-    const totalDevCost = totalHours * settings.hourly_rate;
+    const totalDevCost = sessions.reduce((sum, session) => sum + session.total_cost, 0);
     const totalAiCost = 0; // We'll track AI costs through subscriptions instead
     
     // Calculate subscription costs (annualized for monthly/yearly, one-time as is)
@@ -883,8 +879,12 @@ const AdminPage = () => {
         { setting_name: 'per_event_price', setting_value: devSettings.per_event_price, description: 'Average price per event', updated_at: new Date().toISOString() },
         { setting_name: 'per_event_price_light', setting_value: devSettings.per_event_price_light, description: 'Price per event for light users (1-5 events/month)', updated_at: new Date().toISOString() },
         { setting_name: 'per_event_price_regular', setting_value: devSettings.per_event_price_regular, description: 'Price per event for regular users (6-15 events/month)', updated_at: new Date().toISOString() },
-        { setting_name: 'per_event_price_frequent', setting_value: devSettings.per_event_price_frequent, description: 'Price per event for frequent users (16-25 events/month)', updated_at: new Date().toISOString() },
-        { setting_name: 'per_event_price_enterprise', setting_value: devSettings.per_event_price_enterprise, description: 'Price per event for enterprise users (26+ events/month)', updated_at: new Date().toISOString() },
+        { setting_name: 'per_event_price_heavy', setting_value: devSettings.per_event_price_heavy, description: 'Price per event for heavy users (16+ events/month)', updated_at: new Date().toISOString() },
+        { setting_name: 'capacity_small_price', setting_value: devSettings.capacity_small_price, description: 'Price per event for small venues (1-999 capacity)', updated_at: new Date().toISOString() },
+        { setting_name: 'capacity_medium_price', setting_value: devSettings.capacity_medium_price, description: 'Price per event for medium venues (1K-5K capacity)', updated_at: new Date().toISOString() },
+        { setting_name: 'capacity_large_price', setting_value: devSettings.capacity_large_price, description: 'Price per event for large venues (5K-20K capacity)', updated_at: new Date().toISOString() },
+        { setting_name: 'capacity_major_price', setting_value: devSettings.capacity_major_price, description: 'Price per event for major venues (20K-50K capacity)', updated_at: new Date().toISOString() },
+        { setting_name: 'capacity_mega_price', setting_value: devSettings.capacity_mega_price, description: 'Price per event for mega venues (50K+ capacity)', updated_at: new Date().toISOString() },
         { setting_name: 'cost_per_customer_yearly', setting_value: devSettings.cost_per_customer_yearly, description: 'Annual cost per customer (infrastructure, support)', updated_at: new Date().toISOString() },
         { setting_name: 'cost_per_event', setting_value: devSettings.cost_per_event, description: 'Cost per event (processing, storage)', updated_at: new Date().toISOString() },
         { setting_name: 'target_subscribers', setting_value: devSettings.target_subscribers, description: 'Target number of subscribers for projections', updated_at: new Date().toISOString() }
@@ -903,13 +903,7 @@ const AdminPage = () => {
       // Add new dev session if filled out
       if (newSession.start_time && newSession.end_time && newSession.description) {
         const startTime = new Date(`${newSession.date}T${newSession.start_time}`);
-        let endTime = new Date(`${newSession.date}T${newSession.end_time}`);
-        
-        // If end time is earlier than start time, assume it's the next day
-        if (endTime.getTime() <= startTime.getTime()) {
-          endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000); // Add 24 hours
-        }
-        
+        const endTime = new Date(`${newSession.date}T${newSession.end_time}`);
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
         const totalCost = durationHours * newSession.hourly_rate;
 
@@ -983,72 +977,6 @@ const AdminPage = () => {
     } catch (error) {
       console.error('Error saving data:', error);
       alert(`Error saving data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const fixNegativeSessions = async () => {
-    try {
-      // Get all sessions from database
-      const { data: sessions, error: fetchError } = await supabase
-        .from('dev_sessions')
-        .select('*');
-
-      if (fetchError) throw fetchError;
-
-      if (!sessions) {
-        alert('No sessions found to fix');
-        return;
-      }
-
-      const sessionsToFix = [];
-
-      for (const session of sessions) {
-        // Recalculate duration and cost for each session
-        const startTime = new Date(`${session.date}T${session.start_time}`);
-        let endTime = new Date(`${session.date}T${session.end_time}`);
-        
-        // If end time is earlier than start time, assume it's the next day
-        if (endTime.getTime() <= startTime.getTime()) {
-          endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000); // Add 24 hours
-        }
-        
-        const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        const totalCost = durationHours * session.hourly_rate;
-
-        // Only update if the values are different (negative or incorrect)
-        if (session.duration_hours !== durationHours || session.total_cost !== totalCost) {
-          sessionsToFix.push({
-            id: session.id,
-            duration_hours: durationHours,
-            total_cost: totalCost
-          });
-        }
-      }
-
-      if (sessionsToFix.length === 0) {
-        alert('No sessions need fixing - all durations are correct!');
-        return;
-      }
-
-      // Update each session
-      for (const sessionUpdate of sessionsToFix) {
-        const { error: updateError } = await supabase
-          .from('dev_sessions')
-          .update({
-            duration_hours: sessionUpdate.duration_hours,
-            total_cost: sessionUpdate.total_cost
-          })
-          .eq('id', sessionUpdate.id);
-
-        if (updateError) throw updateError;
-      }
-
-      alert(`Fixed ${sessionsToFix.length} sessions with incorrect duration/cost calculations!`);
-      await fetchDevData(); // Refresh the UI
-      
-    } catch (error) {
-      console.error('Error fixing negative sessions:', error);
-      alert(`Error fixing sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1213,7 +1141,7 @@ const AdminPage = () => {
             <div className="h-4 bg-gray-200 dark:bg-[#23408e] rounded w-1/2 mb-8"></div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div key={i} className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                   <div className="h-4 bg-gray-200 dark:bg-[#2d437a] rounded w-3/4 mb-4"></div>
                   <div className="h-8 bg-gray-200 dark:bg-[#2d437a] rounded w-1/2"></div>
                 </div>
@@ -1266,10 +1194,40 @@ const AdminPage = () => {
             Setup Database
           </button>
         </div>
-
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col items-start transition-colors duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              <span className="font-semibold text-lg">Total Companies</span>
+            </div>
+            <span className="text-2xl font-bold">{companies.length}</span>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col items-start transition-colors duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <UserGroupIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              <span className="font-semibold text-lg">Total Users</span>
+            </div>
+            <span className="text-2xl font-bold">{users.length}</span>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col items-start transition-colors duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              <span className="font-semibold text-lg">Total Events</span>
+            </div>
+            <span className="text-2xl font-bold">{events.length}</span>
+          </div>
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col items-start transition-colors duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              <span className="font-semibold text-lg">Active Events</span>
+            </div>
+            <span className="text-2xl font-bold">{events.filter(event => new Date(event.end_datetime) > new Date()).length}</span>
+          </div>
+        </div>
         {/* System Overview Card */}
         {activeSection === 'overview' && (
-          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 transition-colors duration-300">
             <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-blue-200">System Overview</h2>
             <p className="text-gray-600 dark:text-blue-100">Welcome to the admin dashboard. Here you can manage companies, users, and view system statistics.</p>
           </div>
@@ -1280,7 +1238,7 @@ const AdminPage = () => {
           <div className="space-y-6">
             {/* Development Metrics Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <ClockIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Hours</span>
@@ -1289,7 +1247,7 @@ const AdminPage = () => {
                 <p className="text-sm text-gray-600 dark:text-blue-100">{devMetrics.sessions_count} sessions</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <CurrencyDollarIcon className="h-6 w-6 text-green-600 dark:text-green-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Dev Cost</span>
@@ -1298,7 +1256,7 @@ const AdminPage = () => {
                 <p className="text-sm text-gray-600 dark:text-blue-100">@ £{devSettings.hourly_rate}/hour</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <CreditCardIcon className="h-6 w-6 text-orange-600 dark:text-orange-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Subscriptions</span>
@@ -1307,7 +1265,7 @@ const AdminPage = () => {
                 <p className="text-sm text-gray-600 dark:text-blue-100">{subscriptionCosts.length} active</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <ChartPieIcon className="h-6 w-6 text-red-600 dark:text-red-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Investment</span>
@@ -1320,7 +1278,7 @@ const AdminPage = () => {
             {/* Input Forms and Settings */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Log Development Session */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Log Development Session</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -1380,7 +1338,7 @@ const AdminPage = () => {
               </div>
 
               {/* Add Subscription */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Subscription</h3>
                 {newSubscription.billing_period === 'yearly' && (
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
@@ -1454,30 +1412,8 @@ const AdminPage = () => {
               </div>
             </div>
 
-            {/* Save Button for Input Forms */}
-            <div className="flex justify-center gap-4 mb-6">
-              <button
-                onClick={saveAllData}
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg text-lg font-semibold"
-              >
-                Save All Changes
-              </button>
-              <button
-                onClick={fetchDevData}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-semibold"
-              >
-                Refresh Data
-              </button>
-              <button
-                onClick={fixNegativeSessions}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg text-lg font-semibold"
-              >
-                Fix Negative Sessions
-              </button>
-            </div>
-
-            {/* Settings & Calculations */}
-            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            {/* Settings & Save Button */}
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
               <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Development & Pricing Settings</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div>
@@ -1498,16 +1434,35 @@ const AdminPage = () => {
                     value={devSettings.subscription_price_yearly}
                     onChange={(e) => {
                       const newYearlyPrice = parseFloat(e.target.value) || 0;
-                      const newPricing = calculatePricing(newYearlyPrice);
+                      // Calculate monthly price with 20% markup to make yearly more attractive
+                      const yearlyEquivalentMonthly = newYearlyPrice / 12;
+                      const newMonthlyPrice = Math.round(yearlyEquivalentMonthly * 1.20 * 100) / 100;
+                      
+                      // Calculate 5-tier per-event pricing based on monthly price
+                      const baseEventPrice = newMonthlyPrice / 8; // Base calculation - break-even at 8 events
+                      const newPerEventLight = Math.round(baseEventPrice * 4.0 * 100) / 100;      // 400% - Very high for 1-3 events
+                      const newPerEventCasual = Math.round(baseEventPrice * 3.2 * 100) / 100;     // 320% - High for 4-8 events  
+                      const newPerEventRegular = Math.round(baseEventPrice * 2.5 * 100) / 100;    // 250% - Standard for 9-15 events
+                      const newPerEventFrequent = Math.round(baseEventPrice * 2.0 * 100) / 100;   // 200% - Discount for 16-25 events
+                      const newPerEventEnterprise = Math.round(baseEventPrice * 1.5 * 100) / 100; // 150% - Volume rate for 26+ events
+                      const newPerEventAverage = Math.round((newPerEventLight + newPerEventCasual + newPerEventRegular + newPerEventFrequent + newPerEventEnterprise) / 5 * 100) / 100;
+                      
                       setDevSettings(prev => ({ 
                         ...prev, 
-                        ...newPricing
+                        subscription_price_yearly: newYearlyPrice,
+                        subscription_price_monthly: newMonthlyPrice,
+                        per_event_price: newPerEventAverage,
+                        per_event_price_light: newPerEventLight,
+                        per_event_price_casual: newPerEventCasual,
+                        per_event_price_regular: newPerEventRegular,
+                        per_event_price_frequent: newPerEventFrequent,
+                        per_event_price_enterprise: newPerEventEnterprise
                       }));
                     }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
                   />
                   <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">
-                    Yearly equiv: £{(devSettings.subscription_price_yearly / 12).toFixed(2)}/month (15% savings vs monthly)
+                    Yearly equiv: £{(devSettings.subscription_price_yearly / 12).toFixed(2)}/month (17% savings vs monthly)
                   </p>
                 </div>
                 <div>
@@ -1520,7 +1475,7 @@ const AdminPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-not-allowed"
                   />
                   <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">
-                    Auto-calculated (Yearly ÷ 12 × 1.17) - 17% premium over yearly
+                    Auto-calculated (Yearly ÷ 12 × 1.20) - 20% premium over yearly
                   </p>
                 </div>
                 <div>
@@ -1532,165 +1487,190 @@ const AdminPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
                   />
                 </div>
-              </div>
-
-              {/* Tiered Pricing Display */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">6-Tier Per-Event Pricing Strategy</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
-                    <h5 className="font-semibold text-red-800 dark:text-red-200 mb-2 text-sm">Light (1-3/month)</h5>
-                    <p className="text-lg font-bold text-red-900 dark:text-red-100">£{devSettings.per_event_price_light?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-red-600 dark:text-red-300 mb-2">Premium occasional rate</p>
-                    <div className="text-xs text-red-700 dark:text-red-200 space-y-1">
-                      <p><strong>Target:</strong> One-off events</p>
-                      <p><strong>Strategy:</strong> High margin</p>
-                      <p><strong>Convert:</strong> At 3+ events</p>
-                    </div>
-                  </div>
-                  <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-3">
-                    <h5 className="font-semibold text-orange-800 dark:text-orange-200 mb-2 text-sm">Casual (4-8/month)</h5>
-                    <p className="text-lg font-bold text-orange-900 dark:text-orange-100">£{devSettings.per_event_price_casual?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-orange-600 dark:text-orange-300 mb-2">Regular user rate</p>
-                    <div className="text-xs text-orange-700 dark:text-orange-200 space-y-1">
-                      <p><strong>Target:</strong> Small venues</p>
-                      <p><strong>Strategy:</strong> Push subscription</p>
-                      <p><strong>Convert:</strong> Monthly at 4 events</p>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-                    <h5 className="font-semibold text-blue-800 dark:text-blue-200 mb-2 text-sm">Regular (9-15/month)</h5>
-                    <p className="text-lg font-bold text-blue-900 dark:text-blue-100">£{devSettings.per_event_price_regular?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300 mb-2">Standard business rate</p>
-                    <div className="text-xs text-blue-700 dark:text-blue-200 space-y-1">
-                      <p><strong>Target:</strong> Event companies</p>
-                      <p><strong>Strategy:</strong> Subscription attractive</p>
-                      <p><strong>Convert:</strong> Yearly plan</p>
-                    </div>
-                  </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
-                    <h5 className="font-semibold text-green-800 dark:text-green-200 mb-2 text-sm">Frequent (16-25/month)</h5>
-                    <p className="text-lg font-bold text-green-900 dark:text-green-100">£{devSettings.per_event_price_frequent?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-green-600 dark:text-green-300 mb-2">Volume discount</p>
-                    <div className="text-xs text-green-700 dark:text-green-200 space-y-1">
-                      <p><strong>Target:</strong> Large venues</p>
-                      <p><strong>Strategy:</strong> Retention focused</p>
-                      <p><strong>Convert:</strong> Enterprise deals</p>
-                    </div>
-                  </div>
-                  <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-3">
-                    <h5 className="font-semibold text-purple-800 dark:text-purple-200 mb-2 text-sm">Enterprise (26+/month)</h5>
-                    <p className="text-lg font-bold text-purple-900 dark:text-purple-100">£{devSettings.per_event_price_enterprise?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-purple-600 dark:text-purple-300 mb-2">Best volume rate</p>
-                    <div className="text-xs text-purple-700 dark:text-purple-200 space-y-1">
-                      <p><strong>Target:</strong> Festivals, chains</p>
-                      <p><strong>Strategy:</strong> Competitive pricing</p>
-                      <p><strong>Convert:</strong> Custom contracts</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
-                    <h5 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 text-sm">Arena Premium (20k+ capacity)</h5>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">£{devSettings.per_event_price_enterprise_arena?.toFixed(2) || '0.00'}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">Large venue premium</p>
-                    <div className="text-xs text-gray-700 dark:text-gray-200 space-y-1">
-                      <p><strong>Target:</strong> Arenas, stadiums</p>
-                      <p><strong>Strategy:</strong> Premium for scale</p>
-                      <p><strong>Convert:</strong> Multi-year deals</p>
-                    </div>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arena Premium Multiplier</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={devSettings.enterprise_premium_multiplier}
+                    onChange={(e) => setDevSettings(prev => ({ ...prev, enterprise_premium_multiplier: parseFloat(e.target.value) || 1.0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">Multiplier for venues with 20,000+ capacity (e.g., 1.5 = 50% premium)</p>
                 </div>
-                <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                  <p><strong>Pricing Logic:</strong> Monthly subscription (£{devSettings.subscription_price_monthly?.toFixed(2)}) becomes attractive at 5 events. Yearly subscription (£{devSettings.subscription_price_yearly?.toFixed(2)}) offers 20% savings vs monthly.</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost per Event (£)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={devSettings.cost_per_event}
+                    onChange={(e) => setDevSettings(prev => ({ ...prev, cost_per_event: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">Processing, storage, bandwidth cost per event</p>
                 </div>
               </div>
 
-              {/* Subscriber Analysis Tool */}
+              {/* Capacity-Based Pricing Controls */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Subscriber Analysis - Set Your Projections</h4>
+                <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Capacity-Based Event Pricing Controls</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base Event Price (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.base_event_price}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, base_event_price: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">Base price before multipliers</p>
+                  </div>
+                </div>
                 
-                {/* Subscription Customers */}
-                <div className="mb-4">
-                  <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Subscription Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Subscribers</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_monthly}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_monthly: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">£{devSettings.subscription_price_monthly}/month each</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yearly Subscribers</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_yearly}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_yearly: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-blue-300 mt-1">£{devSettings.subscription_price_yearly}/year each</p>
-                    </div>
+                {/* Multipliers Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Small Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={devSettings.capacity_small_multiplier}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_small_multiplier: parseFloat(e.target.value) || 1 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Medium Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={devSettings.capacity_medium_multiplier}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_medium_multiplier: parseFloat(e.target.value) || 1.5 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Large Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={devSettings.capacity_large_multiplier}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_large_multiplier: parseFloat(e.target.value) || 2 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Major Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={devSettings.capacity_major_multiplier}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_major_multiplier: parseFloat(e.target.value) || 4 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Mega Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={devSettings.capacity_mega_multiplier}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_mega_multiplier: parseFloat(e.target.value) || 15 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
                   </div>
                 </div>
 
-                {/* Per-Event Customers */}
-                <div className="mb-4">
-                  <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Per-Event Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-red-700 dark:text-red-300 mb-1">Light Users</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_light}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_light: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-red-600 dark:text-red-300 mt-1">£{devSettings.per_event_price_light?.toFixed(2)} × 2 events/month avg</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-orange-700 dark:text-orange-300 mb-1">Casual Users</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_casual}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_casual: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">£{devSettings.per_event_price_casual?.toFixed(2)} × 6 events/month avg</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Regular Users</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_regular}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_regular: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">£{devSettings.per_event_price_regular?.toFixed(2)} × 12 events/month avg</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-1">Frequent Users</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_frequent}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_frequent: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-green-300 dark:border-green-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-green-600 dark:text-green-300 mt-1">£{devSettings.per_event_price_frequent?.toFixed(2)} × 20 events/month avg</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Enterprise Users</label>
-                      <input
-                        type="number"
-                        value={devSettings.subscribers_enterprise}
-                        onChange={(e) => setDevSettings(prev => ({ ...prev, subscribers_enterprise: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                      />
-                      <p className="text-xs text-purple-600 dark:text-purple-300 mt-1">£{devSettings.per_event_price_enterprise?.toFixed(2)} × 30 events/month avg</p>
-                    </div>
+                {/* Minimums Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Small Minimum (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.capacity_small_minimum}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_small_minimum: parseFloat(e.target.value) || 75 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Medium Minimum (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.capacity_medium_minimum}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_medium_minimum: parseFloat(e.target.value) || 100 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Large Minimum (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.capacity_large_minimum}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_large_minimum: parseFloat(e.target.value) || 200 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Major Minimum (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.capacity_major_minimum}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_major_minimum: parseFloat(e.target.value) || 400 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Mega Minimum (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={devSettings.capacity_mega_minimum}
+                      onChange={(e) => setDevSettings(prev => ({ ...prev, capacity_mega_minimum: parseFloat(e.target.value) || 1000 }))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                    />
                   </div>
                 </div>
+              </div>
+
+              {/* Live Pricing Preview */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Live Pricing Preview</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {[
+                    { name: "Small", range: "1-999", capacity: 500, multiplier: devSettings.capacity_small_multiplier, minimum: devSettings.capacity_small_minimum },
+                    { name: "Medium", range: "1K-5K", capacity: 2500, multiplier: devSettings.capacity_medium_multiplier, minimum: devSettings.capacity_medium_minimum },
+                    { name: "Large", range: "5K-20K", capacity: 10000, multiplier: devSettings.capacity_large_multiplier, minimum: devSettings.capacity_large_minimum },
+                    { name: "Major", range: "20K-50K", capacity: 30000, multiplier: devSettings.capacity_major_multiplier, minimum: devSettings.capacity_major_minimum },
+                    { name: "Mega", range: "50K+", capacity: 75000, multiplier: devSettings.capacity_mega_multiplier, minimum: devSettings.capacity_mega_minimum }
+                  ].map((tier) => {
+                    const calculatedPrice = devSettings.base_event_price * tier.multiplier;
+                    const finalPrice = Math.max(calculatedPrice, tier.minimum);
+                    const isMinimumUsed = calculatedPrice < tier.minimum;
+                    
+                    return (
+                      <div key={tier.name} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                        <h5 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{tier.name}</h5>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{tier.range}</p>
+                        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <p>£{devSettings.base_event_price} × {tier.multiplier} = £{calculatedPrice.toFixed(2)}</p>
+                          <p>Min: £{tier.minimum}</p>
+                          {isMinimumUsed && <p className="text-amber-500 dark:text-amber-400 font-medium">Using minimum</p>}
+                        </div>
+                        <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">£{finalPrice.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+
 
                 {/* Revenue Summary */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
@@ -1711,7 +1691,8 @@ const AdminPage = () => {
                            (devSettings.subscribers_casual * devSettings.per_event_price_casual * 6) + 
                            (devSettings.subscribers_regular * devSettings.per_event_price_regular * 12) + 
                            (devSettings.subscribers_frequent * devSettings.per_event_price_frequent * 20) + 
-                           (devSettings.subscribers_enterprise * devSettings.per_event_price_enterprise * 30)).toLocaleString()}
+                           (devSettings.subscribers_enterprise * devSettings.per_event_price_enterprise * 30) + 
+                           (devSettings.subscribers_arena * devSettings.per_event_price_enterprise * devSettings.enterprise_premium_multiplier * 15)).toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -1723,7 +1704,8 @@ const AdminPage = () => {
                            (devSettings.subscribers_casual * devSettings.per_event_price_casual * 6) + 
                            (devSettings.subscribers_regular * devSettings.per_event_price_regular * 12) + 
                            (devSettings.subscribers_frequent * devSettings.per_event_price_frequent * 20) + 
-                           (devSettings.subscribers_enterprise * devSettings.per_event_price_enterprise * 30)).toLocaleString()}
+                           (devSettings.subscribers_enterprise * devSettings.per_event_price_enterprise * 30) + 
+                           (devSettings.subscribers_arena * devSettings.per_event_price_enterprise * devSettings.enterprise_premium_multiplier * 15)).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -1801,12 +1783,22 @@ const AdminPage = () => {
                   </div>
                 </div>
               </div>
+              
+              {/* Single Save Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={saveAllData}
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg text-lg font-semibold"
+                >
+                  Save All Changes
+                </button>
+              </div>
             </div>
 
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Development Sessions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Development Sessions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {devSessions.slice(0, 10).map((session) => (
@@ -1841,7 +1833,7 @@ const AdminPage = () => {
               </div>
 
               {/* Active Subscriptions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Subscriptions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {subscriptionCosts.slice(0, 10).map((subscription) => (
@@ -1879,9 +1871,9 @@ const AdminPage = () => {
           </div>
         )}
 
-                 {/* Non-Super Admin Message */}
+        {/* Non-Super Admin Message */}
          {activeSection === 'development' && !isSuperAdmin && (
-           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
              <div className="text-center">
                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Access Restricted</h3>
                <p className="text-gray-600 dark:text-blue-100 mb-4">Development tracking is only available to super administrators.</p>
@@ -1897,11 +1889,6 @@ const AdminPage = () => {
                </button>
              </div>
            </div>
-         )}
-
-         {/* Pricing Calculator Section */}
-         {activeSection === 'pricing' && (
-           <EventPricingCalculator />
          )}
 
          {/* ...rest of the admin content... */}

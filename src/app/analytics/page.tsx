@@ -27,6 +27,18 @@ import html2canvas from 'html2canvas';
 import { FaChevronLeft, FaChevronRight, FaArrowUp, FaArrowDown, FaArrowRight, FaFileExport, FaPrint, FaMapMarkerAlt, FaClock, FaExclamationTriangle, FaUsers, FaCheck, FaLightbulb } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import { FiRefreshCw, FiPrinter } from 'react-icons/fi';
+import { 
+  ChartBarIcon, 
+  ClockIcon, 
+  ExclamationTriangleIcon,
+  MapPinIcon,
+  UsersIcon,
+  DocumentChartBarIcon,
+  CogIcon,
+  LightBulbIcon,
+  FireIcon,
+  ChartPieIcon
+} from '@heroicons/react/24/outline';
 
 ChartJS.register(
   CategoryScale,
@@ -72,6 +84,20 @@ interface EventRecord {
   expected_attendance?: number;
 }
 
+// Analytics navigation items
+const navigation = [
+  { name: 'Overview', icon: ChartBarIcon, id: 'overview' },
+  { name: 'Attendance Analytics', icon: UsersIcon, id: 'attendance' },
+  { name: 'Incident Analytics', icon: ExclamationTriangleIcon, id: 'incidents' },
+  { name: 'Performance Metrics', icon: ClockIcon, id: 'performance' },
+  { name: 'Heatmap Analysis', icon: FireIcon, id: 'heatmap' },
+  { name: 'Predictive Insights', icon: LightBulbIcon, id: 'predictions' },
+  { name: 'AI Insights', icon: ChartPieIcon, id: 'ai-insights' },
+  { name: 'Event Debrief', icon: DocumentChartBarIcon, id: 'debrief' },
+  { name: 'Reports & Export', icon: DocumentChartBarIcon, id: 'reports' },
+  { name: 'Settings', icon: CogIcon, id: 'settings' },
+];
+
 const msToTime = (ms: number | null) => {
   if (ms === null || isNaN(ms) || ms < 0) return 'N/A';
   if (ms === 0) return '0s';
@@ -113,6 +139,7 @@ function getChartTextColor() {
 }
 
 export default function AnalyticsPage() {
+  const [activeSection, setActiveSection] = useState('overview');
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [incidentData, setIncidentData] = useState<IncidentRecord[]>([]);
   const [eventDetails, setEventDetails] = useState<EventRecord | null>(null);
@@ -207,6 +234,14 @@ export default function AnalyticsPage() {
             peak: prevPeakAttendance
           });
         }
+      }
+      
+      // Fetch additional analytics data
+      if (event.id) {
+        fetchData(`/api/analytics/incident-heatmap?eventId=${event.id}`, setHeatmapData, setLoadingHeatmap);
+        fetchData(`/api/analytics/performance-metrics?eventId=${event.id}`, setMetrics, setLoadingMetrics);
+        fetchData(`/api/analytics/predictions?eventId=${event.id}`, setPredictions, setLoadingPredictions);
+        fetchData(`/api/analytics/debrief-summary?eventId=${event.id}`, setDebrief, setLoadingDebrief);
       }
       
       setLoading(false);
@@ -862,28 +897,85 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-        <div className="p-8 bg-slate-50 min-h-screen">
-            <h1 className="text-3xl font-bold mb-6">Analytics Dashboard</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-                {[...Array(6)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 p-6 rounded-xl shadow">
-                        <Skeleton height={20} width="50%" />
-                        <Skeleton height={40} width="100%" />
+      <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
+          <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
+            <div className="flex items-center space-x-2">
+              <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+            </div>
           </div>
-        ))}
-      </div>
+          <nav className="flex-1 space-y-2 py-4 px-2">
+            {navigation.map(item => (
+              <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left bg-gray-100 dark:bg-[#1a2a57] text-gray-400 dark:text-gray-200">
+                <item.icon className="h-5 w-5 text-gray-400 dark:text-blue-300" />
+                {item.name}
+              </div>
+            ))}
+          </nav>
+        </aside>
+        {/* Main Content */}
+        <main className="flex-1 p-8">
+          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <Skeleton height={20} width="50%" />
+                <Skeleton height={40} width="100%" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#10172a] py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Analytics Dashboard</h1>
+    <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
+        <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
+          <div className="flex items-center space-x-2">
+            <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+          </div>
+        </div>
+        <nav className="flex-1 space-y-2 py-4 px-2">
+          {navigation.map(item => {
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
+                  ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
+                `}
+              >
+                <item.icon className={`h-5 w-5 ${active ? 'text-blue-700 dark:text-blue-200' : 'text-gray-400 dark:text-blue-300'}`} />
+                {item.name}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Analytics Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-300">Monitor performance and insights for your events</p>
+          </div>
+        </div>
+
+        {/* Show content based on active section */}
+        {(activeSection === 'overview' || activeSection === 'attendance' || activeSection === 'incidents' || activeSection === 'performance' || activeSection === 'heatmap' || activeSection === 'predictions' || activeSection === 'ai-insights' || activeSection === 'debrief' || activeSection === 'reports') && (
+          <div>
       
       {/* Top Analytics Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {kpiData.map((kpi, index) => (
-            <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white p-4 rounded-xl shadow flex flex-col justify-between hover:shadow-lg transition-shadow duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-white">{kpi.title}</h3>
@@ -935,7 +1027,7 @@ export default function AnalyticsPage() {
       {/* Main Grid for Charts and Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Attendance Chart */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Timeline</h2>
           <div className="flex-grow relative">
             {attendanceData.length > 0 ? (
@@ -946,7 +1038,7 @@ export default function AnalyticsPage() {
         </div>
             </div>
         {/* Attendance Log */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Log</h2>
           <div className="flex-grow overflow-y-auto">
             {attendanceData.length > 0 ? (
@@ -1254,7 +1346,10 @@ export default function AnalyticsPage() {
               )}
             </div>
         </div>
-      </div>
+                </div>
+        </div>
+        )}
+      </main>
     </div>
   );
 }
