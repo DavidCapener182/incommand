@@ -207,15 +207,12 @@ const w3wApiKey = process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY;
 const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
-function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo, incidents, selectedFilter, onTypeClick }: { 
+function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
   lat: number; 
   lon: number; 
   venueAddress: string; 
   singleCard: boolean; 
   largeLogo: boolean;
-  incidents?: any[];
-  selectedFilter?: string | null;
-  onTypeClick?: (type: string) => void;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [searchedLatLon, setSearchedLatLon] = useState<{lat: number, lon: number} | null>(null);
@@ -229,47 +226,17 @@ function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo, inci
 
   return (
     <>
-      {singleCard ? (
-        <div
-          className="w-full h-full flex items-center justify-center cursor-pointer"
-          style={{ minHeight: 0 }}
-          onClick={() => setModalOpen(true)}
-        >
-          {largeLogo ? (
-            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-          ) : (
-            <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-          )}
-        </div>
-      ) : (
-        <div className="flex gap-4 w-full">
-          <div
-                            className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex items-center justify-center cursor-pointer w-1/2 transition-colors duration-300"
-            style={{ minHeight: 0, height: '100%' }}
-            onClick={() => setModalOpen(true)}
-          >
-            {largeLogo ? (
-              <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-            ) : (
-              <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
-            )}
-          </div>
-                      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex items-center justify-center w-1/2 transition-colors duration-300" style={{ minHeight: 0, height: '100%' }}>
-            {incidents && onTypeClick ? (
-              <TopIncidentTypesCard
-                incidents={incidents}
-                onTypeClick={onTypeClick}
-                selectedType={selectedFilter || null}
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center">
-                <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
-                <div className="text-xs text-gray-500 dark:text-gray-100">No incidents yet</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <div
+        className="w-full h-full flex items-center justify-center cursor-pointer"
+        style={{ minHeight: 0 }}
+        onClick={() => setModalOpen(true)}
+      >
+        {largeLogo ? (
+          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+        ) : (
+          <img src="/w3w.png" alt="What3Words" className="w-full h-full object-contain" />
+        )}
+      </div>
       <div className="fixed inset-0 z-50 pointer-events-none">
         {modalOpen && (
           <button
@@ -975,8 +942,8 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          {/* Desktop: Venue, Weather, W3W+Top3 in a single row */}
-          <div className="hidden md:grid grid-cols-3 gap-4 mb-8">
+                    {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
+          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
             <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
@@ -992,19 +959,25 @@ export default function Dashboard() {
                 />
               )}
             </div>
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-2">
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
                 venueAddress={currentEvent?.venue_address || ''} 
-                singleCard={false}
+                singleCard={true}
                 largeLogo={false}
-                incidents={incidents}
-                selectedFilter={selectedFilter}
-                onTypeClick={(type: string) => setSelectedFilter(type)}
               />
             </div>
-
+            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+              <TopIncidentTypesCard 
+                incidents={incidents} 
+                onTypeClick={(type: string) => {
+                  // Filter by exact incident type
+                  setSelectedFilter(type);
+                }} 
+                selectedType={selectedFilter}
+              />
+            </div>
           </div>
         </div>
 
