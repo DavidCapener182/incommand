@@ -1,3 +1,5 @@
+DEPLOYMENT TEST: 2025-06-26 19:30 UTC
+
 # inCommand (Event Control)
 
 ## June 2025: Group Chat & Mobile Drawer Overhaul
