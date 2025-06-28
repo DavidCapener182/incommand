@@ -63,7 +63,29 @@ function getInitials(nameOrEmail: string) {
   return '?';
 }
 
-const EventMessagesPanel = () => {
+interface EventMessagesPanelProps {
+  eventId?: string | null;
+  eventName?: string;
+  CHAT_LIST?: { key: string; label: string; icon: string; pinned: boolean }[];
+  selectedChat?: string;
+  setSelectedChat?: React.Dispatch<React.SetStateAction<string>>;
+  showSidebarMobile?: boolean;
+  setShowSidebarMobile?: React.Dispatch<React.SetStateAction<boolean>>;
+  isMobile?: boolean;
+  AIChat?: React.ComponentType<{ isVisible: boolean }>;
+}
+
+const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
+  eventId,
+  eventName,
+  CHAT_LIST,
+  selectedChat,
+  setSelectedChat,
+  showSidebarMobile,
+  setShowSidebarMobile,
+  isMobile,
+  AIChat,
+}) => {
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [communityGroups, setCommunityGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('ai');
@@ -282,7 +304,7 @@ const EventMessagesPanel = () => {
       {/* Main Chat Area */}
       <main style={{ flex: 1, padding: 0, background: '#f3f4f6', display: 'flex', flexDirection: 'column', minHeight: '400px', borderTopRightRadius: 24, borderBottomRightRadius: 24 }}>
         {selectedGroup === 'ai' ? (
-          <AIChat isVisible={true} />
+          AIChat ? <AIChat isVisible={true} /> : null
         ) : (
           <>
             {/* Rounded, colored header bar */}
