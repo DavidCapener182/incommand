@@ -695,7 +695,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
       )}
       {/* Chat Area */}
       {(!isMobile || !showSidebarMobile) && (
-        <main className="flex-1 flex flex-col h-full bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-[#232c43] shadow-2xl rounded-r-2xl md:rounded-l-none overflow-hidden relative">
+        <main className="flex flex-col h-full bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-[#232c43] shadow-2xl rounded-r-2xl md:rounded-l-none overflow-hidden relative">
           {/* Top bar with back button on mobile */}
           {isMobile && (
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-20">
@@ -711,19 +711,21 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
               <span className="font-bold text-lg ml-2 flex-1 truncate">{uniqueCommunityChats.find(c => c.id === selectedChat)?.name || 'Unknown'}</span>
             </div>
           )}
-          {selectedChat === 'ai' ? (
-            <AIChat isVisible={true} />
-          ) : (
-            <CommunityChat
-              chatId={selectedChat}
-              chatName={uniqueCommunityChats.find(c => c.id === selectedChat)?.name || 'Unknown'}
-              addToast={addToast}
-              isMobile={isMobile}
-              inputRef={inputRef}
-              handleInputFocus={handleInputFocus}
-              handleInputBlur={handleInputBlur}
-            />
-          )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {selectedChat === 'ai' ? (
+              <AIChat isVisible={true} />
+            ) : (
+              <CommunityChat
+                chatId={selectedChat}
+                chatName={uniqueCommunityChats.find(c => c.id === selectedChat)?.name || 'Unknown'}
+                addToast={addToast}
+                isMobile={isMobile}
+                inputRef={inputRef}
+                handleInputFocus={handleInputFocus}
+                handleInputBlur={handleInputBlur}
+              />
+            )}
+          </div>
           {/* 4. Member list modal (mobile) */}
           {isMobile && showMembersModal && (
             <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40">
@@ -737,12 +739,6 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
                 {/* ...render member list here... */}
               </div>
             </div>
-          )}
-          {/* 5. Floating Action Button (FAB) for new group/chat (optional, can be hidden) */}
-          {isMobile && (
-            <button className={`fixed right-6 z-40 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl focus:outline-none transition-all duration-300 ${keyboardOpen ? 'bottom-32' : 'bottom-6'}`} disabled title="Coming soon">
-              +
-            </button>
           )}
         </main>
       )}

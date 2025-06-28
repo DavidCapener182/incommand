@@ -116,42 +116,87 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
         {/* Content */}
         <div className={`flex-1 ${activeTab === 'messages' ? (isMobile ? 'flex flex-col' : 'flex') : ''} overflow-y-auto p-0 md:p-6`}> 
           {activeTab === 'home' && (
-            <div className="p-6 flex flex-col gap-4">
-              {/* Welcome Card */}
-              <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-6 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
-                  <span>Hi David!</span>
+            <>
+              {/* Sticky Top Section on Mobile */}
+              {isMobile ? (
+                <div className="sticky top-0 z-30 bg-gradient-to-b from-[#2A3990] via-white to-white dark:from-[#101c36] dark:via-[#151d34] dark:to-[#232c43] p-4 pb-2">
+                  {/* Logo */}
+                  <div className="flex items-center justify-between mb-2">
+                    <img src="/inCommand.png" alt="inCommand Logo" className="h-10 w-auto" />
+                  </div>
+                  {/* Welcome Card */}
+                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-4 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700 mb-2">
+                    <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+                      <span>Hi David!</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
+                      <span>This is inCommand technical support. How can we help?</span>
+                    </div>
+                    {/* Quick Action */}
+                    <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                      <span>Send us a message</span>
+                    </button>
+                  </div>
+                  {/* Search Bar */}
+                  <div className="relative mt-2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </span>
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                      placeholder="Search for help, SOPs, or FAQs..."
+                      disabled
+                    />
+                  </div>
+                  {/* Helper text */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <InformationCircleIcon className="w-4 h-4" />
+                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
-                  <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
-                  <span>This is inCommand technical support. How can we help?</span>
+              ) : (
+                <div className="p-6 flex flex-col gap-4">
+                  {/* Welcome Card */}
+                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-6 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+                      <span>Hi David!</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
+                      <span>This is inCommand technical support. How can we help?</span>
+                    </div>
+                    {/* Quick Action */}
+                    <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                      <span>Send us a message</span>
+                    </button>
+                  </div>
+                  {/* Search Bar */}
+                  <div className="relative mt-2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </span>
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                      placeholder="Search for help, SOPs, or FAQs..."
+                      disabled
+                    />
+                  </div>
+                  {/* Helper text */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <InformationCircleIcon className="w-4 h-4" />
+                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                  </div>
                 </div>
-                {/* Quick Action */}
-                <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
-                  <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
-                  <span>Send us a message</span>
-                </button>
-              </div>
-              {/* Search Bar */}
-              <div className="relative mt-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <MagnifyingGlassIcon className="w-5 h-5" />
-                </span>
-                <input
-                  type="text"
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="Search for help, SOPs, or FAQs..."
-                  disabled
-                />
-              </div>
-              {/* Helper text */}
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                <InformationCircleIcon className="w-4 h-4" />
-                <span>Tip: Try searching for "evacuation" or "radio".</span>
-              </div>
+              )}
               {/* Top SOPs/FAQs */}
-              <div className="mt-4">
+              <div className={`mt-4 ${isMobile ? 'p-4 pt-0' : ''}`} style={isMobile ? { maxHeight: 'calc(100dvh - 320px)', overflowY: 'auto' } : {}}>
                 <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Top SOPs & FAQs</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {topArticles.map(article => (
@@ -195,7 +240,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
           {activeTab === 'messages' && (
             <EventMessagesPanel
