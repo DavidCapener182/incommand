@@ -94,6 +94,11 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
         style={{
           left: isMobile ? undefined : 'auto',
           pointerEvents: 'auto',
+          transform: 'scale(1)',
+          width: isMobile ? '100vw' : undefined,
+          height: isMobile ? '100vh' : undefined,
+          maxWidth: isMobile ? '100vw' : undefined,
+          maxHeight: isMobile ? '100vh' : undefined,
           background: isMobile
             ? 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)'
             : 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)',
@@ -120,12 +125,8 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
               {/* Sticky Top Section on Mobile */}
               {isMobile ? (
                 <div className="sticky top-0 z-30 p-4 pb-2">
-                  {/* Logo */}
-                  <div className="flex items-center justify-between mb-2">
-                    <img src="/inCommand.png" alt="inCommand Logo" className="h-10 w-auto" />
-                  </div>
                   {/* Welcome Card */}
-                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-4 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700 mb-2">
+                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-4 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700 mb-4">
                     <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
                       <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
                       <span>Hi David!</span>
@@ -141,7 +142,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
                     </button>
                   </div>
                   {/* Search Bar */}
-                  <div className="relative mt-2">
+                  <div className="relative mb-2">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                       <MagnifyingGlassIcon className="w-5 h-5" />
                     </span>
@@ -153,7 +154,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
                     />
                   </div>
                   {/* Helper text */}
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <InformationCircleIcon className="w-4 h-4" />
                     <span>Tip: Try searching for "evacuation" or "radio".</span>
                   </div>
