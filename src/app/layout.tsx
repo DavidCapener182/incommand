@@ -86,7 +86,7 @@ function CompanyFooter() {
   if (!showFooter) return null;
 
   return (
-    <footer className="fixed bottom-0 left-0 w-full z-30 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
+    <footer className="fixed bottom-0 left-0 w-full z-40 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
       style={{
         background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
         boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
@@ -129,9 +129,6 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     fetchCurrentEvent();
   }, []);
 
-  // Check if we're on mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
   // Message bubble SVG for AI Chat
   const MessageBubbleIcon = (
     <svg className="w-8 h-8" fill="none" stroke="white" viewBox="0 0 24 24">
@@ -143,7 +140,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <>
       <AuthGate>
         {showNav && <Navigation />}
-        <main className={`min-h-screen bg-gray-50 dark:bg-[#15192c] ${showNav ? 'pb-12' : ''}`}>{children}</main>
+        <main className="min-h-screen bg-gray-50 dark:bg-[#15192c]">{children}</main>
         {/* Docked FAB Bar at Bottom Right */}
         {showNav && hasCurrentEvent && (
           <Dock
@@ -162,7 +159,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             panelHeight={68}
             baseItemSize={56}
             magnification={72}
-            className={isMobile ? "bottom-16" : "bottom-2"}
+            className="bottom-2"
           />
         )}
         {/* Controlled AI Chat - only render when open */}
@@ -196,6 +193,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <link rel="icon" href="/favicon.ico" type="image/x-icon" />
         <link rel="icon" href="/icon.png" type="image/png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
