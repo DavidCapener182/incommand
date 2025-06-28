@@ -16,8 +16,18 @@ interface EventMessagesPanelProps {
   AIChat: React.ComponentType<{ isVisible: boolean }>;
 }
 
+interface CommunityChatProps {
+  chatId: string;
+  chatName: string;
+  addToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+  isMobile: boolean;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  handleInputFocus?: () => void;
+  handleInputBlur?: () => void;
+}
+
 // CommunityChat component for group chat UI/UX
-const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (toast: Omit<ToastMessage, 'id'>) => void }> = ({ chatId, chatName, addToast }) => {
+const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToast, isMobile, inputRef, handleInputFocus, handleInputBlur }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -28,13 +38,12 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const lastToastMsgId = useRef<string | null>(null);
   const messageRefs = useRef<{ [id: string]: HTMLDivElement | null }>({});
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const lastToastMsgId = useRef<string | null>(null);
 
   // Fetch messages from Supabase
   useEffect(() => {
@@ -101,7 +110,7 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
 
   // Focus input when chat becomes visible
   useEffect(() => {
-    if (inputRef.current) {
+    if (inputRef && inputRef.current) {
       inputRef.current.focus();
     }
   }, [chatId]);
@@ -214,14 +223,14 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
   };
 
   const insertMention = (name: string) => {
-    if (!inputRef.current) return;
+    if (!inputRef || !inputRef.current) return;
     const value = inputRef.current.value;
     const atIndex = value.lastIndexOf('@');
     if (atIndex !== -1) {
       const before = value.slice(0, atIndex + 1);
       const after = value.slice(atIndex + 1).replace(/\S*/, '');
       const newValue = before + name + ' ' + after;
-      setInputMessage(newValue);
+      inputRef.current.value = newValue;
       setShowMentions(false);
       setMentionQuery('');
       setMentionIndex(0);
@@ -318,7 +327,7 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
         </div>
       )}
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+      <div className={`flex-1 overflow-y-auto p-4 space-y-6 min-h-0 ${isMobile ? 'pb-32' : ''}`}>
         {/* Pinned Messages */}
         {messages.filter(msg => msg.pinned).length > 0 && (
           <div className="mb-4">
@@ -448,12 +457,13 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
         <div ref={messagesEndRef} />
       </div>
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-2xl">
+      <div className={`p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-2xl ${isMobile ? 'fixed bottom-0 left-0 w-full z-50 pb-[env(safe-area-inset-bottom)]' : ''}`}
+        style={isMobile ? { touchAction: 'manipulation' } : {}}>
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           {/* Attachment Icon (UI only) */}
           <button
             type="button"
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900 text-gray-400 dark:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-150 shadow"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900 text-gray-400 dark:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-150 shadow"
             title="Attach file (coming soon)"
             aria-label="Attach file (coming soon)"
             disabled
@@ -467,10 +477,13 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
             value={inputMessage}
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             placeholder={`Message ${chatName}…`}
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-base"
             disabled={isLoading}
             aria-label="Message input"
+            style={isMobile ? { fontSize: 16 } : {}} // extra safety for iOS
           />
           {showMentions && filteredMembers.length > 0 && (
             <ul className="absolute bottom-14 left-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-64 max-h-48 overflow-y-auto">
@@ -489,7 +502,7 @@ const CommunityChat: React.FC<{ chatId: string; chatName: string; addToast?: (to
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
-            className="p-3 rounded-full bg-[#2A3990] text-white dark:bg-white dark:text-[#2A3990] hover:bg-[#1e2a6a] dark:hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 shadow-lg text-lg"
+            className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-[#2A3990] text-white dark:bg-white dark:text-[#2A3990] hover:bg-[#1e2a6a] dark:hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 shadow-lg text-lg"
             aria-label="Send message"
           >
             <ArrowUpCircleIcon className="w-7 h-7" />
@@ -520,6 +533,24 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  // Keyboard open detection
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    let initialHeight = window.innerHeight;
+    const onResize = () => {
+      const heightDiff = initialHeight - window.innerHeight;
+      setKeyboardOpen(heightDiff > 150); // 150px threshold
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [isMobile]);
+
+  // Pass focus/blur handlers to input
+  const handleInputFocus = () => { if (isMobile) setKeyboardOpen(true); };
+  const handleInputBlur = () => { if (isMobile) setKeyboardOpen(false); };
 
   // Fetch eventId from eventName
   useEffect(() => {
@@ -573,7 +604,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   );
 
   return (
-    <div className={`flex-1 flex ${isMobile ? 'flex-col' : ''} h-full`}>
+    <div className={`flex-1 flex ${isMobile ? 'flex-col min-h-[100dvh]' : ''} h-full`} style={isMobile ? { minHeight: '100dvh' } : {}}>
       {/* Toast Notifications */}
       <Toast messages={toastMessages} onRemove={removeToast} />
       {/* Sidebar (Group List) */}
@@ -687,6 +718,10 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
               chatId={selectedChat}
               chatName={uniqueCommunityChats.find(c => c.id === selectedChat)?.name || 'Unknown'}
               addToast={addToast}
+              isMobile={isMobile}
+              inputRef={inputRef}
+              handleInputFocus={handleInputFocus}
+              handleInputBlur={handleInputBlur}
             />
           )}
           {/* 4. Member list modal (mobile) */}
@@ -705,7 +740,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
           )}
           {/* 5. Floating Action Button (FAB) for new group/chat (optional, can be hidden) */}
           {isMobile && (
-            <button className="fixed bottom-6 right-6 z-40 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl focus:outline-none" disabled title="Coming soon">
+            <button className={`fixed right-6 z-40 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl focus:outline-none transition-all duration-300 ${keyboardOpen ? 'bottom-32' : 'bottom-6'}`} disabled title="Coming soon">
               +
             </button>
           )}
