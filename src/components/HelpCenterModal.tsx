@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AIChat from './AIChat';
+import EventMessagesPanel from './EventMessagesPanel';
 import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, BuildingOffice2Icon, UsersIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
 
@@ -16,7 +17,11 @@ const TABS = [
 ];
 
 const CHAT_LIST = [
-  { key: 'ai', label: 'AI Chatbot', icon: '💬', pinned: true }
+  { key: 'ai', label: 'AI Chatbot', icon: '💬', pinned: true },
+  { key: 'general', label: 'General', icon: '💬', pinned: false },
+  { key: 'supervisors', label: 'Supervisors', icon: '👥', pinned: false },
+  { key: 'smt', label: 'Senior Management Team', icon: '🏢', pinned: false },
+  { key: 'issues', label: 'Issues & Incidents', icon: '⚠️', pinned: false }
 ];
 
 export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProps) {
@@ -217,7 +222,16 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
           )}
           {activeTab === 'messages' && (
             <div className="flex-1 flex flex-col h-full">
-              <AIChat isVisible={true} />
+              <EventMessagesPanel 
+                eventName={eventName}
+                CHAT_LIST={CHAT_LIST}
+                selectedChat={selectedChat}
+                setSelectedChat={setSelectedChat}
+                showSidebarMobile={showSidebarMobile}
+                setShowSidebarMobile={setShowSidebarMobile}
+                isMobile={isMobile}
+                AIChat={AIChat}
+              />
             </div>
           )}
           {activeTab === 'help' && (
