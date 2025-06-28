@@ -11,6 +11,7 @@ import ProfileCard from './ProfileCard'
 import NotificationDrawer from './NotificationDrawer'
 import './ProfileCard.css'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
+import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
 
 const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
 
@@ -79,6 +80,11 @@ export default function Navigation() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const router = useRouter();
   const [theme, setTheme] = useTheme();
+  const [eventChats, setEventChats] = useState<{id: string, name: string, type: string}[]>([]);
+  const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [selectedEventChatId, setSelectedEventChatId] = useState<string | null>(null);
+
+  console.log("Navigation component mounted");
 
   const isActive = (path: string) => {
     if (path === '/incidents' && pathname === '/') {
@@ -212,6 +218,35 @@ export default function Navigation() {
     setUnreadNotifications(0);
     // In production, this would clear all notifications from the backend
   };
+
+  useEffect(() => {
+    async function fetchCurrentEvent() {
+      const { data: event, error } = await supabase
+        .from('events')
+        .select('id, event_name')
+        .eq('is_current', true)
+        .single();
+      console.log('Fetched current event:', event, error);
+      setCurrentEvent(event);
+    }
+    fetchCurrentEvent();
+  }, []);
+
+  useEffect(() => {
+    async function fetchChats() {
+      if (!currentEvent?.id) {
+        console.log('No current event, skipping chat fetch');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('event_chats')
+        .select('id, name, type')
+        .eq('event_id', currentEvent.id);
+      console.log('Fetched event chats:', data, error);
+      if (!error) setEventChats(data);
+    }
+    fetchChats();
+  }, [currentEvent]);
 
   return (
     <>
@@ -549,6 +584,38 @@ export default function Navigation() {
         onMarkAllRead={handleMarkAllNotificationsRead}
         onClearAll={handleClearAllNotifications}
       />
+
+      {/* Only render the event group section in the messages sidebar context: */}
+      {pathname === '/messages' && (
+        <div className="mt-4">
+          <div className="flex flex-col bg-white dark:bg-[#232c43] rounded-2xl shadow-md overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <BuildingOffice2Icon className="w-6 h-6 text-blue-600" />
+              <span className="font-bold text-base text-gray-900 dark:text-gray-100">
+                {currentEvent?.event_name || 'Event'}
+                <span className="font-normal text-gray-500 dark:text-gray-400 ml-1">– Community</span>
+              </span>
+            </div>
+            <ul className="flex flex-col gap-1 pl-8 pr-2 pb-3">
+              {eventChats.map((group) => (
+                <li key={group.id}>
+                  <button
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2
+                      ${selectedEventChatId === group.id
+                        ? 'bg-blue-50 dark:bg-blue-900 font-bold text-[#2A3990] dark:text-blue-200 shadow'
+                        : 'hover:bg-blue-50 dark:hover:bg-blue-800 text-gray-800 dark:text-gray-200'}
+                    `}
+                    onClick={() => setSelectedEventChatId(group.id)}
+                  >
+                    <UsersIcon className="w-5 h-5 text-blue-400" />
+                    <span>{group.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </>
   )
 } 
