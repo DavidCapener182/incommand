@@ -94,11 +94,6 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
         style={{
           left: isMobile ? undefined : 'auto',
           pointerEvents: 'auto',
-          transform: 'scale(1)',
-          width: isMobile ? '100vw' : undefined,
-          height: isMobile ? '100vh' : undefined,
-          maxWidth: isMobile ? '100vw' : undefined,
-          maxHeight: isMobile ? '100vh' : undefined,
           background: isMobile
             ? 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)'
             : 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)',
