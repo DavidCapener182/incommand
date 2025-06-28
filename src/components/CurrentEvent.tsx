@@ -12,6 +12,7 @@ interface Event {
   event_type: string
   event_description?: string
   support_acts?: any[]
+  event_brief?: string
 }
 
 interface CurrentEventProps {
