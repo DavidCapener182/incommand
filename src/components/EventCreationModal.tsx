@@ -35,6 +35,7 @@ interface EventFormData {
   assistant_head_of_security_name: string;
   event_control_name: string;
   support_acts: SupportAct[];
+  event_brief?: string;
   [key: string]: any; // Add index signature for dynamic access
 }
 
@@ -65,7 +66,8 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     production_manager_name: '',
     head_of_security_name: '',
     assistant_head_of_security_name: '',
-    event_control_name: ''
+    event_control_name: '',
+    event_brief: '',
   })
   const [loading, setLoading] = useState(false)
   const [descriptionLoading, setDescriptionLoading] = useState(false)
@@ -307,7 +309,8 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         support_acts: formData.support_acts ? JSON.stringify(formData.support_acts) : null,
         event_description: formData.event_description || formData.description || null,
         venue_capacity: formData.venue_capacity || null,
-        company_id
+        company_id,
+        event_brief: formData.event_brief || null,
       }
 
       const { error: insertError, data: insertedEvent } = await supabase
@@ -463,6 +466,22 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   </div>
                 )}
                 <p className="mt-1 text-sm text-gray-500">Brief is automatically generated based on historical data and risk assessment</p>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">Event Brief (from client)</label>
+              </div>
+              <div className="mt-1 relative">
+                <textarea
+                  name="event_brief"
+                  value={formData.event_brief || ''}
+                  onChange={handleInputChange}
+                  rows={6}
+                  placeholder="Paste or type the event brief provided by the client here."
+                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-sm text-gray-500">This field is for the client's event brief and can contain large pasted text.</p>
               </div>
             </div>
           </div>

@@ -23,6 +23,7 @@ interface EventContext {
   recentIncidents: any[];
   attendanceData: any[];
   weatherData: any;
+  eventBrief?: string;
 }
 
 const SYSTEM_PROMPT = `You are inCommand AI, a digital operations assistant for live event control and security management. You provide expert guidance to security, safety, and management staff during live events in the UK.
@@ -115,7 +116,8 @@ async function getEventContext(): Promise<EventContext | null> {
       openIncidents,
       recentIncidents: incidents || [],
       attendanceData: attendance || [],
-      weatherData: null // Could be enhanced with weather API
+      weatherData: null, // Could be enhanced with weather API
+      eventBrief: events.event_brief || '',
     };
   } catch (error) {
     console.error('Error getting event context:', error);

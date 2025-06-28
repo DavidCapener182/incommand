@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('event_name, venue_name')
+      .select('event_name, venue_name, event_brief')
       .eq('id', eventId)
       .single();
 
@@ -59,6 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 3. Construct a detailed prompt for OpenAI
     const prompt = `
       Please provide a debrief summary for the event: "${event.event_name}" at "${event.venue_name}".
+      The client event brief is: ${event.event_brief || 'No event brief provided.'}
       The output must be a valid JSON object.
       Here is the data:
       - Incidents: ${JSON.stringify(incidents.slice(0, 20))}
