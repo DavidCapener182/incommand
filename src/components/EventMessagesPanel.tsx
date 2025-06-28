@@ -88,12 +88,12 @@ const EventMessagesPanel = () => {
 
   // Fetch community groups for the event
   useEffect(() => {
-    if (!currentEvent || !currentEvent.id) return;
+    if (!currentEvent) return;
     async function fetchGroups() {
       const { data } = await supabase
         .from('event_chats')
         .select('id, name, type')
-        .eq('event_id', currentEvent.id);
+        .eq('event_id', currentEvent?.id ?? '');
       if (data) {
         setCommunityGroups(data as Group[]);
         // Set default selected group if not set
