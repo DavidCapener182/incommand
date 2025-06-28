@@ -220,7 +220,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
       const after = value.slice(atIndex + 1).replace(/\S*/, '');
       const newValue = before + name + ' ' + after;
       inputRef.current.value = newValue;
-      setShowMentions(.false);
+      setShowMentions(false);
       setMentionQuery('');
       setMentionIndex(0);
       // Move cursor to after inserted mention
