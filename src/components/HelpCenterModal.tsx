@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AIChat from './AIChat';
-import EventMessagesPanel from './EventMessagesPanel';
 import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, BuildingOffice2Icon, UsersIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
+import EventMessagesPanel from './EventMessagesPanel';
 
 interface HelpCenterModalProps {
   isOpen: boolean;
@@ -17,11 +17,7 @@ const TABS = [
 ];
 
 const CHAT_LIST = [
-  { key: 'ai', label: 'AI Chatbot', icon: '💬', pinned: true },
-  { key: 'general', label: 'General', icon: '💬', pinned: false },
-  { key: 'supervisors', label: 'Supervisors', icon: '👥', pinned: false },
-  { key: 'smt', label: 'Senior Management Team', icon: '🏢', pinned: false },
-  { key: 'issues', label: 'Issues & Incidents', icon: '⚠️', pinned: false }
+  { key: 'ai', label: 'AI Chatbot', icon: '💬', pinned: true }
 ];
 
 export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProps) {
@@ -30,10 +26,6 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
   const [showSidebarMobile, setShowSidebarMobile] = useState(true);
   const [expandedArticle, setExpandedArticle] = useState<string | null>(null);
   const [expandedHelpArticle, setExpandedHelpArticle] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-  
   const topArticles = [
     { key: 'incident', title: 'Logging an Incident' },
     { key: 'evac', title: 'Evacuation Procedure' },
@@ -46,20 +38,6 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
   ];
   const [aiChatUnread, setAIChatUnread] = useState(false);
   const [eventName, setEventName] = useState<string>('Current Event');
-
-  // Keyboard detection for mobile
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    let initialHeight = window.innerHeight;
-    const onResize = () => {
-      const heightDiff = initialHeight - window.innerHeight;
-      setKeyboardOpen(heightDiff > 150); // 150px threshold for keyboard open
-    };
-    
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   useEffect(() => {
     if (activeTab === 'messages') {
@@ -116,6 +94,9 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
         style={{
           left: isMobile ? undefined : 'auto',
           pointerEvents: 'auto',
+          background: isMobile
+            ? 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)'
+            : 'linear-gradient(to bottom, #2A3990 0%, #fff 90%, #fff 100%)',
         }}
       >
         <button
@@ -133,48 +114,89 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
           </div>
         </div>
         {/* Content */}
-        <div className={`flex-1 ${activeTab === 'messages' ? (isMobile ? 'flex flex-col' : 'flex') : ''} overflow-y-auto p-0 md:p-6 ${isMobile && keyboardOpen ? 'pb-20' : ''}`}> 
+        <div className={`flex-1 ${activeTab === 'messages' ? (isMobile ? 'flex flex-col' : 'flex') : ''} overflow-y-auto p-0 md:p-6`}> 
           {activeTab === 'home' && (
-            <div className="p-4 flex flex-col gap-4">
-              {/* Welcome Card */}
-              <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-6 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
-                  <span>Hi David!</span>
+            <>
+              {/* Sticky Top Section on Mobile */}
+              {isMobile ? (
+                <div className="sticky top-0 z-30 p-4 pb-2">
+                  {/* Logo */}
+                  <div className="flex items-center justify-between mb-2">
+                    <img src="/inCommand.png" alt="inCommand Logo" className="h-10 w-auto" />
+                  </div>
+                  {/* Welcome Card */}
+                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-4 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700 mb-2">
+                    <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+                      <span>Hi David!</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
+                      <span>This is inCommand technical support. How can we help?</span>
+                    </div>
+                    {/* Quick Action */}
+                    <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                      <span>Send us a message</span>
+                    </button>
+                  </div>
+                  {/* Search Bar */}
+                  <div className="relative mt-2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </span>
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                      placeholder="Search for help, SOPs, or FAQs..."
+                      disabled
+                    />
+                  </div>
+                  {/* Helper text */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <InformationCircleIcon className="w-4 h-4" />
+                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
-                  <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
-                  <span>This is inCommand technical support. How can we help?</span>
+              ) : (
+                <div className="p-6 flex flex-col gap-4">
+                  {/* Welcome Card */}
+                  <div className="bg-white dark:bg-[#232c43] rounded-2xl shadow-md p-6 flex flex-col gap-2 items-start border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      <UserCircleIcon className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+                      <span>Hi David!</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mb-2">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
+                      <span>This is inCommand technical support. How can we help?</span>
+                    </div>
+                    {/* Quick Action */}
+                    <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                      <span>Send us a message</span>
+                    </button>
+                  </div>
+                  {/* Search Bar */}
+                  <div className="relative mt-2">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </span>
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
+                      placeholder="Search for help, SOPs, or FAQs..."
+                      disabled
+                    />
+                  </div>
+                  {/* Helper text */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <InformationCircleIcon className="w-4 h-4" />
+                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                  </div>
                 </div>
-                {/* Quick Action */}
-                <button className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
-                  <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
-                  <span>Send us a message</span>
-                </button>
-              </div>
-              {/* Search Bar */}
-              <div className="relative mt-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <MagnifyingGlassIcon className="w-5 h-5" />
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232c43] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-base"
-                  placeholder="Search for help, SOPs, or FAQs..."
-                />
-              </div>
-              {/* Helper text */}
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                <InformationCircleIcon className="w-4 h-4" />
-                <span>Tip: Try searching for "evacuation" or "radio".</span>
-              </div>
-              
+              )}
               {/* Top SOPs/FAQs */}
-              <div className="mt-4">
+              <div className={`mt-4 ${isMobile ? 'p-4 pt-0' : ''}`} style={isMobile ? { maxHeight: 'calc(100dvh - 320px)', overflowY: 'auto' } : {}}>
                 <div className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Top SOPs & FAQs</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {topArticles.map(article => (
@@ -218,21 +240,19 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
           {activeTab === 'messages' && (
-            <div className="flex-1 flex flex-col h-full">
-              <EventMessagesPanel 
-                eventName={eventName}
-                CHAT_LIST={CHAT_LIST}
-                selectedChat={selectedChat}
-                setSelectedChat={setSelectedChat}
-                showSidebarMobile={showSidebarMobile}
-                setShowSidebarMobile={setShowSidebarMobile}
-                isMobile={isMobile}
-                AIChat={AIChat}
-              />
-            </div>
+            <EventMessagesPanel
+              eventName={eventName}
+              CHAT_LIST={CHAT_LIST}
+              selectedChat={selectedChat}
+              setSelectedChat={setSelectedChat}
+              showSidebarMobile={showSidebarMobile}
+              setShowSidebarMobile={setShowSidebarMobile}
+              isMobile={isMobile}
+              AIChat={AIChat}
+            />
           )}
           {activeTab === 'help' && (
             <div className="p-6 flex flex-col gap-4">
@@ -272,8 +292,8 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
           )}
           {activeTab === 'news' && <div className="p-6">News/Announcements - Coming soon</div>}
         </div>
-        {/* Bottom Tab Navigation - Always visible with high z-index */}
-        <nav className={`flex justify-around items-center border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-[#232c43]/95 backdrop-blur-sm p-2 pt-3 ${isMobile ? 'sticky bottom-0 z-50' : ''}`}>
+        {/* Bottom Tab Navigation */}
+        <nav className="flex justify-around items-center border-t border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-[#232c43]/90 p-2 pt-3">
           <button
             className={`flex flex-col items-center flex-1 py-1 px-2 rounded-lg transition-colors duration-150 ${activeTab === 'home' ? 'bg-blue-100 dark:bg-[#1e2a6a] text-blue-700 dark:text-blue-200' : 'text-gray-600 dark:text-gray-300'}`}
             onClick={() => setActiveTab('home')}
