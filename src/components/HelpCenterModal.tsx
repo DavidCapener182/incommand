@@ -38,6 +38,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
   ];
   const [aiChatUnread, setAIChatUnread] = useState(false);
   const [eventName, setEventName] = useState<string>('Current Event');
+  const [eventId, setEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'messages') {
@@ -63,16 +64,21 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
   }, [activeTab, selectedChat, isOpen]);
 
   useEffect(() => {
-    const fetchEventName = async () => {
+    const fetchEvent = async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('event_name')
+        .select('id, event_name')
         .eq('is_current', true)
         .single();
-      if (data?.event_name) setEventName(data.event_name);
-      else setEventName('Current Event');
+      if (data?.event_name && data?.id) {
+        setEventName(data.event_name);
+        setEventId(data.id);
+      } else {
+        setEventName('Current Event');
+        setEventId(null);
+      }
     };
-    fetchEventName();
+    fetchEvent();
   }, []);
 
   if (!isOpen) return null;
@@ -240,6 +246,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
           )}
           {activeTab === 'messages' && (
             <EventMessagesPanel
+              eventId={eventId}
               eventName={eventName}
               CHAT_LIST={CHAT_LIST}
               selectedChat={selectedChat}
