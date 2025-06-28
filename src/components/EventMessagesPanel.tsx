@@ -251,7 +251,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Chat Header */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 rounded-t-lg">
+      <div className={`sticky ${isMobile ? 'top-[60px]' : 'top-0'} z-10 bg-white dark:bg-gray-900 shadow flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 rounded-t-lg`}>
         <div className="flex items-center gap-3">
           {/* Group icon - choose based on group name */}
           {members.length === 0 ? (
