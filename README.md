@@ -93,6 +93,19 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 
 ## Recent Major Updates (June 2025)
 
+### Group Chat UI/UX & Logic Overhaul (June 26, 2025)
+- **Resolved persistent syntax error** in `EventMessagesPanel.tsx` ("Unexpected token `div`")
+- **Comprehensive UI/UX and Supabase logic improvements for the Messages tab:**
+  - Sidebar: sticky event header, always-visible icons, group separation, scrollable, active state styling
+  - Chat header: group icon, subtitle, "View Members" button with badge, avatars, tooltips
+  - Message area: empty state, avatars, role-colored names, timestamps, bubble styles, pinned messages, action icons, date separators, read receipts
+  - Input bar: dynamic placeholder, attachment icon, send button, focus/active states, (optionally) @mentions and keyboard shortcuts
+  - General: dashboard-style UI, dark mode, responsive sidebar, ARIA labels, keyboard accessibility
+  - Supabase: real-time updates, group creation, member assignment
+  - **Toast notifications**: new message toasts with click-to-jump (scrolls to and highlights relevant message)
+  - Polish: hover/active states, empty group state, mobile navigation, notification click-to-jump
+- **Laid groundwork for further refinements** (per detailed user feedback)
+
 ### Development Tracking & Business Intelligence (Latest)
 - **Development Cost Tracking**: Comprehensive system for tracking development hours and AI usage costs
   - Super admin dashboard with ROI projections and break-even analysis
