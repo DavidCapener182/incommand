@@ -108,13 +108,6 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
     }
   }, [messages]);
 
-  // Focus input when chat becomes visible
-  useEffect(() => {
-    if (inputRef && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [chatId]);
-
   // Fetch members when showMembers is toggled on
   useEffect(() => {
     async function fetchMembers() {
@@ -238,7 +231,9 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.selectionStart = inputRef.current.selectionEnd = (before + name + ' ').length;
-          inputRef.current.focus();
+          if (!isMobile) {
+            inputRef.current.focus();
+          }
         }
       }, 0);
     }
@@ -483,7 +478,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
             className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-base"
             disabled={isLoading}
             aria-label="Message input"
-            style={isMobile ? { fontSize: 16 } : {}} // extra safety for iOS
+            style={{ fontSize: '16px' }}
           />
           {showMentions && filteredMembers.length > 0 && (
             <ul className="absolute bottom-14 left-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-64 max-h-48 overflow-y-auto">
