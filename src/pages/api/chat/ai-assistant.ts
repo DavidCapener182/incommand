@@ -67,6 +67,8 @@ async function getEventContext(): Promise<EventContext | null> {
       .eq('is_current', true)
       .single();
 
+    console.log('Fetched event:', events); // DEBUG
+
     if (eventError || !events) {
       console.error('Error fetching current event:', eventError);
       return null;
@@ -107,7 +109,7 @@ async function getEventContext(): Promise<EventContext | null> {
     const totalIncidents = incidents?.length || 0;
     const openIncidents = incidents?.filter(i => !i.is_closed && i.status !== 'logged').length || 0;
 
-    return {
+    const context = {
       eventName: events.event_name,
       venueName: events.venue_name,
       eventDate: events.event_date,
@@ -119,37 +121,24 @@ async function getEventContext(): Promise<EventContext | null> {
       weatherData: null, // Could be enhanced with weather API
       eventBrief: events.event_brief || '',
     };
+    console.log('Event context:', context); // DEBUG
+    return context;
   } catch (error) {
     console.error('Error getting event context:', error);
     return null;
   }
 }
 
-function createContextPrompt(context: EventContext, userMessage: string): string {
-  const incidentSummary = context.recentIncidents.reduce((acc: any, incident: any) => {
-    acc[incident.type] = (acc[incident.type] || 0) + 1;
-    return acc;
-  }, {});
+function createContextPrompt(context: EventContext, userPrompt: string) {
+  let prompt = `Current Event Context:\nEvent: ${context.eventName}\nVenue: ${context.venueName}\nDate: ${context.eventDate}\nTime: ${context.eventTime}\n\nCurrent Status:\n- Total incidents today: ${context.totalIncidents}\n- Open incidents: ${context.openIncidents}\n- Incident breakdown: \n${context.recentIncidents?.map(i => `- ${i.type}: ${i.status}`).join('\n') || ''}\n`;
 
-  return `Current Event Context:
-Event: ${context.eventName}
-Venue: ${context.venueName}
-Date: ${context.eventDate}
-Time: ${context.eventTime}
+  // [event_brief] Always include the event brief if present
+  if (context.eventBrief) {
+    prompt += `\nClient Event Brief:\n${context.eventBrief}\n`;
+  }
 
-Current Status:
-- Total incidents today: ${context.totalIncidents}
-- Open incidents: ${context.openIncidents}
-- Incident breakdown: ${Object.entries(incidentSummary).map(([type, count]) => `${type}: ${count}`).join(', ')}
-
-Recent Incidents (last 5):
-${context.recentIncidents.slice(0, 5).map(incident => 
-  `- ${incident.type}: ${incident.description} (${incident.status}) - ${new Date(incident.created_at).toLocaleTimeString()}`
-).join('\n')}
-
-User Question: ${userMessage}
-
-Provide a helpful, professional response based on this context. If referencing specific incidents or data, use the information provided above.`;
+  prompt += `\nUser Question: ${userPrompt}\n\nProvide a helpful, professional response based on this context. If referencing specific incidents or data, use the information provided above.`;
+  return prompt;
 }
 
 const QUICK_ACTIONS = [
@@ -182,11 +171,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Unable to load event context' });
     }
 
-    // Prepare the conversation for OpenAI
+    // The messages array is already correct:
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: createContextPrompt(context, message) }
     ];
+    console.log('Final messages sent to OpenAI:', messages); // DEBUG
 
     // Add conversation history if provided
     if (conversationHistory && Array.isArray(conversationHistory)) {
