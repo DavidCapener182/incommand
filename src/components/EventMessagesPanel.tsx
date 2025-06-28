@@ -501,11 +501,11 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
           {/* Send Button */}
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
-            className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-[#2A3990] text-white dark:bg-white dark:text-[#2A3990] hover:bg-[#1e2a6a] dark:hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 shadow-lg text-lg"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-full bg-blue-500 hover:bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-150 shadow-lg"
+            disabled={isLoading || !inputMessage.trim()}
             aria-label="Send message"
           >
-            <ArrowUpCircleIcon className="w-7 h-7" />
+            <ArrowUpCircleIcon className="w-6 h-6" />
           </button>
         </form>
         <div className="mt-2 text-xs text-gray-500 text-center">
@@ -516,6 +516,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
   );
 };
 
+// Main Panel component
 const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   eventName,
   CHAT_LIST,
