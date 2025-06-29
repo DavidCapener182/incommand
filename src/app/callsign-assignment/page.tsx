@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -647,6 +647,11 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     setPendingChanges(true);
   };
 
+  // Helper to check if a string is a valid UUID
+  function isValidUUID(str: string | undefined): boolean {
+    return !!str && validateUUID(str);
+  }
+
   // Save all changes
   const saveChanges = async () => {
     if (!eventId) {
@@ -657,53 +662,45 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     try {
       // 1. Upsert all positions (callsign_roles)
       const roles = categories.flatMap(category =>
-        category.positions.map(pos => ({
-          id: pos.id || uuidv4(), // Generate UUID if missing
-          event_id: eventId,
-          area: category.name,
-          short_code: pos.short || pos.callsign,
-          callsign: pos.callsign,
-          position: pos.position,
-          required: pos.required ?? false,
-        }))
-      );
-      const { data: upsertedRoles, error: rolesError } = await supabase
-        .from("callsign_roles")
-        .upsert(roles, { onConflict: "event_id,area,short_code" })
-        .select();
-      if (rolesError) throw rolesError;
-      // 2. Map position id to upserted role id
-      const idMap: Record<string, string> = {};
-      upsertedRoles?.forEach((r: any) => {
-        const match = categories
-          .find(c => c.name === r.area)
-          ?.positions.find(
-            p =>
-              p.callsign === r.callsign &&
-              ((p.short && p.short === r.short_code) || p.callsign === r.short_code) &&
-              p.position === r.position
-          );
-        if (match) idMap[match.id] = r.id;
-      });
-      // 3. Upsert assignments (callsign_assignments)
-      const assignmentsArr = categories.flatMap(category =>
-        category.positions
-          .filter(pos => pos.assignedStaff)
-          .map(pos => ({
+        category.positions.map(pos => {
+          // Always use a valid UUID for id
+          const roleId = isValidUUID(pos.id) ? pos.id : uuidv4();
+          // Store the generated UUID back to pos.id for assignment reference
+          pos.id = roleId;
+          return {
+            id: roleId,
             event_id: eventId,
-            callsign_role_id: idMap[pos.id],
-            assigned_staff_id: pos.assignedStaff,
-          }))
+            area: category.name,
+            short_code: pos.short || pos.callsign,
+            callsign: pos.callsign,
+            position: pos.position,
+            required: pos.required ?? false,
+          };
+        })
       );
-      if (assignmentsArr.length > 0) {
-        const { error: assignError } = await supabase
-          .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
-        if (assignError) throw assignError;
-      }
-      alert("Saved successfully!");
+      // Upsert roles
+      const { error: rolesError } = await supabase.from('callsign_roles').upsert(roles, { onConflict: 'id' });
+      if (rolesError) throw rolesError;
+
+      // 2. Upsert all assignments (callsign_assignments)
+      const assignments = categories.flatMap(category =>
+        category.positions.map(pos => {
+          // Use the valid UUID for role_id
+          return {
+            event_id: eventId,
+            role_id: pos.id, // now always a valid UUID
+            assigned_staff_id: pos.assignedStaff || null,
+          };
+        })
+      );
+      // Upsert assignments
+      const { error: assignmentsError } = await supabase.from('callsign_assignments').upsert(assignments, { onConflict: 'event_id,role_id' });
+      if (assignmentsError) throw assignmentsError;
+
+      // Show success toast or status
+      alert("Assignments and roles saved successfully.");
     } catch (err: any) {
-      alert("Error saving: " + (err.message || err.toString()));
+      alert("Error saving: " + (err.message || err));
     }
   };
 
