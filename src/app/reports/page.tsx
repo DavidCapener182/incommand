@@ -204,6 +204,11 @@ export default function ReportsPage() {
     (inc) => inc.incident_type !== "Sit Rep" && inc.incident_type !== "Attendance"
   );
 
+  // Filter logs for the all-logs list (exclude attendance)
+  const filteredLogs = logs.filter(
+    (log) => log.type !== "Attendance"
+  ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
   // Incident summary for each
   function incidentSummary(inc: any) {
     const time = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
@@ -221,6 +226,27 @@ export default function ReportsPage() {
         className="underline decoration-dotted cursor-help"
       >
         {inc.callsign_from}
+      </span>
+    ) : null;
+    return <span><b>{title} ({time})</b> - {info} {callsignFrom}</span>;
+  }
+
+  // Log summary for each log (reuse incidentSummary style)
+  function logSummary(log: any) {
+    const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";
+    const info = log.details || log.occurrence || "No details";
+    const title = log.type || "Log";
+    // Tooltip for from/callsign
+    const callsignFrom = log.from ? (
+      <span
+        title={
+          callsignShortToName[log.from?.toUpperCase()] ||
+          callsignAssignments[log.from?.toUpperCase()] ||
+          undefined
+        }
+        className="underline decoration-dotted cursor-help"
+      >
+        {log.from}
       </span>
     ) : null;
     return <span><b>{title} ({time})</b> - {info} {callsignFrom}</span>;
@@ -365,6 +391,15 @@ export default function ReportsPage() {
             {filteredIncidents.length ? filteredIncidents.map((inc, i) => (
               <li key={i}>{incidentSummary(inc)}</li>
             )) : <li>No incidents recorded.</li>}
+          </ul>
+        </div>
+        {/* All logs except attendance, in chronological order */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white mt-6">All Logs (excluding Attendance)</label>
+          <ul className="list-disc ml-6 dark:text-white">
+            {filteredLogs.length ? filteredLogs.map((log, i) => (
+              <li key={i}>{logSummary(log)}</li>
+            )) : <li>No logs recorded.</li>}
           </ul>
         </div>
         <div>
