@@ -20,6 +20,7 @@ export default function ReportsPage() {
   const [showdownTime, setShowdownTime] = useState<string>("-");
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({});
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({});
+  const [allLogs, setAllLogs] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,15 +32,34 @@ export default function ReportsPage() {
         .single();
       setEvent(event);
       setHeadOfSecurity(event?.head_of_security || event?.head_of_security_name || "");
-      // Get logs
-      const { data: logs } = await supabase
+      // Get event logs
+      const { data: eventLogs } = await supabase
         .from("event_logs")
         .select("*")
         .eq("event_id", event?.id || "")
         .order("timestamp", { ascending: true });
-      setLogs(logs || []);
+      // Get incident logs
+      const { data: incidentLogs } = await supabase
+        .from("incident_logs")
+        .select("*")
+        .eq("event_id", event?.id || "")
+        .order("timestamp", { ascending: true });
+      setLogs(eventLogs || []); // keep for legacy use
+      // Add showdown incident if showdownLog exists (legacy)
+      let allIncidents = incidentLogs || [];
+      setIncidents(allIncidents);
+      // Merge logs for All Logs section
+      let mergedLogs = [
+        ...(eventLogs || []).map(l => ({ ...l, _source: 'event_logs' })),
+        ...(incidentLogs || []).map(l => ({ ...l, _source: 'incident_logs' }))
+      ];
+      // Exclude attendance logs
+      mergedLogs = mergedLogs.filter(l => (l.type || l.incident_type) !== 'Attendance');
+      // Sort by timestamp
+      mergedLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setAllLogs(mergedLogs);
       // Staff Briefed & In Position time (check occurrence and details)
-      const staffBriefedLog = (logs || []).find(
+      const staffBriefedLog = (eventLogs || []).find(
         (log: any) =>
           log.type === "Sit Rep" &&
           ((log.occurrence && log.occurrence.toLowerCase().includes("staff briefed and in position")) ||
@@ -56,7 +76,7 @@ export default function ReportsPage() {
         setStaffBriefingTime("-");
       }
       // Showdown time (check occurrence and details)
-      const showdownLog = (logs || []).find(
+      const showdownLog = (eventLogs || []).find(
         (log: any) =>
           log.type === "Sit Rep" &&
           log.from === "PM" &&
@@ -68,29 +88,6 @@ export default function ReportsPage() {
       } else {
         setShowdownTime("-");
       }
-      // Get incidents
-      const { data: incidents } = await supabase
-        .from("incident_logs")
-        .select("*")
-        .eq("event_id", event?.id || "")
-        .order("timestamp", { ascending: true });
-      // Add showdown incident if showdownLog exists
-      let allIncidents = incidents || [];
-      if (showdownLog) {
-        allIncidents = [
-          ...allIncidents,
-          {
-            incident_type: "Event Timing",
-            incident_title: "Showdown",
-            timestamp: showdownLog.timestamp,
-            details: "The show has ended",
-            occurrence: "Showdown",
-            callsign: "PM",
-          },
-        ];
-      }
-      setIncidents(allIncidents);
-
       // Showdown Time: use Event Timing incident if present
       const showdownIncident = allIncidents.find(
         (inc: any) => inc.incident_type === "Event Timing" && inc.occurrence === "Showdown"
@@ -397,7 +394,7 @@ export default function ReportsPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white mt-6">All Logs (excluding Attendance)</label>
           <ul className="list-disc ml-6 dark:text-white">
-            {filteredLogs.length ? filteredLogs.map((log, i) => (
+            {allLogs.length ? allLogs.map((log, i) => (
               <li key={i}>{logSummary(log)}</li>
             )) : <li>No logs recorded.</li>}
           </ul>
