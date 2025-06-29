@@ -73,6 +73,8 @@ interface IncidentRecord {
   is_closed: boolean;
   priority?: string;
   occurrence?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface EventRecord {
@@ -609,6 +611,10 @@ export default function AnalyticsPage() {
     'Suspicious Activity': '#FFD166',
     'Technical Issue': '#06D6A0',
     'Queue Build-Up': '#118AB2',
+    'Artist On Stage': '#2A3990',
+    'Artist Off Stage': '#4F8A8B',
+    'Artist Movement': '#7E78D2',
+    'Sexual Misconduct': '#FFD166',
   };
   const defaultColor = '#CCCCCC';
 
@@ -752,16 +758,20 @@ export default function AnalyticsPage() {
   };
 
   // --- Incident Response Time ---
-  const responseTimes: number[] = filteredIncidents
-    .filter((i) => i.status === 'Closed' && i.timestamp && (i as any).closed_timestamp)
-    .map((i) => {
-      // Replace with actual field if available
-      // @ts-ignore
-      return (new Date(i.closed_timestamp).getTime() - new Date(i.timestamp).getTime()) / 1000 / 60;
-    });
-  const avgResponse = responseTimes.length ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(1) : null;
-  const minResponse = responseTimes.length ? Math.min(...responseTimes).toFixed(1) : null;
-  const maxResponse = responseTimes.length ? Math.max(...responseTimes).toFixed(1) : null;
+  const closedLogs = incidentData.filter(
+    (log) => log.is_closed && log.created_at && log.updated_at
+  );
+  const responseTimes = closedLogs.map(
+    (log) => (
+      new Date(log.updated_at as string).getTime() - new Date(log.created_at as string).getTime()
+    )
+  );
+  const avgResponseTimeMs = responseTimes.length
+    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+    : null;
+  const avgResponseTimeDisplay = avgResponseTimeMs
+    ? msToTime(avgResponseTimeMs)
+    : "N/A";
 
   // --- Ejection/Refusal Patterns (total count by type) ---
   const ejectionRefusalTypeCounts: { [type: string]: number } = { Ejection: 0, Refusal: 0 };
@@ -834,7 +844,7 @@ export default function AnalyticsPage() {
 
   // --- Summary Chips Data ---
   const summaryChips = [
-    { label: 'Avg response', value: msToTime(metrics.avgResponseTimeMs) },
+    { label: 'Avg response', value: avgResponseTimeDisplay },
     { label: 'Most likely', value: predictions.likelyType || 'N/A' },
     { label: 'Open', value: statusCounts['Open'] },
     { label: 'Closed', value: statusCounts['Closed'] },
@@ -851,7 +861,7 @@ export default function AnalyticsPage() {
   const totalIncidents = filteredIncidents.length;
   const summaryCardsData = [
     { title: 'Total Incidents', value: totalIncidentsCountable.length },
-    { title: 'Avg Response Time', value: msToTime(metrics.avgResponseTimeMs) },
+    { title: 'Avg Response Time', value: avgResponseTimeDisplay },
     { title: 'Open Incidents', value: statusCounts['Open'] },
     { title: 'Closed Incidents', value: statusCounts['Closed'] },
     { title: 'Most Likely Type', value: predictions.likelyType || 'N/A' },
@@ -866,7 +876,7 @@ export default function AnalyticsPage() {
     { title: 'Total Incidents', value: totalIncidentsCountable.length },
     { title: 'Open Incidents', value: openIncidents.length.toLocaleString() },
     { title: 'Closed Incidents', value: statusCounts['Closed'].toLocaleString() },
-    { title: 'Avg Response Time', value: msToTime(metrics.avgResponseTimeMs) },
+    { title: 'Avg Response Time', value: avgResponseTimeDisplay },
     { title: 'Most Likely Type', value: predictions.likelyType || null },
     { title: 'Peak Attendance', value: peakAttendance > 0 ? peakAttendance.toLocaleString() : null },
   ];
@@ -894,6 +904,15 @@ export default function AnalyticsPage() {
     const direction = percentage > 0 ? 'up' : 'down';
     return { percentage, direction };
   };
+
+  // Find doors open time from incident logs occurrence
+  const doorsOpenLog = incidentData.find(
+    (log) =>
+      log.occurrence &&
+      /doors (open|green|are open|opened)/i.test(log.occurrence)
+  );
+  const doorsOpenTimeFromLog = doorsOpenLog ? new Date(doorsOpenLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+  const doorsOpenTimeDisplay = doorsOpenTimeFromLog || (eventDetails?.doors_open_time ? eventDetails.doors_open_time : '-');
 
   if (loading) {
     return (
@@ -1315,6 +1334,13 @@ export default function AnalyticsPage() {
                     {isSavingNotes ? 'Saving...' : 'Save Notes'}
                   </button>
                 </section>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Doors Open Time</label>
+                  <div className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
+                    {doorsOpenTimeDisplay}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1438,4 +1464,28 @@ const chartOptions = (doorsOpenTime: string | null, label: string) => ({
       beginAtZero: true,
     },
   },
-}); 
+});
+
+const INCIDENT_TYPES = [
+  'Medical',
+  'Ejection',
+  'Refusal',
+  'Lost Property',
+  'Technical',
+  'Weather',
+  'Suspicious',
+  'Aggressive',
+  'Welfare',
+  'Queue',
+  'Venue',
+  'Audit',
+  'Accreditation',
+  'Staffing',
+  'Accsessablity',
+  'Suspected Fire',
+  'Fire',
+  'Artist On Stage',
+  'Artist Off Stage',
+  'Artist Movement',
+  'Sexual Misconduct',
+]; 

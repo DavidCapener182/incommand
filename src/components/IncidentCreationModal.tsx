@@ -81,6 +81,8 @@ const INCIDENT_TYPES = {
   'Alcohol / Drug Related': 'Alcohol / Drug Related',
   'Weapon Related': 'Weapon Related',
   'Artist Movement': 'Artist Movement',
+  'Artist On Stage': 'Artist On Stage',
+  'Artist Off Stage': 'Artist Off Stage',
   'Sexual Misconduct': 'Sexual Misconduct',
   'Event Timing': 'Event Timing',
   'Timings': 'Timing Update',
@@ -96,6 +98,13 @@ const INCIDENT_TYPES = {
   'Emergency Show Stop': 'Emergency Show Stop',
   'Animal Incident': 'Animal Incident',
   'Missing Child/Person': 'Missing Child/Person',
+  'Accreditation': 'Accreditation',
+  'Staffing': 'Staffing',
+  'Accsessablity': 'Accsessablity',
+  'Suspected Fire': 'Suspected Fire',
+  'Fire': 'Fire',
+  'Showdown': 'Showdown',
+  'Fight': 'Fight',
 } as const
 
 export const incidentTypes = Object.keys(INCIDENT_TYPES);
@@ -1655,6 +1664,18 @@ const INCIDENT_ACTIONS: Record<string, string[]> = {
     'VIP vehicle used',
     'Other (specify)'
   ],
+  'Artist On Stage': [
+    'Artist on stage',
+    'Artist off stage',
+    'Issues?',
+    'Crowd surfer numbers',
+  ],
+  'Artist Off Stage': [
+    'Artist on stage',
+    'Artist off stage',
+    'Issues?',
+    'Crowd surfer numbers',
+  ],
   'Sexual Misconduct': [
     'Allegation recorded',
     'Police notified',
@@ -1772,8 +1793,13 @@ const INCIDENT_ACTIONS: Record<string, string[]> = {
     'Found child/person reunited',
     'Medical check performed',
     'Other'
-  ]
-};
+  ],
+  'Showdown': [
+    'Showdown incident logged',
+    'Event control notified',
+    'Other'
+  ],
+} as const
 
 // Helper to get usage counts from localStorage
 function getUsageCounts() {
@@ -2058,6 +2084,16 @@ export default function IncidentCreationModal({
   // Handle input change
   const handleQuickInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const input = e.target.value;
+    if (input.trim().toLowerCase() === 'showdown') {
+      setFormData(prev => ({
+        ...prev,
+        ai_input: input,
+        incident_type: 'Showdown',
+        occurrence: 'Showdown',
+        action_taken: 'The show has ended',
+      }));
+      return;
+    }
     setFormData(prev => ({ ...prev, ai_input: input }));
 
     // Just set the occurrence to the raw input immediately
@@ -2238,7 +2274,7 @@ export default function IncidentCreationModal({
         occurrence: formData.occurrence.trim(),
         incident_type: formData.incident_type.trim(),
         action_taken: (formData.action_taken || '').trim(),
-        is_closed: false,
+        is_closed: formData.is_closed,
         event_id: selectedEvent.id,
         status: formData.status || 'open',
         ai_input: formData.ai_input || null,
@@ -2920,6 +2956,20 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               rows={3}
               className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Closed checkbox */}
+          <div className="flex items-center mt-2">
+            <input
+              id="closed-checkbox"
+              type="checkbox"
+              checked={formData.is_closed}
+              onChange={e => setFormData(prev => ({ ...prev, is_closed: e.target.checked }))}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="closed-checkbox" className="ml-2 block text-sm text-gray-700">
+              Closed?
+            </label>
           </div>
 
           {formData.incident_type !== 'Attendance' && (

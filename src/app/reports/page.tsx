@@ -5,12 +5,14 @@ import { FaUpload } from "react-icons/fa";
 import SignaturePad from "react-signature-canvas";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import OpenAI from "openai";
 
 export default function ReportsPage() {
   const [event, setEvent] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [incidents, setIncidents] = useState<any[]>([]);
   const [aiSummary, setAiSummary] = useState<string>("");
+  const [loadingSummary, setLoadingSummary] = useState(true);
   const [headOfSecurity, setHeadOfSecurity] = useState<string>("");
   const [signature, setSignature] = useState<string>("");
   const [incidentReportFile, setIncidentReportFile] = useState<File | null>(null);
@@ -133,6 +135,38 @@ export default function ReportsPage() {
     };
     fetchAssignments();
   }, [event]);
+
+  // Get event date: use today's date or the date of the first log
+  const eventDate = allLogs.length > 0
+    ? new Date(allLogs[0].timestamp).toLocaleDateString()
+    : new Date().toLocaleDateString();
+
+  // Get venue name from current event (if available)
+  // Assume you have a variable or prop called 'venueName' or similar
+  // If not, fallback to '-'
+  const venueName = event?.venue || '-';
+
+  // When fetching/generating the AI summary, replace [insert date] and [insert venue] in the prompt
+  useEffect(() => {
+    const fetchAiSummary = async () => {
+      setLoadingSummary(true);
+      try {
+        const response = await fetch("/api/notifications/ai-summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: `You are an event report assistant. Write a strictly factual, 2-paragraph summary of the incidents for this event, using ONLY the actual incident logs provided below. Do not add, infer, or embellish any details. If there are no incidents, state that clearly. Do not mention attendance tracking or any event details not present in the logs. Here are the incident logs:\n${JSON.stringify(incidents)}\nDate: ${eventDate}, Venue: ${venueName}.`
+          }),
+        });
+        const data = await response.json();
+        setAiSummary(data.summary || "No summary generated.");
+      } catch (error) {
+        setAiSummary("No summary generated.");
+      }
+      setLoadingSummary(false);
+    };
+    fetchAiSummary();
+  }, [eventDate, venueName, allLogs]);
 
   // Extract times and details from logs or incidents
   const getLogTime = (keyword: string) => {
@@ -280,6 +314,64 @@ export default function ReportsPage() {
     pdf.save(`EndOfEventReport-${event?.event_name || "event"}.pdf`);
   };
 
+  // Improved extraction for Doors Open Time and Staff Briefed & In Position
+  function getDoorsOpenTime() {
+    const match = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes('doors green') || text.includes('doors open') || text.includes('doors are open');
+      }
+    );
+    return match && match.timestamp ? new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+  }
+  function getStaffBriefedTime() {
+    const match = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes('staff briefed') || text.includes('staff briefed and in position') || text.includes('staff fully briefed and in position ready for doors');
+      }
+    );
+    return match && match.timestamp ? new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+  }
+
+  function getShowdownTime() {
+    const match = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes('showdown');
+      }
+    );
+    return match && match.timestamp ? new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+  }
+  function getVenueClearTime() {
+    const match = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes('venue clear') || text.includes('venue is clear of public');
+      }
+    );
+    return match && match.timestamp ? new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+  }
+
+  // Helper to get on/off times for a support act from logs
+  function getSupportActTimes(actName: string) {
+    const onLog = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes(`${actName.toLowerCase()} on`);
+      }
+    );
+    const offLog = allLogs.find(
+      (log) => {
+        const text = (log.details || log.occurrence || '').toLowerCase();
+        return text.includes(`${actName.toLowerCase()} off`);
+      }
+    );
+    const onTime = onLog && onLog.timestamp ? new Date(onLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+    const offTime = offLog && offLog.timestamp ? new Date(offLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+    return { onTime, offTime };
+  }
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 bg-white dark:bg-[#23408e] shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">End of Event Report</h1>
@@ -318,7 +410,7 @@ export default function ReportsPage() {
             <input
               type="text"
               className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
-              value={getLogTime('staff briefed')}
+              value={getStaffBriefedTime()}
               readOnly
             />
           </div>
@@ -327,25 +419,50 @@ export default function ReportsPage() {
             <input
               type="text"
               className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
-              value={doorsOpenTime}
+              value={getDoorsOpenTime()}
               readOnly
             />
           </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white">Support Act(s)</label>
-          <ul className="list-disc ml-6 dark:text-white">
-            {supportActs.length ? supportActs.map((act, i) => {
-              if ('act_name' in act) {
-                // Event support act
-                return <li key={i}>{act.act_name} {act.start_time ? `(${act.start_time})` : ""}</li>;
-              } else {
-                // Log entry
-                const logAct = act as any;
-                return <li key={i}>{logAct.details ? logAct.details : ""} {logAct.timestamp ? `(${new Date(logAct.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})` : ""}</li>;
-              }
-            }) : <li>-</li>}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden text-sm">
+              <thead className="bg-gray-100 dark:bg-[#1a2a57]">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Act Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">On Time</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Off Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supportActs.length ? supportActs.map((act, i) => {
+                  if ('act_name' in act) {
+                    const { onTime, offTime } = getSupportActTimes(act.act_name);
+                    return (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-gray-50 dark:bg-[#1a2a4f]' : 'bg-white dark:bg-[#23408e]'}>
+                        <td className="px-4 py-2 whitespace-nowrap">{act.act_name}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{onTime || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{offTime || '-'}</td>
+                      </tr>
+                    );
+                  } else {
+                    // Log entry fallback
+                    const logAct = act as any;
+                    return (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-gray-50 dark:bg-[#1a2a4f]' : 'bg-white dark:bg-[#23408e]'}>
+                        <td className="px-4 py-2 whitespace-nowrap">{logAct.details || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{logAct.timestamp ? new Date(logAct.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">-</td>
+                      </tr>
+                    );
+                  }
+                }) : (
+                  <tr><td colSpan={3} className="text-center py-4">No support acts recorded.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white">Main Act</label>
@@ -362,7 +479,7 @@ export default function ReportsPage() {
             <input
               type="text"
               className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
-              value={showdownTime}
+              value={getShowdownTime()}
               readOnly
             />
           </div>
@@ -371,33 +488,52 @@ export default function ReportsPage() {
             <input
               type="text"
               className="mt-1 block w-full border rounded px-3 py-2 dark:bg-[#1a2a4f] dark:text-white"
-              value={venueClearTime}
+              value={getVenueClearTime()}
               readOnly
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-white">Incident Summary</label>
-          <div className="bg-gray-50 dark:bg-[#1a2a4f] border rounded p-4 min-h-[60px] dark:text-white">
-            {renderSummary(aiSummary)}
-          </div>
+        <div className="mt-6">
+          <div className="font-bold text-lg mb-2">Post-Event Incident Summary</div>
+          {loadingSummary ? (
+            <div className="text-gray-500">Loading summary...</div>
+          ) : aiSummary ? (
+            aiSummary
+              .replace(/\*\*/g, '') // Remove markdown bold
+              .split(/\n\n|(?<=\.)\n/) // Split into paragraphs
+              .filter(Boolean)
+              .map((para, idx) => (
+                <p key={idx} className="mb-3 whitespace-pre-line text-gray-900 dark:text-gray-100">{para.trim()}</p>
+              ))
+          ) : (
+            <div className="text-gray-500">No summary generated.</div>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-white">Incident List</label>
-          <ul className="list-disc ml-6 dark:text-white">
-            {filteredIncidents.length ? filteredIncidents.map((inc, i) => (
-              <li key={i}>{incidentSummary(inc)}</li>
-            )) : <li>No incidents recorded.</li>}
-          </ul>
-        </div>
-        {/* All logs except attendance, in chronological order */}
+        {/* All logs except attendance, in chronological order, as a table */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white mt-6">All Logs (excluding Attendance)</label>
-          <ul className="list-disc ml-6 dark:text-white">
-            {allLogs.length ? allLogs.map((log, i) => (
-              <li key={i}>{logSummary(log)}</li>
-            )) : <li>No logs recorded.</li>}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden text-sm">
+              <thead className="bg-gray-100 dark:bg-[#1a2a57]">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Type</th>
+                  <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider whitespace-nowrap" style={{ width: '80px', minWidth: '80px', maxWidth: '80px' }}>Time</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allLogs.length ? allLogs.map((log, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-gray-50 dark:bg-[#1a2a4f]' : 'bg-white dark:bg-[#23408e]'}>
+                    <td className="px-4 py-2 whitespace-nowrap">{log.type || log.incident_type || '-'}</td>
+                    <td className="px-2 py-2 whitespace-nowrap" style={{ width: '80px', minWidth: '80px', maxWidth: '80px' }}>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-2">{log.details || log.occurrence || log.description || '-'}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={3} className="text-center py-4">No logs recorded.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white">Upload Incident Report</label>

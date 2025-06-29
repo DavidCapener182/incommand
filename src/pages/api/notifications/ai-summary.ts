@@ -12,11 +12,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  if (req.method !== 'GET') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
+    // For POST, get the prompt from the body (if provided)
+    let customPrompt = '';
+    if (req.method === 'POST') {
+      customPrompt = req.body?.prompt || '';
+    }
+
     // Get the current event
     const { data: currentEvent } = await supabase
       .from('events')
@@ -50,8 +56,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Error fetching incidents for AI summary:', incidentsError);
       throw incidentsError;
     }
-
-
 
     // Exclude attendance incidents from total count (they're capacity tracking, not security incidents)
     const totalIncidents = incidents?.filter(i => i.incident_type.toLowerCase() !== 'attendance')?.length || 0;
@@ -108,7 +112,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generate AI summary if we have OpenAI API key
     if (process.env.OPENAI_API_KEY && incidents && incidents.length > 0) {
       try {
-        const prompt = `You are an AI security analyst for an event management system. Analyze the following incident data and provide a comprehensive security and operational overview.
+        // Use custom prompt if provided, otherwise use the default
+        const promptToUse = customPrompt
+          ? customPrompt
+          : `You are an AI security analyst for an event management system. Analyze the following incident data and provide a comprehensive security and operational overview.
 
 **Current Event Data:**
 - Total Incidents: ${totalIncidents}
@@ -120,19 +127,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 ${Object.entries(incidentTypeBreakdown).map(([type, count]) => `- ${type}: ${count} incidents`).join('\n')}
 
 **Recent Incidents (last 2 hours):**
-${recentIncidents.map(incident => 
-  `- ${incident.incident_type}: ${incident.occurrence.substring(0, 100)} (Priority: ${highPriorityTypes.includes(incident.incident_type) ? 'High' : 'Standard'}, Status: ${incident.is_closed || incident.status === 'logged' ? 'Closed' : 'Open'})`
-).join('\n')}
+${recentIncidents.map(incident => `- ${incident.incident_type}: ${incident.occurrence.substring(0, 100)} (Priority: ${highPriorityTypes.includes(incident.incident_type) ? 'High' : 'Standard'}, Status: ${incident.is_closed || incident.status === 'logged' ? 'Closed' : 'Open'})`).join('\n')}
 
 **All Current Incidents:**
-${incidents?.slice(0, 20).map(incident => 
-  `- ${incident.incident_type}: ${incident.occurrence.substring(0, 150)} (Priority: ${highPriorityTypes.includes(incident.incident_type) ? 'High' : 'Standard'}, Status: ${incident.is_closed || incident.status === 'logged' ? 'Closed' : 'Open'}, Location: ${incident.location || 'Not specified'})`
-).join('\n')}
+${incidents?.slice(0, 20).map(incident => `- ${incident.incident_type}: ${incident.occurrence.substring(0, 150)} (Priority: ${highPriorityTypes.includes(incident.incident_type) ? 'High' : 'Standard'}, Status: ${incident.is_closed || incident.status === 'logged' ? 'Closed' : 'Open'}, Location: ${incident.location || 'Not specified'})`).join('\n')}
 
 **IMPORTANT CONTEXT:**
 - "Attendance" incidents are NOT security issues - they track venue occupancy and people entering
 - For Attendance incidents, focus on: occupancy patterns, peak entry times, capacity management, crowd flow
 - All other incident types (Medical, Ejection, Technical, etc.) are actual security/operational concerns
+- "Artist On/Off Stage" incidents are NOT issues or concerns; they simply record scheduled artist transitions and are expected as part of the event flow.
 
 Provide a structured analysis in exactly this format with ### headers:
 
@@ -168,7 +172,7 @@ Keep each section concise but informative. Focus on actionable intelligence for 
             },
             {
               role: 'user',
-              content: prompt
+              content: promptToUse
             }
           ],
           max_tokens: 1200,
