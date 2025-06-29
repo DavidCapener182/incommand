@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   table: {
-    display: 'table',
     width: 'auto',
     marginTop: 8,
     marginBottom: 16,
+    flexDirection: 'column',
   },
   tableRow: {
     flexDirection: 'row',
@@ -86,6 +86,26 @@ const styles = StyleSheet.create({
   },
 });
 
+// Add or update the props type definition above the component
+interface EndOfEventPDFProps {
+  headOfSecurity: string;
+  eventDate: string;
+  eventName: string;
+  staffBriefedTime: string;
+  doorsOpenTime: string;
+  supportActs: any[]; // Replace 'any' with a more specific type if known
+  mainAct: string;
+  showdownTime: string;
+  venueClearTime: string;
+  incidentSummary: string;
+  logoUrl: string;
+  logs: any[]; // Replace 'any' with a more specific type if known
+  incidentReportFileName: string;
+  signatureType: string;
+  signatureScribble: string;
+  // Add any other props as needed
+}
+
 const EndOfEventPDF = ({
   logoUrl = '/inCommand.png', // Use your public logo path or a remote URL
   headOfSecurity,
@@ -102,7 +122,7 @@ const EndOfEventPDF = ({
   incidentReportFileName,
   signatureType,
   signatureScribble,
-}) => (
+}: EndOfEventPDFProps) => (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Logo and Title */}
@@ -159,7 +179,7 @@ const EndOfEventPDF = ({
           </View>
           {/* Table Rows */}
           {logs && logs.length > 0 ? (
-            logs.map((log, idx) => (
+            logs.map((log: any, idx: number) => (
               <View
                 key={idx}
                 style={[

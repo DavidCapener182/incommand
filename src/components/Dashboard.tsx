@@ -26,6 +26,7 @@ import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
+// @ts-ignore-next-line
 import Modal from 'react-modal'
 import what3words from '@what3words/api'
 import { Menu, Transition, Dialog } from '@headlessui/react'
@@ -567,19 +568,32 @@ export default function Dashboard() {
         });
         // Find current and next slot
         const sortedTimings = timingsWithMinutes.sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
+        // Find the minutesSinceMidnight for 'Show Down'
+        const showDownTiming = sortedTimings.find(t => t.title.toLowerCase().includes('show down'));
+        const showDownMinutes = showDownTiming ? showDownTiming.minutesSinceMidnight : null;
+        // Filter out 'stand down', 'curfew', and 'show down' from timings for Happening Now
+        const filteredTimings = sortedTimings.filter(t => {
+          const title = t.title.toLowerCase();
+          return !title.includes('stand down') && !title.includes('curfew') && !title.includes('show down');
+        });
         let current = null, next = null;
-        for (let i = 0; i < sortedTimings.length; i++) {
-          if (sortedTimings[i].minutesSinceMidnight > currentTimeNumber) {
-            next = sortedTimings[i];
-            current = i > 0 ? sortedTimings[i - 1] : sortedTimings[0];
+        for (let i = 0; i < filteredTimings.length; i++) {
+          if (filteredTimings[i].minutesSinceMidnight > currentTimeNumber) {
+            next = filteredTimings[i];
+            current = i > 0 ? filteredTimings[i - 1] : filteredTimings[0];
             break;
           }
         }
         // If no next, last event is current
-        if (!next && sortedTimings.length > 0) {
-          current = sortedTimings[sortedTimings.length - 1];
+        if (!next && filteredTimings.length > 0) {
+          current = filteredTimings[filteredTimings.length - 1];
         }
-        setCurrentSlot(current ? { title: current.title, time: current.time } : null);
+        // If current time is after or at Show Down, do not show any previous timings as Happening Now
+        if (showDownMinutes !== null && currentTimeNumber >= showDownMinutes) {
+          setCurrentSlot(null);
+        } else {
+          setCurrentSlot(current ? { title: current.title, time: current.time } : null);
+        }
         setNextSlot(next ? { title: next.title, time: next.time } : null);
         // For desktop, keep nextFiveTimings as before
         const futureTimings = sortedTimings.filter(t => t.minutesSinceMidnight > currentTimeNumber);
