@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
+import { v4 as uuidv4 } from 'uuid';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -657,12 +658,13 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       // 1. Upsert all positions (callsign_roles)
       const roles = categories.flatMap(category =>
         category.positions.map(pos => ({
+          id: pos.id || uuidv4(), // Generate UUID if missing
           event_id: eventId,
           area: category.name,
-          short_code: pos.short ? pos.short : pos.callsign,
+          short_code: pos.short || pos.callsign,
           callsign: pos.callsign,
           position: pos.position,
-          id: pos.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pos.id) ? pos.id : undefined,
+          required: pos.required ?? false,
         }))
       );
       const { data: upsertedRoles, error: rolesError } = await supabase
