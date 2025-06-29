@@ -230,7 +230,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
       ? { icon: <FaRobot />, label: 'AI Chatbot', key: 'ai' }
       : getGroupMeta(
           communityGroups.find((g) => g.id === selectedGroup) || {}
-        );
+  );
 
   return (
     <div style={{ display: 'flex', height: '100%', minHeight: '400px', borderRadius: 24, boxShadow: '0 4px 32px rgba(44,62,80,0.10)', background: '#f3f4f6', overflow: 'hidden' }}>
@@ -266,15 +266,15 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
               </li>
             ))}
           </ul>
-        </div>
+                </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Community Groups</div>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {communityGroups.map(group => {
               const meta = getGroupMeta(group);
-              return (
+                    return (
                 <li key={meta.key} style={{ marginBottom: 8 }}>
-                  <button
+                        <button
                     style={{
                       background: selectedGroup === group.id ? '#fff' : 'transparent',
                       border: selectedGroup === group.id ? '2px solid #6366f1' : '1px solid #e5e7eb',
@@ -291,16 +291,16 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
                     onClick={() => setSelectedGroup(group.id)}
                   >
                     {meta.icon} {meta.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
         <button style={{ width: '100%', padding: 8, borderRadius: 12, background: '#e5e7eb', color: '#6b7280', border: 'none', cursor: 'not-allowed' }} disabled>
           + Add Group
         </button>
-      </aside>
+        </aside>
       {/* Main Chat Area */}
       <main style={{ flex: 1, padding: 0, background: '#f3f4f6', display: 'flex', flexDirection: 'column', minHeight: '400px', borderTopRightRadius: 24, borderBottomRightRadius: 24 }}>
         {selectedGroup === 'ai' ? (
@@ -420,4 +420,4 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   );
 };
 
-export default EventMessagesPanel;
+export default EventMessagesPanel; 
