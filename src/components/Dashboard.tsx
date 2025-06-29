@@ -70,29 +70,46 @@ interface TimeCardProps {
   eventTimings: EventTiming[];
   nextEvent: EventTiming | null;
   countdown: string;
-      }
+  currentSlot?: EventTiming | null;
+}
 
-const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown }) => {
+const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot }) => {
   return (
     <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:block">
-            <div className="hidden md:block">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Time</h2>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{currentTime}</p>
-          {nextEvent && (
-            <div className="mt-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
-              <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+        <div className="md:block relative">
+          <div className="hidden md:block">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Time</h2>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{currentTime}</p>
+            {nextEvent && (
+              <div className="mt-2">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
+                <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
+              </div>
+            )}
+            {/* Happening Now absolutely positioned at bottom left on desktop */}
+            {currentSlot && (
+              <div className="hidden md:flex flex-col items-start absolute left-0 bottom-0 z-20 ml-[-1rem] mb-[-1rem]">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                <div className="text-base font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
+                <div className="text-sm text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
+              </div>
+            )}
+          </div>
+          {/* Mobile: show Happening Now in normal flow */}
+          {currentSlot && (
+            <div className="md:hidden mt-6">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+              <div className="text-base font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
             </div>
           )}
-            </div>
         </div>
         <div>
-            <div className='hidden md:block'>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Event Schedule</h2>
-            </div>
-            <div className="space-y-2 mt-2">
+          <div className='hidden md:block'>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Event Schedule</h2>
+          </div>
+          <div className="space-y-2 mt-2">
             {eventTimings.map((timing, index) => (
               <div 
                 key={index} 
@@ -100,23 +117,19 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                         timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
                       } `}
               >
-                      <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500 dark:text-gray-100'}`}>
-                  {timing.title}
-                </span>
-                      <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900 dark:text-gray-100'}`}>
-                  {timing.time}
-                </span>
+                <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500 dark:text-gray-100'}`}>{timing.title}</span>
+                <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900 dark:text-gray-100'}`}>{timing.time}</span>
               </div>
             ))}
-            </div>
-             {eventTimings.length === 0 && !nextEvent && (
-              <p className="text-sm text-gray-500 dark:text-gray-100">No upcoming event timings</p>
-            )}
+          </div>
+          {eventTimings.length === 0 && !nextEvent && (
+            <p className="text-sm text-gray-500 dark:text-gray-100">No upcoming event timings</p>
+          )}
         </div>
       </div>
     </div>
   );
-};
+}
 
 const StatCard: React.FC<StatCardProps> = ({ 
   title, 
@@ -150,18 +163,27 @@ const StatCard: React.FC<StatCardProps> = ({
   }, [value]);
 
   const [showTooltip, setShowTooltip] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkScreen = () => setIsDesktop(window.innerWidth >= 768);
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
 
   return (
     <div 
       onClick={isFilterable ? onClick : undefined}
       className={`
-        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center transition-colors duration-300
-        ${isFilterable ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
+        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center
+        ${isFilterable ? 'cursor-pointer' : ''}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}
         ${pulse ? 'animate-pulse-once' : ''}
         relative
         ${className}
-        hover:shadow-xl hover:-translate-y-1 transition-all duration-200
+        transition-all duration-300
+        hover:scale-110 hover:shadow-2xl hover:border-pink-500 hover:z-10
       `}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
@@ -183,7 +205,7 @@ const StatCard: React.FC<StatCardProps> = ({
         <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
       </div>
       {/* Tooltip */}
-      {tooltip && showTooltip && (
+      {tooltip && showTooltip && isDesktop && (
         <div className="absolute z-20 left-1/2 top-full mt-2 w-40 p-2 bg-gray-800 text-white text-xs rounded shadow-lg -translate-x-1/2">
           {tooltip}
         </div>
@@ -293,10 +315,10 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
     // Ensure incidents is an array
     const safeIncidents = Array.isArray(incidents) ? incidents : [];
     
-    // Exclude Attendance and Sit Rep
-    const filtered = safeIncidents.filter((i: any) => 
-      i && i.incident_type && !['Attendance', 'Sit Rep'].includes(i.incident_type)
-    );
+    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage
+    const filtered = safeIncidents.filter((i: any) => {
+      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage'].includes(i.incident_type);
+    });
     
     // Count by type
     const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
@@ -404,10 +426,13 @@ export default function Dashboard() {
   const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
   const [countdown, setCountdown] = useState<string>('');
   const [nextEvent, setNextEvent] = useState<EventTiming | null>(null);
+  const [previousEvent, setPreviousEvent] = useState<EventTiming | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOccupancyModalOpen, setIsOccupancyModalOpen] = useState(false);
   const [attendanceTimeline, setAttendanceTimeline] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
+  const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
   
   // Toast notifications
   const { messages, addToast, removeToast } = useToast();
@@ -540,13 +565,26 @@ export default function Dashboard() {
           const [hours, minutes] = timing.time.split(':').map(Number);
           return { ...timing, minutesSinceMidnight: hours * 60 + minutes };
         });
-        const futureTimings = timingsWithMinutes
-          .filter(t => t.minutesSinceMidnight > currentTimeNumber)
-          .sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
-        const nextTiming = futureTimings[0] || null;
+        // Find current and next slot
+        const sortedTimings = timingsWithMinutes.sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
+        let current = null, next = null;
+        for (let i = 0; i < sortedTimings.length; i++) {
+          if (sortedTimings[i].minutesSinceMidnight > currentTimeNumber) {
+            next = sortedTimings[i];
+            current = i > 0 ? sortedTimings[i - 1] : sortedTimings[0];
+            break;
+          }
+        }
+        // If no next, last event is current
+        if (!next && sortedTimings.length > 0) {
+          current = sortedTimings[sortedTimings.length - 1];
+        }
+        setCurrentSlot(current ? { title: current.title, time: current.time } : null);
+        setNextSlot(next ? { title: next.title, time: next.time } : null);
+        // For desktop, keep nextFiveTimings as before
+        const futureTimings = sortedTimings.filter(t => t.minutesSinceMidnight > currentTimeNumber);
         const nextFiveTimings = futureTimings.slice(0, 5).map((t, i) => ({ ...t, isNext: i === 0 }));
         setEventTimings(nextFiveTimings);
-        setNextEvent(nextTiming ? { ...nextTiming, isNext: true } : null);
       }
       setIsRefreshing(false);
     };
@@ -724,6 +762,7 @@ export default function Dashboard() {
             eventTimings={eventTimings}
             nextEvent={nextEvent}
             countdown={countdown}
+            currentSlot={currentSlot}
           />
         </div>
 
@@ -740,15 +779,25 @@ export default function Dashboard() {
                 <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
               </div>
               <hr className="border-t border-gray-200" />
-              {nextEvent ? (
+              {(currentSlot || nextSlot) ? (
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-b-lg">
-                  <span className="text-sm font-medium text-blue-600 dark:text-gray-100">{nextEvent.title}</span>
-                  <span className="text-sm font-bold text-blue-700 dark:text-gray-100">{nextEvent.time}</span>
-                  <span className="text-sm font-medium text-blue-600">{nextEvent.title}</span>
-                  <span className="text-sm font-bold text-blue-700">{nextEvent.time}</span>
+                  {currentSlot ? (
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentSlot.title}</span>
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-100">{currentSlot.time}</span>
+                    </div>
+                  ) : <div />}
+                  {nextSlot ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-200">Up Next</span>
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-100">{nextSlot.title}</span>
+                      <span className="text-xs font-bold text-blue-700 dark:text-blue-100">{nextSlot.time}</span>
+                    </div>
+                  ) : <div />}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 text-center p-3">No upcoming timings</p>
+                <p className="text-sm text-gray-500 text-center p-3">No timings available</p>
               )}
             </div>
           )}
@@ -969,18 +1018,17 @@ export default function Dashboard() {
             <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
-            <div className="flex flex-col h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 items-center justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100">
-              {currentEvent?.venue_address && (
-                <WeatherCard 
-                  lat={coordinates?.lat} 
-                  lon={coordinates?.lon}
-                  locationName={currentEvent.venue_address}
-                  eventDate={currentEvent.event_date ?? ''} 
-                  startTime={currentEvent.main_act_start_time ?? ''}
-                  curfewTime={currentEvent.curfew_time ?? ''}
-                />
-              )}
-            </div>
+            {/* WeatherCard: render only the WeatherCard, no extra card container */}
+            {currentEvent?.venue_address && (
+              <WeatherCard 
+                lat={coordinates?.lat} 
+                lon={coordinates?.lon}
+                locationName={currentEvent.venue_address}
+                eventDate={currentEvent.event_date ?? ''} 
+                startTime={currentEvent.main_act_start_time ?? ''}
+                curfewTime={currentEvent.curfew_time ?? ''}
+              />
+            )}
             <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 cursor-pointer">
               <What3WordsMapCard 
                 lat={coordinates.lat} 

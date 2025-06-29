@@ -671,15 +671,23 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     }
     setPendingChanges(false);
     try {
+      // Fetch existing roles for this event
+      const { data: existingRoles, error: fetchError } = await supabase
+        .from('callsign_roles')
+        .select('id, area, short_code')
+        .eq('event_id', eventId);
+      if (fetchError) throw fetchError;
+      const roleIdMap = new Map();
+      (existingRoles || []).forEach(role => {
+        roleIdMap.set(`${role.area}|${role.short_code}`, role.id);
+      });
+
       // 1. Upsert all positions (callsign_roles)
       const roles = categories.flatMap(category =>
         category.positions.map(pos => {
-          // Always use a valid UUID for id
-          const roleId = isValidUUID(pos.id) ? pos.id : uuidv4();
-          // Store the generated UUID back to pos.id for assignment reference
-          pos.id = roleId;
+          const key = `${category.name}|${pos.short || pos.callsign}`;
           return {
-            id: roleId,
+            id: roleIdMap.get(key) || uuidv4(),
             event_id: eventId,
             area: category.name,
             short_code: pos.short || pos.callsign,
@@ -689,25 +697,36 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
           };
         })
       );
-      // Upsert roles
-      const { error: rolesError } = await supabase.from('callsign_roles').upsert(roles, { onConflict: 'id' });
+      // Deduplicate roles by event_id, area, short_code
+      const uniqueRolesMap = new Map();
+      roles.forEach(role => {
+        const key = `${role.event_id}|${role.area}|${role.short_code}`;
+        if (!uniqueRolesMap.has(key)) {
+          uniqueRolesMap.set(key, role);
+        }
+      });
+      const uniqueRoles = Array.from(uniqueRolesMap.values());
+
+      // Upsert roles with correct conflict target
+      const { error: rolesError } = await supabase.from('callsign_roles').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
       if (rolesError) throw rolesError;
-
+      const idMap: Record<string, string> = {};
+      uniqueRoles.forEach(role => {
+        idMap[role.id] = role.id;
+      });
       // 2. Upsert all assignments (callsign_assignments)
-      const assignments = categories.flatMap(category =>
-        category.positions.map(pos => {
-          // Only include event_id and role_id
-          return {
-            event_id: eventId,
-            role_id: pos.id, // now always a valid UUID
-          };
-        })
+      const assignmentsArr = categories.flatMap(category =>
+        category.positions.map(pos => ({
+          event_id: eventId,
+          role_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
+        }))
       );
-      // Upsert assignments
-      const { error: assignmentsError } = await supabase.from('callsign_assignments').upsert(assignments, { onConflict: 'event_id,role_id' });
-      if (assignmentsError) throw assignmentsError;
-
-      // Show success toast or status
+      if (assignmentsArr.length > 0) {
+        const { error: assignError } = await supabase
+          .from("callsign_assignments")
+          .upsert(assignmentsArr, { onConflict: "event_id,role_id" });
+        if (assignError) throw assignError;
+      }
       alert("Assignments and roles saved successfully.");
     } catch (err: any) {
       alert("Error saving: " + (err.message || err));
