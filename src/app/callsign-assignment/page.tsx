@@ -429,7 +429,7 @@ export default function StaffCommandCentre() {
       <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
         <div className="w-full h-full">
           {activeView === 'staff' && <StaffListView />}
-          {activeView === 'callsign' && <CallsignAssignmentView />}
+          {activeView === 'callsign' && <CallsignAssignmentView eventId={eventId} />}
           {activeView === 'radio' && <RadioSignOut />}
           {activeView === 'shift' && <ShiftRoster />}
           {activeView === 'accreditation' && <Accreditation />}
@@ -440,7 +440,7 @@ export default function StaffCommandCentre() {
 }
 
 // --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
-function CallsignAssignmentView() {
+function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Default categories with better structure
   const defaultCategories = [
     { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
@@ -455,6 +455,7 @@ function CallsignAssignmentView() {
     id: string;
     callsign: string; 
     position: string;
+    short?: string;
     assignedStaff?: number;
     required?: boolean;
   };
@@ -646,11 +647,62 @@ function CallsignAssignmentView() {
   };
 
   // Save all changes
-  const saveChanges = () => {
-    // TODO: Save to database
-    console.log('Saving changes:', categories);
+  const saveChanges = async () => {
+    if (!eventId) {
+      alert("No current event selected.");
+      return;
+    }
     setPendingChanges(false);
-    // Show success toast
+    try {
+      // 1. Upsert all positions (callsign_roles)
+      const roles = categories.flatMap(category =>
+        category.positions.map(pos => ({
+          event_id: eventId,
+          area: category.name,
+          short_code: pos.short ? pos.short : pos.callsign,
+          callsign: pos.callsign,
+          position: pos.position,
+          id: pos.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pos.id) ? pos.id : undefined,
+        }))
+      );
+      const { data: upsertedRoles, error: rolesError } = await supabase
+        .from("callsign_roles")
+        .upsert(roles, { onConflict: "event_id,area,short_code" })
+        .select();
+      if (rolesError) throw rolesError;
+      // 2. Map position id to upserted role id
+      const idMap: Record<string, string> = {};
+      upsertedRoles?.forEach((r: any) => {
+        const match = categories
+          .find(c => c.name === r.area)
+          ?.positions.find(
+            p =>
+              p.callsign === r.callsign &&
+              ((p.short && p.short === r.short_code) || p.callsign === r.short_code) &&
+              p.position === r.position
+          );
+        if (match) idMap[match.id] = r.id;
+      });
+      // 3. Upsert assignments (callsign_assignments)
+      const assignmentsArr = categories.flatMap(category =>
+        category.positions
+          .filter(pos => pos.assignedStaff)
+          .map(pos => ({
+            event_id: eventId,
+            callsign_role_id: idMap[pos.id],
+            assigned_staff_id: pos.assignedStaff,
+          }))
+      );
+      if (assignmentsArr.length > 0) {
+        const { error: assignError } = await supabase
+          .from("callsign_assignments")
+          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
+        if (assignError) throw assignError;
+      }
+      alert("Saved successfully!");
+    } catch (err: any) {
+      alert("Error saving: " + (err.message || err.toString()));
+    }
   };
 
   if (loadingStaff) {
