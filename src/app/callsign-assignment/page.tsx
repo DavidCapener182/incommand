@@ -336,9 +336,20 @@ export default function StaffCommandCentre() {
           return base;
         })
       );
+      // Deduplicate roles by event_id, area, short_code
+      const uniqueRolesMap = new Map();
+      roles.forEach(role => {
+        const key = `${role.event_id}|${role.area}|${role.short_code}`;
+        if (!uniqueRolesMap.has(key)) {
+          uniqueRolesMap.set(key, role);
+        }
+      });
+      const uniqueRoles = Array.from(uniqueRolesMap.values());
+
+      // Upsert roles with correct conflict target
       const { data: upsertedRoles, error: rolesError } = await supabase
         .from("callsign_roles")
-        .upsert(roles, { onConflict: "event_id,area,short_code" })
+        .upsert(uniqueRoles, { onConflict: "event_id,area,short_code" })
         .select();
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
@@ -685,11 +696,10 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       // 2. Upsert all assignments (callsign_assignments)
       const assignments = categories.flatMap(category =>
         category.positions.map(pos => {
-          // Use the valid UUID for role_id
+          // Only include event_id and role_id
           return {
             event_id: eventId,
             role_id: pos.id, // now always a valid UUID
-            assigned_staff_id: pos.assignedStaff || null,
           };
         })
       );
