@@ -1254,7 +1254,370 @@ const AdminPage = () => {
         {activeSection === 'overview' && (
           <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
             <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-blue-200">System Overview</h2>
-            <p className="text-gray-600 dark:text-blue-100">Welcome to the admin dashboard. Here you can manage companies, users, and view system statistics.</p>
+            <p className="text-gray-600 dark:text-blue-100 mb-4">Welcome to the admin dashboard. Here you can manage companies, users, and view system statistics.</p>
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Companies</span>
+                </div>
+                <span className="text-2xl font-bold">{companies.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserGroupIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Users</span>
+                </div>
+                <span className="text-2xl font-bold">{users.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Events</span>
+                </div>
+                <span className="text-2xl font-bold">{events.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Active Events</span>
+                </div>
+                <span className="text-2xl font-bold">{events.filter(event => new Date(event.end_datetime) > new Date()).length}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Management Section */}
+        {activeSection === 'users' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">User Management</h2>
+              <button
+                onClick={() => setIsUserModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+              >
+                Add New User
+              </button>
+            </div>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-[#2d437a]">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Name</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Email</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Role</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{user.full_name}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{user.email}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            user.role === 'superadmin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{user.company?.name || 'N/A'}</td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsUserModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mr-3"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Companies Section */}
+        {activeSection === 'companies' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Company Management</h2>
+              <button
+                onClick={() => setIsCompanyModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+              >
+                Add New Company
+              </button>
+            </div>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-[#2d437a]">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company Name</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Contact</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Plan</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Users</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companies.map((company) => (
+                      <tr key={company.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">{company.name}</td>
+                        <td className="py-3 px-4">
+                          <div className="text-gray-900 dark:text-gray-100 text-sm">{company.primary_contact_name}</div>
+                          <div className="text-gray-600 dark:text-blue-100 text-xs">{company.primary_contact_email}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            company.subscription_plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                            company.subscription_plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            company.subscription_plan === 'trial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {company.subscription_plan}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            company.account_status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            company.account_status === 'suspended' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {company.account_status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
+                          {users.filter(user => user.company_id === company.id).length}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Events Section */}
+        {activeSection === 'events' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-[#2d437a]">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Event Name</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Venue</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((event) => (
+                      <tr key={event.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="text-gray-900 dark:text-gray-100 font-medium">{event.event_name}</div>
+                          <div className="text-gray-600 dark:text-blue-100 text-sm">{event.artist_name}</div>
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{event.venue_name}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
+                          {new Date(event.start_datetime).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{event.company?.name || 'N/A'}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            new Date(event.end_datetime) > new Date() ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {new Date(event.end_datetime) > new Date() ? 'Active' : 'Completed'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Audit Logs Section */}
+        {activeSection === 'audit' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Audit Logs</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              {auditLogs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-[#2d437a]">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Action</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Type</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">User</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Details</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.slice(0, 50).map((log) => (
+                        <tr key={log.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                          <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{log.action}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              log.action_type === 'user' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              log.action_type === 'company' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              log.action_type === 'event' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                            }`}>
+                              {log.action_type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{log.user?.full_name || log.performed_by}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100 max-w-xs truncate">{log.details}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
+                            {new Date(log.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-blue-100">No audit logs available</p>
+                  <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">Audit logging may not be configured</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Platform Settings Section */}
+        {activeSection === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Platform Settings</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">System Configuration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Default User Role
+                      </label>
+                      <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Session Timeout (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        defaultValue={60}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Database Management</h3>
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      onClick={setupDatabase}
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+                    >
+                      Setup Database
+                    </button>
+                    <button
+                      onClick={() => fetchData()}
+                      className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+                    >
+                      Refresh All Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Section */}
+        {activeSection === 'notifications' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">System Notifications</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="text-center py-8">
+                <BellIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-blue-100">Notification management coming soon</p>
+                <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">This section will allow you to manage system-wide notifications and alerts</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Support Section */}
+        {activeSection === 'support' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Support & Documentation</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="text-center py-8">
+                <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-blue-100">Admin support resources coming soon</p>
+                <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">This section will provide admin documentation and support tools</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Billing Section */}
+        {activeSection === 'billing' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Billing & Subscriptions</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="text-center py-8">
+                <CreditCardIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-blue-100">Billing management coming soon</p>
+                <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">This section will provide subscription and billing management tools</p>
+              </div>
+            </div>
           </div>
         )}
 
