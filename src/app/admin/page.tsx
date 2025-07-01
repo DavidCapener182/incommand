@@ -1254,12 +1254,6 @@ const AdminPage = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Admin Dashboard</h1>
               <p className="text-gray-600 dark:text-gray-300">Manage and monitor your platform settings and data</p>
             </div>
-            <button
-              onClick={setupDatabase}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-200 w-full sm:w-auto"
-            >
-              Setup Database
-            </button>
           </div>
 
         {/* System Overview Card */}
