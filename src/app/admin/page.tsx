@@ -1235,7 +1235,7 @@ const AdminPage = () => {
         title="Admin"
       />
       
-      <main className="flex-1 lg:ml-64 ml-16">
+      <main className="flex-1 ml-16 lg:ml-64">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
             <div>

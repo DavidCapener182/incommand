@@ -39,9 +39,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       />
       
       {/* Main content */}
-      <main className="flex-1 lg:ml-64 ml-16">
-        {/* Page content with proper spacing for mobile sidebar */}
-        <div className="p-4 sm:p-6 lg:p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300 min-h-screen">
+      <main className="flex-1 ml-16 lg:ml-64 bg-gray-50 dark:bg-[#15192c] min-h-screen transition-colors duration-300">
+        <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>

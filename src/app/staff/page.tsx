@@ -127,7 +127,7 @@ export default function StaffManagementPage() {
         title="Staff"
       />
       
-      <main className="flex-1 lg:ml-64 ml-16">
+      <main className="flex-1 ml-16 lg:ml-64">
         <div className="p-4 sm:p-6 lg:p-8">
           {renderContent()}
         </div>
