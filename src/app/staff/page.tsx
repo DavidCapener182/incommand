@@ -1,10 +1,36 @@
 "use client";
-import React from "react";
-import { UserGroupIcon, PlusIcon } from "@heroicons/react/24/outline";
+import React, { useState } from "react";
+import { UserGroupIcon, PlusIcon, ClipboardDocumentListIcon, CalendarIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import IconSidebar from "../components/IconSidebar";
+
+// Staff navigation items
+const navigation = [
+  { name: 'Staff List', icon: UserGroupIcon, id: 'staff-list' },
+  { name: 'Schedules', icon: CalendarIcon, id: 'schedules' },
+  { name: 'Reports', icon: ChartBarIcon, id: 'reports' },
+  { name: 'Assignments', icon: ClipboardDocumentListIcon, id: 'assignments' },
+];
 
 export default function StaffManagementPage() {
+  const [activeSection, setActiveSection] = useState('staff-list');
+
+  const sidebarItems = navigation.map(item => ({
+    ...item,
+    onClick: () => setActiveSection(item.id)
+  }));
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] p-6 md:p-8 transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+      {/* Icon Sidebar */}
+      <IconSidebar 
+        items={sidebarItems}
+        activeItem={activeSection}
+        onItemClick={setActiveSection}
+      />
+      
+      {/* Main Content */}
+      <main className="flex-1 ml-16 transition-all duration-300">
+        <div className="p-6 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <UserGroupIcon className="h-8 w-8 text-blue-700 dark:text-blue-300" />
@@ -39,6 +65,8 @@ export default function StaffManagementPage() {
           </tbody>
         </table>
       </div>
+        </div>
+      </main>
     </div>
   );
 } 
