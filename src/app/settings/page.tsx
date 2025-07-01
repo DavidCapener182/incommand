@@ -435,7 +435,7 @@ export default function GeneralSettingsPage() {
             </div>
           </div>
         </div>
-
+        
         {/* Account Actions */}
         <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 dark:border-[#2d437a]">
           <div className="flex items-center gap-3 mb-6">
