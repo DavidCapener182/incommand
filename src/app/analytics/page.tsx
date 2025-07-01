@@ -37,9 +37,7 @@ import {
   CogIcon,
   LightBulbIcon,
   FireIcon,
-  ChartPieIcon,
-  Bars3Icon,
-  XMarkIcon
+  ChartPieIcon
 } from '@heroicons/react/24/outline';
 import IconSidebar from '../../components/IconSidebar';
 
@@ -168,7 +166,6 @@ export default function AnalyticsPage() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
   const [debriefError, setDebriefError] = useState<string | null>(null);
-
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -918,24 +915,17 @@ export default function AnalyticsPage() {
   const doorsOpenTimeFromLog = doorsOpenLog ? new Date(doorsOpenLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
   const doorsOpenTimeDisplay = doorsOpenTimeFromLog || (eventDetails?.doors_open_time ? eventDetails.doors_open_time : '-');
 
-  const sidebarItems = navigation.map(item => ({
-    ...item,
-    onClick: () => setActiveSection(item.id)
-  }));
-
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-        {/* Icon Sidebar */}
-        <IconSidebar 
-          items={sidebarItems}
+      <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+        <IconSidebar
+          navigation={navigation}
           activeItem={activeSection}
           onItemClick={setActiveSection}
+          title="Analytics"
         />
         
-        {/* Main Content */}
-        <main className="flex-1 ml-16 transition-all duration-300">
-          {/* Page content */}
+        <main className="flex-1 lg:ml-64 ml-16">
           <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
@@ -953,18 +943,15 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Icon Sidebar */}
-      <IconSidebar 
-        items={sidebarItems}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+      <IconSidebar
+        navigation={navigation}
         activeItem={activeSection}
         onItemClick={setActiveSection}
+        title="Analytics"
       />
       
-      {/* Main Content */}
-      <main className="flex-1 ml-16 transition-all duration-300">
-        
-        {/* Page content */}
+      <main className="flex-1 lg:ml-64 ml-16">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
             <div>

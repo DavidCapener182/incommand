@@ -16,9 +16,7 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   ChartPieIcon,
-  CalculatorIcon,
-  Bars3Icon,
-  XMarkIcon
+  CalculatorIcon
 } from '@heroicons/react/24/outline';
 import UserManagementModal from '@/components/UserManagementModal';
 import CompanyCreationModal from '@/components/CompanyCreationModal';
@@ -1228,28 +1226,21 @@ const AdminPage = () => {
     )
   }
 
-  const sidebarItems = navigation.map(item => ({
-    ...item,
-    onClick: () => setActiveSection(item.id)
-  }));
-
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Icon Sidebar */}
-      <IconSidebar 
-        items={sidebarItems}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+      <IconSidebar
+        navigation={navigation}
         activeItem={activeSection}
         onItemClick={setActiveSection}
+        title="Admin"
       />
       
-      {/* Main Content */}
-      <main className="flex-1 ml-16 transition-all duration-300">
-        
-        {/* Page content */}
+      <main className="flex-1 lg:ml-64 ml-16">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Manage and monitor your platform settings and data</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Admin Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-300">Manage and monitor your platform settings and data</p>
             </div>
             <button 
               onClick={setupDatabase}
