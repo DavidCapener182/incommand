@@ -302,10 +302,11 @@ const AdminPage = () => {
   });
 
   // Add state for modal/expanded company
-  const [selectedCompanyUsers, setSelectedCompanyUsers] = useState<any[] | null>(null);
-  const [selectedCompanyEvents, setSelectedCompanyEvents] = useState<any[] | null>(null);
-  const [showUsersModal, setShowUsersModal] = useState(false);
-  const [showEventsModal, setShowEventsModal] = useState(false);
+  // const [selectedCompanyUsers, setSelectedCompanyUsers] = useState<any[] | null>(null);
+  // const [selectedCompanyEvents, setSelectedCompanyEvents] = useState<any[] | null>(null);
+  // const [showUsersModal, setShowUsersModal] = useState(false);
+  // const [showEventsModal, setShowEventsModal] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData()
@@ -1341,75 +1342,83 @@ const AdminPage = () => {
               </div>
             </div>
 
-            {/* Users grouped by company */}
+            {/* Users grouped by company, but filtered if companyFilter is set */}
             <div className="space-y-6">
               {Object.entries(usersGroupedByCompany)
+                .filter(([companyName, _]) => {
+                  if (!companyFilter) return true;
+                  const company = companies.find(c => c.id === companyFilter);
+                  return company && company.name === companyName;
+                })
                 .sort(([companyA], [companyB]) => companyA.localeCompare(companyB))
                 .map(([companyName, companyUsers]) => (
-                <div key={companyName} className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a]">
-                  <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
-                      <BuildingOfficeIcon className="h-5 w-5" />
-                      {companyName} ({companyUsers.length} users)
-                    </h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
-                      <thead className="bg-gray-50 dark:bg-[#1e3a5f]">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">User</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Role</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Joined</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-                        {companyUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-[#1e3a5f]">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                                    <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-                                  </div>
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900 dark:text-blue-100">
-                                    {user.full_name || 'No name'}
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-blue-200">{user.email}</div>
-                                  <div className="text-xs text-gray-400 dark:text-blue-300">ID: {user.id}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                user.role === 'superadmin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                                user.role === 'user' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                                'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
-                              }`}>
-                                {user.role || 'user'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
-                              {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                              <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-                                Edit
-                              </button>
-                              <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
-                                Resend
-                              </button>
-                            </td>
+                  <div key={companyName} className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a]">
+                    <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
+                        <BuildingOfficeIcon className="h-5 w-5" />
+                        {companyName} ({companyUsers.length} users)
+                        {companyFilter && (
+                          <button className="ml-4 text-xs text-blue-600 underline" onClick={() => setCompanyFilter(null)}>Clear filter</button>
+                        )}
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+                        <thead className="bg-gray-50 dark:bg-[#1e3a5f]">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">User</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Joined</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                          {companyUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-[#1e3a5f]">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                      <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-blue-100">
+                                      {user.full_name || 'No name'}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-blue-200">{user.email}</div>
+                                    <div className="text-xs text-gray-400 dark:text-blue-300">ID: {user.id}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  user.role === 'superadmin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                  user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                  user.role === 'user' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                }`}>
+                                  {user.role || 'user'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
+                                {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                                  Edit
+                                </button>
+                                <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                  Resend
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
@@ -1511,8 +1520,8 @@ const AdminPage = () => {
                               {(company.user_count || 0) > 0 && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                                      onClick={() => {
-                                       setSelectedCompanyUsers(users.filter(u => u.company_id === company.id));
-                                       setShowUsersModal(true);
+                                       setActiveSection('users');
+                                       setCompanyFilter(company.id);
                                      }}>
                                   View users
                                 </div>
@@ -1530,8 +1539,8 @@ const AdminPage = () => {
                               {(company.event_count || 0) > 0 && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                                      onClick={() => {
-                                       setSelectedCompanyEvents(events.filter(e => e.company_id === company.id));
-                                       setShowEventsModal(true);
+                                       setActiveSection('events');
+                                       setCompanyFilter(company.id);
                                      }}>
                                   View events
                                 </div>
@@ -1629,8 +1638,11 @@ const AdminPage = () => {
               </div>
             </div>
             
-            {/* Events grouped by company */}
-            {companies.map(company => {
+            {/* Events grouped by company, but filtered if companyFilter is set */}
+            {(companyFilter
+              ? companies.filter(c => c.id === companyFilter)
+              : companies
+            ).map(company => {
               const companyEvents = events.filter(e => e.company_id === company.id);
               if (companyEvents.length === 0) return null;
               return (
@@ -1638,6 +1650,9 @@ const AdminPage = () => {
                   <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
                       {company.name} ({companyEvents.length} events)
+                      {companyFilter && (
+                        <button className="ml-4 text-xs text-blue-600 underline" onClick={() => setCompanyFilter(null)}>Clear filter</button>
+                      )}
                     </h3>
                   </div>
                   <div className="overflow-x-auto">
