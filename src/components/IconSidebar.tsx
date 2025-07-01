@@ -42,13 +42,16 @@ export default function IconSidebar({
   return (
     <>
       {/* Mobile: Icon-only sidebar that can expand */}
-      <aside className={`
-        lg:hidden
-        fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
-        transition-all duration-300 ease-in-out z-50 shadow-lg
-        ${isExpanded ? 'w-64' : 'w-16'}
-        ${className}
-      `}>
+      <aside 
+        className={`
+          lg:hidden
+          fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
+          transition-all duration-300 ease-in-out z-50 shadow-lg
+          ${isExpanded ? 'w-64' : 'w-16'}
+          ${className}
+        `}
+        onMouseLeave={() => setIsExpanded(false)}
+      >
         {/* Mobile Header */}
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a]">
           <div className="flex items-center justify-between">
@@ -67,7 +70,7 @@ export default function IconSidebar({
                 key={item.id}
                 onClick={() => handleItemClick(item)}
                 onMouseEnter={() => setIsExpanded(true)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 relative z-20
                   ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
                 `}
               >
@@ -80,12 +83,14 @@ export default function IconSidebar({
           })}
         </nav>
 
-        {/* Overlay toggle area for expanding */}
-        <div 
-          className="absolute inset-0 z-10"
-          onClick={() => setIsExpanded(!isExpanded)}
-          onMouseLeave={() => setIsExpanded(false)}
-        />
+        {/* Expand trigger area - only shows when sidebar is collapsed */}
+        {!isExpanded && (
+          <div 
+            className="absolute inset-0 z-10"
+            onMouseEnter={() => setIsExpanded(true)}
+            onClick={() => setIsExpanded(true)}
+          />
+        )}
       </aside>
 
       {/* Desktop: Full traditional sidebar (original design) */}
