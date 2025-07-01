@@ -1422,8 +1422,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+
               {/* Predictive Insights */}
               <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <h2 className="font-bold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white">Predictive Insights</h2>
