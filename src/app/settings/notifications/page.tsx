@@ -161,12 +161,12 @@ export default function NotificationSettingsPage() {
     settingKey: keyof NotificationSettings; 
     disabled?: boolean;
   }) => (
-    <div className="flex items-start justify-between p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
       <div className="flex-1">
         <h4 className="font-medium text-gray-900 dark:text-white">{label}</h4>
         <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">{description}</p>
       </div>
-      <label className="relative inline-flex items-center cursor-pointer ml-4">
+      <label className="relative inline-flex items-center cursor-pointer sm:ml-4 self-start sm:self-auto">
         <input
           type="checkbox"
           className="sr-only"
@@ -199,17 +199,17 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Notification Settings</h1>
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Notification Settings</h1>
         <p className="text-gray-600 dark:text-blue-100">Customize how and when you receive notifications from the platform.</p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Incident Notifications */}
-        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-blue-200">Incident Notifications</h2>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Incident Notifications</h2>
+          <div className="space-y-3 sm:space-y-4">
             <SettingToggle
               label="New Incidents"
               description="Notify me when new incidents are created"
@@ -239,9 +239,9 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* AI Insights */}
-        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-blue-200">AI Insights</h2>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">AI Insights</h2>
+          <div className="space-y-3 sm:space-y-4">
             <SettingToggle
               label="AI Summary Digest"
               description="Receive periodic AI-generated summaries of platform activity"
@@ -261,9 +261,9 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* System Notifications */}
-        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-blue-200">System Notifications</h2>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">System Notifications</h2>
+          <div className="space-y-3 sm:space-y-4">
             <SettingToggle
               label="Maintenance Alerts"
               description="Notify me about scheduled maintenance and downtime"
@@ -283,9 +283,9 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* Event Notifications */}
-        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-blue-200">Event Notifications</h2>
-          <div className="space-y-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Event Notifications</h2>
+          <div className="space-y-3 sm:space-y-4">
             <SettingToggle
               label="New Events"
               description="Notify me when new events are created"
@@ -305,22 +305,22 @@ export default function NotificationSettingsPage() {
         </div>
 
         {/* Delivery Methods */}
-        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-blue-200">Delivery Methods</h2>
-          <div className="space-y-4">
-            <div className="flex items-start justify-between p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Delivery Methods</h2>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
               <div className="flex-1">
                 <h4 className="font-medium text-gray-900 dark:text-white">Browser Notifications</h4>
                 <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">
                   Receive push notifications in your browser
                   {browserPermissionStatus === 'denied' && (
-                    <span className="text-red-600 dark:text-red-400 ml-2">
+                    <span className="text-red-600 dark:text-red-400 block sm:inline sm:ml-2 mt-1 sm:mt-0">
                       (Permission denied - enable in browser settings)
                     </span>
                   )}
                 </p>
               </div>
-              <div className="ml-4 flex flex-col items-end space-y-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -348,7 +348,7 @@ export default function NotificationSettingsPage() {
                 {browserPermissionStatus === 'default' && (
                   <button
                     onClick={requestBrowserPermission}
-                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
                   >
                     Enable
                   </button>
@@ -362,7 +362,7 @@ export default function NotificationSettingsPage() {
               settingKey="email_notifications"
             />
 
-            <div className="p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
+            <div className="p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">Digest Frequency</h4>
               <p className="text-sm text-gray-600 dark:text-blue-100 mb-3">
                 How often should we send you summary notifications?
@@ -370,7 +370,7 @@ export default function NotificationSettingsPage() {
               <select
                 value={settings.digest_frequency}
                 onChange={(e) => handleSettingChange('digest_frequency', e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
               >
                 <option value="realtime">Real-time (as they happen)</option>
                 <option value="hourly">Hourly digest</option>
@@ -379,15 +379,15 @@ export default function NotificationSettingsPage() {
               </select>
             </div>
 
-            <div className="p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
-              <div className="flex items-start justify-between mb-4">
+            <div className="p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3 sm:gap-4">
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900 dark:text-white">Quiet Hours</h4>
                   <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">
                     Pause non-urgent notifications during specified hours
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer ml-4">
+                <label className="relative inline-flex items-center cursor-pointer sm:ml-4 self-start sm:self-auto">
                   <input
                     type="checkbox"
                     className="sr-only"
@@ -407,7 +407,7 @@ export default function NotificationSettingsPage() {
               </div>
               
               {settings.quiet_hours_enabled && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Start Time
@@ -416,7 +416,7 @@ export default function NotificationSettingsPage() {
                       type="time"
                       value={settings.quiet_hours_start}
                       onChange={(e) => handleSettingChange('quiet_hours_start', e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
                     />
                   </div>
                   <div>
@@ -427,7 +427,7 @@ export default function NotificationSettingsPage() {
                       type="time"
                       value={settings.quiet_hours_end}
                       onChange={(e) => handleSettingChange('quiet_hours_end', e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -441,7 +441,7 @@ export default function NotificationSettingsPage() {
           <button
             onClick={saveNotificationSettings}
             disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-colors"
           >
             {saving && (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

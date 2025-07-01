@@ -24,11 +24,11 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300 pt-16 lg:pt-0">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -40,6 +40,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         fixed lg:static inset-y-0 left-0 z-50
         w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
         flex flex-col shadow-lg transition-transform duration-300 ease-in-out
+        lg:mt-0 mt-16
       `}>
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
           <div className="flex items-center justify-between">
@@ -50,7 +51,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             {/* Mobile close button */}
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57] transition-colors"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -78,14 +79,17 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 lg:ml-0">
-        {/* Mobile header */}
-        <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
-          >
-            <Bars3Icon className="h-6 w-6" />
-          </button>
+        {/* Mobile header - positioned to account for main navigation */}
+        <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3 sticky top-16 z-40 shadow-sm">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center gap-2 p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#1a2a57] transition-colors"
+            >
+              <Bars3Icon className="h-5 w-5" />
+              <span className="text-sm font-medium">Settings Menu</span>
+            </button>
+          </div>
         </div>
         
         {/* Page content */}
