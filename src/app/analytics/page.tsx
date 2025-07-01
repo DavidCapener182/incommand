@@ -925,7 +925,7 @@ export default function AnalyticsPage() {
           title="Analytics"
         />
         
-        <main className="flex-1 lg:ml-64 ml-16">
+        <main className="flex-1 ml-16 lg:ml-64">
           <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
@@ -951,7 +951,7 @@ export default function AnalyticsPage() {
         title="Analytics"
       />
       
-      <main className="flex-1 lg:ml-64 ml-16">
+      <main className="flex-1 ml-16 lg:ml-64">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
             <div>
