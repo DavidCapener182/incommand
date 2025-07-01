@@ -37,7 +37,9 @@ import {
   CogIcon,
   LightBulbIcon,
   FireIcon,
-  ChartPieIcon
+  ChartPieIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 ChartJS.register(
@@ -165,6 +167,7 @@ export default function AnalyticsPage() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
   const [debriefError, setDebriefError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -917,12 +920,35 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
+        <aside className={`
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+          fixed lg:static inset-y-0 left-0 z-50
+          w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
+          flex flex-col shadow-lg transition-transform duration-300 ease-in-out
+        `}>
           <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-            <div className="flex items-center space-x-2">
-              <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+              </div>
+              {/* Mobile close button */}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
             </div>
           </div>
           <nav className="flex-1 space-y-2 py-4 px-2">
@@ -934,16 +960,30 @@ export default function AnalyticsPage() {
             ))}
           </nav>
         </aside>
+        
         {/* Main Content */}
-        <main className="flex-1 p-8">
-          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <Skeleton height={20} width="50%" />
-                <Skeleton height={40} width="100%" />
-              </div>
-            ))}
+        <main className="flex-1 lg:ml-0">
+          {/* Mobile header */}
+          <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+            >
+              <Bars3Icon className="h-6 w-6" />
+            </button>
+          </div>
+          
+          {/* Page content */}
+          <div className="p-4 sm:p-6 lg:p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                  <Skeleton height={20} width="50%" />
+                  <Skeleton height={40} width="100%" />
+                </div>
+              ))}
+            </div>
           </div>
         </main>
       </div>
@@ -952,12 +992,35 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
+      <aside className={`
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
+        flex flex-col shadow-lg transition-transform duration-300 ease-in-out
+      `}>
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-          <div className="flex items-center space-x-2">
-            <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+            </div>
+            {/* Mobile close button */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
         </div>
         <nav className="flex-1 space-y-2 py-4 px-2">
@@ -966,7 +1029,10 @@ export default function AnalyticsPage() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => {
+                  setActiveSection(item.id);
+                  setSidebarOpen(false); // Close mobile menu on navigation
+                }}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
                   ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
                 `}
@@ -978,23 +1044,36 @@ export default function AnalyticsPage() {
           })}
         </nav>
       </aside>
+      
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Analytics Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-300">Monitor performance and insights for your events</p>
-          </div>
+      <main className="flex-1 lg:ml-0">
+        {/* Mobile header */}
+        <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
         </div>
+        
+        {/* Page content */}
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Analytics Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-300">Monitor performance and insights for your events</p>
+            </div>
+          </div>
 
         {/* Show content based on active section */}
         {(activeSection === 'overview' || activeSection === 'attendance' || activeSection === 'incidents' || activeSection === 'performance' || activeSection === 'heatmap' || activeSection === 'predictions' || activeSection === 'ai-insights' || activeSection === 'debrief' || activeSection === 'reports') && (
           <div>
       
-      {/* Top Analytics Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {kpiData.map((kpi, index) => (
-            <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            {/* Top Analytics Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 sm:mb-8">
+              {kpiData.map((kpi, index) => (
+                <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-white">{kpi.title}</h3>
@@ -1043,11 +1122,11 @@ export default function AnalyticsPage() {
           ))}
             </div>
 
-      {/* Main Grid for Charts and Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Attendance Chart */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Timeline</h2>
+            {/* Main Grid for Charts and Widgets */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
+              {/* Attendance Chart */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-bold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white">Attendance Timeline</h2>
           <div className="flex-grow relative">
             {attendanceData.length > 0 ? (
               <Line data={attendanceChartData} options={attendanceChartOptions} />
@@ -1056,9 +1135,9 @@ export default function AnalyticsPage() {
           )}
         </div>
             </div>
-        {/* Attendance Log */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Log</h2>
+              {/* Attendance Log */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-bold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white">Attendance Log</h2>
           <div className="flex-grow overflow-y-auto">
             {attendanceData.length > 0 ? (
               <table className="w-full">
@@ -1143,10 +1222,10 @@ export default function AnalyticsPage() {
               </div>
               </div>
             </div>
-        {/* Live Now Card */}
-        <div className={`bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 lg:col-span-1 min-h-[340px]`}>
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Status</h2>
+              {/* Live Now Card */}
+              <div className={`bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 xl:col-span-1 min-h-[340px]`}>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Live Status</h2>
               <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${mostRecentOpen ? getPriorityColor(mostRecentOpen.priority) : 'bg-green-500'}`}>
                 {mostRecentOpen ? 'Action Required' : 'All Clear'}
               </span>
@@ -1167,11 +1246,11 @@ export default function AnalyticsPage() {
           </div>
       </div>
 
-      {/* Second Row: Lower Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Merged Incident Analysis Card */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Incident Analysis</h2>
+            {/* Second Row: Lower Widgets */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
+              {/* Merged Incident Analysis Card */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 min-h-[270px] flex flex-col xl:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-bold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white">Incident Analysis</h2>
           <div className="flex-grow grid grid-cols-2 gap-4">
             {/* Incident Volume Chart */}
             <div className="flex flex-col">
@@ -1200,10 +1279,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Trends & Predictive AI */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Trends</h2>
+              {/* Trends & Predictive AI */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 min-h-[340px] flex flex-col xl:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
+                  <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white">Trends</h2>
             {aiInsights.length > 1 && (
               <div className="flex items-center space-x-2">
                 <button onClick={prevInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
@@ -1240,12 +1319,12 @@ export default function AnalyticsPage() {
       </div>
         </div>
 
-      {/* Third Row: Heatmap & More */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Debrief Summary */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex justify-between items-center flex-shrink-0 mb-4">
-            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Debrief Summary</h2>
+            {/* Third Row: Heatmap & More */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+              {/* Debrief Summary */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 min-h-[340px] flex flex-col xl:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 mb-4 gap-2">
+                  <h2 className="font-bold text-xl sm:text-2xl text-gray-900 dark:text-white">Debrief Summary</h2>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => eventId && handleGenerateDebrief(eventId)}
@@ -1345,9 +1424,9 @@ export default function AnalyticsPage() {
             )}
           </div>
         </div>
-        {/* Predictive Insights */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Predictive Insights</h2>
+              {/* Predictive Insights */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-4 sm:p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-bold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white">Predictive Insights</h2>
             <div className="flex-grow flex items-center justify-center">
               {loadingPredictions ? (
                 <Skeleton height={80} />
@@ -1373,8 +1452,11 @@ export default function AnalyticsPage() {
             </div>
         </div>
                 </div>
-        </div>
+              </div>
+            </div>
+          </div>
         )}
+        </div>
       </main>
     </div>
   );
