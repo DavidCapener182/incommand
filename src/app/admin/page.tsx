@@ -68,6 +68,15 @@ interface Event {
     name: string;
   };
   expected_attendance?: number;
+  source_table?: string;
+  is_current?: boolean;
+  route_length?: number;
+  assembly_point?: string;
+  dispersal_point?: string;
+  duration_days?: number;
+  camping_available?: boolean;
+  client_company?: string;
+  event_purpose?: string;
 }
 
 interface AuditLog {
@@ -414,9 +423,30 @@ const AdminPage = () => {
     try {
       setLoading(true)
       setError(null)
-      console.log('Fetching data...')
+      console.log('Fetching comprehensive admin data...')
       
-      // Fetch companies with user and event counts
+      // Fetch ALL users from profiles table regardless of company
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          role,
+          company,
+          company_id,
+          created_at
+        `)
+        .order('company', { ascending: true })
+        .order('full_name', { ascending: true })
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError)
+        setError('Failed to fetch users')
+        return
+      }
+
+      // Fetch ALL companies from companies table
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select(`
@@ -425,109 +455,215 @@ const AdminPage = () => {
           created_at
         `)
         .order('name')
-      
+
       if (companiesError) {
         console.error('Error fetching companies:', companiesError)
         setError('Failed to fetch companies')
         return
       }
 
-      // Fetch users with company information
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          full_name,
-          role,
-          created_at,
-          company_id,
-          companies:company_id (
-            id,
-            name
-          )
-        `)
-        .order('full_name')
-      
-      if (usersError) {
-        console.error('Error fetching users:', usersError)
-        setError('Failed to fetch users')
-        return
-      }
-
-      // Fetch events with company information
-      const { data: eventsData, error: eventsError } = await supabase
+      // Fetch events from main events table
+      const { data: mainEventsData, error: mainEventsError } = await supabase
         .from('events')
         .select(`
           id,
           event_name,
-          event_date,
           event_type,
-          venue_name,
           artist_name,
+          venue_name,
+          venue_address,
+          event_date,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
           company_id,
           created_at,
-          expected_attendance,
-          companies:company_id (
-            id,
-            name
-          )
+          updated_at,
+          is_current
         `)
         .order('event_date', { ascending: false })
+
+      // Fetch events from festival_events table
+      const { data: festivalEventsData, error: festivalError } = await supabase
+        .from('festival_events')
+        .select(`
+          id,
+          event_name,
+          event_type,
+          venue_name,
+          venue_address,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
+          created_at,
+          updated_at,
+          is_current,
+          duration_days,
+          camping_available
+        `)
+        .order('start_datetime', { ascending: false })
+
+      // Fetch events from music_events table
+      const { data: musicEventsData, error: musicError } = await supabase
+        .from('music_events')
+        .select(`
+          id,
+          event_name,
+          event_type,
+          artist_name,
+          venue_name,
+          venue_address,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
+          created_at,
+          updated_at,
+          is_current
+        `)
+        .order('start_datetime', { ascending: false })
+
+      // Fetch events from parade_events table
+      const { data: paradeEventsData, error: paradeError } = await supabase
+        .from('parade_events')
+        .select(`
+          id,
+          event_name,
+          event_type,
+          venue_name,
+          venue_address,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
+          created_at,
+          updated_at,
+          is_current,
+          route_length,
+          assembly_point,
+          dispersal_point
+        `)
+        .order('start_datetime', { ascending: false })
+
+      // Fetch events from base_events table
+      const { data: baseEventsData, error: baseError } = await supabase
+        .from('base_events')
+        .select(`
+          id,
+          event_name,
+          event_type,
+          venue_name,
+          venue_address,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
+          created_at,
+          updated_at,
+          is_current
+        `)
+        .order('start_datetime', { ascending: false })
+
+      // Fetch events from corporate_events table
+      const { data: corporateEventsData, error: corporateError } = await supabase
+        .from('corporate_events')
+        .select(`
+          id,
+          event_name,
+          event_type,
+          venue_name,
+          venue_address,
+          start_datetime,
+          end_datetime,
+          expected_attendance,
+          created_at,
+          updated_at,
+          is_current,
+          client_company,
+          event_purpose
+        `)
+        .order('start_datetime', { ascending: false })
+
+      // Combine all events from different tables
+      let allEvents: any[] = []
       
-      if (eventsError) {
-        console.error('Error fetching events:', eventsError)
-        setError('Failed to fetch events')
-        return
+      if (mainEventsData) {
+        allEvents = [...allEvents, ...mainEventsData.map(event => ({ ...event, source_table: 'events' }))]
+      }
+      
+      if (festivalEventsData) {
+        allEvents = [...allEvents, ...festivalEventsData.map(event => ({ ...event, source_table: 'festival_events' }))]
+      }
+      
+      if (musicEventsData) {
+        allEvents = [...allEvents, ...musicEventsData.map(event => ({ ...event, source_table: 'music_events' }))]
+      }
+      
+      if (paradeEventsData) {
+        allEvents = [...allEvents, ...paradeEventsData.map(event => ({ ...event, source_table: 'parade_events' }))]
+      }
+      
+      if (baseEventsData) {
+        allEvents = [...allEvents, ...baseEventsData.map(event => ({ ...event, source_table: 'base_events' }))]
+      }
+      
+      if (corporateEventsData) {
+        allEvents = [...allEvents, ...corporateEventsData.map(event => ({ ...event, source_table: 'corporate_events' }))]
       }
 
-      // Process companies data with counts
-      const companiesWithCounts = companiesData?.map(company => {
-        const companyUsers = usersData?.filter(user => user.company_id === company.id) || []
-        const companyEvents = eventsData?.filter(event => event.company_id === company.id) || []
+      // Sort all events by date (most recent first)
+      allEvents.sort((a, b) => {
+        const dateA = new Date(a.event_date || a.start_datetime || a.created_at || 0)
+        const dateB = new Date(b.event_date || b.start_datetime || b.created_at || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
+
+      // Process companies with user and event counts
+      const processedCompanies = companiesData?.map(company => {
+        const companyUsers = usersData?.filter(user => 
+          user.company_id === company.id || user.company === company.name
+        ) || []
         
+        const companyEvents = allEvents.filter(event => 
+          event.company_id === company.id || 
+          (typeof event.company_id === 'string' && event.company_id === company.id.toString())
+        )
+
         return {
           ...company,
           user_count: companyUsers.length,
           event_count: companyEvents.length,
           users: companyUsers,
-          events: companyEvents,
-          latest_event_date: companyEvents.length > 0 
-            ? companyEvents.sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())[0].event_date
-            : null
+          events: companyEvents
         }
       }) || []
 
-      // Group users by company for better display
-      const usersGroupedByCompany = usersData?.reduce((acc, user) => {
-        const companyName = user.companies?.name || 'Unassigned'
-        if (!acc[companyName]) {
-          acc[companyName] = []
-        }
+      // Group users by company for display
+      const groupedUsers = usersData?.reduce((acc: Record<string, any[]>, user) => {
+        const companyName = user.company || 'Unassigned'
+        if (!acc[companyName]) acc[companyName] = []
         acc[companyName].push(user)
         return acc
-      }, {} as Record<string, any[]>) || {}
+      }, {}) || {}
 
-      // Process events data to include company names
-      const eventsWithCompanyNames = eventsData?.map(event => ({
-        ...event,
-        company_name: event.companies?.name || 'Unknown Company'
-      })) || []
-
-      console.log('Data fetched successfully:', {
-        users: usersData?.length,
-        companies: companiesData?.length,
-        events: eventsData?.length
+      console.log('Admin data fetched successfully:', {
+        totalUsers: usersData?.length || 0,
+        totalCompanies: companiesData?.length || 0,
+        totalEvents: allEvents.length,
+        eventSources: {
+          events: mainEventsData?.length || 0,
+          festival_events: festivalEventsData?.length || 0,
+          music_events: musicEventsData?.length || 0,
+          parade_events: paradeEventsData?.length || 0,
+          base_events: baseEventsData?.length || 0,
+          corporate_events: corporateEventsData?.length || 0
+        }
       })
-      
+
       setUsers(usersData || [])
-      setCompanies(companiesWithCounts)
-      setEvents(eventsWithCompanyNames)
-      setUsersGroupedByCompany(usersGroupedByCompany)
-      
-    } catch (err) {
-      console.error('Error in fetchData:', err)
-      setError('An unexpected error occurred')
+      setCompanies(processedCompanies)
+      setEvents(allEvents)
+      setUsersGroupedByCompany(groupedUsers)
+    } catch (error) {
+      console.error('Error fetching admin data:', error)
+      setError('Failed to fetch admin data')
     } finally {
       setLoading(false)
     }
@@ -1295,7 +1431,7 @@ const AdminPage = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Admin Dashboard</h1>
               <p className="text-gray-600 dark:text-gray-300">Manage and monitor your platform settings and data</p>
             </div>
-            <button 
+            <button
               onClick={setupDatabase}
               className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-200 w-full sm:w-auto"
             >
@@ -1315,7 +1451,7 @@ const AdminPage = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                   <span className="font-semibold text-lg">Total Companies</span>
-                </div>
+        </div>
                 <span className="text-2xl font-bold">{companies.length}</span>
               </div>
               <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
@@ -1466,107 +1602,156 @@ const AdminPage = () => {
               </div>
               <button
                 onClick={() => setIsCompanyModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
               >
-                Add New Company
+                Add Company
               </button>
             </div>
             
             {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{companies.length}</div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Companies</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                  {companies.reduce((sum, company) => sum + company.user_count, 0)}
+                  {companies.reduce((sum, company) => sum + (company.user_count || 0), 0)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                  {companies.reduce((sum, company) => sum + company.event_count, 0)}
+                  {companies.reduce((sum, company) => sum + (company.event_count || 0), 0)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
-                  {companies.filter(company => company.event_count > 0).length}
+                  {companies.filter(company => (company.event_count || 0) > 0).length}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Active Companies</div>
               </div>
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
-                <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">
-                  {Math.round(companies.reduce((sum, company) => sum + company.user_count, 0) / Math.max(companies.length, 1))}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-blue-100">Avg Users/Company</div>
-              </div>
             </div>
-
-            {/* Companies List */}
-            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a]">
+            
+            {/* Companies Table */}
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200">All Companies</h3>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Companies sorted by activity and event count</p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
-                  <thead className="bg-gray-50 dark:bg-[#1e3a5f]">
+                  <thead className="bg-gray-50 dark:bg-[#1a2759]">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Company</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Company Details</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Users</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Events</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Latest Event</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Created</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-                    {companies
-                      .sort((a, b) => b.event_count - a.event_count) // Sort by event count (most active first)
-                      .map((company) => (
-                      <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-[#1e3a5f]">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-blue-100">{company.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-blue-200">ID: {company.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-blue-100 font-medium">{company.user_count}</div>
-                          <div className="text-xs text-gray-500 dark:text-blue-200">
-                            {company.user_count === 1 ? 'user' : 'users'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-blue-100 font-medium">{company.event_count}</div>
-                          <div className="text-xs text-gray-500 dark:text-blue-200">
-                            {company.event_count === 1 ? 'event' : 'events'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
-                          {company.latest_event_date 
-                            ? new Date(company.latest_event_date).toLocaleDateString()
-                            : 'No events'
-                          }
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
-                          {company.created_at ? new Date(company.created_at).toLocaleDateString() : 'Unknown'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-                            View Details
-                          </button>
-                          <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
-                            Edit
-                          </button>
+                  <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                    {companies.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-blue-100">
+                          No companies found
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      companies
+                        .sort((a, b) => (b.event_count || 0) - (a.event_count || 0)) // Sort by event count descending
+                        .map((company) => (
+                        <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2759]">
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-blue-200">
+                                {company.name}
+                              </div>
+                              <div className="text-xs text-gray-400 dark:text-blue-200 font-mono">
+                                ID: {company.id.substring(0, 8)}...
+                              </div>
+                              {(company.event_count || 0) > 0 && (
+                                <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                  Active
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
+                                {company.user_count || 0}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                registered users
+                              </div>
+                              {(company.user_count || 0) > 0 && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
+                                     onClick={() => {
+                                       // Could add functionality to filter users by this company
+                                       console.log('Filter users for company:', company.name)
+                                     }}>
+                                  View users
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
+                                {company.event_count || 0}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                total events
+                              </div>
+                              {(company.event_count || 0) > 0 && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
+                                     onClick={() => {
+                                       // Could add functionality to filter events by this company
+                                       console.log('Filter events for company:', company.name)
+                                     }}>
+                                  View events
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-500 dark:text-blue-100">
+                              {new Date(company.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-blue-200">
+                              {new Date(company.created_at).toLocaleDateString() === new Date().toLocaleDateString() 
+                                ? 'Today' 
+                                : `${Math.floor((new Date().getTime() - new Date(company.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago`
+                              }
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                              <button 
+                                onClick={() => {
+                                  console.log('Edit company:', company.id)
+                                  // Add edit functionality
+                                }}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  console.log('View company details:', company.id)
+                                  // Add view functionality
+                                }}
+                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-xs font-medium"
+                              >
+                                Details
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1580,117 +1765,175 @@ const AdminPage = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
-                <p className="text-gray-600 dark:text-blue-100 text-sm">All events across all companies on inCommand platform</p>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All events across all companies and event types</p>
               </div>
             </div>
             
             {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{events.length}</div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{events.length}</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
-                <div className="text-sm text-gray-600 dark:text-blue-100">Active Events</div>
                 <div className="text-2xl font-bold text-green-600 dark:text-green-300">
                   {events.filter(event => event.event_type === 'Concert').length}
                 </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Concerts</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
-                <div className="text-sm text-gray-600 dark:text-blue-100">Completed</div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                  {events.filter(e => new Date(e.end_datetime) <= new Date()).length}
-                </div>
-              </div>
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
-                <div className="text-sm text-gray-600 dark:text-blue-100">This Month</div>
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                  {events.filter(e => {
-                    const eventDate = new Date(e.start_datetime);
-                    const now = new Date();
-                    return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
-                  }).length}
+                  {events.filter(event => event.source_table === 'festival_events').length}
                 </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Festivals</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
-                <div className="text-sm text-gray-600 dark:text-blue-100">Companies with Events</div>
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
-                  {new Set(events.map(e => e.company_id)).size}
+                  {events.filter(event => event.source_table === 'parade_events').length}
                 </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Parades</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-300">
+                  {events.filter(event => event.source_table === 'corporate_events').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Corporate</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
+                  {events.filter(event => event.is_current).length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Active Events</div>
               </div>
             </div>
-
-            {/* Events List */}
-            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a]">
+            
+            {/* Events Table */}
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200">All Events</h3>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Events from all event tables across all companies</p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
-                  <thead className="bg-gray-50 dark:bg-[#1e3a5f]">
+                  <thead className="bg-gray-50 dark:bg-[#1a2759]">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Event</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Company</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Venue</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Event Details</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Venue & Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Type & Source</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Attendance</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-                    {events
-                      .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()) // Sort by date descending
-                      .map((event) => (
-                      <tr key={event.id} className="hover:bg-gray-50 dark:hover:bg-[#1e3a5f]">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                                <MusicalNoteIcon className="h-6 w-6 text-purple-600 dark:text-purple-300" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-blue-100">{event.event_name}</div>
-                              {event.artist_name && event.artist_name !== event.event_name && (
-                                <div className="text-xs text-gray-500 dark:text-blue-200">Artist: {event.artist_name}</div>
-                              )}
-                              <div className="text-xs text-gray-400 dark:text-blue-300">ID: {event.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-blue-100 font-medium">{event.company_name}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            event.event_type === 'Concert' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            event.event_type === 'Festival' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            event.event_type === 'Corporate' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
-                          }`}>
-                            {event.event_type || 'Other'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
-                          {event.event_date ? new Date(event.event_date).toLocaleDateString() : 'TBD'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-blue-100">{event.venue_name || 'TBD'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
-                          {event.expected_attendance ? event.expected_attendance.toLocaleString() : 'TBD'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-                            View Details
-                          </button>
-                          <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
-                            Edit
-                          </button>
+                  <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                    {events.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-blue-100">
+                          No events found
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      events.slice(0, 50).map((event: any) => (
+                        <tr key={`${event.source_table}-${event.id}`} className="hover:bg-gray-50 dark:hover:bg-[#1a2759]">
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-blue-200">
+                                {event.event_name}
+                              </div>
+                              {event.artist_name && (
+                                <div className="text-xs text-gray-500 dark:text-blue-100">
+                                  Artist: {event.artist_name}
+                                </div>
+                              )}
+                              {event.client_company && (
+                                <div className="text-xs text-gray-500 dark:text-blue-100">
+                                  Client: {event.client_company}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-400 dark:text-blue-200 font-mono">
+                                ID: {event.id.substring(0, 8)}...
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm text-gray-900 dark:text-blue-200">
+                                {event.venue_name}
+                              </div>
+                              {event.venue_address && (
+                                <div className="text-xs text-gray-500 dark:text-blue-100">
+                                  {event.venue_address}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                {event.event_date ? 
+                                  new Date(event.event_date).toLocaleDateString() :
+                                  event.start_datetime ? 
+                                    new Date(event.start_datetime).toLocaleDateString() :
+                                    'Date TBD'
+                                }
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                {event.event_type || 'General'}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100 font-mono">
+                                {event.source_table.replace('_events', '').replace('events', 'main')}
+                              </div>
+                              {event.route_length && (
+                                <div className="text-xs text-gray-500 dark:text-blue-100">
+                                  Route: {event.route_length}km
+                                </div>
+                              )}
+                              {event.duration_days && (
+                                <div className="text-xs text-gray-500 dark:text-blue-100">
+                                  Duration: {event.duration_days} days
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 dark:text-blue-200">
+                              {event.expected_attendance ? 
+                                event.expected_attendance.toLocaleString() : 
+                                'TBD'
+                              }
+                            </div>
+                            {event.camping_available && (
+                              <div className="text-xs text-green-600 dark:text-green-400">
+                                Camping Available
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                event.is_current 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                              }`}>
+                                {event.is_current ? 'Active' : 'Inactive'}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                Created: {new Date(event.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+              {events.length > 50 && (
+                <div className="px-6 py-4 bg-gray-50 dark:bg-[#1a2759] border-t border-gray-200 dark:border-[#2d437a]">
+                  <p className="text-sm text-gray-600 dark:text-blue-100">
+                    Showing first 50 of {events.length} events. Use filters to narrow down results.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1783,19 +2026,19 @@ const AdminPage = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Database Management</h3>
                   <div className="flex flex-wrap gap-4">
-                    <button
-                      onClick={setupDatabase}
+            <button 
+              onClick={setupDatabase}
                       className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
-                    >
-                      Setup Database
-                    </button>
+            >
+              Setup Database
+            </button>
                     <button
                       onClick={() => fetchData()}
                       className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
                     >
                       Refresh All Data
                     </button>
-                  </div>
+          </div>
                 </div>
               </div>
             </div>
