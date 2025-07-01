@@ -412,10 +412,19 @@ const AdminPage = () => {
       setError(null)
       console.log('Fetching data...')
       
-      // Fetch companies
+      // Fetch companies with more detailed information
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select('*')
+        .select(`
+          *,
+          created_at,
+          primary_contact_name,
+          primary_contact_email,
+          subscription_plan,
+          billing_status,
+          account_status
+        `)
+        .order('name')
       
       if (companiesError) {
         console.error('Error fetching companies:', companiesError)
@@ -425,10 +434,19 @@ const AdminPage = () => {
 
       console.log('Companies data:', companiesData)
 
-      // Fetch all users/profiles
+      // Fetch all users/profiles with company information
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          company:companies(
+            id,
+            name,
+            subscription_plan,
+            account_status
+          )
+        `)
+        .order('company_id, full_name')
       
       if (usersError) {
         console.error('Error fetching users:', usersError)
@@ -438,10 +456,12 @@ const AdminPage = () => {
 
       console.log('Users data:', usersData)
 
-      // Group users by company
+      // Group users by company for enhanced display
       const companiesWithUsers = companiesData?.map(company => ({
         ...company,
-        users: usersData?.filter(user => user.company_id === company.id) || []
+        users: usersData?.filter(user => user.company_id === company.id) || [],
+        user_count: usersData?.filter(user => user.company_id === company.id).length || 0,
+        last_activity: company.created_at // You can enhance this with actual activity data
       })) || []
 
       // Add users without company to "No Company" group
@@ -450,16 +470,30 @@ const AdminPage = () => {
         companiesWithUsers.push({
           id: 'no-company',
           name: 'No Company',
-          users: usersWithoutCompany
+          users: usersWithoutCompany,
+          user_count: usersWithoutCompany.length,
+          subscription_plan: 'free',
+          account_status: 'active',
+          billing_status: 'active',
+          primary_contact_name: 'N/A',
+          primary_contact_email: 'N/A'
         })
       }
 
       console.log('Companies with users:', companiesWithUsers)
 
-      // Fetch events
+      // Fetch events with company information
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          company:companies(
+            id,
+            name,
+            subscription_plan
+          )
+        `)
+        .order('start_datetime', { ascending: false })
       
       if (eventsError) {
         console.error('Error fetching events:', eventsError)
@@ -469,7 +503,15 @@ const AdminPage = () => {
 
       console.log('Events data:', eventsData)
 
-      setCompanies(companiesWithUsers)
+      // Calculate enhanced metrics for companies
+      const enhancedCompanies = companiesWithUsers.map(company => ({
+        ...company,
+        event_count: eventsData?.filter(event => event.company_id === company.id).length || 0,
+        recent_events: eventsData?.filter(event => event.company_id === company.id).slice(0, 3) || [],
+        last_event_date: eventsData?.filter(event => event.company_id === company.id)?.[0]?.start_datetime || null
+      }))
+
+      setCompanies(enhancedCompanies)
       setUsers(usersData || [])
       setEvents(eventsData || [])
     } catch (error) {
@@ -1294,13 +1336,36 @@ const AdminPage = () => {
         {activeSection === 'users' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">User Management</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">User Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All users across inCommand platform sorted by company</p>
+              </div>
               <button
                 onClick={() => setIsUserModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
               >
                 Add New User
               </button>
+            </div>
+            
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Companies</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{companies.filter(c => c.id !== 'no-company').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Admins</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{users.filter(u => u.role === 'admin' || u.role === 'superadmin').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Unassigned Users</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{users.filter(u => !u.company_id).length}</div>
+              </div>
             </div>
             
             <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
@@ -1312,37 +1377,87 @@ const AdminPage = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Email</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Role</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Plan</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Joined</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{user.full_name}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{user.email}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                            user.role === 'superadmin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                          }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{user.company?.name || 'N/A'}</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsUserModalOpen(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mr-3"
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {users
+                      .sort((a, b) => {
+                        // Sort by company name first, then by name
+                        const companyA = a.company?.name || 'ZZZ No Company';
+                        const companyB = b.company?.name || 'ZZZ No Company';
+                        if (companyA !== companyB) {
+                          return companyA.localeCompare(companyB);
+                        }
+                        return (a.full_name || '').localeCompare(b.full_name || '');
+                      })
+                      .map((user) => (
+                        <tr key={user.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="text-gray-900 dark:text-gray-100 font-medium">{user.full_name || 'No Name'}</div>
+                            <div className="text-xs text-gray-500 dark:text-blue-200">ID: {user.id.slice(0, 8)}...</div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{user.email}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              user.role === 'superadmin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                              user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              user.role === 'staff' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                            }`}>
+                              {user.role || 'user'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-gray-900 dark:text-gray-100 font-medium">
+                              {user.company?.name || 'No Company'}
+                            </div>
+                            {user.company?.subscription_plan && (
+                              <div className="text-xs text-gray-500 dark:text-blue-200">
+                                {user.company.subscription_plan}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {user.company?.subscription_plan ? (
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                user.company.subscription_plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                user.company.subscription_plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                user.company.subscription_plan === 'trial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                              }`}>
+                                {user.company.subscription_plan}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500 text-xs">N/A</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100 text-sm">
+                            {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsUserModalOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleResendInvite(user.email)}
+                                className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 text-sm"
+                              >
+                                Resend
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -1354,7 +1469,10 @@ const AdminPage = () => {
         {activeSection === 'companies' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Company Management</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Company Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All companies on inCommand platform with comprehensive metrics</p>
+              </div>
               <button
                 onClick={() => setIsCompanyModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
@@ -1363,53 +1481,134 @@ const AdminPage = () => {
               </button>
             </div>
             
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Companies</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{companies.filter(c => c.id !== 'no-company').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Enterprise</div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">{companies.filter(c => c.subscription_plan === 'enterprise').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Pro</div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{companies.filter(c => c.subscription_plan === 'pro').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Trial</div>
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">{companies.filter(c => c.subscription_plan === 'trial').length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">{companies.reduce((sum, c) => sum + (c.event_count || 0), 0)}</div>
+              </div>
+            </div>
+            
             <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-[#2d437a]">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company Name</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Contact</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Plan</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Status</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Users</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Events</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Last Event</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Created</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.map((company) => (
-                      <tr key={company.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">{company.name}</td>
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 dark:text-gray-100 text-sm">{company.primary_contact_name}</div>
-                          <div className="text-gray-600 dark:text-blue-100 text-xs">{company.primary_contact_email}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            company.subscription_plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                            company.subscription_plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            company.subscription_plan === 'trial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                          }`}>
-                            {company.subscription_plan}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            company.account_status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            company.account_status === 'suspended' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                          }`}>
-                            {company.account_status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
-                          {users.filter(user => user.company_id === company.id).length}
-                        </td>
-                      </tr>
-                    ))}
+                    {companies
+                      .filter(company => company.id !== 'no-company')
+                      .sort((a, b) => (b.event_count || 0) - (a.event_count || 0)) // Sort by event count descending
+                      .map((company) => (
+                        <tr key={company.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="text-gray-900 dark:text-gray-100 font-medium">{company.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-blue-200">ID: {company.id.slice(0, 8)}...</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-gray-900 dark:text-gray-100 text-sm">{company.primary_contact_name || 'N/A'}</div>
+                            <div className="text-gray-600 dark:text-blue-100 text-xs">{company.primary_contact_email || 'N/A'}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              company.subscription_plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                              company.subscription_plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              company.subscription_plan === 'trial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                            }`}>
+                              {company.subscription_plan || 'free'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                company.account_status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                company.account_status === 'suspended' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                              }`}>
+                                {company.account_status || 'unknown'}
+                              </span>
+                              {company.billing_status && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  company.billing_status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                  company.billing_status === 'past_due' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                  company.billing_status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                }`}>
+                                  {company.billing_status}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-gray-900 dark:text-white">{company.user_count || 0}</div>
+                              <div className="text-xs text-gray-500 dark:text-blue-200">users</div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-gray-900 dark:text-white">{company.event_count || 0}</div>
+                              <div className="text-xs text-gray-500 dark:text-blue-200">events</div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100 text-sm">
+                            {company.last_event_date ? new Date(company.last_event_date).toLocaleDateString() : 'Never'}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100 text-sm">
+                            {company.created_at ? new Date(company.created_at).toLocaleDateString() : 'Unknown'}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
+              
+              {/* Unassigned Users Section */}
+              {companies.find(c => c.id === 'no-company') && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-[#2d437a]">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 mb-3">
+                    Unassigned Users ({companies.find(c => c.id === 'no-company')?.user_count || 0})
+                  </h3>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                    <p className="text-yellow-800 dark:text-yellow-200 text-sm mb-2">
+                      Users without company assignment. Consider assigning them to appropriate companies.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {companies.find(c => c.id === 'no-company')?.users?.map((user: any) => (
+                        <span key={user.id} className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 text-xs rounded-md">
+                          {user.full_name || user.email}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1417,53 +1616,192 @@ const AdminPage = () => {
         {/* Events Section */}
         {activeSection === 'events' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All events across all companies on inCommand platform</p>
+              </div>
+            </div>
+            
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{events.length}</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Active Events</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                  {events.filter(e => new Date(e.end_datetime) > new Date()).length}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Completed</div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
+                  {events.filter(e => new Date(e.end_datetime) <= new Date()).length}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">This Month</div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                  {events.filter(e => {
+                    const eventDate = new Date(e.start_datetime);
+                    const now = new Date();
+                    return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+                  }).length}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-sm text-gray-600 dark:text-blue-100">Companies with Events</div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+                  {new Set(events.map(e => e.company_id)).size}
+                </div>
+              </div>
+            </div>
             
             <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-[#2d437a]">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Event Name</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Event Details</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Venue</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Date & Time</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Company</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Plan</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Duration</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {events.map((event) => (
-                      <tr key={event.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 dark:text-gray-100 font-medium">{event.event_name}</div>
-                          <div className="text-gray-600 dark:text-blue-100 text-sm">{event.artist_name}</div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{event.venue_name}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
-                          {new Date(event.start_datetime).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{event.company?.name || 'N/A'}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            new Date(event.end_datetime) > new Date() ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                          }`}>
-                            {new Date(event.end_datetime) > new Date() ? 'Active' : 'Completed'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {events
+                      .sort((a, b) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime()) // Sort by date descending
+                      .map((event) => {
+                        const isActive = new Date(event.end_datetime) > new Date();
+                        const startDate = new Date(event.start_datetime);
+                        const endDate = new Date(event.end_datetime);
+                        const durationHours = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60));
+                        
+                        return (
+                          <tr key={event.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="text-gray-900 dark:text-gray-100 font-medium">{event.event_name}</div>
+                              <div className="text-gray-600 dark:text-blue-100 text-sm">{event.artist_name || 'No Artist'}</div>
+                              <div className="text-xs text-gray-500 dark:text-blue-200">
+                                {event.event_type || 'General Event'}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="text-gray-900 dark:text-gray-100 font-medium">{event.venue_name}</div>
+                              <div className="text-gray-600 dark:text-blue-100 text-xs">
+                                {event.venue_address ? (
+                                  event.venue_address.length > 40 
+                                    ? `${event.venue_address.substring(0, 40)}...`
+                                    : event.venue_address
+                                ) : 'No Address'}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="text-gray-900 dark:text-gray-100 font-medium">
+                                {startDate.toLocaleDateString()}
+                              </div>
+                              <div className="text-gray-600 dark:text-blue-100 text-sm">
+                                {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-200">
+                                Ends: {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="text-gray-900 dark:text-gray-100 font-medium">
+                                {event.company?.name || 'Unknown Company'}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-200">
+                                ID: {event.company_id?.slice(0, 8) || 'N/A'}...
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              {event.company?.subscription_plan ? (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  event.company.subscription_plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                  event.company.subscription_plan === 'pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                  event.company.subscription_plan === 'trial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                }`}>
+                                  {event.company.subscription_plan}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500 text-xs">Unknown</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                              }`}>
+                                {isActive ? 'Active' : 'Completed'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-blue-100 text-sm">
+                              <div className="text-center">
+                                <div className="font-medium">{durationHours}h</div>
+                                <div className="text-xs text-gray-500 dark:text-blue-200">duration</div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() => handleDeleteEvent(event.id)}
+                                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-sm"
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(event.id);
+                                    alert('Event ID copied to clipboard');
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                                >
+                                  Copy ID
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Events by Company Summary */}
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-[#2d437a]">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 mb-4">Events by Company</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {companies
+                    .filter(company => company.id !== 'no-company' && (company.event_count || 0) > 0)
+                    .sort((a, b) => (b.event_count || 0) - (a.event_count || 0))
+                    .map((company) => (
+                      <div key={company.id} className="bg-gray-50 dark:bg-[#1a2a57] rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-gray-900 dark:text-white">{company.name}</h4>
+                          <span className="text-lg font-bold text-blue-600 dark:text-blue-300">
+                            {company.event_count}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-blue-200 mb-2">
+                          {company.subscription_plan} plan
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-blue-100">
+                          Last event: {company.last_event_date 
+                            ? new Date(company.last_event_date).toLocaleDateString()
+                            : 'Never'
+                          }
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
           </div>
