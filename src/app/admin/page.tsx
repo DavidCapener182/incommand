@@ -16,7 +16,9 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   ChartPieIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import UserManagementModal from '@/components/UserManagementModal';
 import CompanyCreationModal from '@/components/CompanyCreationModal';
@@ -1225,14 +1227,40 @@ const AdminPage = () => {
     )
   }
 
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
+      <aside className={`
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
+        flex flex-col shadow-lg transition-transform duration-300 ease-in-out
+      `}>
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-          <div className="flex items-center space-x-2">
-            <CogIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Admin Panel</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CogIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">Admin Panel</span>
+            </div>
+            {/* Mobile close button */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
         </div>
         <nav className="flex-1 space-y-2 py-4 px-2">
@@ -1241,7 +1269,10 @@ const AdminPage = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => {
+                  setActiveSection(item.id);
+                  setSidebarOpen(false); // Close mobile menu on navigation
+                }}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
                   ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
                 `}
@@ -1253,19 +1284,32 @@ const AdminPage = () => {
           })}
         </nav>
       </aside>
+      
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Manage and monitor your platform settings and data</h1>
-          </div>
-          <button 
-            onClick={setupDatabase}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-200"
+      <main className="flex-1 lg:ml-0">
+        {/* Mobile header */}
+        <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
           >
-            Setup Database
+            <Bars3Icon className="h-6 w-6" />
           </button>
         </div>
+        
+        {/* Page content */}
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Manage and monitor your platform settings and data</h1>
+            </div>
+            <button 
+              onClick={setupDatabase}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-200 w-full sm:w-auto"
+            >
+              Setup Database
+            </button>
+          </div>
 
         {/* System Overview Card */}
         {activeSection === 'overview' && (
@@ -1279,7 +1323,7 @@ const AdminPage = () => {
         {activeSection === 'development' && isSuperAdmin && (
           <div className="space-y-6">
             {/* Development Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center gap-2 mb-2">
                   <ClockIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
@@ -1318,11 +1362,11 @@ const AdminPage = () => {
             </div>
 
             {/* Input Forms and Settings */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Log Development Session */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Log Development Session</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Log Development Session</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
                     <input
@@ -1347,7 +1391,7 @@ const AdminPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
                     <input
@@ -1380,8 +1424,8 @@ const AdminPage = () => {
               </div>
 
               {/* Add Subscription */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Subscription</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Subscription</h3>
                 {newSubscription.billing_period === 'yearly' && (
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -1389,7 +1433,7 @@ const AdminPage = () => {
                     </p>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Service Name</label>
                     <input
@@ -1413,7 +1457,7 @@ const AdminPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost (£)</label>
                     <input
@@ -1477,9 +1521,9 @@ const AdminPage = () => {
             </div>
 
             {/* Settings & Calculations */}
-            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Development & Pricing Settings</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Development & Pricing Settings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hourly Rate (£)</label>
                   <input
@@ -1537,7 +1581,7 @@ const AdminPage = () => {
               {/* Tiered Pricing Display */}
               <div className="mb-6">
                 <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">6-Tier Per-Event Pricing Strategy</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
                     <h5 className="font-semibold text-red-800 dark:text-red-200 mb-2 text-sm">Light (1-3/month)</h5>
                     <p className="text-lg font-bold text-red-900 dark:text-red-100">£{devSettings.per_event_price_light?.toFixed(2) || '0.00'}</p>
@@ -1611,7 +1655,7 @@ const AdminPage = () => {
                 {/* Subscription Customers */}
                 <div className="mb-4">
                   <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Subscription Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Subscribers</label>
                       <input
@@ -1638,7 +1682,7 @@ const AdminPage = () => {
                 {/* Per-Event Customers */}
                 <div className="mb-4">
                   <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Per-Event Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-red-700 dark:text-red-300 mb-1">Light Users</label>
                       <input
@@ -1695,7 +1739,7 @@ const AdminPage = () => {
                 {/* Revenue Summary */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                   <h5 className="text-md font-medium mb-3 text-gray-800 dark:text-gray-200">Projected Monthly Revenue</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-gray-600 dark:text-gray-300">Monthly Subs:</p>
                       <p className="font-bold text-blue-600 dark:text-blue-400">£{(devSettings.subscribers_monthly * devSettings.subscription_price_monthly).toLocaleString()}</p>
@@ -1733,7 +1777,7 @@ const AdminPage = () => {
               {/* Profit Analysis */}
               <div className="mb-6">
                 <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Profit Analysis</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                   {/* Yearly Subscriber Profit */}
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
                     <h5 className="font-semibold text-green-800 dark:text-green-200 mb-2">Yearly Subscriber</h5>
@@ -1804,10 +1848,10 @@ const AdminPage = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Development Sessions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Development Sessions</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Development Sessions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {devSessions.slice(0, 10).map((session) => (
                     <div key={session.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
@@ -1841,8 +1885,8 @@ const AdminPage = () => {
               </div>
 
               {/* Active Subscriptions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Subscriptions</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Subscriptions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {subscriptionCosts.slice(0, 10).map((subscription) => (
                     <div key={subscription.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
@@ -1881,7 +1925,7 @@ const AdminPage = () => {
 
                  {/* Non-Super Admin Message */}
          {activeSection === 'development' && !isSuperAdmin && (
-           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
              <div className="text-center">
                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Access Restricted</h3>
                <p className="text-gray-600 dark:text-blue-100 mb-4">Development tracking is only available to super administrators.</p>
@@ -1905,6 +1949,7 @@ const AdminPage = () => {
          )}
 
          {/* ...rest of the admin content... */}
+        </div>
       </main>
     </div>
   )

@@ -171,123 +171,133 @@ export default function EventsSettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Event Settings</h1>
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-        <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200 flex items-center gap-2">
-          Current Event
-          {isRefreshing && <span className="ml-2 text-xs text-blue-500 dark:text-blue-300 animate-pulse">Refreshing…</span>}
-        </h2>
-        {loading ? (
-          <div className="text-gray-500 dark:text-blue-100">Loading events...</div>
-        ) : error ? (
-          <div className="text-red-500 dark:text-red-400">{error}</div>
-        ) : currentEvent ? (
-          <>
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-bold text-lg text-gray-900 dark:text-white">{currentEvent.event_name}</div>
-              <button
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 transition-colors"
-                onClick={handleEndEvent}
-                disabled={endingEvent}
-              >
-                {endingEvent ? 'Ending...' : 'End Event'}
-              </button>
-            </div>
-            <div className="mt-2">
-              <h3 className="text-md font-semibold mb-2 text-gray-800 dark:text-blue-200">Logs</h3>
-              {logsLoading ? (
-                <div className="text-gray-500 dark:text-blue-100">Loading logs...</div>
-              ) : logs.length === 0 ? (
-                <div className="text-gray-400 dark:text-blue-300">No logs for this event.</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden">
-                    <thead className="bg-gray-100 dark:bg-[#1a2a57]">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Details</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Timestamp</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Actions</th>
+    <div className="w-full max-w-4xl mx-auto">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-gray-900 dark:text-white">Event Settings</h1>
+      
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200 flex items-center gap-2">
+            Current Event
+            {isRefreshing && <span className="ml-2 text-xs text-blue-500 dark:text-blue-300 animate-pulse">Refreshing…</span>}
+          </h2>
+          {loading ? (
+            <div className="text-gray-500 dark:text-blue-100">Loading events...</div>
+          ) : error ? (
+            <div className="text-red-500 dark:text-red-400">{error}</div>
+          ) : currentEvent ? (
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                <div className="font-bold text-lg text-gray-900 dark:text-white">{currentEvent.event_name}</div>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 transition-colors w-full sm:w-auto"
+                  onClick={handleEndEvent}
+                  disabled={endingEvent}
+                >
+                  {endingEvent ? 'Ending...' : 'End Event'}
+                </button>
+              </div>
+              <div className="mt-2">
+                <h3 className="text-md font-semibold mb-2 text-gray-800 dark:text-blue-200">Logs</h3>
+                {logsLoading ? (
+                  <div className="text-gray-500 dark:text-blue-100">Loading logs...</div>
+                ) : logs.length === 0 ? (
+                  <div className="text-gray-400 dark:text-blue-300">No logs for this event.</div>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 sm:mx-0">
+                    <div className="inline-block min-w-full px-4 sm:px-0">
+                      <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden">
+                        <thead className="bg-gray-100 dark:bg-[#1a2a57]">
+                          <tr>
+                            <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Type</th>
+                            <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Details</th>
+                            <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Timestamp</th>
+                            <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                          {logs.map((log: any) => (
+                            <tr key={log.id}>
+                              <td className="px-2 sm:px-4 py-2 text-gray-900 dark:text-blue-100 font-medium text-sm">{log.incident_type}</td>
+                              <td className="px-2 sm:px-4 py-2 text-gray-700 dark:text-blue-100 text-sm max-w-xs truncate">{log.details}</td>
+                              <td className="px-2 sm:px-4 py-2 text-gray-700 dark:text-blue-100 text-sm whitespace-nowrap">{formatDateTime(log.timestamp)}</td>
+                              <td className="px-2 sm:px-4 py-2">
+                                <button
+                                  className="px-2 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-xs disabled:opacity-50 transition-colors"
+                                  onClick={() => handleDeleteLog(log.id)}
+                                  disabled={deletingLogId === log.id}
+                                >
+                                  {deletingLogId === log.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="text-gray-400 dark:text-blue-300">No current event.</div>
+          )}
+        </div>
+        
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200">Past Events</h2>
+          {loading ? (
+            <div className="text-gray-500 dark:text-blue-100">Loading events...</div>
+          ) : pastEvents.length === 0 ? (
+            <div className="text-gray-400 dark:text-blue-300">No past events found.</div>
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full px-4 sm:px-0">
+                <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden">
+                  <thead className="bg-gray-100 dark:bg-[#1a2a57]">
+                    <tr>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Event Name</th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Date</th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                    <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-                    {logs.map((log: any) => (
-                        <tr key={log.id}>
-                          <td className="px-4 py-2 text-gray-900 dark:text-blue-100 font-medium">{log.incident_type}</td>
-                          <td className="px-4 py-2 text-gray-700 dark:text-blue-100">{log.details}</td>
-                          <td className="px-4 py-2 text-gray-700 dark:text-blue-100">{formatDateTime(log.timestamp)}</td>
-                          <td className="px-4 py-2">
-                          <button
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-xs disabled:opacity-50 transition-colors"
-                            onClick={() => handleDeleteLog(log.id)}
-                            disabled={deletingLogId === log.id}
-                          >
-                            {deletingLogId === log.id ? 'Deleting...' : 'Delete'}
-                          </button>
+                  <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                    {pastEvents.map((event: any) => (
+                      <tr key={event.id}>
+                        <td className="px-2 sm:px-4 py-2 text-gray-900 dark:text-blue-100 font-medium text-sm">{event.event_name}</td>
+                        <td className="px-2 sm:px-4 py-2 text-gray-700 dark:text-blue-100 text-sm whitespace-nowrap">{formatDateTime(event.event_date)}</td>
+                        <td className="px-2 sm:px-4 py-2">
+                          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                            <button
+                              className="px-2 sm:px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-xs disabled:opacity-50 transition-colors"
+                              onClick={() => setSelectedEvent(event)}
+                              disabled={selectedEvent?.id === event.id}
+                            >
+                              {selectedEvent?.id === event.id ? 'Selected' : 'View Logs'}
+                            </button>
+                            <button
+                              className="px-2 sm:px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-xs disabled:opacity-50 transition-colors"
+                              onClick={() => handleReenableEvent(event)}
+                              disabled={reenablingEventId === event.id}
+                            >
+                              {reenablingEventId === event.id ? 'Re-enabling...' : 'Re-enable'}
+                            </button>
+                            <button
+                              className="px-2 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-xs disabled:opacity-50 transition-colors"
+                              onClick={() => handleDeleteEvent(event)}
+                              disabled
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                </div>
-              )}
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="text-gray-400 dark:text-blue-300">No current event.</div>
-        )}
-      </div>
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-        <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200">Past Events</h2>
-        {loading ? (
-          <div className="text-gray-500 dark:text-blue-100">Loading events...</div>
-        ) : pastEvents.length === 0 ? (
-          <div className="text-gray-400 dark:text-blue-300">No past events found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden">
-              <thead className="bg-gray-100 dark:bg-[#1a2a57]">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Event Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-                {pastEvents.map((event: any) => (
-                  <tr key={event.id}>
-                    <td className="px-4 py-2 text-gray-900 dark:text-blue-100 font-medium">{event.event_name}</td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-blue-100">{formatDateTime(event.event_date)}</td>
-                    <td className="px-4 py-2 flex gap-2">
-                      <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-xs disabled:opacity-50 transition-colors"
-                        onClick={() => setSelectedEvent(event)}
-                        disabled={selectedEvent?.id === event.id}
-                      >
-                        {selectedEvent?.id === event.id ? 'Selected' : 'View Logs'}
-                      </button>
-                    <button
-                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-xs disabled:opacity-50 transition-colors"
-                      onClick={() => handleReenableEvent(event)}
-                      disabled={reenablingEventId === event.id}
-                    >
-                      {reenablingEventId === event.id ? 'Re-enabling...' : 'Re-enable'}
-                    </button>
-                    <button
-                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-xs disabled:opacity-50 transition-colors"
-                      onClick={() => handleDeleteEvent(event)}
-                        disabled
-                    >
-                      Delete
-                    </button>
-                    </td>
-                  </tr>
-            ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
