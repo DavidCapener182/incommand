@@ -425,242 +425,53 @@ const AdminPage = () => {
       setError(null)
       console.log('Fetching comprehensive admin data...')
       
-      // Fetch ALL users from profiles table regardless of company
+      // Fetch all users from profiles
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          email,
-          full_name,
-          role,
-          company,
-          company_id,
-          created_at
-        `)
+        .select('*')
         .order('company', { ascending: true })
         .order('full_name', { ascending: true })
 
       if (usersError) {
-        console.error('Error fetching users:', usersError)
         setError('Failed to fetch users')
+        setLoading(false)
         return
       }
 
-      // Fetch ALL companies from companies table
+      // Fetch all companies
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
-        .select(`
-          id,
-          name,
-          created_at
-        `)
-        .order('name')
+        .select('*')
+        .order('name', { ascending: true })
 
       if (companiesError) {
-        console.error('Error fetching companies:', companiesError)
         setError('Failed to fetch companies')
+        setLoading(false)
         return
       }
 
-      // Fetch events from main events table
-      const { data: mainEventsData, error: mainEventsError } = await supabase
+      // Fetch all events from the main events table (other event tables are empty)
+      const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          artist_name,
-          venue_name,
-          venue_address,
-          event_date,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          company_id,
-          created_at,
-          updated_at,
-          is_current
-        `)
+        .select('*')
         .order('event_date', { ascending: false })
 
-      // Fetch events from festival_events table
-      const { data: festivalEventsData, error: festivalError } = await supabase
-        .from('festival_events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          venue_name,
-          venue_address,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          created_at,
-          updated_at,
-          is_current,
-          duration_days,
-          camping_available
-        `)
-        .order('start_datetime', { ascending: false })
-
-      // Fetch events from music_events table
-      const { data: musicEventsData, error: musicError } = await supabase
-        .from('music_events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          artist_name,
-          venue_name,
-          venue_address,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          created_at,
-          updated_at,
-          is_current
-        `)
-        .order('start_datetime', { ascending: false })
-
-      // Fetch events from parade_events table
-      const { data: paradeEventsData, error: paradeError } = await supabase
-        .from('parade_events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          venue_name,
-          venue_address,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          created_at,
-          updated_at,
-          is_current,
-          route_length,
-          assembly_point,
-          dispersal_point
-        `)
-        .order('start_datetime', { ascending: false })
-
-      // Fetch events from base_events table
-      const { data: baseEventsData, error: baseError } = await supabase
-        .from('base_events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          venue_name,
-          venue_address,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          created_at,
-          updated_at,
-          is_current
-        `)
-        .order('start_datetime', { ascending: false })
-
-      // Fetch events from corporate_events table
-      const { data: corporateEventsData, error: corporateError } = await supabase
-        .from('corporate_events')
-        .select(`
-          id,
-          event_name,
-          event_type,
-          venue_name,
-          venue_address,
-          start_datetime,
-          end_datetime,
-          expected_attendance,
-          created_at,
-          updated_at,
-          is_current,
-          client_company,
-          event_purpose
-        `)
-        .order('start_datetime', { ascending: false })
-
-      // Combine all events from different tables
-      let allEvents: any[] = []
-      
-      if (mainEventsData) {
-        allEvents = [...allEvents, ...mainEventsData.map(event => ({ ...event, source_table: 'events' }))]
-      }
-      
-      if (festivalEventsData) {
-        allEvents = [...allEvents, ...festivalEventsData.map(event => ({ ...event, source_table: 'festival_events' }))]
-      }
-      
-      if (musicEventsData) {
-        allEvents = [...allEvents, ...musicEventsData.map(event => ({ ...event, source_table: 'music_events' }))]
-      }
-      
-      if (paradeEventsData) {
-        allEvents = [...allEvents, ...paradeEventsData.map(event => ({ ...event, source_table: 'parade_events' }))]
-      }
-      
-      if (baseEventsData) {
-        allEvents = [...allEvents, ...baseEventsData.map(event => ({ ...event, source_table: 'base_events' }))]
-      }
-      
-      if (corporateEventsData) {
-        allEvents = [...allEvents, ...corporateEventsData.map(event => ({ ...event, source_table: 'corporate_events' }))]
+      if (eventsError) {
+        setError('Failed to fetch events')
+        setLoading(false)
+        return
       }
 
-      // Sort all events by date (most recent first)
-      allEvents.sort((a, b) => {
-        const dateA = new Date(a.event_date || a.start_datetime || a.created_at || 0)
-        const dateB = new Date(b.event_date || b.start_datetime || b.created_at || 0)
-        return dateB.getTime() - dateA.getTime()
-      })
-
-      // Process companies with user and event counts
-      const processedCompanies = companiesData?.map(company => {
-        const companyUsers = usersData?.filter(user => 
-          user.company_id === company.id || user.company === company.name
-        ) || []
-        
-        const companyEvents = allEvents.filter(event => 
-          event.company_id === company.id || 
-          (typeof event.company_id === 'string' && event.company_id === company.id.toString())
-        )
-
-        return {
-          ...company,
-          user_count: companyUsers.length,
-          event_count: companyEvents.length,
-          users: companyUsers,
-          events: companyEvents
-        }
-      }) || []
-
-      // Group users by company for display
-      const groupedUsers = usersData?.reduce((acc: Record<string, any[]>, user) => {
-        const companyName = user.company || 'Unassigned'
-        if (!acc[companyName]) acc[companyName] = []
-        acc[companyName].push(user)
-        return acc
-      }, {}) || {}
-
-      console.log('Admin data fetched successfully:', {
-        totalUsers: usersData?.length || 0,
-        totalCompanies: companiesData?.length || 0,
-        totalEvents: allEvents.length,
-        eventSources: {
-          events: mainEventsData?.length || 0,
-          festival_events: festivalEventsData?.length || 0,
-          music_events: musicEventsData?.length || 0,
-          parade_events: paradeEventsData?.length || 0,
-          base_events: baseEventsData?.length || 0,
-          corporate_events: corporateEventsData?.length || 0
-        }
-      })
-
+      // Set state with fetched data
       setUsers(usersData || [])
-      setCompanies(processedCompanies)
-      setEvents(allEvents)
-      setUsersGroupedByCompany(groupedUsers)
+      setCompanies(companiesData || [])
+      setEvents(eventsData || [])
+      setLoading(false)
+
+      // If you want to add other event tables in the future, add them here and merge arrays
+      // Example:
+      // const { data: musicEvents } = await supabase.from('music_events').select('*')
+      // setEvents([...eventsData, ...(musicEvents || [])])
     } catch (error) {
       console.error('Error fetching admin data:', error)
       setError('Failed to fetch admin data')
