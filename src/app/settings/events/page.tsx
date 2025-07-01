@@ -175,21 +175,21 @@ export default function EventsSettingsPage() {
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-gray-900 dark:text-white">Event Settings</h1>
       
       <div className="space-y-4 sm:space-y-6">
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200 flex items-center gap-2">
+        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <h2 className="text-base sm:text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200 flex items-center gap-2">
             Current Event
             {isRefreshing && <span className="ml-2 text-xs text-blue-500 dark:text-blue-300 animate-pulse">Refreshing…</span>}
           </h2>
           {loading ? (
             <div className="text-gray-500 dark:text-blue-100">Loading events...</div>
           ) : error ? (
-            <div className="text-red-500 dark:text-red-400">{error}</div>
+            <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>
           ) : currentEvent ? (
             <>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
-                <div className="font-bold text-lg text-gray-900 dark:text-white">{currentEvent.event_name}</div>
+                <div className="font-bold text-base sm:text-lg text-gray-900 dark:text-white">{currentEvent.event_name}</div>
                 <button
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 transition-colors w-full sm:w-auto"
+                  className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50 transition-colors w-full sm:w-auto"
                   onClick={handleEndEvent}
                   disabled={endingEvent}
                 >
@@ -197,7 +197,7 @@ export default function EventsSettingsPage() {
                 </button>
               </div>
               <div className="mt-2">
-                <h3 className="text-md font-semibold mb-2 text-gray-800 dark:text-blue-200">Logs</h3>
+                <h3 className="text-sm sm:text-md font-semibold mb-2 text-gray-800 dark:text-blue-200">Logs</h3>
                 {logsLoading ? (
                   <div className="text-gray-500 dark:text-blue-100">Loading logs...</div>
                 ) : logs.length === 0 ? (
