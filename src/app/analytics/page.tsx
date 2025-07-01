@@ -41,6 +41,7 @@ import {
   Bars3Icon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import IconSidebar from '../../components/IconSidebar';
 
 ChartJS.register(
   CategoryScale,
@@ -167,7 +168,7 @@ export default function AnalyticsPage() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
   const [debriefError, setDebriefError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -917,62 +918,23 @@ export default function AnalyticsPage() {
   const doorsOpenTimeFromLog = doorsOpenLog ? new Date(doorsOpenLog.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
   const doorsOpenTimeDisplay = doorsOpenTimeFromLog || (eventDetails?.doors_open_time ? eventDetails.doors_open_time : '-');
 
+  const sidebarItems = navigation.map(item => ({
+    ...item,
+    onClick: () => setActiveSection(item.id)
+  }));
+
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside className={`
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-          fixed lg:static inset-y-0 left-0 z-50
-          w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
-          flex flex-col shadow-lg transition-transform duration-300 ease-in-out
-        `}>
-          <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
-              </div>
-              {/* Mobile close button */}
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-          <nav className="flex-1 space-y-2 py-4 px-2">
-            {navigation.map(item => (
-              <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left bg-gray-100 dark:bg-[#1a2a57] text-gray-400 dark:text-gray-200">
-                <item.icon className="h-5 w-5 text-gray-400 dark:text-blue-300" />
-                {item.name}
-              </div>
-            ))}
-          </nav>
-        </aside>
+        {/* Icon Sidebar */}
+        <IconSidebar 
+          items={sidebarItems}
+          activeItem={activeSection}
+          onItemClick={setActiveSection}
+        />
         
         {/* Main Content */}
-        <main className="flex-1 lg:ml-0">
-          {/* Mobile header */}
-          <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
-            >
-              <Bars3Icon className="h-6 w-6" />
-            </button>
-          </div>
-          
+        <main className="flex-1 ml-16 transition-all duration-300">
           {/* Page content */}
           <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
@@ -992,70 +954,15 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0
-        fixed lg:static inset-y-0 left-0 z-50
-        w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] 
-        flex flex-col shadow-lg transition-transform duration-300 ease-in-out
-      `}>
-        <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
-            </div>
-            {/* Mobile close button */}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-2 py-4 px-2">
-          {navigation.map(item => {
-            const active = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveSection(item.id);
-                  setSidebarOpen(false); // Close mobile menu on navigation
-                }}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
-                  ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
-                `}
-              >
-                <item.icon className={`h-5 w-5 ${active ? 'text-blue-700 dark:text-blue-200' : 'text-gray-400 dark:text-blue-300'}`} />
-                {item.name}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
+      {/* Icon Sidebar */}
+      <IconSidebar 
+        items={sidebarItems}
+        activeItem={activeSection}
+        onItemClick={setActiveSection}
+      />
       
       {/* Main Content */}
-      <main className="flex-1 lg:ml-0">
-        {/* Mobile header */}
-        <div className="lg:hidden bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] px-4 py-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-[#1a2a57]"
-          >
-            <Bars3Icon className="h-6 w-6" />
-          </button>
-        </div>
+      <main className="flex-1 ml-16 transition-all duration-300">
         
         {/* Page content */}
         <div className="p-4 sm:p-6 lg:p-8">
