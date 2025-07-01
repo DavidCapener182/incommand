@@ -423,59 +423,46 @@ const AdminPage = () => {
     try {
       setLoading(true)
       setError(null)
-      console.log('Fetching comprehensive admin data...')
-      
       // Fetch all users from profiles
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*')
         .order('company', { ascending: true })
         .order('full_name', { ascending: true })
-
+      console.log('DEBUG: usersData', usersData, 'usersError', usersError)
       if (usersError) {
         setError('Failed to fetch users')
         setLoading(false)
         return
       }
-
       // Fetch all companies
       const { data: companiesData, error: companiesError } = await supabase
         .from('companies')
         .select('*')
         .order('name', { ascending: true })
-
+      console.log('DEBUG: companiesData', companiesData, 'companiesError', companiesError)
       if (companiesError) {
         setError('Failed to fetch companies')
         setLoading(false)
         return
       }
-
-      // Fetch all events from the main events table (other event tables are empty)
+      // Fetch all events
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
         .order('event_date', { ascending: false })
-
+      console.log('DEBUG: eventsData', eventsData, 'eventsError', eventsError)
       if (eventsError) {
         setError('Failed to fetch events')
         setLoading(false)
         return
       }
-
-      // Set state with fetched data
       setUsers(usersData || [])
       setCompanies(companiesData || [])
       setEvents(eventsData || [])
       setLoading(false)
-
-      // If you want to add other event tables in the future, add them here and merge arrays
-      // Example:
-      // const { data: musicEvents } = await supabase.from('music_events').select('*')
-      // setEvents([...eventsData, ...(musicEvents || [])])
-    } catch (error) {
-      console.error('Error fetching admin data:', error)
-      setError('Failed to fetch admin data')
-    } finally {
+    } catch (err) {
+      setError('Unexpected error fetching admin data')
       setLoading(false)
     }
   }
@@ -1204,6 +1191,26 @@ const AdminPage = () => {
       setError('Failed to seed initial data');
     }
   };
+
+  useEffect(() => {
+    // Group users by company name (or 'No Company')
+    const grouped: Record<string, any[]> = {};
+    users.forEach(user => {
+      const company = companies.find(c => c.id === user.company_id);
+      const companyName = company ? company.name : 'No Company';
+      if (!grouped[companyName]) grouped[companyName] = [];
+      grouped[companyName].push(user);
+    });
+    setUsersGroupedByCompany(grouped);
+
+    // Add user_count and event_count to each company
+    const companiesWithCounts = companies.map(company => ({
+      ...company,
+      user_count: users.filter(u => u.company_id === company.id).length,
+      event_count: events.filter(e => e.company_id === company.id).length,
+    }));
+    setCompanies(companiesWithCounts);
+  }, [users, companies, events]);
 
   if (loading) {
     return (
