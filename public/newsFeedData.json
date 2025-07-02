@@ -1,0 +1,74 @@
+[
+  {
+    "date": "2025-06-25T05:01:52+01:00",
+    "description": "Comprehensive README update with all features and improvements."
+  },
+  {
+    "date": "2025-06-26T06:00:29+01:00",
+    "description": "Restore Top 3 Incident Types card and update README."
+  },
+  {
+    "date": "2025-06-05T18:17:15+01:00",
+    "description": "Update CurrentEvent component with crowd management descriptions and improve UI layout."
+  },
+  {
+    "date": "2025-06-07T00:43:47+01:00",
+    "description": "Improve dashboard layout and add weather card - Reorganize stats, add dynamic weather display, improve subscriptions."
+  },
+  {
+    "date": "2025-06-15T22:13:43+01:00",
+    "description": "Add Save All button to callsign assignment page with Supabase persistence and update logic."
+  },
+  {
+    "date": "2025-06-19T13:11:11+01:00",
+    "description": "Show support act times in event schedule and display up to 5 upcoming timings."
+  },
+  {
+    "date": "2025-06-19T15:13:04+01:00",
+    "description": "Enhanced company management system with improved UI and data model."
+  },
+  {
+    "date": "2025-06-23T04:34:58+01:00",
+    "description": "Improve analytics page and implement responsive navigation."
+  },
+  {
+    "date": "2025-06-23T14:47:41+01:00",
+    "description": "Improve mobile responsiveness and incident table UI."
+  },
+  {
+    "date": "2025-06-24T00:20:52+01:00",
+    "description": "ProfileCard popup now appears as dropdown below profile photo, full size, always inside screen."
+  },
+  {
+    "date": "2025-06-25T04:49:07+01:00",
+    "description": "Major UI/UX Improvements: AI Chat, Notifications, and Enhanced Formatting."
+  },
+  {
+    "date": "2025-06-25T17:07:41+01:00",
+    "description": "Polish login page UI, improve CTA flow, restore solid blue background, and enhance accessibility."
+  },
+  {
+    "date": "2025-06-28T14:07:32+01:00",
+    "description": "Professional mobile UX for chat FAB, input bar, and keyboard handling."
+  },
+  {
+    "date": "2025-06-28T16:27:37+01:00",
+    "description": "Align messages by sender (current user right, others left) and show avatars/names from Supabase profiles."
+  },
+  {
+    "date": "2025-06-29T14:02:16+01:00",
+    "description": "Show all logs except attendance logs in chronological order at end of event report."
+  },
+  {
+    "date": "2025-06-29T14:13:55+01:00",
+    "description": "Implement Supabase save logic for callsign assignments and roles per event."
+  },
+  {
+    "date": "2025-06-29T21:57:35+01:00",
+    "description": "Add 'Fight' to incident types and ensure Showdown quick action and time extraction logic are present."
+  },
+  {
+    "date": "2025-07-01T15:28:29+00:00",
+    "description": "Add comprehensive feature documentation for inCommand system."
+  }
+] 
