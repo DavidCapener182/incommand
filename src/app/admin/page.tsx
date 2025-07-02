@@ -211,7 +211,7 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | undefined>()
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClientComponentClient()
   const [companyFilters, setCompanyFilters] = useState<CompanyFilters>({
@@ -307,6 +307,8 @@ const AdminPage = () => {
   // const [showUsersModal, setShowUsersModal] = useState(false);
   // const [showEventsModal, setShowEventsModal] = useState(false);
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  // Add state for editing user/company
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   useEffect(() => {
     fetchData()
@@ -1217,6 +1219,53 @@ const AdminPage = () => {
     setCompanies(companiesWithCounts);
   }, [users, companies, events]);
 
+  const handleCreateUser = async (userData: Partial<User>) => {
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        email_confirm: true,
+        user_metadata: { full_name: userData.full_name }
+      });
+      if (authError) throw authError;
+      // 2. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            email: userData.email,
+            full_name: userData.full_name,
+            company_id: userData.company_id,
+            role: userData.role
+          }
+        ]);
+      if (profileError) throw profileError;
+      await fetchData();
+      setIsUserModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setError('Failed to create user');
+    }
+  };
+
+  const handleUpdateCompany = async (companyData: Partial<Company>) => {
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ name: companyData.name })
+        .eq('id', companyData.id);
+      if (error) throw error;
+      await fetchData();
+      setIsCompanyModalOpen(false);
+      setSelectedCompany(null);
+    } catch (error) {
+      console.error('Error updating company:', error);
+      setError('Failed to update company');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-[#101c36] py-8 transition-colors duration-300">
@@ -1399,10 +1448,19 @@ const AdminPage = () => {
                                 {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                                <button
+                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setIsUserModalOpen(true);
+                                  }}
+                                >
                                   Edit
                                 </button>
-                                <button className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                <button
+                                  className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                  onClick={() => handleResendInvite(user.email)}
+                                >
                                   Resend
                                 </button>
                               </td>
@@ -1556,8 +1614,8 @@ const AdminPage = () => {
                             <div className="flex space-x-2">
                               <button 
                                 onClick={() => {
-                                  console.log('Edit company:', company.id)
-                                  // Add edit functionality
+                                  setSelectedCompany(company);
+                                  setIsCompanyModalOpen(true);
                                 }}
                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium"
                               >

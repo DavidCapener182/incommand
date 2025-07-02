@@ -1,8 +1,9 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Company {
+  id?: string;
   name: string;
 }
 
@@ -10,17 +11,27 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (companyData: Partial<Company>) => Promise<void>;
+  company?: Company | null;
 }
 
-export default function CompanyCreationModal({ isOpen, onClose, onSubmit }: Props) {
+export default function CompanyCreationModal({ isOpen, onClose, onSubmit, company }: Props) {
   const [formData, setFormData] = useState<Partial<Company>>({
     name: '',
   });
+
+  useEffect(() => {
+    if (company) {
+      setFormData({ ...company });
+    } else {
+      setFormData({ name: '' });
+    }
+  }, [company]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit(formData);
     setFormData({ name: '' }); // Reset form
+    onClose();
   };
 
   return (
@@ -63,7 +74,7 @@ export default function CompanyCreationModal({ isOpen, onClose, onSubmit }: Prop
                 <div className="sm:flex sm:items-start">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                     <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
-                      Add New Company
+                      {company ? 'Edit Company' : 'Add New Company'}
                     </Dialog.Title>
                     <div className="mt-4">
                       <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,7 +98,7 @@ export default function CompanyCreationModal({ isOpen, onClose, onSubmit }: Prop
                             type="submit"
                             className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
                           >
-                            Create
+                            {company ? 'Save Changes' : 'Create'}
                           </button>
                           <button
                             type="button"
