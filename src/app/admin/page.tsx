@@ -2463,7 +2463,7 @@ const AdminPage = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{-1 * session.total_cost.toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">{'-£' + Math.abs(session.total_cost).toFixed(2)}</p>
                           <p className="text-sm text-gray-600 dark:text-blue-100">{session.duration_hours.toFixed(1)}h</p>
                         </div>
                       </div>
