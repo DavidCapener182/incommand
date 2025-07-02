@@ -26,13 +26,18 @@ export default function UserManagementModal({
   isOpen,
   onClose,
   refreshData,
+  user,
+  companies,
+  onSubmit
 }: {
   isOpen: boolean;
   onClose: () => void;
-  refreshData: () => void;
+  refreshData?: () => void;
+  user?: User | null;
+  companies: Company[];
+  onSubmit: (userData: Partial<User>) => Promise<void>;
 }) {
   const supabase = createClientComponentClient();
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -42,7 +47,18 @@ export default function UserManagementModal({
 
   useEffect(() => {
     fetchCompanies();
-  }, []);
+    if (user) {
+      setEmail(user.email || '');
+      setFullName(user.full_name || '');
+      setSelectedCompany(companies.find(c => c.id === user.company_id) || null);
+      setSelectedRole(roles.find(r => r.id === user.role) || roles[0]);
+    } else {
+      setEmail('');
+      setFullName('');
+      setSelectedCompany(companies[0] || null);
+      setSelectedRole(roles[0]);
+    }
+  }, [user, companies]);
 
   const fetchCompanies = async () => {
     try {
@@ -52,7 +68,6 @@ export default function UserManagementModal({
         .order('name');
 
       if (error) throw error;
-      setCompanies(data || []);
       if (data && data.length > 0 && !selectedCompany) {
         setSelectedCompany(data[0]);
       }
@@ -65,35 +80,27 @@ export default function UserManagementModal({
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: { full_name: fullName }
-      });
-
-      if (authError) throw authError;
-
-      // 2. Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: authData.user.id,
-            email,
-            full_name: fullName,
-            company_id: selectedCompany?.id,
-            role: selectedRole.id
-          }
-        ]);
-
-      if (profileError) throw profileError;
-
-      // Success
+      if (user) {
+        // Edit mode
+        await onSubmit({
+          id: user.id,
+          email,
+          full_name: fullName,
+          company_id: selectedCompany?.id,
+          role: selectedRole.id
+        });
+      } else {
+        // Add mode
+        await onSubmit({
+          email,
+          full_name: fullName,
+          company_id: selectedCompany?.id,
+          role: selectedRole.id
+        });
+      }
       onClose();
-      refreshData();
+      if (refreshData) refreshData();
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -132,7 +139,7 @@ export default function UserManagementModal({
                   as="h3"
                   className="text-lg font-medium leading-6 text-gray-900"
                 >
-                  Add New User
+                  {user ? 'Edit User' : 'Add New User'}
                 </Dialog.Title>
 
                 <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -287,7 +294,7 @@ export default function UserManagementModal({
                       className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                       disabled={loading}
                     >
-                      {loading ? 'Adding...' : 'Add User'}
+                      {loading ? (user ? 'Saving...' : 'Adding...') : (user ? 'Save Changes' : 'Add User')}
                     </button>
                   </div>
                 </form>
