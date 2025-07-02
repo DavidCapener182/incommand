@@ -46,6 +46,7 @@ interface User {
   role: string;
   created_at: string;
   company_id: string;
+  avatar_url?: string; // Add avatar_url
   company?: {
     id: string;
     name: string;
@@ -148,9 +149,11 @@ interface DevMetrics {
   projected_monthly_revenue: number;
   break_even_subscribers: number;
   roi_timeline_months: number;
+  total_paid_out: number; // new: sum of all paid out (subscriptions)
+  total_dev_time_cost: number; // new: sum of all dev time (sessions)
 }
 
-interface SubscriptionCost {
+interface Subscription {
   id: string;
   service_name: string;
   cost: number;
@@ -229,7 +232,7 @@ const AdminPage = () => {
   
   // Development tracking state
   const [devSessions, setDevSessions] = useState<DevSession[]>([]);
-  const [subscriptionCosts, setSubscriptionCosts] = useState<SubscriptionCost[]>([]);
+  const [subscriptionCosts, setSubscriptionCosts] = useState<Subscription[]>([]);
   const [devSettings, setDevSettings] = useState<DevSettings>({
     hourly_rate: 40,
     subscription_price_monthly: 487.5,
@@ -275,7 +278,9 @@ const AdminPage = () => {
     avg_session_length: 0,
     projected_monthly_revenue: 0,
     break_even_subscribers: 0,
-    roi_timeline_months: 0
+    roi_timeline_months: 0,
+    total_paid_out: 0, // new: sum of all paid out (subscriptions)
+    total_dev_time_cost: 0, // new: sum of all dev time (sessions)
   });
   const [newSession, setNewSession] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -725,14 +730,14 @@ const AdminPage = () => {
         setDevSessions(sessionsData);
       }
 
-      // Fetch subscription costs
+      // Fetch subscriptions (was subscription_costs)
       const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscription_costs')
+        .from('subscriptions')
         .select('*')
         .order('start_date', { ascending: false });
 
       if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-        console.error('Error fetching subscription costs:', subscriptionError);
+        console.error('Error fetching subscriptions:', subscriptionError);
       } else if (subscriptionData) {
         setSubscriptionCosts(subscriptionData);
       }
@@ -814,11 +819,11 @@ const AdminPage = () => {
     }
   };
 
-  const calculateDevMetrics = (sessions: DevSession[], subscriptions: SubscriptionCost[] = []) => {
+  const calculateDevMetrics = (sessions: DevSession[], subscriptions: Subscription[] = []) => {
     calculateDevMetricsWithSettings(sessions, subscriptions, devSettings);
   };
 
-  const calculateDevMetricsWithSettings = (sessions: DevSession[], subscriptions: SubscriptionCost[] = [], settings: DevSettings) => {
+  const calculateDevMetricsWithSettings = (sessions: DevSession[], subscriptions: Subscription[] = [], settings: DevSettings) => {
     const totalHours = sessions.reduce((sum, session) => sum + session.duration_hours, 0);
     // Recalculate total cost using current hourly rate instead of stored total_cost
     const totalDevCost = totalHours * settings.hourly_rate;
@@ -844,14 +849,25 @@ const AdminPage = () => {
       }
     }, 0);
     
-    const totalInvestment = totalDevCost + totalAiCost + totalSubscriptionCost;
-    const avgSessionLength = sessions.length > 0 ? totalHours / sessions.length : 0;
+    const totalDevTimeCost = -1 * sessions.reduce((sum, session) => sum + session.total_cost, 0); // negative
+    const totalPaidOut = -1 * subscriptions.reduce((sum, sub) => {
+      const cost = sub.cost;
+      if (sub.billing_period === 'monthly') {
+        const startDate = new Date(sub.start_date);
+        const endDate = sub.end_date ? new Date(sub.end_date) : new Date();
+        const months = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+        return sum + (cost * months);
+      } else if (sub.billing_period === 'yearly') {
+        const startDate = new Date(sub.start_date);
+        const endDate = sub.end_date ? new Date(sub.end_date) : new Date();
+        const years = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365)));
+        return sum + (cost * years);
+      } else {
+        return sum + cost;
+      }
+    }, 0); // negative
+    const totalInvestment = totalDevTimeCost + totalPaidOut; // sum of both, both negative
     
-    // Use provided settings for calculations
-    const projectedMonthlyRevenue = settings.subscription_price_monthly * settings.target_subscribers;
-    const breakEvenSubscribers = Math.ceil(totalInvestment / settings.subscription_price_monthly);
-    const roiTimelineMonths = Math.ceil(totalInvestment / projectedMonthlyRevenue);
-
     setDevMetrics({
       total_hours: totalHours,
       total_dev_cost: totalDevCost,
@@ -859,10 +875,12 @@ const AdminPage = () => {
       total_subscription_cost: totalSubscriptionCost,
       total_investment: totalInvestment,
       sessions_count: sessions.length,
-      avg_session_length: avgSessionLength,
-      projected_monthly_revenue: projectedMonthlyRevenue,
-      break_even_subscribers: breakEvenSubscribers,
-      roi_timeline_months: roiTimelineMonths
+      avg_session_length: sessions.length > 0 ? totalHours / sessions.length : 0,
+      projected_monthly_revenue: settings.subscription_price_monthly * settings.target_subscribers,
+      break_even_subscribers: Math.ceil(totalInvestment / settings.subscription_price_monthly),
+      roi_timeline_months: Math.ceil(totalInvestment / settings.subscription_price_monthly),
+      total_dev_time_cost: totalDevTimeCost,
+      total_paid_out: totalPaidOut,
     });
   };
 
@@ -957,7 +975,7 @@ const AdminPage = () => {
         }
 
         const { error } = await supabase
-          .from('subscription_costs')
+          .from('subscriptions')
           .insert(subscriptionsToInsert);
         if (error) throw error;
 
@@ -1186,7 +1204,7 @@ const AdminPage = () => {
 
       // Insert subscriptions
       const { error: subscriptionError } = await supabase
-        .from('subscription_costs')
+        .from('subscriptions')
         .insert(initialSubscriptions);
 
       if (subscriptionError) throw subscriptionError;
@@ -1421,16 +1439,23 @@ const AdminPage = () => {
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
                                   <div className="flex-shrink-0 h-10 w-10">
-                                    <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                                      <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
-                                    </div>
+                                    {user.avatar_url ? (
+                                      <img
+                                        src={user.avatar_url}
+                                        alt={user.full_name || user.email || 'User'}
+                                        className="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                                      />
+                                    ) : (
+                                      <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                        <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="ml-4">
                                     <div className="text-sm font-medium text-gray-900 dark:text-blue-100">
                                       {user.full_name || 'No name'}
                                     </div>
                                     <div className="text-sm text-gray-500 dark:text-blue-200">{user.email}</div>
-                                    <div className="text-xs text-gray-400 dark:text-blue-300">ID: {user.id}</div>
                                   </div>
                                 </div>
                               </td>
@@ -1904,19 +1929,19 @@ const AdminPage = () => {
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center gap-2 mb-2">
                   <CurrencyDollarIcon className="h-6 w-6 text-green-600 dark:text-green-300" />
-                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Dev Cost</span>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Development Time Cost</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_dev_cost.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">@ £{devSettings.hourly_rate}/hour</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_dev_time_cost < 0 ? '-' : ''}£{Math.abs(devMetrics.total_dev_time_cost).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Unpaid, tracked as negative</p>
               </div>
 
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="flex items-center gap-2 mb-2">
                   <CreditCardIcon className="h-6 w-6 text-orange-600 dark:text-orange-300" />
-                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Subscriptions</span>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Paid Out Costs</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_subscription_cost.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">{subscriptionCosts.length} active</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_paid_out < 0 ? '-' : ''}£{Math.abs(devMetrics.total_paid_out).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Expenses paid out (subscriptions, etc. — negative/outgoing)</p>
               </div>
 
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
@@ -1924,8 +1949,8 @@ const AdminPage = () => {
                   <ChartPieIcon className="h-6 w-6 text-red-600 dark:text-red-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Investment</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_investment.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">Break-even: {devMetrics.break_even_subscribers} subs</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_investment < 0 ? '-' : ''}£{Math.abs(devMetrics.total_investment).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Sum of your time and paid out expenses (negative)</p>
               </div>
             </div>
 
@@ -2431,7 +2456,7 @@ const AdminPage = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{session.total_cost.toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{-1 * session.total_cost.toFixed(2)}</p>
                           <p className="text-sm text-gray-600 dark:text-blue-100">{session.duration_hours.toFixed(1)}h</p>
                         </div>
                       </div>
@@ -2469,17 +2494,10 @@ const AdminPage = () => {
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{subscription.cost.toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">{'-£' + Math.abs(subscription.cost).toFixed(2)}</p>
                           <p className="text-sm text-gray-600 dark:text-blue-100">{subscription.billing_period}</p>
                         </div>
                       </div>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        subscription.billing_period === 'monthly' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        subscription.billing_period === 'yearly' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}>
-                        {subscription.billing_period}
-                      </span>
                     </div>
                   ))}
                   {subscriptionCosts.length === 0 && (
