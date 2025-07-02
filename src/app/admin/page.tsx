@@ -153,7 +153,7 @@ interface DevMetrics {
   total_dev_time_cost: number; // new: sum of all dev time (sessions)
 }
 
-interface Subscription {
+interface SubscriptionCost {
   id: string;
   service_name: string;
   cost: number;
@@ -232,7 +232,7 @@ const AdminPage = () => {
   
   // Development tracking state
   const [devSessions, setDevSessions] = useState<DevSession[]>([]);
-  const [subscriptionCosts, setSubscriptionCosts] = useState<Subscription[]>([]);
+  const [subscriptionCosts, setSubscriptionCosts] = useState<SubscriptionCost[]>([]);
   const [devSettings, setDevSettings] = useState<DevSettings>({
     hourly_rate: 40,
     subscription_price_monthly: 487.5,
@@ -730,14 +730,14 @@ const AdminPage = () => {
         setDevSessions(sessionsData);
       }
 
-      // Fetch subscriptions (was subscription_costs)
+      // Fetch subscription costs
       const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('subscriptions')
+        .from('subscription_costs')
         .select('*')
         .order('start_date', { ascending: false });
 
       if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-        console.error('Error fetching subscriptions:', subscriptionError);
+        console.error('Error fetching subscription costs:', subscriptionError);
       } else if (subscriptionData) {
         setSubscriptionCosts(subscriptionData);
       }
@@ -819,11 +819,11 @@ const AdminPage = () => {
     }
   };
 
-  const calculateDevMetrics = (sessions: DevSession[], subscriptions: Subscription[] = []) => {
+  const calculateDevMetrics = (sessions: DevSession[], subscriptions: SubscriptionCost[] = []) => {
     calculateDevMetricsWithSettings(sessions, subscriptions, devSettings);
   };
 
-  const calculateDevMetricsWithSettings = (sessions: DevSession[], subscriptions: Subscription[] = [], settings: DevSettings) => {
+  const calculateDevMetricsWithSettings = (sessions: DevSession[], subscriptions: SubscriptionCost[] = [], settings: DevSettings) => {
     const totalHours = sessions.reduce((sum, session) => sum + session.duration_hours, 0);
     // Recalculate total cost using current hourly rate instead of stored total_cost
     const totalDevCost = totalHours * settings.hourly_rate;
@@ -849,6 +849,14 @@ const AdminPage = () => {
       }
     }, 0);
     
+    const totalInvestment = totalDevCost + totalAiCost + totalSubscriptionCost;
+    const avgSessionLength = sessions.length > 0 ? totalHours / sessions.length : 0;
+    
+    // Use provided settings for calculations
+    const projectedMonthlyRevenue = settings.subscription_price_monthly * settings.target_subscribers;
+    const breakEvenSubscribers = Math.ceil(totalInvestment / settings.subscription_price_monthly);
+    const roiTimelineMonths = Math.ceil(totalInvestment / projectedMonthlyRevenue);
+
     const totalDevTimeCost = -1 * sessions.reduce((sum, session) => sum + session.total_cost, 0); // negative
     const totalPaidOut = -1 * subscriptions.reduce((sum, sub) => {
       const cost = sub.cost;
@@ -866,8 +874,7 @@ const AdminPage = () => {
         return sum + cost;
       }
     }, 0); // negative
-    const totalInvestment = totalDevTimeCost + totalPaidOut; // sum of both, both negative
-    
+
     setDevMetrics({
       total_hours: totalHours,
       total_dev_cost: totalDevCost,
@@ -875,12 +882,12 @@ const AdminPage = () => {
       total_subscription_cost: totalSubscriptionCost,
       total_investment: totalInvestment,
       sessions_count: sessions.length,
-      avg_session_length: sessions.length > 0 ? totalHours / sessions.length : 0,
-      projected_monthly_revenue: settings.subscription_price_monthly * settings.target_subscribers,
-      break_even_subscribers: Math.ceil(totalInvestment / settings.subscription_price_monthly),
-      roi_timeline_months: Math.ceil(totalInvestment / settings.subscription_price_monthly),
-      total_dev_time_cost: totalDevTimeCost,
+      avg_session_length: avgSessionLength,
+      projected_monthly_revenue: projectedMonthlyRevenue,
+      break_even_subscribers: breakEvenSubscribers,
+      roi_timeline_months: roiTimelineMonths,
       total_paid_out: totalPaidOut,
+      total_dev_time_cost: totalDevTimeCost,
     });
   };
 
@@ -975,7 +982,7 @@ const AdminPage = () => {
         }
 
         const { error } = await supabase
-          .from('subscriptions')
+          .from('subscription_costs')
           .insert(subscriptionsToInsert);
         if (error) throw error;
 
@@ -1204,7 +1211,7 @@ const AdminPage = () => {
 
       // Insert subscriptions
       const { error: subscriptionError } = await supabase
-        .from('subscriptions')
+        .from('subscription_costs')
         .insert(initialSubscriptions);
 
       if (subscriptionError) throw subscriptionError;
@@ -1227,14 +1234,7 @@ const AdminPage = () => {
       grouped[companyName].push(user);
     });
     setUsersGroupedByCompany(grouped);
-
-    // Add user_count and event_count to each company
-    const companiesWithCounts = companies.map(company => ({
-      ...company,
-      user_count: users.filter(u => u.company_id === company.id).length,
-      event_count: events.filter(e => e.company_id === company.id).length,
-    }));
-    setCompanies(companiesWithCounts);
+    // REMOVE setCompanies(companiesWithCounts) to avoid overwriting companies
   }, [users, companies, events]);
 
   const handleCreateUser = async (userData: Partial<User>) => {
@@ -1370,21 +1370,21 @@ const AdminPage = () => {
               <div>
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">User Management</h2>
                 <p className="text-gray-600 dark:text-blue-100 text-sm">All users across inCommand platform sorted by company</p>
-              </div>
-              <button
+            </div>
+            <button
                 onClick={() => setIsUserModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
-              >
+            >
                 Add New User
-              </button>
-            </div>
+            </button>
+          </div>
             
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{users.length}</div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
-              </div>
+        </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-300">{companies.length}</div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Companies</div>
@@ -1473,15 +1473,15 @@ const AdminPage = () => {
                                 {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                <button
+              <button
                                   className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                  onClick={() => {
+                onClick={() => {
                                     setSelectedUser(user);
                                     setIsUserModalOpen(true);
-                                  }}
-                                >
+                }}
+              >
                                   Edit
-                                </button>
+              </button>
                                 <button
                                   className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                                   onClick={() => handleResendInvite(user.email)}
@@ -1508,14 +1508,14 @@ const AdminPage = () => {
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Company Management</h2>
                 <p className="text-gray-600 dark:text-blue-100 text-sm">All companies on inCommand platform with comprehensive metrics</p>
               </div>
-              <button
+          <button
                 onClick={() => setIsCompanyModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
-              >
+          >
                 Add Company
-              </button>
-            </div>
-            
+          </button>
+        </div>
+        
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
@@ -1524,13 +1524,13 @@ const AdminPage = () => {
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                  {companies.reduce((sum, company) => sum + (company.user_count || 0), 0)}
+                  {companies.reduce((sum, company) => sum + users.filter(u => u.company_id === company.id).length, 0)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
               </div>
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                  {companies.reduce((sum, company) => sum + (company.event_count || 0), 0)}
+                  {companies.reduce((sum, company) => sum + events.filter(e => e.company_id === company.id).length, 0)}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
               </div>
@@ -1570,7 +1570,14 @@ const AdminPage = () => {
                       companies
                         .sort((a, b) => (b.event_count || 0) - (a.event_count || 0)) // Sort by event count descending
                         .map((company) => (
-                        <tr key={company.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2759]">
+                        <tr
+                          key={company.id}
+                          className="hover:bg-gray-50 dark:hover:bg-[#1a2759] cursor-pointer"
+                          onClick={() => {
+                            setCompanyFilter(company.id);
+                            setActiveSection('users');
+                          }}
+                        >
                           <td className="px-6 py-4">
                             <div className="space-y-1">
                               <div className="text-sm font-medium text-gray-900 dark:text-blue-200">
@@ -1579,7 +1586,7 @@ const AdminPage = () => {
                               <div className="text-xs text-gray-400 dark:text-blue-200 font-mono">
                                 ID: {company.id.substring(0, 8)}...
                               </div>
-                              {(company.event_count || 0) > 0 && (
+                              {(events.filter(e => e.company_id === company.id).length > 0) && (
                                 <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
                                   Active
                                 </div>
@@ -1589,7 +1596,7 @@ const AdminPage = () => {
                           <td className="px-6 py-4">
                             <div className="space-y-1">
                               <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
-                                {company.user_count || 0}
+                                {users.filter(u => u.company_id === company.id).length}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-blue-100">
                                 registered users
@@ -1608,7 +1615,7 @@ const AdminPage = () => {
                           <td className="px-6 py-4">
                             <div className="space-y-1">
                               <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
-                                {company.event_count || 0}
+                                {events.filter(e => e.company_id === company.id).length}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-blue-100">
                                 total events
@@ -1671,10 +1678,10 @@ const AdminPage = () => {
         {activeSection === 'events' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <div>
+            <div>
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
                 <p className="text-gray-600 dark:text-blue-100 text-sm">All events grouped by company</p>
-              </div>
+            </div>
             </div>
             
             {/* Summary Stats */}
@@ -1859,7 +1866,7 @@ const AdminPage = () => {
                       className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
                     >
                       Refresh All Data
-                    </button>
+            </button>
           </div>
                 </div>
               </div>
@@ -1932,7 +1939,7 @@ const AdminPage = () => {
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Development Time Cost</span>
                 </div>
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_dev_time_cost < 0 ? '-' : ''}£{Math.abs(devMetrics.total_dev_time_cost).toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">Unpaid, tracked as negative</p>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Unpaid, tracked as negative (your time)</p>
               </div>
 
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
@@ -1941,7 +1948,7 @@ const AdminPage = () => {
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Paid Out Costs</span>
                 </div>
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_paid_out < 0 ? '-' : ''}£{Math.abs(devMetrics.total_paid_out).toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">Expenses paid out (subscriptions, etc. — negative/outgoing)</p>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Expenses paid out (negative)</p>
               </div>
 
               <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
@@ -1950,7 +1957,7 @@ const AdminPage = () => {
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Investment</span>
                 </div>
                 <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_investment < 0 ? '-' : ''}£{Math.abs(devMetrics.total_investment).toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">Sum of your time and paid out expenses (negative)</p>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Total Investment (negative, sum of your time and paid out)</p>
               </div>
             </div>
 
