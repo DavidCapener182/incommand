@@ -197,7 +197,7 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | undefined>()
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClientComponentClient()
   const [companyFilters, setCompanyFilters] = useState<CompanyFilters>({
@@ -525,7 +525,7 @@ const AdminPage = () => {
 
       await fetchData()
       setIsUserModalOpen(false)
-      setSelectedUser(undefined)
+      setSelectedUser(null)
     } catch (error) {
       console.error('Error updating user:', error)
     }
