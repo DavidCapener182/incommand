@@ -525,7 +525,7 @@ const AdminPage = () => {
 
       await fetchData()
       setIsUserModalOpen(false)
-      setSelectedUser(undefined)
+      setSelectedUser(null)
     } catch (error) {
       console.error('Error updating user:', error)
     }
