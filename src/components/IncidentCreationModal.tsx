@@ -1929,7 +1929,7 @@ export default function IncidentCreationModal({
         const incidentType = detectIncidentType(input);
         const callsign = detectCallsign(input) || '';
         const location = extractLocation(input) || '';
-        let processedData: any;
+        let processedData: IncidentParserResult | null = null;
 
         // Custom handler for showdown
         if (incidentType === 'Event Timing' && input.toLowerCase().includes('showdown')) {
