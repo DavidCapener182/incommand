@@ -12,6 +12,12 @@ interface AISummaryData {
     attendanceInsights: string;
   };
   lastUpdated: string;
+  details: {
+    currentEventStatus: string;
+    securityConcerns: string;
+    trending: string;
+    recommendations: string;
+  };
 }
 
 interface AIInsightsCarouselProps {
@@ -71,89 +77,39 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
     setTimeout(() => setAutoRotate(true), 120000);
   };
 
-  // Generate cards from AI data
+  // Generate cards from API details fields only
   const getCards = () => {
-    if (!aiSummary) return [];
-
+    if (!aiSummary || !aiSummary.details) return [];
+    const { currentEventStatus, securityConcerns, trending, recommendations } = aiSummary.details;
     const cards = [];
-
-    // Card 1: Event Status Overview
-    cards.push({
-      title: "Event Status",
-      icon: "📊",
-      content: (
-        <div className="space-y-2">
-          <div className="grid grid-cols-3 gap-2 text-sm">
-            <div className="text-center">
-              <div className="text-lg font-bold text-blue-600">{aiSummary.analysis.totalIncidents}</div>
-              <div className="text-xs text-gray-500">Total</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">{aiSummary.analysis.openIncidents}</div>
-              <div className="text-xs text-gray-500">Open</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-red-600">{aiSummary.analysis.highPriorityIncidents}</div>
-              <div className="text-xs text-gray-500">High Priority</div>
-            </div>
-          </div>
-          <p className="text-xs text-gray-600 mt-2">
-            {aiSummary.analysis.openIncidents === 0 
-              ? "✅ All incidents resolved" 
-              : `${aiSummary.analysis.openIncidents} incident${aiSummary.analysis.openIncidents > 1 ? 's' : ''} require attention`
-            }
-          </p>
-        </div>
-      )
-    });
-
-    // Card 2: Attendance Insights (if available)
-    if (aiSummary.analysis.attendanceInsights) {
+    if (currentEventStatus) {
       cards.push({
-        title: "Attendance Insights",
-        icon: "👥",
-        content: (
-          <div className="text-xs text-gray-700 leading-relaxed">
-            {aiSummary.analysis.attendanceInsights}
-          </div>
-        )
+        title: 'Current Event Status',
+        icon: '📊',
+        content: <div className="text-sm text-gray-700 leading-relaxed">{currentEventStatus}</div>
       });
     }
-
-    // Card 3: Urgent Alerts (if any)
-    if (aiSummary.analysis.urgentAlerts && aiSummary.analysis.urgentAlerts.length > 0) {
+    if (securityConcerns) {
       cards.push({
-        title: "Urgent Alerts",
-        icon: "🚨",
-        content: (
-          <div className="space-y-1">
-            {aiSummary.analysis.urgentAlerts.slice(0, 2).map((alert, index) => (
-              <div key={index} className="text-xs text-red-700 bg-red-50 p-2 rounded border-l-2 border-red-300">
-                {alert}
-              </div>
-            ))}
-          </div>
-        )
+        title: 'Security & Operational Concerns',
+        icon: '🛡️',
+        content: <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{securityConcerns}</div>
       });
     }
-
-    // Card 4: Recommendations
-    if (aiSummary.analysis.recommendations && aiSummary.analysis.recommendations.length > 0) {
+    if (trending) {
       cards.push({
-        title: "Recommendations",
-        icon: "💡",
-        content: (
-          <div className="space-y-1">
-            {aiSummary.analysis.recommendations.slice(0, 2).map((rec, index) => (
-              <div key={index} className="text-xs text-blue-700 bg-blue-50 p-2 rounded">
-                {rec.replace(/^\*\*\d+\.\s*/, '').replace(/\*\*/g, '')}
-              </div>
-            ))}
-          </div>
-        )
+        title: 'Trending Locations or Incident Types',
+        icon: '📈',
+        content: <div className="text-sm text-gray-700 leading-relaxed">{trending}</div>
       });
     }
-
+    if (recommendations) {
+      cards.push({
+        title: 'Actionable Recommendations',
+        icon: '✅',
+        content: <div className="text-sm text-gray-700 leading-relaxed">{recommendations}</div>
+      });
+    }
     return cards;
   };
 

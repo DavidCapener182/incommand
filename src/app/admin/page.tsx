@@ -1204,6 +1204,185 @@ const AdminPage = () => {
     }
   };
 
+  // --- ENHANCED ADMIN DATA DISPLAY ---
+
+  // Helper: Group users by company
+  const usersByCompany = users.reduce((acc, user) => {
+    const company = user.company?.name || (companies.find(c => c.id === user.company_id)?.name) || 'Unassigned';
+    if (!acc[company]) acc[company] = [];
+    acc[company].push(user);
+    return acc;
+  }, {} as Record<string, User[]>);
+
+  // Helper: Company summary
+  const companyStats = companies.map(company => {
+    const companyUsers = users.filter(u => u.company_id === company.id);
+    const companyEvents = events.filter(e => e.company_id === company.id);
+    return {
+      ...company,
+      userCount: companyUsers.length,
+      eventCount: companyEvents.length,
+      lastEventDate: companyEvents.length > 0 ? companyEvents.reduce((latest, e) => e.start_datetime > latest ? e.start_datetime : latest, companyEvents[0].start_datetime) : null
+    };
+  });
+
+  // Helper: Event summary
+  const eventStats = events.map(event => {
+    const company = companies.find(c => c.id === event.company_id);
+    return {
+      ...event,
+      companyName: company ? company.name : 'Unassigned',
+      companyPlan: company ? company.subscription_plan : null
+    };
+  });
+
+  // --- UI SECTIONS ---
+
+  // User Management Section
+  const UserManagementSection = () => (
+    <div className="mb-8">
+      <h2 className="text-2xl font-bold mb-4">User Management</h2>
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Total Users</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{users.length}</span>
+        </div>
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Companies</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{companies.length}</span>
+        </div>
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Admins</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{users.filter(u => u.role === 'admin' || u.role === 'superadmin').length}</span>
+        </div>
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Unassigned</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{users.filter(u => !u.company_id).length}</span>
+        </div>
+      </div>
+      {Object.entries(usersByCompany).sort(([a], [b]) => a.localeCompare(b)).map(([company, companyUsers]) => (
+        <div key={company} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8">
+          <h3 className="text-xl font-semibold mb-2">{company}</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-[#1a2a57] text-gray-700 dark:text-gray-200 uppercase text-xs font-semibold">
+                  <th className="px-4 py-2">Name</th>
+                  <th className="px-4 py-2">Email</th>
+                  <th className="px-4 py-2">Role</th>
+                  <th className="px-4 py-2">Join Date</th>
+                  <th className="px-4 py-2">Company Plan</th>
+                  <th className="px-4 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {companyUsers.sort((a, b) => a.full_name.localeCompare(b.full_name)).map(user => {
+                  const userCompany = companies.find(c => c.id === user.company_id);
+                  return (
+                    <tr key={user.id} className="border-t border-gray-200 dark:border-[#2d437a]">
+                      <td className="px-4 py-2 font-medium">{user.full_name}</td>
+                      <td className="px-4 py-2">{user.email}</td>
+                      <td className="px-4 py-2">
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' : user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{user.role}</span>
+                      </td>
+                      <td className="px-4 py-2">{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-2">{userCompany ? userCompany.subscription_plan : '-'}</td>
+                      <td className="px-4 py-2 space-x-2">
+                        <button className="bg-blue-500 text-white px-3 py-1 rounded">Edit</button>
+                        <button className="bg-yellow-500 text-white px-3 py-1 rounded">Resend</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Companies Section
+  const CompaniesSection = () => (
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8">
+      <h2 className="text-2xl font-bold mb-4">Companies</h2>
+      <div className="mb-4 flex flex-wrap gap-4">
+        <div className="bg-blue-50 rounded p-3 text-blue-900 font-semibold">Total Companies: {companies.length}</div>
+        <div className="bg-green-50 rounded p-3 text-green-900 font-semibold">Total Events: {events.length}</div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-[#1a2a57] text-gray-700 dark:text-gray-200 uppercase text-xs font-semibold">
+              <th className="px-4 py-2">Company</th>
+              <th className="px-4 py-2">Contact</th>
+              <th className="px-4 py-2">Plan</th>
+              <th className="px-4 py-2">Users</th>
+              <th className="px-4 py-2">Events</th>
+              <th className="px-4 py-2">Last Event</th>
+              <th className="px-4 py-2">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {companyStats.sort((a, b) => b.eventCount - a.eventCount).map(company => (
+              <tr key={company.id} className="border-t border-gray-200 dark:border-[#2d437a]">
+                <td className="px-4 py-2 font-medium">{company.name}</td>
+                <td className="px-4 py-2">-</td>
+                <td className="px-4 py-2">{company.subscription_plan || '-'}</td>
+                <td className="px-4 py-2">{company.userCount}</td>
+                <td className="px-4 py-2">{company.eventCount}</td>
+                <td className="px-4 py-2">{company.lastEventDate ? new Date(company.lastEventDate).toLocaleDateString() : '-'}</td>
+                <td className="px-4 py-2">{company.created_at ? new Date(company.created_at).toLocaleDateString() : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // Events Section
+  const EventsSection = () => (
+    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8">
+      <h2 className="text-2xl font-bold mb-4">Events</h2>
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Total Events</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{events.length}</span>
+        </div>
+        <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-100 mb-1">Companies with Events</span>
+          <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{Array.from(new Set(events.map(e => e.company_id))).length}</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-[#1a2a57] text-gray-700 dark:text-gray-200 uppercase text-xs font-semibold">
+              <th className="px-4 py-2">Event</th>
+              <th className="px-4 py-2">Company</th>
+              <th className="px-4 py-2">Venue</th>
+              <th className="px-4 py-2">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {eventStats.map(event => {
+              const date = event.start_datetime ? new Date(event.start_datetime) : null;
+              return (
+                <tr key={event.id} className="border-t border-gray-200 dark:border-[#2d437a]">
+                  <td className="px-4 py-2 font-medium">{event.event_name}</td>
+                  <td className="px-4 py-2">{event.companyName}</td>
+                  <td className="px-4 py-2" title={event.venue_address}>{event.venue_name}{event.venue_address ? ' (' + event.venue_address.slice(0, 20) + (event.venue_address.length > 20 ? '...' : '') + ')' : ''}</td>
+                  <td className="px-4 py-2">{date ? date.toLocaleDateString() : '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-[#101c36] py-8 transition-colors duration-300">
@@ -1904,7 +2083,12 @@ const AdminPage = () => {
            <EventPricingCalculator />
          )}
 
-         {/* ...rest of the admin content... */}
+         {/* User Management Section */}
+         {activeSection === 'users' && <UserManagementSection />}
+         {/* Companies Section */}
+         {activeSection === 'companies' && <CompaniesSection />}
+         {/* Events Section */}
+         {activeSection === 'events' && <EventsSection />}
       </main>
     </div>
   )

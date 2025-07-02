@@ -3,6 +3,7 @@ import AIChat from './AIChat';
 import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, BuildingOffice2Icon, UsersIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
 import EventMessagesPanel from './EventMessagesPanel';
+import NewsFeed from './NewsFeed';
 
 interface HelpCenterModalProps {
   isOpen: boolean;
@@ -293,7 +294,7 @@ export default function HelpCenterModal({ isOpen, onClose }: HelpCenterModalProp
               )}
             </div>
           )}
-          {activeTab === 'news' && <div className="p-6">News/Announcements - Coming soon</div>}
+          {activeTab === 'news' && <NewsFeed />}
         </div>
         {/* Bottom Tab Navigation */}
         <nav className="flex justify-around items-center border-t border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-[#232c43]/90 p-2 pt-3">
