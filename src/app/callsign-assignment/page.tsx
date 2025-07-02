@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
+import ReactDOM from "react-dom";
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -190,11 +191,8 @@ export default function StaffCommandCentre() {
         .from("callsign_roles")
         .select("id, area, short_code, callsign, position")
         .eq("event_id", eventId);
-      // Load assignments
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from("callsign_assignments")
-        .select("callsign_role_id, assigned_name")
-        .eq("event_id", eventId);
+      // Debug log
+      console.log('Loaded roles from Supabase:', roles);
       if (rolesError || assignmentsError) {
         setSaveStatus("Error loading saved data");
         return;
@@ -215,6 +213,7 @@ export default function StaffCommandCentre() {
         for (const area in areaMap) {
           grouped.push({ group: area, positions: areaMap[area] });
         }
+        console.log('Grouped roles for UI:', grouped);
         setGroups(grouped);
       } else {
         setGroups(initialGroups);
@@ -453,6 +452,7 @@ export default function StaffCommandCentre() {
 
 // --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
+  console.log('CallsignAssignmentView mounted');
   // Default categories with better structure
   const defaultCategories = [
     { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
@@ -468,8 +468,10 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     callsign: string; 
     position: string;
     short?: string;
-    assignedStaff?: number;
+    assignedStaff?: string;
     required?: boolean;
+    role?: string; // add this
+    post?: string; // add this
   };
   
   type Category = { 
@@ -571,29 +573,33 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Filter positions based on global search
   const filteredCategories = categories.map(category => ({
     ...category,
-    positions: category.positions.filter(position => 
-      position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
-      position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
-      (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
-    )
-  })).filter(category => 
-    category.positions.length > 0 || globalSearch === ''
-  );
+    positions: !globalSearch.trim()
+      ? category.positions
+      : category.positions.filter(position => 
+          position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
+          position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
+          (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
+        )
+  })).filter(category => category.positions.length > 0 || globalSearch === '');
 
   // Assign staff to position
-  const assignStaff = (categoryId: number, positionId: string, staffId: number) => {
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
-        ? {
-            ...cat,
-            positions: cat.positions.map(pos => 
-              pos.id === positionId 
-                ? { ...pos, assignedStaff: staffId }
-                : pos
-            )
-          }
-          : cat
-      ));
+  const assignStaff = (categoryId: number, positionId: string, staffId: string) => {
+    setCategories(prev => {
+      const updated = prev.map(cat => 
+        cat.id === categoryId 
+          ? {
+              ...cat,
+              positions: cat.positions.map(pos => 
+                pos.id === positionId 
+                  ? { ...pos, assignedStaff: staffId }
+                  : pos
+              )
+            }
+            : cat
+        );
+      console.log('[assignStaff] updated categories:', updated);
+      return updated;
+    });
     setPendingChanges(true);
   };
 
@@ -692,7 +698,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             area: category.name,
             short_code: pos.short || pos.callsign,
             callsign: pos.callsign,
-            position: pos.position,
+            position: pos.role || pos.position || '', // always set
+            post: pos.post || '',                     // always set
             required: pos.required ?? false,
           };
         })
@@ -718,13 +725,14 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       const assignmentsArr = categories.flatMap(category =>
         category.positions.map(pos => ({
           event_id: eventId,
-          role_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
+          callsign_role_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
+          assigned_name: pos.assignedStaff || null,
         }))
       );
       if (assignmentsArr.length > 0) {
         const { error: assignError } = await supabase
           .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,role_id" });
+          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
         if (assignError) throw assignError;
       }
       alert("Assignments and roles saved successfully.");
@@ -744,59 +752,13 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     );
   }
 
+  // Add debug logs outside JSX
+  console.log('Rendering debug panel');
+  console.log('Rendering AddPositionModal');
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Sticky Header with Search */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold">📋</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-300">Manage staff assignments and callsigns</p>
-              </div>
-            </div>
-            
-            {/* Search Bar */}
-            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-96">
-              <div className="relative flex-1">
-        <input
-          type="text"
-                  placeholder="Search by callsign, role, or staff name..."
-                  value={globalSearch}
-                  onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-      </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAddCategoryModal(true)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-lg transition-colors"
-              >
-                + Department
-              </button>
-              <button
-                onClick={() => setShowAddPositionModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded-lg transition-colors"
-              >
-                + Position
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <>
+      {/* ... existing JSX ... */}
       <div className="px-4 py-4">
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -878,7 +840,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         {/* Department Cards */}
         <div className="space-y-3">
           {filteredCategories.map((category) => (
-            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200" style={{ overflow: 'visible' }}>
               {/* Department Header - Made Much Smaller */}
               <div className={`${category.color} px-4 py-2`}>
                 <div className="flex items-center justify-between">
@@ -954,24 +916,17 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Fixed Save Bar */}
-      {pendingChanges && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-            <span className="font-medium">You have unsaved changes</span>
-            <button
-              onClick={saveChanges}
-              className="bg-white text-blue-600 px-4 py-1 rounded font-medium hover:bg-gray-100 transition-colors"
-            >
-              Save Changes
-            </button>
-                    </div>
+        {/* Save Button */}
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={saveChanges}
+            disabled={!pendingChanges}
+            className={`px-6 py-2 rounded-lg font-semibold text-white transition-colors shadow-md ${pendingChanges ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+          >
+            {pendingChanges ? 'Save Changes' : 'All Changes Saved'}
+          </button>
         </div>
-      )}
-
-      {/* Modals */}
+      </div>
       <AddPositionModal
         isOpen={showAddPositionModal}
         onClose={() => {
@@ -982,7 +937,6 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         selectedCategory={selectedCategory}
         onAdd={addPosition}
       />
-
       <EditPositionModal
         isOpen={!!editingPosition}
         position={editingPosition}
@@ -993,13 +947,11 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
           setPendingChanges(true);
         }}
       />
-
       <AddCategoryModal
         isOpen={showAddCategoryModal}
         onClose={() => setShowAddCategoryModal(false)}
         onAdd={addCategory}
       />
-
       <EditCategoryModal
         isOpen={showEditCategoryModal}
         category={editingCategory}
@@ -1010,7 +962,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         onEdit={editCategory}
         onDelete={deleteCategory}
       />
-    </div>
+    </>
   );
 }
 
@@ -1028,11 +980,13 @@ function PositionCard({
   assignedStaff: any;
   category: any;
   unassignedStaff: any[];
-  onAssign: (staffId: number) => void;
+  onAssign: (staffId: string) => void;
   onUnassign: () => void;
   onEdit: () => void;
 }) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{top: number, left: number, width: number, dropUp: boolean} | null>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -1051,6 +1005,72 @@ function PositionCard({
     }
   }, [showAssignMenu]);
 
+  // Calculate dropdown position on open
+  React.useEffect(() => {
+    if (showAssignMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 200; // px, matches max-h-48
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropUp = spaceBelow < dropdownHeight;
+      setDropdownPos({
+        top: dropUp ? rect.top - dropdownHeight - 8 : rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        dropUp,
+      });
+    } else if (!showAssignMenu) {
+      setDropdownPos(null);
+    }
+  }, [showAssignMenu]);
+
+  // Only show staff with the required skill for this position
+  const eligibleStaff = React.useMemo(() => {
+    if (!position.role) return unassignedStaff;
+    return unassignedStaff.filter(staff => Array.isArray(staff.skills) && staff.skills.includes(position.role));
+  }, [unassignedStaff, position.role]);
+
+  // Dropdown menu element
+  const dropdownMenu = dropdownPos && showAssignMenu ? (
+    <div
+      className="absolute left-0 right-0 mt-1 bg-white dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg shadow-xl max-h-48 overflow-y-auto z-50"
+      style={{ zIndex: 50, top: '100%' }}
+    >
+      {eligibleStaff.length === 0 ? (
+        <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No available staff</div>
+      ) : (
+        eligibleStaff.map((staff) => (
+          <button
+            key={staff.id}
+            type="button"
+            onClick={e => {
+              e.preventDefault();
+              console.log('Assign button clicked for staffId:', staff.id);
+              onAssign(staff.id);
+              setTimeout(() => setShowAssignMenu(false), 0);
+            }}
+            className="w-full text-left p-2 hover:bg-gray-50 dark:hover:bg-[#2d437a] transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
+                {staff.name.split(' ').map((n: string) => n[0]).join('')}
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white text-xs">{staff.name}</div>
+              </div>
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+  ) : null;
+
+  useEffect(() => {
+    console.log('[PositionCard] position.id:', position.id, 'assignedStaff:', position.assignedStaff, 'assignedStaff prop:', assignedStaff);
+    if (unassignedStaff && unassignedStaff.length > 0) {
+      console.log('[PositionCard] unassignedStaff IDs:', unassignedStaff.map(s => s.id));
+    }
+  }, [position, assignedStaff, unassignedStaff]);
+
   return (
     <div className={`relative bg-white dark:bg-[#182447] rounded-lg border-2 transition-all duration-200 hover:shadow-lg ${
       assignedStaff 
@@ -1068,8 +1088,13 @@ function PositionCard({
         {/* Header with Callsign & Position */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">{position.callsign}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 truncate">{position.position}</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{position.callsign}</div>
+            {position.role && (
+              <div className="text-xs text-gray-600 dark:text-gray-300 truncate">{position.role}</div>
+            )}
+            {position.post && (
+              <div className="text-xs text-gray-400 dark:text-gray-400 truncate">{position.post}</div>
+            )}
           </div>
           <button
             onClick={onEdit}
@@ -1113,47 +1138,20 @@ function PositionCard({
         {/* Action Buttons */}
         {!assignedStaff && (
           <div className="flex gap-1">
-            <div className="relative flex-1 assign-dropdown-container" style={{ zIndex: showAssignMenu ? 60 : 'auto' }}>
-                      <button
+            <div className="relative flex-1 assign-dropdown-container">
+              <button
+                ref={buttonRef}
                 onClick={() => setShowAssignMenu(!showAssignMenu)}
                 className="w-full px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded transition-colors"
-                      >
+              >
                 Assign
-                      </button>
-              
-              {/* Assignment Dropdown */}
-              {showAssignMenu && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg shadow-xl max-h-48 overflow-y-auto" style={{ zIndex: 9999 }}>
-                          {unassignedStaff.length === 0 ? (
-                    <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No available staff</div>
-                          ) : (
-                    unassignedStaff.map((staff) => (
-                                <button
-                        key={staff.id}
-                                  onClick={() => {
-                          onAssign(staff.id);
-                          setShowAssignMenu(false);
-                        }}
-                        className="w-full text-left p-2 hover:bg-gray-50 dark:hover:bg-[#2d437a] transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
-                            {staff.name.split(' ').map((n: string) => n[0]).join('')}
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white text-xs">{staff.name}</div>
-                          </div>
-                        </div>
-                                </button>
-                              ))
-                          )}
-                        </div>
-              )}
+              </button>
+              {dropdownMenu}
             </div>
-                      </div>
-                    )}
-                  </div>
-            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1167,7 +1165,8 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
 }) {
   const [formData, setFormData] = useState({
     callsign: '',
-    position: '',
+    role: '',
+    post: '',
     categoryId: selectedCategory || categories[0]?.id || 1,
     required: false
   });
@@ -1180,13 +1179,14 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.callsign.trim() && formData.position.trim()) {
+    if (formData.callsign.trim() && formData.role.trim() && formData.post.trim()) {
       onAdd(formData.categoryId, {
         callsign: formData.callsign.trim(),
-        position: formData.position.trim(),
+        role: formData.role.trim(),
+        post: formData.post.trim(),
         required: formData.required
       });
-      setFormData({ callsign: '', position: '', categoryId: categories[0]?.id || 1, required: false });
+      setFormData({ callsign: '', role: '', post: '', categoryId: categories[0]?.id || 1, required: false });
       onClose();
     }
   };
@@ -1232,15 +1232,32 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Position/Role
             </label>
+            <select
+              value={formData.role}
+              onChange={e => setFormData(prev => ({ ...prev, role: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select a skill/role</option>
+              {SKILL_OPTIONS.map(skill => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
+      </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Position/Post
+            </label>
             <input
               type="text"
-              value={formData.position}
-              onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-              placeholder="e.g., Door Supervisor, Control Room Operator"
+              value={formData.post}
+              onChange={(e) => setFormData(prev => ({ ...prev, post: e.target.value }))}
+              placeholder="e.g., Stage Left, Pit Supervisor"
               className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-      </div>
+        </div>
 
           <div className="flex items-center gap-2">
             <input
@@ -1311,6 +1328,11 @@ function StaffListView() {
   });
   const [staff, setStaff] = useState<any[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  // Sorting and filtering state
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<'full_name' | 'active' | 'skills'>('full_name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [skillsExpanded, setSkillsExpanded] = useState<{ [id: string]: boolean }>({});
 
   useEffect(() => {
     fetchUserCompany();
@@ -1457,23 +1479,72 @@ function StaffListView() {
   }
   }
 
+  // Filtering and sorting logic
+  const filteredStaff = React.useMemo(() => {
+    let filtered = staff;
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter((member) =>
+        member.full_name?.toLowerCase().includes(s) ||
+        member.email?.toLowerCase().includes(s) ||
+        member.contact_number?.toLowerCase().includes(s) ||
+        (member.skill_tags && member.skill_tags.some((tag: string) => tag.toLowerCase().includes(s))) ||
+        (typeof member.active === "boolean" && (s === "active" ? member.active : s === "inactive" ? !member.active : false))
+      );
+    }
+    // Sorting
+    return [...filtered].sort((a, b) => {
+      let aVal: any, bVal: any;
+      if (sortBy === 'skills') {
+        aVal = a.skill_tags ? a.skill_tags.join(', ') : '';
+        bVal = b.skill_tags ? b.skill_tags.join(', ') : '';
+      } else if (sortBy === 'active') {
+        aVal = a.active ? 1 : 0;
+        bVal = b.active ? 1 : 0;
+      } else {
+        aVal = a[sortBy] || '';
+        bVal = b[sortBy] || '';
+      }
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [staff, search, sortBy, sortDir]);
+
+  function handleSort(col: 'full_name' | 'active' | 'skills') {
+    if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+  }
+
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Staff Management</h2>
           <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add Staff
-        </button>
+        <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-center">
+          <input
+            type="text"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search by name, skill, status..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Add Staff
+          </button>
+        </div>
       </div>
 
-      {staff.length === 0 ? (
+      {filteredStaff.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No staff found</h3>
@@ -1491,86 +1562,128 @@ function StaffListView() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-[#2d437a]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Name
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('full_name')}>
+                    Name {sortBy === 'full_name' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Skills
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('skills')}>
+                    Skills {sortBy === 'skills' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('active')}>
+                    Status {sortBy === 'active' && (sortDir === 'asc' ? '▲' : '▼')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
-              </tr>
-            </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
-                {staff.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a]">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                          <span className="text-blue-700 dark:text-blue-200 font-medium text-sm">
-                            {member.full_name.split(' ').map((n: string) => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {member.full_name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {member.email}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {member.contact_number || 'Not provided'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {(member.skill_tags || []).map((skill: string) => (
-                          <span
-                            key={skill}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        member.active 
-                          ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
-                      }`}>
-                        {member.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => openEditModal(member)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(member.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
-                      >
-                        Delete
-                      </button>
-                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                {filteredStaff.map((member) => {
+                  const skills = member.skill_tags || [];
+                  const showCount = 5;
+                  const expanded = !!skillsExpanded[member.id];
+                  return (
+                    <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a]">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                            <span className="text-blue-700 dark:text-blue-200 font-medium text-sm">
+                              {member.full_name.split(' ').map((n: string) => n[0]).join('')}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {member.full_name}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {member.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {member.contact_number || 'Not provided'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div
+                          className="flex flex-wrap gap-1 items-center"
+                        >
+                          {skills.length <= showCount || expanded ? (
+                            <>
+                              {skills.map((skill: string) => (
+                                <span
+                                  key={skill}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 whitespace-nowrap md:px-2.5 md:py-0.5"
+                                  style={{ minWidth: 0 }}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {skills.length > showCount && (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 ml-1 whitespace-nowrap md:px-2.5 md:py-0.5"
+                                  style={{ minWidth: 0 }}
+                                  onClick={() => setSkillsExpanded(prev => ({ ...prev, [member.id]: false }))}
+                                >
+                                  Show less
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {skills.slice(0, showCount).map((skill: string) => (
+                                <span
+                                  key={skill}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 whitespace-nowrap md:px-2.5 md:py-0.5"
+                                  style={{ minWidth: 0 }}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              <button
+                                type="button"
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 ml-1 whitespace-nowrap md:px-2.5 md:py-0.5"
+                                style={{ minWidth: 0 }}
+                                onClick={() => setSkillsExpanded(prev => ({ ...prev, [member.id]: true }))}
+                              >
+                                (+{skills.length - showCount} more)
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          member.active 
+                            ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
+                        }`}>
+                          {member.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => openEditModal(member)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(member.id)}
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
