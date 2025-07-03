@@ -193,7 +193,7 @@ export default function StaffCommandCentre() {
         .eq("event_id", eventId);
       // Debug log
       console.log('Loaded roles from Supabase:', roles);
-      if (rolesError || assignmentsError) {
+      if (rolesError) {
         setSaveStatus("Error loading saved data");
         return;
       }
