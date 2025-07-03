@@ -218,12 +218,12 @@ export default function StaffCommandCentre() {
       } else {
         setGroups(initialGroups);
       }
-      if (assignments && assignments.length > 0) {
+      if (assignments && Object.keys(assignments).length > 0) {
         // Map assignments by callsign_role_id
         const assignMap: Record<string, string> = {};
-        assignments.forEach((a) => {
-          if (a.assigned_name) { // Only add if assigned_name exists
-            assignMap[a.callsign_role_id] = a.assigned_name;
+        Object.entries(assignments).forEach(([callsign_role_id, assigned_name]) => {
+          if (assigned_name) { // Only add if assigned_name exists
+            assignMap[callsign_role_id] = assigned_name;
           }
         });
         // End of Selection
