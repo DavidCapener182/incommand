@@ -1,3 +1,4 @@
+'use client';
 import React, { useState } from 'react';
 
 // Mock data for staff with assigned callsigns
