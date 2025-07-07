@@ -318,7 +318,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
     
     // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage
     const filtered = safeIncidents.filter((i: any) => {
-      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage'].includes(i.incident_type);
+      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage', 'Artist off Stage', 'Artist on Stage'].includes(i.incident_type);
     });
     
     // Count by type
