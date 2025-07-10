@@ -316,9 +316,17 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
     // Ensure incidents is an array
     const safeIncidents = Array.isArray(incidents) ? incidents : [];
     
-    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage
+    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage (case-insensitive, robust)
     const filtered = safeIncidents.filter((i: any) => {
-      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage'].includes(i.incident_type);
+      if (!i || !i.incident_type) return false;
+      const type = i.incident_type.trim().toLowerCase();
+      return ![
+        'attendance',
+        'sit rep',
+        'artist on/off stage',
+        'artist on stage',
+        'artist off stage'
+      ].includes(type);
     });
     
     // Count by type
@@ -937,7 +945,7 @@ export default function Dashboard() {
                 isFilterable={true}
             color="yellow"
                 tooltip="Incidents that are currently open."
-            />
+          />
             <StatCard
                 title="High Prio"
                 value={incidentStats.high}
