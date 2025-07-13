@@ -192,12 +192,17 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     if (!incidentId || !newUpdate.trim()) return
 
     try {
+      // Fetch the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const user = userData?.user;
+      const updatedBy = user?.email || user?.id || 'Unknown';
       const { error } = await supabase
         .from('incident_updates')
         .insert({
           incident_id: incidentId,
           update_text: newUpdate.trim(),
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: updatedBy
         })
 
       if (error) throw error
@@ -224,13 +229,18 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       if (error) throw error
 
+      // Fetch the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const user = userData?.user;
+      const updatedBy = user?.email || user?.id || 'Unknown';
       // Add an update to track the edit
       await supabase
         .from('incident_updates')
         .insert({
           incident_id: incidentId,
           update_text: 'Incident details updated',
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: updatedBy
         })
 
       setEditMode(false)
@@ -258,13 +268,18 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       if (updateError) throw updateError;
 
+      // Fetch the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const user = userData?.user;
+      const updatedBy = user?.email || user?.id || 'Unknown';
       // Add an update to the audit trail
       const { error: auditError } = await supabase
         .from('incident_updates')
         .insert({
           incident_id: incident.id,
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: updatedBy
         });
 
       if (auditError) throw auditError;

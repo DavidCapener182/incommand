@@ -435,13 +435,18 @@ export default function IncidentTable({
         .eq('id', incident.id);
       if (error) throw error;
       
+      // Fetch the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const user = userData?.user;
+      const updatedBy = user?.email || user?.id || 'Unknown';
       // Add an update to track the status change
       await supabase
         .from('incident_updates')
         .insert({
           incident_id: incident.id,
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
-          updated_by: 'Event Control'
+          updated_by: updatedBy
         });
       
       console.log('Status update successful');

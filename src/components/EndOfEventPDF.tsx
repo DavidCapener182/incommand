@@ -124,49 +124,38 @@ const EndOfEventPDF = ({
   signatureScribble,
 }: EndOfEventPDFProps) => (
   <Document>
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.page} wrap>
       {/* Logo and Title */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <Image src={logoUrl} style={styles.logo} />
         <Text style={[styles.heading, { marginLeft: 16 }]}>End of Event Report</Text>
       </View>
-
       {/* Event Details */}
       <View style={styles.section}>
         <Text style={styles.label}>Head of Security</Text>
         <Text style={styles.value}>{headOfSecurity || '-'}</Text>
-
         <Text style={styles.label}>Date of Event</Text>
         <Text style={styles.value}>{eventDate || '-'}</Text>
-
         <Text style={styles.label}>Event Name</Text>
         <Text style={styles.value}>{eventName || '-'}</Text>
-
         <Text style={styles.label}>Staff Briefed & In Position</Text>
         <Text style={styles.value}>{staffBriefedTime || '-'}</Text>
-
         <Text style={styles.label}>Doors Open Time</Text>
         <Text style={styles.value}>{doorsOpenTime || '-'}</Text>
-
         <Text style={styles.label}>Support Act(s)</Text>
         <Text style={styles.value}>{supportActs || '-'}</Text>
-
         <Text style={styles.label}>Main Act</Text>
         <Text style={styles.value}>{mainAct || '-'}</Text>
-
         <Text style={styles.label}>Showdown Time</Text>
         <Text style={styles.value}>{showdownTime || '-'}</Text>
-
         <Text style={styles.label}>Venue Clear Time</Text>
         <Text style={styles.value}>{venueClearTime || '-'}</Text>
       </View>
-
       {/* Incident Summary */}
       <View style={styles.section}>
         <Text style={styles.label}>Incident Summary</Text>
         <Text style={styles.value}>{incidentSummary || '-'}</Text>
       </View>
-
       {/* All Logs Table */}
       <View style={styles.section}>
         <Text style={styles.label}>All Logs (excluding Attendance)</Text>
@@ -201,7 +190,6 @@ const EndOfEventPDF = ({
           )}
         </View>
       </View>
-
       {/* Incident Report File */}
       {incidentReportFileName && (
         <View style={styles.section}>
@@ -209,7 +197,6 @@ const EndOfEventPDF = ({
           <Text style={styles.fileName}>{incidentReportFileName}</Text>
         </View>
       )}
-
       {/* Signatures */}
       <View style={styles.section}>
         <Text style={styles.label}>Signature (type)</Text>
@@ -222,6 +209,22 @@ const EndOfEventPDF = ({
           <Text style={{ margin: 12 }}>{signatureScribble || ' '}</Text>
         </View>
       </View>
+      {/* Footer with event info, page numbers, and date/time */}
+      <Text
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          left: 32,
+          right: 32,
+          textAlign: 'right',
+          fontSize: 10,
+          color: '#616161',
+        }}
+        render={({ pageNumber, totalPages }) =>
+          `Event: ${eventName || '-'} | Date: ${eventDate || '-'} | Page ${pageNumber} of ${totalPages} | Generated: ${new Date().toLocaleString()}`
+        }
+        fixed
+      />
     </Page>
   </Document>
 );

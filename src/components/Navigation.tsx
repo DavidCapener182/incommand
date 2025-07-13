@@ -12,6 +12,7 @@ import NotificationDrawer from './NotificationDrawer'
 import './ProfileCard.css'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
+import { ChevronLeftIcon, ChevronRightIcon, HomeIcon, ChartBarIcon, Cog6ToothIcon, UserGroupIcon, DocumentTextIcon, BellIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 
 const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
 
@@ -63,6 +64,22 @@ function useTheme() {
   return [theme, setTheme] as const;
 }
 
+const APP_BAR_HEIGHT = 64; // px, adjust as needed
+const BOTTOM_BAR_HEIGHT = 68; // px, adjust if you have a bottom bar/FAB
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed';
+const DESKTOP_SIDEBAR_WIDTH = 240;
+const DESKTOP_SIDEBAR_COLLAPSED_WIDTH = 64;
+
+const menuItems = [
+  { href: '/analytics', label: 'Analytics', icon: ChartBarIcon },
+  { href: '/staff', label: 'Staff Management', icon: UserGroupIcon },
+  { href: '/settings', label: 'Settings', icon: Cog6ToothIcon },
+  { href: '/reports', label: 'Reports', icon: DocumentTextIcon },
+  { href: '/notifications', label: 'Notifications', icon: BellIcon },
+  { href: '/help', label: 'Help', icon: QuestionMarkCircleIcon },
+];
+
 export default function Navigation() {
   const pathname = usePathname() || '';
   const { signOut, user } = useAuth()
@@ -83,6 +100,7 @@ export default function Navigation() {
   const [eventChats, setEventChats] = useState<{id: string, name: string, type: string}[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [selectedEventChatId, setSelectedEventChatId] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   console.log("Navigation component mounted");
 
@@ -248,6 +266,18 @@ export default function Navigation() {
     fetchChats();
   }, [currentEvent]);
 
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(SIDEBAR_COLLAPSED_KEY) : null;
+    if (stored !== null) setSidebarCollapsed(stored === 'true');
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      if (typeof window !== 'undefined') localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!prev));
+      return !prev;
+    });
+  };
+
   return (
     <>
       <nav className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
@@ -396,102 +426,129 @@ export default function Navigation() {
           </div>
         </div>
       </nav>
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Dropdown (Drawer) */}
       {mobileMenuOpen && (
-        <div ref={mobileMenuRef} className="xl:hidden fixed top-0 right-0 w-64 h-full bg-[#2A3990] shadow-lg z-50 animate-slide-in flex flex-col p-6">
-          <button
+        <>
+          {/* Overlay (scrim) */}
+          <div
+            className="fixed left-0 right-0 bg-black bg-opacity-35 transition-opacity duration-300"
+            style={{
+              top: APP_BAR_HEIGHT,
+              height: `calc(100vh - ${APP_BAR_HEIGHT}px)`,
+              zIndex: 40,
+            }}
             onClick={() => setMobileMenuOpen(false)}
-            className="self-end p-2 mb-4 text-white"
-            aria-label="Close menu"
-          >
-            <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          <Link href="/incidents" className={`${isActive('/incidents')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Incidents</Link>
+            aria-label="Close sidebar overlay"
+          />
 
-          <button
-            onClick={() => {
-              if (!hasCurrentEvent) {
-                setShowNoEventModal(true);
-                return;
-              }
-              setReportsOpen((open) => !open);
+          {/* Sidebar Drawer (now right side) */}
+          <aside
+            className={`fixed right-0 z-50 bg-[#2A3990] shadow-lg flex flex-col transition-transform duration-300 ease-in-out xl:hidden`
+              + ` min-w-[270px] max-w-[400px] w-[80vw]`
+              + ` top-[${APP_BAR_HEIGHT}px]`
+              + ` h-[calc(100vh-64px)]`
+              + ` ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            style={{
+              top: APP_BAR_HEIGHT,
+              height: `calc(100vh - ${APP_BAR_HEIGHT}px)`
             }}
-            className={`w-full text-left py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+            tabIndex={-1}
+            ref={mobileMenuRef}
           >
-            Reports
-          </button>
-          {reportsOpen && hasCurrentEvent && (
-            <div className="pl-8">
-              <Link href="/analytics" className="block py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
-              <Link href="/reports" className="block py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>End of Event Report</Link>
+            {/* Close Button (top-right inside drawer) */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="h-11 flex items-center justify-end px-4 text-white"
+                aria-label="Close menu"
+              >
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          )}
-
-          <button
-            onClick={() => {
-              if (!hasCurrentEvent) {
-                setShowNoEventModal(true);
-                return;
-              }
-              window.location.href = '/callsign-assignment';
-            }}
-            className={`block w-full text-left py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
-          >
-            Staff
-          </button>
-          <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
-          <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>
-          <Link href="/admin" className={`${isActive('/admin')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Admin</Link>
-          
-          {/* AI Assistant for Mobile */}
-          <button
-            onClick={() => {
-              setNotificationDrawerOpen(true);
-              setMobileMenuOpen(false);
-              // Switch to chat tab when opening from mobile menu
-              setTimeout(() => {
-                const chatTab = document.querySelector('[role="tab"][aria-controls="chat-panel"]');
-                if (chatTab) {
-                  (chatTab as HTMLElement).click();
-                }
-              }, 100);
-            }}
-            className="flex items-center w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
-          >
-            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <span>AI Assistant</span>
-          </button>
-
-          {/* Notification Bell for Mobile */}
-          <button
-            onClick={() => {
-              setNotificationDrawerOpen(true);
-              setMobileMenuOpen(false);
-            }}
-            className="flex items-center justify-between w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
-          >
-            <span>Notifications</span>
-            {unreadNotifications > 0 && (
-              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5">
-                {unreadNotifications > 99 ? '99+' : unreadNotifications}
-              </span>
-            )}
-          </button>
-
-          <div className="mt-auto">
-            <button onClick={() => {
-              signOut();
-              setMobileMenuOpen(false);
-            }} className="w-full text-left py-3 px-4 rounded-md text-lg font-medium text-red-400 hover:bg-[#3b4a9b] hover:text-red-300">
-              Sign Out
-            </button>
-          </div>
-        </div>
+            {/* Sidebar Content */}
+            <nav className="flex-1 overflow-y-auto">
+              <Link href="/incidents" className="block h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]">Incidents</Link>
+              {/* Repeat for all nav items, ensure h-11 for all */}
+              <button
+                onClick={() => {
+                  if (!hasCurrentEvent) {
+                    setShowNoEventModal(true);
+                    return;
+                  }
+                  setReportsOpen((open) => !open);
+                }}
+                className={`w-full text-left h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              >
+                Reports
+              </button>
+              {reportsOpen && hasCurrentEvent && (
+                <div className="pl-8">
+                  <Link href="/analytics" className="block h-11 py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
+                  <Link href="/reports" className="block h-11 py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>End of Event Report</Link>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  if (!hasCurrentEvent) {
+                    setShowNoEventModal(true);
+                    return;
+                  }
+                  window.location.href = '/callsign-assignment';
+                }}
+                className={`block w-full text-left h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              >
+                Staff
+              </button>
+              <Link href="/help" className="block h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]">Help & Glossary</Link>
+              <Link href="/settings" className="block h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]">Settings</Link>
+              <Link href="/admin" className="block h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]">Admin</Link>
+              {/* AI Assistant for Mobile */}
+              <button
+                onClick={() => {
+                  setNotificationDrawerOpen(true);
+                  setMobileMenuOpen(false);
+                  setTimeout(() => {
+                    const chatTab = document.querySelector('[role="tab"][aria-controls="chat-panel"]');
+                    if (chatTab) {
+                      (chatTab as HTMLElement).click();
+                    }
+                  }, 100);
+                }}
+                className="flex items-center w-full h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
+              >
+                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <span>AI Assistant</span>
+              </button>
+              {/* Notification Bell for Mobile */}
+              <button
+                onClick={() => {
+                  setNotificationDrawerOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-between w-full h-11 py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
+              >
+                <span>Notifications</span>
+                {unreadNotifications > 0 && (
+                  <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
+              </button>
+              <div className="mt-auto pb-4">
+                <button onClick={() => {
+                  signOut();
+                  setMobileMenuOpen(false);
+                }} className="w-full text-left h-11 py-3 px-4 rounded-md text-lg font-medium text-red-400 hover:bg-[#3b4a9b] hover:text-red-300">
+                  Sign Out
+                </button>
+              </div>
+            </nav>
+          </aside>
+        </>
       )}
 
       {/* No Event Selected Modal */}

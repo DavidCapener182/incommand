@@ -490,10 +490,14 @@ const AdminPage = () => {
       if (error) throw error
 
       // Log the action
+      const user = (await supabase.auth.getUser()).data.user;
       await supabase.from('audit_logs').insert([{
         action: `Created company: ${companyData.name}`,
         action_type: 'company',
-        performed_by: (await supabase.auth.getUser()).data.user?.id,
+        table_name: 'companies',
+        record_id: companyData.id || null,
+        performed_by: user?.id,
+        profile_id: user?.id,
         details: JSON.stringify(data)
       }])
 
@@ -516,10 +520,14 @@ const AdminPage = () => {
       if (error) throw error
 
       // Log the action
+      const user = (await supabase.auth.getUser()).data.user;
       await supabase.from('audit_logs').insert([{
         action: `Updated user: ${userData.email}`,
         action_type: 'user',
-        performed_by: (await supabase.auth.getUser()).data.user?.id,
+        table_name: 'users',
+        record_id: userData.id || null,
+        performed_by: user?.id,
+        profile_id: user?.id,
         details: JSON.stringify(data)
       }])
 
@@ -541,10 +549,12 @@ const AdminPage = () => {
       if (error) throw error
 
       // Log the action
+      const user = (await supabase.auth.getUser()).data.user;
       await supabase.from('audit_logs').insert([{
         action: `Deleted event: ${events.find(e => e.id === eventId)?.event_name}`,
         action_type: 'event',
-        performed_by: (await supabase.auth.getUser()).data.user?.id,
+        performed_by: user?.id,
+        profile_id: user?.id,
         details: `Event ID: ${eventId}`
       }])
 

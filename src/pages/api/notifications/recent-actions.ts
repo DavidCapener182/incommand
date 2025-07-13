@@ -97,9 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           table_name,
           record_id,
           created_at,
-          profiles!audit_logs_user_id_fkey (
-            full_name
-          )
+          profile_id,
+          profiles:profile_id (full_name)
         `)
         .gt('created_at', lastViewedDate.toISOString())
         .order('created_at', { ascending: false })

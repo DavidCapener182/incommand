@@ -588,7 +588,7 @@ export default function Dashboard() {
         for (let i = 0; i < filteredTimings.length; i++) {
           if (filteredTimings[i].minutesSinceMidnight > currentTimeNumber) {
             next = filteredTimings[i];
-            current = i > 0 ? filteredTimings[i - 1] : filteredTimings[0];
+            current = i > 0 ? filteredTimings[i - 1] : null;
             break;
           }
         }
@@ -596,8 +596,13 @@ export default function Dashboard() {
         if (!next && filteredTimings.length > 0) {
           current = filteredTimings[filteredTimings.length - 1];
         }
-        // If current time is after or at Show Down, do not show any previous timings as Happening Now
-        if (showDownMinutes !== null && currentTimeNumber >= showDownMinutes) {
+        // Only show Happening Now if current time is after the first event's start time
+        const firstEventStart = filteredTimings.length > 0 ? filteredTimings[0].minutesSinceMidnight : null;
+        if (
+          showDownMinutes !== null && currentTimeNumber >= showDownMinutes
+          || firstEventStart === null
+          || currentTimeNumber < firstEventStart
+        ) {
           setCurrentSlot(null);
         } else {
           setCurrentSlot(current ? { title: current.title, time: current.time } : null);
