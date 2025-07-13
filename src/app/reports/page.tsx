@@ -7,6 +7,8 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import OpenAI from "openai";
 
+// PRINT-TO-PDF REFACTOR: This page is now optimized for browser print-to-PDF. See globals.css for print styles.
+
 export default function ReportsPage() {
   const [event, setEvent] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
@@ -297,23 +299,6 @@ export default function ReportsPage() {
     alert("Report submitted!");
   };
 
-  // PDF Download
-  const handleDownloadPDF = async () => {
-    const report = document.getElementById("event-report-pdf");
-    if (!report) return;
-    const canvas = await html2canvas(report);
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    // Scale image to fit page width
-    const imgProps = { width: canvas.width, height: canvas.height };
-    const pdfWidth = pageWidth;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight > pageHeight ? pageHeight : pdfHeight);
-    pdf.save(`EndOfEventReport-${event?.event_name || "event"}.pdf`);
-  };
-
   // Improved extraction for Doors Open Time and Staff Briefed & In Position
   function getDoorsOpenTime() {
     const match = allLogs.find(
@@ -373,8 +358,20 @@ export default function ReportsPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 bg-white dark:bg-[#23408e] shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">End of Event Report</h1>
+    <main className="max-w-3xl mx-auto px-4 py-8 bg-white dark:bg-[#23408e] shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 print-report-main" style={{ position: 'relative' }}>
+      {/* Print Report button: always visible at top right except in print */}
+      <div style={{ position: 'absolute', top: 24, right: 24, zIndex: 10 }} className="print:hidden">
+        <button
+          type="button"
+          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
+          onClick={() => window.print()}
+        >
+          Print Report
+        </button>
+      </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">End of Event Report</h1>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6" id="event-report-pdf">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -551,6 +548,7 @@ export default function ReportsPage() {
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             required
+            name="signature"
           />
         </div>
         <div>
@@ -565,13 +563,6 @@ export default function ReportsPage() {
         </div>
         <div className="flex justify-end gap-2">
           <button
-            type="button"
-            className="bg-gray-200 text-gray-700 px-6 py-2 rounded shadow hover:bg-gray-300"
-            onClick={handleDownloadPDF}
-          >
-            Download as PDF
-          </button>
-          <button
             type="submit"
             className="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 disabled:opacity-50"
             disabled={submitting}
@@ -582,4 +573,9 @@ export default function ReportsPage() {
       </form>
     </main>
   );
+}
+
+// Add a script to set data-print-date on body for print footer
+if (typeof window !== 'undefined') {
+  document.body.setAttribute('data-print-date', new Date().toLocaleString());
 } 

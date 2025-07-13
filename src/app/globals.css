@@ -68,3 +68,102 @@ input:-webkit-autofill {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
 } 
+
+/* === PRINT STYLES FOR END OF EVENT REPORT === */
+@media print {
+  /* Hide navigation, dock, chat, modals, and footer, but NOT main content backgrounds */
+  nav, .Dock, .FloatingAIChat, .IncidentCreationModal, footer {
+    display: none !important;
+  }
+  /* Fix: Do NOT hide .bg-gray-50 or .dark:bg-[#15192c] so report content is visible */
+  /* Hide all buttons, file inputs, and interactive elements */
+  button, input[type="file"], .FaUpload, .SignaturePad, .Dock, .FloatingAIChat {
+    display: none !important;
+  }
+  /* Hide form submit, download, and print buttons */
+  form#event-report-pdf button, form#event-report-pdf [type="submit"], form#event-report-pdf [type="button"] {
+    display: none !important;
+  }
+  /* Main report area: full width, white background, no box shadow */
+  #event-report-pdf, .print-report-main {
+    background: white !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0.5in 0.5in 1in 0.5in !important;
+    width: 100vw !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    display: block !important;
+  }
+  /* Remove hover/transition effects */
+  #event-report-pdf *, .print-report-main * {
+    transition: none !important;
+    box-shadow: none !important;
+  }
+  /* Tables: high contrast, no backgrounds */
+  #event-report-pdf table, .print-report-main table {
+    background: white !important;
+    color: #111827 !important;
+    border: 1px solid #888 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 12pt !important;
+  }
+  #event-report-pdf th, #event-report-pdf td, .print-report-main th, .print-report-main td {
+    background: white !important;
+    color: #111827 !important;
+    border: 1px solid #888 !important;
+    padding: 6px 8px !important;
+  }
+  #event-report-pdf thead, .print-report-main thead {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+  }
+  /* Remove alternating row backgrounds */
+  #event-report-pdf tr, .print-report-main tr {
+    background: white !important;
+  }
+  /* Remove dark mode for print */
+  .dark * {
+    background: white !important;
+    color: #111827 !important;
+  }
+  /* Hide upload, signature, and file fields */
+  #event-report-pdf input[type="file"], #event-report-pdf .SignaturePad, #event-report-pdf .FaUpload {
+    display: none !important;
+  }
+  /* Hide signature scribble area */
+  #event-report-pdf .SignaturePad, #event-report-pdf canvas {
+    display: none !important;
+  }
+  /* Show only the typed signature */
+  #event-report-pdf input[type="text"][name="signature"] {
+    display: block !important;
+  }
+  /* Add page break after main report if needed */
+  #event-report-pdf {
+    page-break-after: always;
+  }
+  /* Add a fixed footer with event info and page numbers */
+  @page {
+    margin: 0.5in 0.5in 1in 0.5in;
+    size: auto;
+  }
+  body::after {
+    content: "End of Event Report | Generated on: " attr(data-print-date) " | Page " counter(page) " of " counter(pages);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0.5in;
+    background: #f3f4f6;
+    color: #111827;
+    font-size: 10pt;
+    text-align: center;
+    padding: 8px 0;
+    z-index: 9999;
+    width: 100vw;
+  }
+} 
