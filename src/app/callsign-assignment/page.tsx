@@ -94,6 +94,18 @@ const defaultCategories: Category[] = [
   { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
 ];
 
+// Add at the top of the file (after imports):
+type Position = {
+  id: string;
+  callsign: string;
+  position: string;
+  short?: string;
+  post?: string;
+  required?: boolean;
+  assignedStaff?: string | null;
+  skills_required?: string[];
+};
+
 export default function StaffCommandCentre() {
   const [activeView, setActiveView] = useState('callsign');
   const [currentName, setCurrentName] = useState("");
@@ -396,17 +408,6 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
   ];
 
-  type Position = {
-    id: string;
-    callsign: string;
-    position: string;
-    short?: string;
-    post?: string;
-    required?: boolean;
-    assignedStaff?: string | null;
-    skills_required?: string[];
-  };
-  
   type Category = {
     id: number;
     name: string;
