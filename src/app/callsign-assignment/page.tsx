@@ -254,8 +254,8 @@ export default function StaffCommandCentre() {
       // Helper to check for valid UUID
       const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
       // Flatten roles for upsert
-      const roles = groups.flatMap(group =>
-        group.positions.map(pos => {
+      const roles = categories.flatMap(category =>
+        category.positions.map(pos => {
           const base = {
             event_id: eventId,
             short_code: pos.short,
@@ -287,7 +287,7 @@ export default function StaffCommandCentre() {
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
       upsertedRoles?.forEach((r: any) => {
-        const match = groups
+        const match = categories
           ?.positions.find(
             p =>
               p.callsign === r.callsign &&
