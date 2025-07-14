@@ -476,26 +476,24 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       console.log("No company ID available, skipping staff fetch");
       return;
     }
-    
     setLoadingStaff(true);
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('id, full_name, skill_tags, notes, active')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
         .eq('company_id', userCompanyId)
         .eq('active', true)
         .order('full_name');
-      
       if (error) throw error;
-
       const formattedStaff = data?.map(staff => ({
         id: staff.id,
-        name: staff.full_name,
-        role: staff.skill_tags?.[0] || 'Staff Member',
-        skills: staff.skill_tags || [],
-        avatar: '👤'
+        full_name: staff.full_name,
+        contact_number: staff.contact_number,
+        email: staff.email,
+        skill_tags: staff.skill_tags || [],
+        notes: staff.notes,
+        active: staff.active,
       })) || [];
-
       setStaff(formattedStaff);
     } catch (error) {
       console.error("Error fetching staff:", error);
@@ -844,21 +842,20 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                 <div
                   key={staff.id}
                   className="relative bg-gray-50 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg p-2 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500 group"
-                  title={`${staff.name}${staff.skills && staff.skills.length > 0 ? '\nSkills: ' + staff.skills.join(', ') : ''}`}
+                  title={`${staff.full_name}${staff.skill_tags && staff.skill_tags.length > 0 ? '\nSkills: ' + staff.skill_tags.join(', ') : ''}`}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs flex-shrink-0">
-                      {staff.name.split(' ').map((n: string) => n[0]).join('')}
+                      {staff.full_name.split(' ').map((n: string) => n[0]).join('')}
                     </div>
-                    <div className="font-medium text-gray-900 dark:text-white text-xs truncate">{staff.name}</div>
+                    <div className="font-medium text-gray-900 dark:text-white text-xs truncate">{staff.full_name}</div>
                   </div>
-                  
                   {/* Tooltip */}
-                  {staff.skills && staff.skills.length > 0 && (
+                  {staff.skill_tags && staff.skill_tags.length > 0 && (
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                       <div className="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
-                        <div className="font-medium mb-1">{staff.name}</div>
-                        <div className="text-gray-300">Skills: {staff.skills.join(', ')}</div>
+                        <div className="font-medium mb-1">{staff.full_name}</div>
+                        <div className="text-gray-300">Skills: {staff.skill_tags.join(', ')}</div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                       </div>
                     </div>
@@ -871,7 +868,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
 
         {/* Department Cards */}
         <div className="space-y-3">
-          {filteredCategories.map((category) => (
+          {categories.map((category: Category) => (
             <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200" style={{ overflow: 'visible' }}>
               {/* Department Header - Made Much Smaller */}
               <div className={`${category.color} px-4 py-2`}>
@@ -924,7 +921,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
-                    {category.positions.map((position) => {
+                    {category.positions.map((position: Position) => {
                       const assignedStaff = position.assignedStaff 
                         ? staff.find(s => s.id === position.assignedStaff)
                         : null;
@@ -1231,7 +1228,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
     if (formData.callsign.trim() && formData.role.trim() && formData.post.trim()) {
       onAdd(formData.categoryId, {
         callsign: formData.callsign.trim(),
-        role: formData.role.trim(),
+        position: formData.role.trim(),
         post: formData.post.trim(),
         required: formData.required,
         quantity: formData.quantity,
@@ -1457,26 +1454,24 @@ function StaffListView() {
       console.log("No company ID available, skipping staff fetch");
       return;
     }
-    
     setLoadingStaff(true);
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('id, full_name, skill_tags, notes, active')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
         .eq('company_id', userCompanyId)
         .eq('active', true)
         .order('full_name');
-      
       if (error) throw error;
-
       const formattedStaff = data?.map(staff => ({
         id: staff.id,
-        name: staff.full_name,
-        role: staff.skill_tags?.[0] || 'Staff Member',
-        skills: staff.skill_tags || [],
-        avatar: '👤'
+        full_name: staff.full_name,
+        contact_number: staff.contact_number,
+        email: staff.email,
+        skill_tags: staff.skill_tags || [],
+        notes: staff.notes,
+        active: staff.active,
       })) || [];
-
       setStaff(formattedStaff);
     } catch (error) {
       console.error("Error fetching staff:", error);
@@ -2009,7 +2004,6 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Department</h2>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -2048,26 +2042,19 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
             </div>
           </div>
 
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Danger Zone</h3>
-            <p className="text-sm text-red-600 dark:text-red-300 mb-3">
-              Deleting this department will also remove all positions within it. This action cannot be undone.
-            </p>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="text-sm bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded font-medium transition-colors"
-            >
-              Delete Department
-            </button>
-          </div>
-
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
             >
               Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Delete Department
             </button>
             <button
               type="button"
@@ -2081,85 +2068,4 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
       </div>
     </div>
   );
-} 
-
-// --- Modal Components for Callsign Assignment (new schema) ---
-
-function PositionModal({ position, onSave, onClose }: {
-  position: any;
-  onSave: (data: any) => void;
-  onClose: () => void;
-}) {
-  const [callsign, setCallsign] = useState(position?.callsign || '');
-  const [area, setArea] = useState(position?.area || '');
-  return (
-    <div className="modal-bg">
-      <div className="modal">
-        <h2>{position ? 'Edit Position' : 'Add Position'}</h2>
-        <input value={callsign} onChange={e => setCallsign(e.target.value)} placeholder="Callsign" />
-        <input value={area} onChange={e => setArea(e.target.value)} placeholder="Area/Department" />
-        <div style={{ marginTop: 16 }}>
-          <button onClick={() => onSave({ id: position?.id, callsign, area })} disabled={!callsign || !area}>Save</button>
-          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
 }
-
-function DeleteModal(props: { position: any; onDelete: () => void; onClose: () => void; }) {
-  const { position, onDelete, onClose } = props;
-  return (
-    <div className="modal-bg">
-      <div className="modal">
-        <h2>Delete Position</h2>
-        <p>Are you sure you want to delete <b>{position.callsign}</b>?</p>
-        <div style={{ marginTop: 16 }}>
-          <button onClick={onDelete} style={{ color: 'red' }}>Delete</button>
-          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Fix AssignModal prop types
-function AssignModal({ position, currentUserId, onAssign, onUnassign, onClose, staff }: {
-  position: any;
-  currentUserId: string;
-  onAssign: (id: string) => void;
-  onUnassign: () => void;
-  onClose: () => void;
-  staff: any[];
-}) {
-  const [selected, setSelected] = useState(currentUserId || '');
-  return (
-    <div className="modal-bg">
-      <div className="modal">
-        <h2>Assign Staff to {position.callsign}</h2>
-        <select value={selected} onChange={e => setSelected(e.target.value)}>
-          <option value="">Select staff...</option>
-          {staff.map(s => (
-            <option key={s.id} value={s.id}>{s.full_name || s.id}</option>
-          ))}
-        </select>
-        <div style={{ marginTop: 16 }}>
-          <button onClick={() => { if (selected) onAssign(selected); }} disabled={!selected}>Assign</button>
-          {currentUserId && <button onClick={onUnassign} style={{ marginLeft: 8 }}>Unassign</button>}
-          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Minimal modal styles ---
-<style jsx>{`
-  .modal-bg {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
-  }
-  .modal {
-    background: #fff; border-radius: 8px; padding: 24px; min-width: 300px; box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-  }
-`}</style>
