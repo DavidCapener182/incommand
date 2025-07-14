@@ -1,68 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import ReactDOM from "react-dom";
-
-// Initial groupings and roles as per user specification
-const initialGroups = [
-  {
-    group: "Management",
-    positions: [
-      { id: "a1", callsign: "ALPHA 1", short: "A1", position: "HOS" },
-      { id: "a2", callsign: "ALPHA 2", short: "A2", position: "Site Co" },
-      { id: "a3", callsign: "ALPHA 3", short: "A3", position: "Internal Co" },
-    ],
-  },
-  {
-    group: "External",
-    positions: [
-      { id: "s1", callsign: "SIERRA 1", short: "S1", position: "Queue Management" },
-      { id: "s7", callsign: "SIERRA 7", short: "S7", position: "Access Escort" },
-      { id: "s8", callsign: "SIERRA 8", short: "S8", position: "Hotel Gate" },
-      { id: "s12", callsign: "SIERRA 12", short: "S12", position: "Side Gate" },
-      { id: "s16", callsign: "SIERRA 16", short: "S16", position: "E3 Car Park" },
-    ],
-  },
-  {
-    group: "Internal",
-    positions: [
-      { id: "s2", callsign: "SIERRA 2", short: "S2", position: "BOH Supervisor" },
-      { id: "s3", callsign: "SIERRA 3", short: "S3", position: "Pit Supervisor" },
-      { id: "s4", callsign: "SIERRA 4", short: "S4", position: "Mezzanine" },
-      { id: "s5", callsign: "SIERRA 5", short: "S5", position: "Stage Right" },
-      { id: "s6", callsign: "SIERRA 6", short: "S6", position: "Stage Left" },
-      { id: "s9", callsign: "SIERRA 9", short: "S9", position: "Mezzanine Clicker" },
-      { id: "s10", callsign: "SIERRA 10", short: "S10", position: "Mixer" },
-      { id: "s11", callsign: "SIERRA 11", short: "S11", position: "BOH Fire Exits" },
-      { id: "s15", callsign: "SIERRA 15", short: "S15", position: "Cloakroom" },
-      { id: "response1", callsign: "RESPONSE 1", short: "R1", position: "Response" },
-    ],
-  },
-  {
-    group: "Venue Operations",
-    positions: [
-      { id: "dm", callsign: "DELTA MIKE", short: "DM", position: "Duty Manager" },
-      { id: "pm", callsign: "PAPA MIKE", short: "PM", position: "Production Manager" },
-    ],
-  },
-  {
-    group: "Medical",
-    positions: [
-      { id: "medic1", callsign: "MEDIC 1", short: "M1", position: "Medic" },
-      { id: "medic2", callsign: "MEDIC 2", short: "M2", position: "Medic" },
-    ],
-  },
-  {
-    group: "Traffic Management",
-    positions: [
-      { id: "tm1", callsign: "TM 1", short: "TM1", position: "Traffic Management" },
-    ],
-  },
-];
 
 function getNewId() {
   return `id_${Math.random().toString(36).substr(2, 9)}`;
@@ -132,11 +75,19 @@ type StaffForm = {
   active: boolean;
 };
 
+// Move this to the top of the file, above CallsignAssignmentView:
+
+type Category = {
+  id: number;
+  name: string;
+  color: string;
+  positions: any[];
+};
+
 export default function StaffCommandCentre() {
   const [activeView, setActiveView] = useState('callsign');
-  const [groups, setGroups] = useState(initialGroups);
   const [currentName, setCurrentName] = useState("");
-  const [assignments, setAssignments] = useState<{ [key: string]: string }>({});
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [editGroup, setEditGroup] = useState<string | null>(null);
   const [editPositions, setEditPositions] = useState<any[]>([]);
   const [newRole, setNewRole] = useState({ callsign: "", short: "", position: "" });
@@ -149,6 +100,47 @@ export default function StaffCommandCentre() {
   const [search, setSearch] = useState("");
   const [previousNames, setPreviousNames] = useState<Record<string, string[]>>({});
   const [allPreviousNames, setAllPreviousNames] = useState<string[]>([]);
+  const [positions, setPositions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!eventId) return;
+    setLoading(true);
+    setError(null);
+
+    const fetchData = async () => {
+      try {
+        const { data: posData, error: posError } = await supabase
+          .from('callsign_positions')
+          .select('*')
+          .eq('event_id', eventId);
+        if (posError) throw posError;
+
+        const { data: assignData, error: assignError } = await supabase
+          .from('callsign_assignments')
+          .select('*');
+        if (assignError) throw assignError;
+
+        setPositions(posData || []);
+        setAssignments(assignData || []);
+      } catch (err) {
+        setError((err as any).message || 'Error loading data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [eventId]);
+
+  // Group positions by area for display
+  const groupedByArea = positions.reduce((acc: Record<string, any[]>, pos: any) => {
+    const area = pos.area || "Uncategorized";
+    if (!acc[area]) acc[area] = [];
+    acc[area].push(pos);
+    return acc;
+  }, {});
 
   // Fetch current event on mount
   useEffect(() => {
@@ -180,63 +172,7 @@ export default function StaffCommandCentre() {
     };
     fetchCurrentEvent();
   }, []);
-
-  // Load roles and assignments from Supabase when eventId changes
-  useEffect(() => {
-    if (!eventId) return;
-    const loadRolesAndAssignments = async () => {
-      setSaveStatus("Loading saved callsigns...");
-      // Load roles
-      const { data: roles, error: rolesError } = await supabase
-        .from("callsign_roles")
-        .select("id, area, short_code, callsign, position")
-        .eq("event_id", eventId);
-      // Debug log
-      console.log('Loaded roles from Supabase:', roles);
-      if (rolesError) {
-        setSaveStatus("Error loading saved data");
-        return;
-      }
-      if (roles && roles.length > 0) {
-        // Group roles by area
-        const grouped: typeof groups = [];
-        const areaMap: Record<string, any[]> = {};
-        roles.forEach((r) => {
-          if (!areaMap[r.area]) areaMap[r.area] = [];
-          areaMap[r.area].push({
-            id: r.id,
-            callsign: r.callsign,
-            short: r.short_code,
-            position: r.position,
-          });
-        });
-        for (const area in areaMap) {
-          grouped.push({ group: area, positions: areaMap[area] });
-        }
-        console.log('Grouped roles for UI:', grouped);
-        setGroups(grouped);
-      } else {
-        setGroups(initialGroups);
-      }
-      if (assignments && Object.keys(assignments).length > 0) {
-        // Map assignments by callsign_role_id
-        const assignMap: Record<string, string> = {};
-        Object.entries(assignments).forEach(([callsign_role_id, assigned_name]) => {
-          if (assigned_name) { // Only add if assigned_name exists
-            assignMap[callsign_role_id] = assigned_name;
-          }
-        });
-        // End of Selection
-        setAssignments(assignMap);
-      } else {
-        // End of Selection
-        setAssignments({});
-      }
-      setSaveStatus(null);
-    };
-    loadRolesAndAssignments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId]);
+  
 
   // Fetch previous unique names for each callsign_role_id (excluding current event)
   useEffect(() => {
@@ -305,11 +241,6 @@ export default function StaffCommandCentre() {
     setNewRole({ callsign: "", short: "", position: "" });
   };
 
-  const handleSaveEdit = () => {
-    setGroups(groups.map((g) => (g.group === editGroup ? { ...g, positions: editPositions } : g)));
-    setEditGroup(null);
-    setEditPositions([]);
-  };
 
   // Save all roles and assignments to Supabase
   const handleSaveAll = async () => {
@@ -327,7 +258,6 @@ export default function StaffCommandCentre() {
         group.positions.map(pos => {
           const base = {
             event_id: eventId,
-            area: group.group,
             short_code: pos.short,
             callsign: pos.callsign,
             position: pos.position,
@@ -358,7 +288,6 @@ export default function StaffCommandCentre() {
       const idMap: Record<string, string> = {};
       upsertedRoles?.forEach((r: any) => {
         const match = groups
-          .find(g => g.group === r.area)
           ?.positions.find(
             p =>
               p.callsign === r.callsign &&
@@ -386,19 +315,7 @@ export default function StaffCommandCentre() {
     }
   };
 
-  // Filtered groups based on search
-  const filteredGroups = groups.map(group => ({
-    ...group,
-    positions: group.positions.filter(pos => {
-      const searchLower = search.toLowerCase();
-      return (
-        // removed pos.name, only use assignments for assigned status
-        pos.position?.toLowerCase().includes(searchLower) ||
-        pos.callsign?.toLowerCase().includes(searchLower) ||
-        pos.short?.toLowerCase().includes(searchLower)
-      );
-    })
-  })).filter(group => group.positions.length > 0);
+ 
 
   // Status color helper
   const getStatusColor = (pos: any) => {
@@ -467,22 +384,22 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
   ];
 
-  type Position = { 
+  type Position = {
     id: string;
-    callsign: string; 
+    callsign: string;
     position: string;
     short?: string;
-    assignedStaff?: string;
+    post?: string;
     required?: boolean;
-    role?: string; // add this
-    post?: string; // add this
+    assignedStaff?: string | null;
+    skills_required?: string[];
   };
   
-  type Category = { 
+  type Category = {
     id: number;
-    name: string; 
+    name: string;
     color: string;
-    positions: Position[] 
+    positions: Position[];
   };
 
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
@@ -586,56 +503,129 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         )
   })).filter(category => category.positions.length > 0 || globalSearch === '');
 
-  // Assign staff to position
-  const assignStaff = (categoryId: number, positionId: string, staffId: string) => {
-    setCategories(prev => {
-      const updated = prev.map(cat => 
-        cat.id === categoryId 
-          ? {
-              ...cat,
-              positions: cat.positions.map(pos => 
-                pos.id === positionId 
-                  ? { ...pos, assignedStaff: staffId }
-                  : pos
-              )
-            }
-            : cat
-        );
-      console.log('[assignStaff] updated categories:', updated);
-      return updated;
+  // Define fetchRoles as a standalone function inside CallsignAssignmentView
+  async function fetchRoles() {
+    if (!eventId) return;
+    // Fetch roles
+    const { data: roles, error } = await supabase
+      .from('callsign_positions')
+      .select('id, area, short_code, callsign, position, post, required, skills_required')
+      .eq('event_id', eventId);
+    if (error) {
+      console.error('Error fetching roles:', error);
+      return;
+    }
+    // Fetch assignments
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('callsign_assignments')
+      .select('id, callsign_role_id, staff_id, staff_name, event_id')
+      .eq('event_id', eventId);
+    if (assignmentsError) {
+      console.error('Error fetching assignments:', assignmentsError);
+      return;
+    }
+    // Debug: print all area and category names
+    console.log('All role.area values:', roles.map(r => r.area));
+    console.log('All category.name values:', defaultCategories.map(c => c.name));
+    // Build assignment map
+    const assignmentMap: Record<string, string | null> = {};
+    assignments?.forEach(a => {
+      assignmentMap[String(a.callsign_role_id)] = a.staff_name || null;
     });
+    // Map roles to categories using robust partial match
+    const newCategories: Category[] = defaultCategories.map(cat => ({ ...cat, positions: [] as Position[] }));
+    roles.forEach(role => {
+      const roleArea = (role.area || '').replace(/\s+/g, '').toLowerCase();
+      const cat = newCategories.find(c => {
+        const catName = c.name.replace(/\s+/g, '').toLowerCase();
+        return catName.includes(roleArea) || roleArea.includes(catName);
+      });
+      if (cat) {
+        cat.positions.push({
+          id: String(role.id),
+          callsign: role.callsign,
+          position: role.position,
+          short: role.short_code,
+          post: role.post,
+          required: role.required,
+          assignedStaff: assignmentMap[String(role.id)] || null,
+          skills_required: role.skills_required || [],
+        });
+      } else {
+        console.warn('Unmatched role area:', role.area, role);
+      }
+    });
+    console.log('Final categories state before setCategories:', newCategories);
+    setCategories(newCategories);
+  }
+
+  // Update assignStaff, unassignStaff, and addPosition to use fetchRoles
+  const assignStaff = async (categoryId: number, positionId: string, staffId: string) => {
+    if (!eventId) return;
+    await supabase.from('callsign_assignments').upsert({
+      event_id: eventId,
+      callsign_role_id: positionId,
+      assigned_name: staffList.find(s => s.id === staffId)?.name || '',
+      position_id: positionId,
+      user_id: staffId,
+      assigned_at: new Date().toISOString(),
+      unassigned_at: null,
+    }, { onConflict: 'position_id' });
+    await fetchRoles();
     setPendingChanges(true);
   };
 
-  // Unassign staff from position
-  const unassignStaff = (categoryId: number, positionId: string) => {
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
-        ? {
-            ...cat,
-            positions: cat.positions.map(pos => 
-              pos.id === positionId 
-                ? { ...pos, assignedStaff: undefined }
-                : pos
-            )
-          }
-        : cat
-    ));
+  const unassignStaff = async (categoryId: number, positionId: string) => {
+    if (!eventId) return;
+    await supabase.from('callsign_assignments').update({
+      unassigned_at: new Date().toISOString(),
+    }).eq('position_id', positionId);
+    await fetchRoles();
     setPendingChanges(true);
   };
 
-  // Add new position
-  const addPosition = (categoryId: number, position: Omit<Position, 'id'>) => {
-    const newPosition = {
-      ...position,
-      id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-    
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, positions: [...cat.positions, newPosition] }
+  const addPosition = async (categoryId: number, position: Omit<Position, 'id'> & { quantity?: number }) => {
+    const quantity = position.quantity && position.quantity > 1 ? position.quantity : 1;
+    let baseCallsign = position.callsign;
+    let baseShort = position.short || baseCallsign;
+    let match = baseCallsign.match(/^(.*?)(\d+)$/);
+    let prefix = match ? match[1] : baseCallsign;
+    let startNum = match ? parseInt(match[2], 10) : 1;
+
+    const newPositions = Array.from({ length: quantity }, (_, i) => {
+      let callsign = quantity > 1 ? `${prefix}${startNum + i}` : baseCallsign;
+      let short = quantity > 1 ? `${prefix}${startNum + i}` : baseShort;
+      return {
+        ...position,
+        callsign,
+        short,
+        id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        skills_required: position.skills_required || [],
+      };
+    });
+
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, positions: [...cat.positions, ...newPositions] }
         : cat
     ));
+    setPendingChanges(true);
+    // Save to Supabase
+    if (!eventId) return;
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+    const rolesToInsert = newPositions.map(pos => ({
+      event_id: eventId,
+      area: category.name,
+      short_code: pos.short,
+      callsign: pos.callsign,
+      position: pos.position || '',
+      post: pos.post || '',
+      required: pos.required ?? false,
+      skills_required: pos.skills_required || [],
+    }));
+    await supabase.from('callsign_positions').upsert(rolesToInsert, { onConflict: 'event_id,area,short_code' });
+    await fetchRoles();
     setPendingChanges(true);
   };
 
@@ -683,7 +673,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     try {
       // Fetch existing roles for this event
       const { data: existingRoles, error: fetchError } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, area, short_code')
         .eq('event_id', eventId);
       if (fetchError) throw fetchError;
@@ -692,7 +682,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         roleIdMap.set(`${role.area}|${role.short_code}`, role.id);
       });
 
-      // 1. Upsert all positions (callsign_roles)
+      // 1. Upsert all positions (callsign_positions)
       const roles = categories.flatMap(category =>
         category.positions.map(pos => {
           const key = `${category.name}|${pos.short || pos.callsign}`;
@@ -702,8 +692,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             area: category.name,
             short_code: pos.short || pos.callsign,
             callsign: pos.callsign,
-            position: pos.role || pos.position || '', // always set
-            post: pos.post || '',                     // always set
+            position: pos.position || '',
+            post: pos.post || '',
             required: pos.required ?? false,
           };
         })
@@ -719,7 +709,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       const uniqueRoles = Array.from(uniqueRolesMap.values());
 
       // Upsert roles with correct conflict target
-      const { error: rolesError } = await supabase.from('callsign_roles').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
+      const { error: rolesError } = await supabase.from('callsign_positions').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
       uniqueRoles.forEach(role => {
@@ -736,7 +726,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       if (assignmentsArr.length > 0) {
         const { error: assignError } = await supabase
           .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
+          .upsert(assignmentsArr, { onConflict: "event_id,position_id,user_id" });
         if (assignError) throw assignError;
       }
       alert("Assignments and roles saved successfully.");
@@ -759,6 +749,23 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Add debug logs outside JSX
   console.log('Rendering debug panel');
   console.log('Rendering AddPositionModal');
+
+  // Add debug log to see categories at render time
+  console.log('Rendering categories:', categories);
+
+  // Add debug log to see categories and positions at render time
+  categories.forEach(cat => {
+    console.log(`Category: ${cat.name}, Positions count: ${cat.positions.length}`, cat.positions);
+  });
+
+  // Inside CallsignAssignmentView, before return:
+  const allPositions = categories.flatMap(cat => cat.positions);
+  const groupedByArea = allPositions.reduce((acc: Record<string, any[]>, pos: any) => {
+    const area = pos.area || "Uncategorized";
+    if (!acc[area]) acc[area] = [];
+    acc[area].push(pos);
+    return acc;
+  }, {});
 
   return (
     <>
@@ -966,6 +973,18 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         onEdit={editCategory}
         onDelete={deleteCategory}
       />
+      <div>
+        {Object.entries(groupedByArea).map(([area, areaPositions]) => (
+          <div key={area}>
+            <h2>{area}</h2>
+            <ul>
+              {(areaPositions as any[]).map((pos: any) => (
+                <li key={pos.id}>{pos.callsign}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </>
   );
 }
@@ -1029,9 +1048,12 @@ function PositionCard({
 
   // Only show staff with the required skill for this position
   const eligibleStaff = React.useMemo(() => {
-    if (!position.role) return unassignedStaff;
-    return unassignedStaff.filter(staff => Array.isArray(staff.skills) && staff.skills.includes(position.role));
-  }, [unassignedStaff, position.role]);
+    if (!Array.isArray(position.skills_required) || position.skills_required.length === 0) return unassignedStaff;
+    return unassignedStaff.filter(staff =>
+      Array.isArray(staff.skills) &&
+      position.skills_required.every((req: string) => staff.skills.includes(req))
+    );
+  }, [unassignedStaff, position.skills_required]);
 
   // Dropdown menu element
   const dropdownMenu = dropdownPos && showAssignMenu ? (
@@ -1172,7 +1194,9 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
     role: '',
     post: '',
     categoryId: selectedCategory || categories[0]?.id || 1,
-    required: false
+    required: false,
+    quantity: 1,
+    skills_required: [] as string[],
   });
 
   useEffect(() => {
@@ -1188,9 +1212,11 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
         callsign: formData.callsign.trim(),
         role: formData.role.trim(),
         post: formData.post.trim(),
-        required: formData.required
+        required: formData.required,
+        quantity: formData.quantity,
+        skills_required: formData.skills_required,
       });
-      setFormData({ callsign: '', role: '', post: '', categoryId: categories[0]?.id || 1, required: false });
+      setFormData({ callsign: '', role: '', post: '', categoryId: categories[0]?.id || 1, required: false, quantity: 1, skills_required: [] });
       onClose();
     }
   };
@@ -1274,6 +1300,39 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
             <label htmlFor="required" className="text-sm text-gray-700 dark:text-gray-200">
               Critical position (must be filled)
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Quantity
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={e => setFormData(prev => ({ ...prev, quantity: Math.max(1, Number(e.target.value)) }))}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Required Skills
+            </label>
+            <select
+              multiple
+              value={formData.skills_required}
+              onChange={e => {
+                const options = Array.from(e.target.selectedOptions).map(o => o.value);
+                setFormData(prev => ({ ...prev, skills_required: options }));
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {SKILL_OPTIONS.map(skill => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -1380,19 +1439,26 @@ function StaffListView() {
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('*')
+        .select('id, full_name, skill_tags, notes, active')
         .eq('company_id', userCompanyId)
+        .eq('active', true)
         .order('full_name');
       
-      if (error) {
-        console.error('Error fetching staff:', error);
-        setStaff([]);
-      } else {
-    setStaff(data || []);
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching staff:', err);
-      setStaff([]);
+      if (error) throw error;
+
+      const formattedStaff = data?.map(staff => ({
+        id: staff.id,
+        name: staff.full_name,
+        role: staff.skill_tags?.[0] || 'Staff Member',
+        skills: staff.skill_tags || [],
+        avatar: '👤'
+      })) || [];
+
+      setStaff(formattedStaff);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+    } finally {
+      setLoadingStaff(false);
     }
   }
 
@@ -1993,3 +2059,83 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
     </div>
   );
 } 
+
+// --- Modal Components for Callsign Assignment (new schema) ---
+
+function PositionModal({ position, onSave, onClose }: {
+  position: any;
+  onSave: (data: any) => void;
+  onClose: () => void;
+}) {
+  const [callsign, setCallsign] = useState(position?.callsign || '');
+  const [area, setArea] = useState(position?.area || '');
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        <h2>{position ? 'Edit Position' : 'Add Position'}</h2>
+        <input value={callsign} onChange={e => setCallsign(e.target.value)} placeholder="Callsign" />
+        <input value={area} onChange={e => setArea(e.target.value)} placeholder="Area/Department" />
+        <div style={{ marginTop: 16 }}>
+          <button onClick={() => onSave({ id: position?.id, callsign, area })} disabled={!callsign || !area}>Save</button>
+          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteModal({ position, onDelete, onClose }) {
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        <h2>Delete Position</h2>
+        <p>Are you sure you want to delete <b>{position.callsign}</b>?</p>
+        <div style={{ marginTop: 16 }}>
+          <button onClick={onDelete} style={{ color: 'red' }}>Delete</button>
+          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Fix AssignModal prop types
+function AssignModal({ position, currentUserId, onAssign, onUnassign, onClose, staff }: {
+  position: any;
+  currentUserId: string;
+  onAssign: (id: string) => void;
+  onUnassign: () => void;
+  onClose: () => void;
+  staff: any[];
+}) {
+  const [selected, setSelected] = useState(currentUserId || '');
+  return (
+    <div className="modal-bg">
+      <div className="modal">
+        <h2>Assign Staff to {position.callsign}</h2>
+        <select value={selected} onChange={e => setSelected(e.target.value)}>
+          <option value="">Select staff...</option>
+          {staff.map(s => (
+            <option key={s.id} value={s.id}>{s.full_name || s.id}</option>
+          ))}
+        </select>
+        <div style={{ marginTop: 16 }}>
+          <button onClick={() => { if (selected) onAssign(selected); }} disabled={!selected}>Assign</button>
+          {currentUserId && <button onClick={onUnassign} style={{ marginLeft: 8 }}>Unassign</button>}
+          <button onClick={onClose} style={{ marginLeft: 8 }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Minimal modal styles ---
+<style jsx>{`
+  .modal-bg {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 24px; min-width: 300px; box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  }
+`}</style>
