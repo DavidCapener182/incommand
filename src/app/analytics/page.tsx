@@ -934,14 +934,7 @@ export default function AnalyticsPage() {
       trendDirection = (['up', 'down', 'flat'].includes(trendObj.direction) ? trendObj.direction : 'flat') as 'up' | 'down' | 'flat';
     }
     // Ensure value is string or number (never null)
-    let safeValue: string | number = kpi.value;
-    if (typeof safeValue === 'number') {
-      // ok
-    } else if (typeof safeValue === 'string') {
-      // ok
-    } else {
-      safeValue = '';
-    }
+    let safeValue: string | number = kpi.value === null ? '' : kpi.value;
     return {
       ...kpi,
       value: safeValue,
