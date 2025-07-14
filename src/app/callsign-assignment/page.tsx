@@ -126,6 +126,9 @@ export default function StaffCommandCentre() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [loadingStaff, setLoadingStaff] = useState(true);
 
   useEffect(() => {
     if (!eventId) return;
@@ -352,7 +355,7 @@ export default function StaffCommandCentre() {
   const assignedStaffIds = categories.flatMap((cat: Category) =>
     (cat.positions as Position[]).map((pos: Position) => pos.assignedStaff?.toString()).filter(Boolean)
   );
-  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id.toString()));
+  const unassignedStaff = staff.filter((staff: any) => !assignedStaffIds.includes(staff.id.toString()));
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
@@ -430,9 +433,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-
-  // Real staff data from Supabase
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [loadingStaff, setLoadingStaff] = useState(true);
 
@@ -495,7 +496,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         avatar: '👤'
       })) || [];
 
-      setStaffList(formattedStaff);
+      setStaff(formattedStaff);
     } catch (error) {
       console.error("Error fetching staff:", error);
     } finally {
@@ -508,7 +509,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     (cat.positions as Position[]).map((pos: Position) => pos.assignedStaff?.toString()).filter(Boolean)
   );
 
-  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id.toString()));
+  const unassignedStaff = staff.filter((staff: any) => !assignedStaffIds.includes(staff.id.toString()));
   // End of Selection
 
   // Filter positions based on global search
@@ -519,7 +520,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       : category.positions.filter(position => 
           position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
           position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
-          (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
+          (position.assignedStaff && staff.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
         )
   })).filter(category => category.positions.length > 0 || globalSearch === '');
 
@@ -585,7 +586,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     await supabase.from('callsign_assignments').upsert({
       event_id: eventId,
       callsign_role_id: positionId,
-      assigned_name: staffList.find(s => s.id === staffId)?.name || '',
+      assigned_name: staff.find(s => s.id === staffId)?.name || '',
       position_id: positionId,
       user_id: staffId,
       assigned_at: new Date().toISOString(),
@@ -925,7 +926,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
                     {category.positions.map((position) => {
                       const assignedStaff = position.assignedStaff 
-                        ? staffList.find(s => s.id === position.assignedStaff)
+                        ? staff.find(s => s.id === position.assignedStaff)
                         : null;
 
                 return (
