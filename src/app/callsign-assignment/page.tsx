@@ -300,11 +300,11 @@ export default function StaffCommandCentre() {
       const idMap: Record<string, string> = {};
       upsertedRoles?.forEach((r: any) => {
         const match = categories
-          ?.positions.find(
-            p =>
-              p.callsign === r.callsign &&
-              p.short === r.short_code &&
-              p.position === r.position
+          .flatMap((cat: Category) => cat.positions)
+          .find((p: Position) =>
+            p.callsign === r.callsign &&
+            p.short === r.short_code &&
+            p.position === r.position
           );
         if (match) idMap[match.id] = r.id;
       });
@@ -547,12 +547,12 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     const newCategories: Category[] = defaultCategories.map(cat => ({ ...cat, positions: [] as Position[] }));
     roles.forEach(role => {
       const roleArea = (role.area || '').replace(/\s+/g, '').toLowerCase();
-      const cat = newCategories.find(c => {
-        const catName = c.name.replace(/\s+/g, '').toLowerCase();
+      const category = newCategories.find(cat => {
+        const catName = cat.name.replace(/\s+/g, '').toLowerCase();
         return catName.includes(roleArea) || roleArea.includes(catName);
       });
-      if (cat) {
-        cat.positions.push({
+      if (category) {
+        category.positions.push({
           id: String(role.id),
           callsign: role.callsign,
           position: role.position,
