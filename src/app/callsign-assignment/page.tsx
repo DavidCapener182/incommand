@@ -348,6 +348,12 @@ export default function StaffCommandCentre() {
     return "bg-gray-300"; // unassigned
   };
 
+  // Inside the main component, after categories is defined:
+  const assignedStaffIds = categories.flatMap((cat: Category) =>
+    (cat.positions as Position[]).map((pos: Position) => pos.assignedStaff?.toString()).filter(Boolean)
+  );
+  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id.toString()));
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
       {/* Sidebar - pixel-perfect match to settings sidebar */}
@@ -423,6 +429,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   const [pendingChanges, setPendingChanges] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // Real staff data from Supabase
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -497,11 +504,12 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   }
 
   // Get assigned staff IDs
-  const assignedStaffIds = categories.flatMap(cat => 
-    cat.positions.map(pos => pos.assignedStaff).filter(Boolean)
+  const assignedStaffIds = categories.flatMap((cat: Category) =>
+    (cat.positions as Position[]).map((pos: Position) => pos.assignedStaff?.toString()).filter(Boolean)
   );
 
-  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id));
+  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id.toString()));
+  // End of Selection
 
   // Filter positions based on global search
   const filteredCategories = categories.map(category => ({
@@ -1403,6 +1411,7 @@ function StaffListView() {
   });
   const [staff, setStaff] = useState<any[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [loadingStaff, setLoadingStaff] = useState(false);
   // Sorting and filtering state
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<'full_name' | 'active' | 'skills'>('full_name');
@@ -1448,6 +1457,7 @@ function StaffListView() {
       return;
     }
     
+    setLoadingStaff(true);
     try {
       const { data, error } = await supabase
         .from('staff')
@@ -2096,7 +2106,8 @@ function PositionModal({ position, onSave, onClose }: {
   );
 }
 
-function DeleteModal({ position, onDelete, onClose }) {
+function DeleteModal(props: { position: any; onDelete: () => void; onClose: () => void; }) {
+  const { position, onDelete, onClose } = props;
   return (
     <div className="modal-bg">
       <div className="modal">
