@@ -84,6 +84,16 @@ type Category = {
   positions: any[];
 };
 
+// 1. Move defaultCategories definition to the top of the file
+const defaultCategories: Category[] = [
+  { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
+  { id: 2, name: 'Internal Security', color: 'bg-blue-400', positions: [] },
+  { id: 3, name: 'External Security', color: 'bg-green-400', positions: [] },
+  { id: 4, name: 'Venue Operations', color: 'bg-orange-400', positions: [] },
+  { id: 5, name: 'Medical & Welfare', color: 'bg-red-400', positions: [] },
+  { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
+];
+
 export default function StaffCommandCentre() {
   const [activeView, setActiveView] = useState('callsign');
   const [currentName, setCurrentName] = useState("");
@@ -103,6 +113,7 @@ export default function StaffCommandCentre() {
   const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
 
   useEffect(() => {
     if (!eventId) return;
@@ -254,10 +265,11 @@ export default function StaffCommandCentre() {
       // Helper to check for valid UUID
       const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
       // Flatten roles for upsert
-      const roles = categories.flatMap(category =>
-        category.positions.map(pos => {
+      const roles = categories.flatMap((category: Category) =>
+        category.positions.map((pos: any) => {
           const base = {
             event_id: eventId,
+            area: category.name,
             short_code: pos.short,
             callsign: pos.callsign,
             position: pos.position,
@@ -375,7 +387,7 @@ export default function StaffCommandCentre() {
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   console.log('CallsignAssignmentView mounted');
   // Default categories with better structure
-  const defaultCategories = [
+  const defaultCategories: Category[] = [
     { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
     { id: 2, name: 'Internal Security', color: 'bg-blue-400', positions: [] },
     { id: 3, name: 'External Security', color: 'bg-green-400', positions: [] },
@@ -402,7 +414,6 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     positions: Position[];
   };
 
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [globalSearch, setGlobalSearch] = useState('');
   const [showAddPositionModal, setShowAddPositionModal] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
@@ -683,8 +694,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       });
 
       // 1. Upsert all positions (callsign_positions)
-      const roles = categories.flatMap(category =>
-        category.positions.map(pos => {
+      const roles = categories.flatMap((category: Category) =>
+        category.positions.map((pos: any) => {
           const key = `${category.name}|${pos.short || pos.callsign}`;
           return {
             id: roleIdMap.get(key) || uuidv4(),
@@ -754,7 +765,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   console.log('Rendering categories:', categories);
 
   // Add debug log to see categories and positions at render time
-  categories.forEach(cat => {
+  categories.forEach((cat: Category) => {
     console.log(`Category: ${cat.name}, Positions count: ${cat.positions.length}`, cat.positions);
   });
 
