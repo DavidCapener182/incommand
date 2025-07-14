@@ -786,6 +786,12 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     return acc;
   }, {});
 
+  // At the top of CallsignAssignmentView, after state definitions:
+  const mergedCategories: Category[] = defaultCategories.map(defaultCat => {
+    const found = categories.find(cat => cat.id === defaultCat.id);
+    return found ? { ...defaultCat, positions: found.positions } : defaultCat;
+  });
+
   return (
     <>
       {/* ... existing JSX ... */}
@@ -868,7 +874,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
 
         {/* Department Cards */}
         <div className="space-y-3">
-          {categories.map((category: Category) => (
+          {mergedCategories.map((category: Category) => (
             <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200" style={{ overflow: 'visible' }}>
               {/* Department Header - Made Much Smaller */}
               <div className={`${category.color} px-4 py-2`}>
@@ -962,7 +968,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
           setShowAddPositionModal(false);
           setSelectedCategory(null);
         }}
-        categories={categories}
+        categories={mergedCategories}
         selectedCategory={selectedCategory}
         onAdd={addPosition}
       />
