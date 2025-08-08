@@ -452,12 +452,12 @@ export default function StaffCommandCentre() {
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Default categories with better structure
   const defaultCategories = [
-    { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
-    { id: 2, name: 'Internal Security', color: 'bg-blue-400', positions: [] },
-    { id: 3, name: 'External Security', color: 'bg-green-400', positions: [] },
-    { id: 4, name: 'Venue Operations', color: 'bg-orange-400', positions: [] },
-    { id: 5, name: 'Medical & Welfare', color: 'bg-red-400', positions: [] },
-    { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
+    { id: 1, name: 'Management', color: 'bg-gradient-to-r from-purple-500 to-purple-600', positions: [] },
+    { id: 2, name: 'Internal Security', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
+    { id: 3, name: 'External Security', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
+    { id: 4, name: 'Venue Operations', color: 'bg-gradient-to-r from-orange-500 to-orange-600', positions: [] },
+    { id: 5, name: 'Medical & Welfare', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
+    { id: 6, name: 'Traffic & Logistics', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
   ];
 
   type Position = { 
@@ -869,50 +869,50 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Sticky Header with Search */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold">📋</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#101c36] dark:to-[#1a2a57] transition-colors duration-300">
+      {/* Enhanced Sticky Header with Search */}
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm border-b border-gray-200 dark:border-[#2d437a] shadow-lg">
+        <div className="px-6 py-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-lg">📋</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-300">Manage staff assignments and callsigns</p>
               </div>
             </div>
             
-            {/* Search Bar */}
-            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-96">
+            {/* Enhanced Search Bar */}
+            <div className="flex items-center gap-4 flex-1 lg:flex-none lg:w-96">
               <div className="relative flex-1">
-        <input
-          type="text"
+                <input
+                  type="text"
                   placeholder="Search by callsign, role, or staff name..."
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200"
                 />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-      </div>
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            {/* Enhanced Action Buttons */}
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowAddCategoryModal(true)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-lg transition-colors"
+                className="px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 + Department
               </button>
               <button
                 onClick={() => setShowAddPositionModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded-lg transition-colors"
+                className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 + Position
               </button>
@@ -921,95 +921,125 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         </div>
       </div>
 
-      <div className="px-4 py-4">
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {categories.reduce((sum, cat) => sum + cat.positions.length, 0)}
+      <div className="px-6 py-6">
+        {/* Enhanced Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {categories.reduce((sum, cat) => sum + cat.positions.length, 0)}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-300">Total Positions</div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                <span className="text-blue-600 dark:text-blue-200 text-xl">📊</span>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Total Positions</div>
           </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {assignedCount}
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {assignedCount}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-300">Assigned</div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-green-100 dark:bg-green-800 flex items-center justify-center">
+                <span className="text-green-600 dark:text-green-200 text-xl">✅</span>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Assigned</div>
           </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {categories.reduce((sum, cat) => sum + cat.positions.length, 0) - assignedCount}
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                  {categories.reduce((sum, cat) => sum + cat.positions.length, 0) - assignedCount}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-300">Vacant</div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-orange-100 dark:bg-orange-800 flex items-center justify-center">
+                <span className="text-orange-600 dark:text-orange-200 text-xl">⚠️</span>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Vacant</div>
           </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {unassignedStaff.length}
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {unassignedStaff.length}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-300">Available Staff</div>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+                <span className="text-blue-600 dark:text-blue-200 text-xl">👥</span>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Available Staff</div>
           </div>
         </div>
 
-        {/* Available Staff Section */}
-        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 mb-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex items-center justify-between mb-3">
+        {/* Enhanced Available Staff Section */}
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Available Staff</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-300"> Assign staff to open positions</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Available Staff</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-300">Assign staff to open positions</p>
             </div>
-            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1 rounded-full font-medium">
+            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-4 py-2 rounded-full font-medium">
               {unassignedStaff.length} available
             </span>
           </div>
           
           {unassignedStaff.length === 0 ? (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              <div className="text-lg mb-1">👥</div>
-              <div className="font-medium text-sm mb-1">All staff assigned</div>
-              <div className="text-xs">Great job! All available staff have been assigned to positions.</div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-4xl mb-3">🎉</div>
+              <div className="font-medium text-lg mb-2">All staff assigned</div>
+              <div className="text-sm">Great job! All available staff have been assigned to positions.</div>
             </div>
-          ) :
-            <div className="flex flex-wrap gap-2">
+          ) : (
+            <div className="flex flex-wrap gap-3">
               {unassignedStaff.map(staff => (
-                <div key={staff.id} className="bg-gray-100 dark:bg-[#182447] px-3 py-1 rounded-full text-sm font-medium text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-[#2d437a] cursor-pointer select-none">
+                <div key={staff.id} className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 px-4 py-2 rounded-xl text-sm font-medium text-gray-900 dark:text-gray-100 border border-blue-200 dark:border-blue-700 cursor-pointer select-none hover:shadow-md transition-all duration-200">
                   {staff.full_name}
                 </div>
               ))}
             </div>
-          }
+          )}
         </div>
 
-        {/* Department Cards */}
-        <div className="space-y-3">
+        {/* Enhanced Department Cards */}
+        <div className="space-y-6">
           {filteredCategories.map((category) => (
-            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              {/* Department Header - Made Much Smaller */}
-              <div className={`${category.color} px-4 py-2`}>
+            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              {/* Enhanced Department Header */}
+              <div className={`${category.color} px-6 py-4 shadow-lg`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-white">{category.name}</h2>
-                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-                      {category.positions.length} positions
-                    </span>
-                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-                      {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
-                    </span>
-                    {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
-                      <span className="bg-orange-200 text-orange-800 text-xs px-2 py-0.5 rounded-full font-semibold ml-2">
-                        {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-bold text-white">{category.name}</h2>
+                    <div className="flex gap-2">
+                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium backdrop-blur-sm">
+                        {category.positions.length} positions
                       </span>
-                    )}
+                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium backdrop-blur-sm">
+                        {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
+                      </span>
+                      {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
+                        <span className="bg-orange-200 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">
+                          {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-              <button
+                  <div className="flex items-center gap-2">
+                    <button
                       onClick={() => {
                         setEditingCategory(category);
                         setShowEditCategoryModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      className="text-white hover:bg-white/20 p-2 rounded-lg transition-all duration-200"
                       title="Edit Department"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
@@ -1018,27 +1048,27 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                         setSelectedCategory(category.id);
                         setShowAddPositionModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      className="text-white hover:bg-white/20 p-2 rounded-lg transition-all duration-200"
                       title="Add Position"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-              </button>
-            </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Positions Grid */}
-              <div className="p-3">
+              {/* Enhanced Positions Grid */}
+              <div className="p-6">
                 {category.positions.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                    <div className="text-2xl mb-1">📝</div>
-                    <div className="text-sm font-medium mb-1">No positions yet</div>
-                    <div className="text-xs">Click the + button above to add positions to this department</div>
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <div className="text-4xl mb-3">📝</div>
+                    <div className="text-lg font-medium mb-2">No positions yet</div>
+                    <div className="text-sm">Click the + button above to add positions to this department</div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     {category.positions.map((position) => {
                       const assignedStaff = position.assignedStaff 
                         ? staffList.find(s => s.id === position.assignedStaff)
@@ -1070,18 +1100,21 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         </div>
       </div>
 
-      {/* Fixed Save Bar */}
+      {/* Enhanced Fixed Save Bar */}
       {pendingChanges && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-            <span className="font-medium">You have unsaved changes</span>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span className="font-medium">You have unsaved changes</span>
+            </div>
             <button
               onClick={saveChanges}
-              className="bg-white text-blue-600 px-4 py-1 rounded font-medium hover:bg-gray-100 transition-colors"
+              className="bg-white text-blue-600 px-6 py-2 rounded-xl font-medium hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Save Changes
             </button>
-                    </div>
+          </div>
         </div>
       )}
 
@@ -1134,13 +1167,13 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       />
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Delete Position</h2>
             <p className="mb-6 text-gray-700 dark:text-gray-200">Are you sure you want to delete this position? This cannot be undone.</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={cancelDeletePosition} className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">Cancel</button>
-              <button onClick={confirmDeletePosition} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+            <div className="flex justify-end gap-3">
+              <button onClick={cancelDeletePosition} className="px-6 py-2 rounded-xl bg-gray-200 text-gray-800 hover:bg-gray-300 transition-all duration-200">Cancel</button>
+              <button onClick={confirmDeletePosition} className="px-6 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all duration-200">Delete</button>
             </div>
           </div>
         </div>
@@ -1210,81 +1243,116 @@ function PositionCard({
   const matchingStaff = getMatchingStaff(position);
 
   return (
-    <div className={`relative rounded-lg border transition-all duration-200 hover:shadow-lg ${
-      isAssigned ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
-    } ${isAssigned ? 'shadow-md' : 'hover:border-blue-300 dark:hover:border-blue-500'}`}>
-      {/* Status Indicator */}
-      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-        isAssigned ? 'bg-green-500' : 'bg-gray-400'
+    <div className={`relative rounded-2xl border-2 transition-all duration-300 hover:shadow-xl ${
+      isAssigned 
+        ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-700' 
+        : 'bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-blue-300 dark:hover:border-blue-500'
+    } ${isAssigned ? 'shadow-lg' : 'hover:shadow-xl'}`}>
+      {/* Enhanced Status Indicator */}
+      <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
+        isAssigned ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
       }`}>
         {isAssigned ? '✓' : '!'}
       </div>
-      {/* Edit/Delete Buttons */}
-      <div className="absolute top-1 right-7 flex gap-1 z-10">
-        <button onClick={onEdit} title="Edit position" className="p-1 text-gray-400 hover:text-blue-600">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" /></svg>
+      
+      {/* Enhanced Edit/Delete Buttons */}
+      <div className="absolute top-2 right-10 flex gap-1 z-10">
+        <button 
+          onClick={onEdit} 
+          title="Edit position" 
+          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" />
+          </svg>
         </button>
-        <button onClick={onDelete} title="Delete position" className="p-1 text-gray-400 hover:text-red-600">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <button 
+          onClick={onDelete} 
+          title="Delete position" 
+          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
-      <div className="p-2 flex flex-col gap-2">
-        {/* Role Badge Header */}
-        <div className="flex items-center gap-2 mb-1">
-          <span className="inline-block bg-white/80 dark:bg-[#23408e]/80 border border-gray-200 dark:border-[#2d437a] rounded px-2 py-0.5 text-xs font-bold text-gray-900 dark:text-white">
+      
+      <div className="p-4 flex flex-col gap-3">
+        {/* Enhanced Role Badge Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <span className="inline-block bg-white/90 dark:bg-[#23408e]/90 border-2 border-gray-200 dark:border-[#2d437a] rounded-xl px-3 py-1.5 text-sm font-bold text-gray-900 dark:text-white shadow-sm">
             {position.callsign}
           </span>
-          <span className="inline-block bg-gray-100 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-200">
+          <span className="inline-block bg-gray-100 dark:bg-[#182447] border-2 border-gray-200 dark:border-[#2d437a] rounded-xl px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm">
             {position.position}
           </span>
         </div>
-        {/* Assigned Staff or Name with Photo/Initials */}
+        
+        {/* Enhanced Assigned Staff or Name with Photo/Initials */}
         {isAssigned && (
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-3 mt-2">
             {assignedStaff && assignedStaff.photoUrl ? (
-              <img src={assignedStaff.photoUrl} alt={assignedStaff.full_name} className="h-8 w-8 rounded-full object-cover border border-gray-300" />
+              <img src={assignedStaff.photoUrl} alt={assignedStaff.full_name} className="h-10 w-10 rounded-full object-cover border-2 border-gray-300 shadow-md" />
             ) : assignedStaff ? (
-              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {(assignedStaff.full_name || '').split(' ').map((n: string) => n[0]).join('')}
               </div>
             ) : assignedName ? (
-              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {(assignedName || '').split(' ').map((n: string) => n[0]).join('')}
               </div>
             ) : null}
-            <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full font-medium">
+            <span className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800 dark:to-emerald-800 text-green-800 dark:text-green-200 text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm">
               {assignedStaff ? assignedStaff.full_name : assignedName}
             </span>
           </div>
         )}
-        {/* Vacant State: Subtle Placeholder and Assign Link */}
+        
+        {/* Enhanced Vacant State */}
         {isVacant && (
-          <div className="mt-2 flex flex-col items-center gap-2">
-            <span className="inline-block text-xs text-gray-400 mb-1">No one assigned</span>
+          <div className="mt-3 flex flex-col items-center gap-3">
+            <span className="inline-block text-sm text-gray-500 dark:text-gray-400 font-medium">No one assigned</span>
             <button
               ref={assignBtnRef}
-              className="text-blue-600 text-xs underline hover:text-blue-800 bg-transparent p-0 border-0 assign-btn"
+              className="text-blue-600 text-sm font-medium hover:text-blue-800 bg-transparent p-0 border-0 assign-btn hover:underline transition-all duration-200"
               onClick={() => setShowAssignMenu(v => !v)}
               type="button"
               style={{ minWidth: 0 }}
             >
-              Assign
+              Assign Staff
             </button>
             {showAssignMenu && dropdownPos && createPortal(
-              <div className="assign-dropdown-container" style={{position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999, background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', width: 192, padding: 8}}>
-                <div className="text-xs text-gray-700 dark:text-gray-200 mb-2">Select staff to assign:</div>
+              <div 
+                className="assign-dropdown-container" 
+                style={{
+                  position: 'fixed', 
+                  top: dropdownPos.top, 
+                  left: dropdownPos.left, 
+                  zIndex: 9999, 
+                  background: 'white', 
+                  border: '2px solid #e5e7eb', 
+                  borderRadius: 12, 
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)', 
+                  width: 220, 
+                  padding: 12,
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <div className="text-sm text-gray-700 dark:text-gray-200 mb-3 font-medium">Select staff to assign:</div>
                 {matchingStaff.length === 0 ? (
-                  <div className="text-xs text-gray-400">No available staff</div>
+                  <div className="text-sm text-gray-400 text-center py-4">No available staff</div>
                 ) : (
-                  matchingStaff.map(staff => (
-                    <button
-                      key={staff.id}
-                      className="block w-full text-left px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-xs text-gray-900 dark:text-gray-100"
-                      onClick={() => { onAssign(staff.id); setShowAssignMenu(false); }}
-                    >
-                      {staff.full_name}
-                    </button>
-                  ))
+                  <div className="max-h-48 overflow-y-auto">
+                    {matchingStaff.map(staff => (
+                      <button
+                        key={staff.id}
+                        className="block w-full text-left px-3 py-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 text-sm text-gray-900 dark:text-gray-100 transition-all duration-200"
+                        onClick={() => { onAssign(staff.id); setShowAssignMenu(false); }}
+                      >
+                        {staff.full_name}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>,
               document.body
@@ -1292,7 +1360,6 @@ function PositionCard({
           </div>
         )}
       </div>
-      {/* ...rest of card... */}
     </div>
   );
 }
