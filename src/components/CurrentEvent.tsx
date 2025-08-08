@@ -214,124 +214,146 @@ export default function CurrentEvent({
         <div className="px-5 py-4">
           {currentEvent ? (
             <div className="space-y-3">
+              {/* Header with event info */}
               <div className="flex items-start justify-between">
-              <div className="flex items-start">
+                <div className="flex items-start">
                   <span className="text-sm font-medium text-gray-500 w-24 pt-1 md:hidden">Event</span>
                   <span className="hidden md:inline text-sm font-medium text-gray-500 w-24 pt-1">Current Event</span>
-                <div>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white ml-2">
-                    {currentEvent.event_name}
-                  </span>
-                    <div className="hidden md:inline">
-                  {currentEvent.support_acts && (() => {
-                    let acts = currentEvent.support_acts;
-                    if (typeof acts === 'string') {
-                      try {
-                        acts = JSON.parse(acts);
-                      } catch {
-                        acts = [];
-                      }
-                    }
-                    return Array.isArray(acts) && acts.length > 0 ? (
-                    <span className="text-sm font-normal text-gray-500 dark:text-white ml-2">
-                        {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                  <div>
+                    <span className="text-base font-semibold text-gray-900 dark:text-white ml-2">
+                      {currentEvent.event_name}
                     </span>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-                </div>
-                <div className="md:hidden">
-                  {currentTime && (
-                    <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
-                  )}
-                </div>
-              </div>
-              <div className="hidden md:block">
-                <>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Venue</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Type</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.event_type}</span>
-              </div>
-              
-              {/* AI Insights - with navigation positioned at bottom of card */}
-              {aiInsights.length > 0 && (
-                <div className="mt-1 pt-1 border-t border-gray-100 pb-1">
-                  <div className="min-h-[115px] max-h-[115px] overflow-hidden">
-                    {aiLoading ? (
-                      <div className="animate-pulse space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-full"></div>
-                        <div className="h-3 bg-gray-200 rounded w-4/5"></div>
-                        <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                      </div>
-                    ) : aiError ? (
-                      <div className="pb-8">
-                        <h4 className="text-sm font-bold text-red-800 mb-2">System Error</h4>
-                        <div className="text-sm text-red-600 leading-relaxed">
-                          {aiError}
-                          <button 
-                            onClick={fetchAiInsights}
-                            className="ml-2 text-red-800 hover:text-red-900 underline"
-                          >
-                            Retry
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="pb-8">
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
-                          {aiInsights[currentInsightIndex]?.title}
-                        </h4>
-                        <div className="text-sm text-gray-700 dark:text-white leading-relaxed pr-1">
-                          {aiInsights[currentInsightIndex]?.content}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Navigation positioned at very bottom of entire card */}
-              {!aiLoading && aiInsights.length > 0 && (
-                <div className="absolute left-0 right-0 bottom-3 flex items-center justify-center">
-                  <div className="flex items-center space-x-2">
-                    {aiInsights.length > 1 && (
-                      <button
-                        onClick={goToPrevious}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        aria-label="Previous insight"
-                      >
-                        <ChevronLeftIcon className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
-                    <div className="flex space-x-1">
-                      {aiInsights.map((_, index) => (
-                        <div
-                          key={index}
-                          className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                            index === currentInsightIndex ? 'bg-[#2A3990]' : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
+                    <div className="hidden md:inline">
+                      {currentEvent.support_acts && (() => {
+                        let acts = currentEvent.support_acts;
+                        if (typeof acts === 'string') {
+                          try {
+                            acts = JSON.parse(acts);
+                          } catch {
+                            acts = [];
+                          }
+                        }
+                        return Array.isArray(acts) && acts.length > 0 ? (
+                          <span className="text-sm font-normal text-gray-500 dark:text-white ml-2">
+                            {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
-                    {aiInsights.length > 1 && (
-                      <button
-                        onClick={goToNext}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        aria-label="Next insight"
-                      >
-                        <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
                   </div>
                 </div>
-              )}
-                </>
+              </div>
+
+              {/* Desktop layout */}
+              <div className="hidden md:block">
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Venue</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Type</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.event_type}</span>
+                </div>
+                
+                {/* AI Insights */}
+                {aiInsights.length > 0 && (
+                  <div className="mt-1 pt-1 border-t border-gray-100 pb-1">
+                    <div className="min-h-[115px] max-h-[115px] overflow-hidden">
+                      {aiLoading ? (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-full"></div>
+                          <div className="h-3 bg-gray-200 rounded w-4/5"></div>
+                          <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        </div>
+                      ) : aiError ? (
+                        <div className="pb-8">
+                          <h4 className="text-sm font-bold text-red-800 mb-2">System Error</h4>
+                          <div className="text-sm text-red-600 leading-relaxed">
+                            {aiError}
+                            <button 
+                              onClick={fetchAiInsights}
+                              className="ml-2 text-red-800 hover:text-red-900 underline"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pb-8">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
+                            {aiInsights[currentInsightIndex]?.title}
+                          </h4>
+                          <div className="text-sm text-gray-700 dark:text-white leading-relaxed pr-1">
+                            {aiInsights[currentInsightIndex]?.content}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Navigation positioned at very bottom of entire card */}
+                {!aiLoading && aiInsights.length > 0 && (
+                  <div className="absolute left-0 right-0 bottom-3 flex items-center justify-center">
+                    <div className="flex items-center space-x-2">
+                      {aiInsights.length > 1 && (
+                        <button
+                          onClick={goToPrevious}
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                          aria-label="Previous insight"
+                        >
+                          <ChevronLeftIcon className="h-4 w-4 text-gray-500" />
+                        </button>
+                      )}
+                      <div className="flex space-x-1">
+                        {aiInsights.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                              index === currentInsightIndex ? 'bg-[#2A3990]' : 'bg-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {aiInsights.length > 1 && (
+                        <button
+                          onClick={goToNext}
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                          aria-label="Next insight"
+                        >
+                          <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile layout with improved positioning */}
+              <div className="md:hidden">
+                <div className="flex items-center mb-2">
+                  <span className="text-sm font-medium text-gray-500 dark:text-white w-16">Venue</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
+                </div>
+                <div className="flex items-center mb-3">
+                  <span className="text-sm font-medium text-gray-500 dark:text-white w-16">Type</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.event_type}</span>
+                </div>
+                
+                {/* Current time positioned at bottom left */}
+                {currentTime && (
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-2">🕐</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{currentTime}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400 mr-1">●</span>
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">Live</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

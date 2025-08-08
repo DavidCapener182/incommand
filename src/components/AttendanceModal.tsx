@@ -193,7 +193,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
@@ -206,18 +206,18 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-auto p-6">
+              <Dialog.Panel className="relative bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-5xl mx-auto p-6">
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="absolute top-4 right-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                   aria-label="Close"
                 >
-                  <span aria-hidden="true">&times;</span>
+                  <span aria-hidden="true" className="text-xl leading-none">×</span>
                 </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Attendance Timeline */}
-                  <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
-                    <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Timeline</h2>
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[360px] flex flex-col hover:shadow-lg transition-shadow duration-300">
+                    <h2 className="font-extrabold text-2xl mb-4 text-gray-900 tracking-tight">Attendance Timeline</h2>
                     <div className="flex-grow relative min-h-[220px]">
                       {loading ? (
                         <div className="text-center text-gray-500 py-10">Loading...</div>
@@ -229,8 +229,8 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                     </div>
                   </div>
                   {/* Attendance Log */}
-                  <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
-                    <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Log</h2>
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[360px] flex flex-col hover:shadow-lg transition-shadow duration-300">
+                    <h2 className="font-extrabold text-2xl mb-4 text-gray-900 tracking-tight">Attendance Log</h2>
                     <div className="flex-grow overflow-y-auto">
                       {loading ? (
                         <div className="text-center text-gray-500 py-10">Loading...</div>
@@ -241,7 +241,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                               <th className="font-semibold text-left text-gray-500 p-2">Time</th>
                               <th className="font-semibold text-right text-gray-500 p-2">Count</th>
                               <th className="font-semibold text-right text-gray-500 p-2">Change</th>
-                              <th className="font-semibold text-left text-gray-500 p-2 w-28"></th>
+                              <th className="font-semibold text-left text-gray-500 p-2 w-36"></th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -251,13 +251,13 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                               const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
                               return (
                                 <tr key={index} className="hover:bg-gray-50">
-                                  <td className="p-2 text-base">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-                                  <td className="p-2 text-right font-mono text-base">{rec.count.toLocaleString()}</td>
-                                  <td className="p-2 text-right font-mono text-base">
+                                  <td className="p-2 text-sm md:text-base">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
+                                  <td className="p-2 text-right font-mono text-sm md:text-base">{rec.count.toLocaleString()}</td>
+                                  <td className="p-2 text-right font-mono text-sm md:text-base">
                                     {change !== null ? (
-                                      <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
-                                        {Math.abs(change).toLocaleString()}
+                                      <span className={`flex items-center justify-end font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {change > 0 ? <FaArrowUp className="mr-1 h-3 w-3" /> : <FaArrowDown className="mr-1 h-3 w-3" />}
+                                        {change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString()}
                                       </span>
                                     ) : (
                                       <span className="text-gray-400">-</span>
@@ -282,7 +282,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                         <div className="mb-4">
                           <div className="flex justify-between items-center mb-1">
                             <h3 className="font-semibold text-gray-700">Attendance Progress</h3>
-                            <span className="font-bold text-gray-900">{Math.round(attendancePercentage)}%</span>
+                            <span className="font-extrabold text-gray-900">{Math.round(attendancePercentage)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
@@ -296,19 +296,19 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                       <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
                           <p className="text-gray-500">Peak</p>
-                          <p className="font-bold text-lg">{peakAttendance.toLocaleString()}</p>
+                          <p className="font-extrabold text-lg">{peakAttendance.toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">Average</p>
-                          <p className="font-bold text-lg">{averageAttendance.toLocaleString()}</p>
+                          <p className="font-extrabold text-lg">{averageAttendance.toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">Median</p>
-                          <p className="font-bold text-lg">{medianAttendance.toLocaleString()}</p>
+                          <p className="font-extrabold text-lg">{medianAttendance.toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">Peak Time</p>
-                          <p className="font-bold text-lg">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                          <p className="font-extrabold text-lg">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
                         </div>
                       </div>
                     </div>
