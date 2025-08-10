@@ -6,6 +6,15 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 
 ## Key Features
 
+### Progressive Web App (PWA) Features
+- **PWA Foundation**: Full PWA support with `next-pwa` and Workbox service worker
+- **Push Notifications**: Web Push API integration with VAPID keys and subscription management
+- **Offline Sync**: IndexedDB-based offline data synchronization with Background Sync API
+- **Camera & GPS Integration**: Native device camera capture with location tagging
+- **Service Worker**: Runtime caching strategies for API, images, and static assets
+- **Install Prompt**: PWA installation promotion with platform-specific instructions
+- **Offline Fallback**: Dedicated offline page for when network is unavailable
+
 ### Core Event Management
 - **Multi-Tenancy**: Company isolation for users and events
 - **Event & Incident Management**: Create, view, and manage events and incidents with role-based permissions
@@ -93,18 +102,47 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 
 ## Recent Major Updates (June 2025)
 
+### Progressive Web App (PWA) Implementation (Latest)
+- **Complete PWA Foundation**: Implemented full Progressive Web App capabilities
+  - Service worker with Workbox for runtime caching and offline support
+  - Enhanced manifest.json with comprehensive PWA metadata
+  - PWA install prompt with platform-specific instructions
+  - Offline fallback page for network outages
+- **Push Notification System**: 
+  - Web Push API integration with VAPID key authentication
+  - Subscription management with Supabase database storage
+  - Server-side notification sending with `web-push` library
+  - Real-time notification delivery with service worker handling
+- **Offline Data Synchronization**:
+  - IndexedDB-based offline queue using Dexie.js
+  - Background Sync API for automatic data synchronization
+  - Manual sync controls with progress tracking
+  - Retry logic for failed operations
+- **Camera & GPS Integration**:
+  - Native device camera access with photo capture
+  - GPS location tagging for incident photos
+  - Camera switching (front/back) support
+  - Location formatting and calculation utilities
+- **Enhanced Toast System**: 
+  - New PWA-specific notification types (push, offline, sync)
+  - Provider-based architecture for better state management
+  - Action buttons for notification interactions
+- **New Components & Hooks**:
+  - `OfflineIndicator`: Visual network status and sync progress
+  - `PWAInstallPrompt`: Installation promotion component
+  - `CameraCapture`: Dedicated camera interface
+  - `useOfflineSync`, `usePushNotifications`, `useCameraGPS`: PWA-specific hooks
+- **API Endpoints**: 
+  - `/api/notifications/push-subscribe`: Push subscription management
+  - `/api/notifications/send-push`: Server-side notification sending
+- **Technical Improvements**:
+  - Server-side rendering compatibility for PWA libraries
+  - Proper error handling and fallbacks
+  - Performance optimizations for offline scenarios
+
 ### Group Chat UI/UX & Logic Overhaul (June 26, 2025)
-- **Resolved persistent syntax error** in `EventMessagesPanel.tsx` ("Unexpected token `div`")
-- **Comprehensive UI/UX and Supabase logic improvements for the Messages tab:**
-  - Sidebar: sticky event header, always-visible icons, group separation, scrollable, active state styling
-  - Chat header: group icon, subtitle, "View Members" button with badge, avatars, tooltips
-  - Message area: empty state, avatars, role-colored names, timestamps, bubble styles, pinned messages, action icons, date separators, read receipts
-  - Input bar: dynamic placeholder, attachment icon, send button, focus/active states, (optionally) @mentions and keyboard shortcuts
-  - General: dashboard-style UI, dark mode, responsive sidebar, ARIA labels, keyboard accessibility
-  - Supabase: real-time updates, group creation, member assignment
-  - **Toast notifications**: new message toasts with click-to-jump (scrolls to and highlights relevant message)
-  - Polish: hover/active states, empty group state, mobile navigation, notification click-to-jump
-- **Laid groundwork for further refinements** (per detailed user feedback)
+
+
 
 ### Development Tracking & Business Intelligence (Latest)
 - **Development Cost Tracking**: Comprehensive system for tracking development hours and AI usage costs
@@ -161,6 +199,7 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL, Real-time subscriptions, Authentication)
 - **AI Integration**: OpenAI GPT-4o-mini, Perplexity AI
+- **PWA**: next-pwa, Workbox, Dexie.js, Web Push API
 - **Deployment**: Vercel with automatic GitHub integration
 - **External APIs**: Weather, Geocoding, What3Words integration
 
@@ -179,6 +218,10 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
    OPENAI_API_KEY=your_openai_api_key
    NEXT_PUBLIC_OPENWEATHER_API_KEY=your_weather_api_key
    NEXT_PUBLIC_WHAT3WORDS_API_KEY=your_what3words_api_key
+   
+   # PWA Push Notifications (Optional)
+   VAPID_PUBLIC_KEY=your_vapid_public_key
+   VAPID_PRIVATE_KEY=your_vapid_private_key
    ```
 
 3. **Run the development server**
@@ -198,6 +241,11 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 - **Analytics**: AI-powered event analysis and reporting
 - **Notifications**: Real-time notification system with drawer interface
 - **AI Chat**: Intelligent assistant for event management support
+- **PWA Components**: 
+  - `OfflineIndicator`: Network status and sync progress
+  - `PWAInstallPrompt`: Installation promotion
+  - `CameraCapture`: Native camera interface
+  - Service Worker: Offline caching and push notifications
 
 ## Customization
 
