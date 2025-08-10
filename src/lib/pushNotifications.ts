@@ -1,8 +1,17 @@
 import { supabase } from './supabase';
 
 // VAPID configuration - these should be environment variables
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'your-vapid-public-key';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'your-vapid-private-key';
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BM8Pgl061UR0U7UwqSorQlLNVwD48UO5vJg-BM_WsF1lnyQA2Xp1pmkJMLP_Yj8efhSSnAKpJvazEWZS5Wfeq4k';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'EFT-mlOW0JzJsFZQnb4FDLn1qgXP08Ruqfo1nbMd1PM';
+
+// Validate VAPID keys
+if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'your-vapid-public-key') {
+  console.warn('VAPID public key not configured. Push notifications may not work properly.');
+}
+
+if (!VAPID_PRIVATE_KEY || VAPID_PRIVATE_KEY === 'your-vapid-private-key') {
+  console.warn('VAPID private key not configured. Push notifications may not work properly.');
+}
 
 export interface PushSubscription {
   id?: number;
