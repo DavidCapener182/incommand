@@ -8,10 +8,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePresence } from '@/hooks/usePresence'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
-import { useCameraGPS } from '../hooks/useCameraGPS'
-import { CameraCapture } from './CameraCapture'
-import { useOfflineSync } from '../hooks/useOfflineSync'
-import { PhotoData } from '../lib/cameraGPS'
 
 interface Props {
   isOpen: boolean
@@ -31,10 +27,6 @@ interface IncidentFormData {
   status: string
   log_number: string
   what3words: string
-  latitude?: number | null
-  longitude?: number | null
-  gps_accuracy?: number | null
-  location_timestamp?: string | null
 }
 
 interface RefusalDetails {
@@ -1876,7 +1868,6 @@ export default function IncidentCreationModal({
   const [showRefusalActions, setShowRefusalActions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const [nextLogNumber, setNextLogNumber] = useState<string>('')
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, string>>({})
   const [processingAI, setProcessingAI] = useState(false)
@@ -1901,29 +1892,10 @@ export default function IncidentCreationModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [showCameraCapture, setShowCameraCapture] = useState(false);
-  const [capturedPhotoData, setCapturedPhotoData] = useState<PhotoData | null>(null);
 
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  
-  // Camera and GPS hooks
-  const {
-    cameraSupported,
-    gpsSupported,
-    currentLocation,
-    getCurrentLocation,
-    formatLocation,
-    isLocationAccurate
-  } = useCameraGPS();
-  
-  // Offline sync hook
-  const {
-    isOnline,
-    isOffline,
-    queueIncidentCreation
-  } = useOfflineSync();
   
   // Real-time collaboration
   const modalRef = useRef<HTMLDivElement>(null);
@@ -2286,20 +2258,6 @@ export default function IncidentCreationModal({
     setError(null);
 
     try {
-      // Check if offline and queue incident creation
-      if (isOffline) {
-        const queuedIncident = {
-          ...formData,
-          event_id: selectedEventId,
-          status: 'queued',
-          created_at: new Date().toISOString()
-        };
-        await queueIncidentCreation(queuedIncident);
-        setSuccess('Incident queued for creation when online');
-        onClose();
-        return;
-      }
-
       if (!selectedEventId) {
         setError('Please select an event to log this incident.');
         setLoading(false);
@@ -2332,11 +2290,7 @@ export default function IncidentCreationModal({
         created_at: now,
         updated_at: now, // Keep this for backward compatibility
         timestamp: now, // Keep this for backward compatibility
-        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
-        gps_accuracy: formData.gps_accuracy || null,
-        location_timestamp: formData.location_timestamp || null
+        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null
       };
 
       // First, check if the log number already exists
@@ -2545,40 +2499,6 @@ export default function IncidentCreationModal({
     }
   };
 
-  const handleCameraCapture = (photoData: PhotoData) => {
-    setCapturedPhotoData(photoData);
-    setPhotoFile(photoData.file);
-    setPhotoPreviewUrl(URL.createObjectURL(photoData.file));
-    setPhotoError(null);
-    setShowCameraCapture(false);
-    
-    // Update form data with GPS coordinates if available
-    if (photoData.location) {
-      setFormData(prev => ({
-        ...prev,
-        latitude: photoData.location?.latitude || null,
-        longitude: photoData.location?.longitude || null,
-        gps_accuracy: photoData.location?.accuracy || null,
-        location_timestamp: photoData.location?.timestamp ? new Date(photoData.location.timestamp).toISOString() : null
-      }));
-    }
-  };
-
-  const handleGetCurrentLocation = async () => {
-    try {
-      const location = await getCurrentLocation();
-      setFormData(prev => ({
-        ...prev,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        gps_accuracy: location.accuracy,
-        location_timestamp: new Date(location.timestamp).toISOString()
-      }));
-    } catch (error) {
-      console.error('Failed to get current location:', error);
-    }
-  };
-
   // Add a function to reset the form to its initial state
   const resetForm = () => {
     setFormData({
@@ -2776,13 +2696,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     {nextLogNumber}
                   </span>
                 </div>
-                {/* Offline Status Indicator */}
-                {isOffline && (
-                  <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg px-3 py-1">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-yellow-800 dark:text-yellow-200">Offline Mode</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -2939,173 +2852,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
             </div>
 
-            {/* Camera and GPS Integration */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-700">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <span className="h-6 w-6 rounded-lg bg-indigo-500 flex items-center justify-center">
-                  <span className="text-white text-sm">📷</span>
-                </span>
-                Camera & Location
-              </h4>
-              
-              <div className="space-y-4">
-                {/* Camera Capture */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Photo Evidence</label>
-                  <div className="space-y-3">
-                    {/* Camera Capture Button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowCameraCapture(true)}
-                      disabled={!cameraSupported}
-                      className="w-full px-4 py-3 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {cameraSupported ? 'Capture Photo' : 'Camera Not Supported'}
-                    </button>
-
-                    {/* File Upload */}
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label
-                        htmlFor="photo-upload"
-                        className="w-full px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#182447] border-2 border-gray-300 dark:border-[#2d437a] rounded-xl hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors duration-200 shadow-sm cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Upload Photo
-                      </label>
-                    </div>
-
-                    {/* Photo Preview */}
-                    {photoPreviewUrl && (
-                      <div className="relative">
-                        <img
-                          src={photoPreviewUrl}
-                          alt="Photo preview"
-                          className="w-full h-32 object-cover rounded-lg border border-gray-300 dark:border-[#2d437a]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhotoFile(null);
-                            setPhotoPreviewUrl(null);
-                            setPhotoError(null);
-                          }}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors duration-200"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Photo Error */}
-                    {photoError && (
-                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-3">
-                        <p className="text-sm text-red-700 dark:text-red-300">{photoError}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* GPS Location */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Location Information</label>
-                  <div className="space-y-3">
-                    {/* GPS Status */}
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#1a2a57] rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-sm text-gray-700 dark:text-gray-200">GPS Support:</span>
-                      </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        gpsSupported 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-                      }`}>
-                        {gpsSupported ? 'Available' : 'Not Available'}
-                      </span>
-                    </div>
-
-                    {/* Current Location */}
-                    {gpsSupported && (
-                      <div className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={handleGetCurrentLocation}
-                          className="w-full px-4 py-3 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-xl hover:bg-green-700 transition-colors duration-200 shadow-sm flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Get Current Location
-                        </button>
-
-                        {/* Location Display */}
-                        {currentLocation && (
-                          <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Coordinates:</span>
-                                <span className="text-sm text-gray-600 dark:text-gray-300">
-                                  {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
-                                </span>
-                              </div>
-                                                             <div className="flex items-center justify-between">
-                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Accuracy:</span>
-                                 <span className={`text-sm ${
-                                   isLocationAccurate(currentLocation) 
-                                     ? 'text-green-600 dark:text-green-400' 
-                                     : 'text-yellow-600 dark:text-yellow-400'
-                                 }`}>
-                                   ±{currentLocation.accuracy.toFixed(1)}m
-                                 </span>
-                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Formatted:</span>
-                                <span className="text-sm text-gray-600 dark:text-gray-300">
-                                  {formatLocation(currentLocation)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* What3Words Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">What3Words Location</label>
-                      <input
-                        type="text"
-                        value={formData.what3words || ''}
-                        onChange={(e) => handleW3WChange(e.target.value)}
-                        onBlur={handleW3WBlur}
-                        placeholder="///word.word.word"
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Location and Action Sections */}
             <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-2xl p-6 border border-teal-200 dark:border-teal-700">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -3168,101 +2914,14 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Attach Photo (optional, max 5MB)</label>
-                  <div className="space-y-3">
-                    {/* Camera Capture Button */}
-                    {cameraSupported && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCameraCapture(true)}
-                        className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                      >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Take Photo with GPS
-                      </button>
-                    )}
-                    
-                    {/* GPS Location Button */}
-                    {gpsSupported && (
-                      <button
-                        type="button"
-                        onClick={handleGetCurrentLocation}
-                        className="w-full px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                      >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Get Current Location
-                      </button>
-                    )}
-                    
-                    {/* GPS Coordinates Display */}
-                    {(formData.latitude && formData.longitude) && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-3">
-                        <div className="text-sm text-green-800 dark:text-green-200">
-                          <div className="font-medium">GPS Location Captured:</div>
-                          <div>Lat: {formData.latitude.toFixed(6)}</div>
-                          <div>Lng: {formData.longitude.toFixed(6)}</div>
-                          {formData.gps_accuracy && (
-                            <div>Accuracy: ±{formData.gps_accuracy.toFixed(1)}m</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* File Upload */}
-                    <div className="border-2 border-dashed border-gray-300 dark:border-[#2d437a] rounded-xl p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-200 cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label htmlFor="photo-upload" className="cursor-pointer">
-                        <div className="text-gray-500 dark:text-gray-400">
-                          <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <p className="text-sm">Click to upload or drag and drop</p>
-                          <p className="text-xs mt-1">PNG, JPG, GIF up to 5MB</p>
-                        </div>
-                      </label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-[#2d437a] rounded-xl p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-200 cursor-pointer">
+                    <div className="text-gray-500 dark:text-gray-400">
+                      <svg className="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-sm">Click to upload or drag and drop</p>
+                      <p className="text-xs mt-1">PNG, JPG, GIF up to 5MB</p>
                     </div>
-                    
-                    {/* Photo Preview */}
-                    {(photoPreviewUrl || capturedPhotoData) && (
-                      <div className="relative">
-                        <img
-                          src={photoPreviewUrl || (capturedPhotoData ? URL.createObjectURL(capturedPhotoData.file) : '')}
-                          alt="Preview"
-                          className="w-full h-32 object-cover rounded-xl border border-gray-300 dark:border-[#2d437a]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhotoFile(null);
-                            setPhotoPreviewUrl(null);
-                            setCapturedPhotoData(null);
-                          }}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* Error Display */}
-                    {photoError && (
-                      <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-3">
-                        {photoError}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -3286,41 +2945,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           </button>
         </div>
       </div>
-      
-      {/* Camera Capture Modal */}
-      {showCameraCapture && (
-        <CameraCapture
-          onPhotoCaptured={handleCameraCapture}
-          onClose={() => setShowCameraCapture(false)}
-          enableLocation={true}
-        />
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 max-w-md">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-medium">Error</span>
-          </div>
-          <p className="mt-1 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Success Display */}
-      {success && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 max-w-md">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="font-medium">Success</span>
-          </div>
-          <p className="mt-1 text-sm">{success}</p>
-        </div>
-      )}
     </div>
   );
 } 

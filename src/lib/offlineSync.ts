@@ -1,17 +1,14 @@
 import Dexie, { Table } from 'dexie';
 import { supabase } from './supabase';
 
-// Database schema for offline operations
 export interface OfflineOperation {
   id?: number;
   type: 'incident_create' | 'incident_update' | 'photo_upload' | 'notification_send';
   data: any;
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  headers?: Record<string, string>;
   timestamp: number;
   retryCount: number;
-  maxRetries?: number;
+  maxRetries: number;
+  priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'processing' | 'completed' | 'failed';
   error?: string;
 }
@@ -23,23 +20,24 @@ export interface SyncProgress {
   inProgress: boolean;
 }
 
-// Offline database using Dexie
 class OfflineDatabase extends Dexie {
-  offlineOperations!: Table<OfflineOperation>;
+  offlineQueue!: Table<OfflineOperation>;
+  offlinePhotos!: Table<{ id: string; file: File; metadata: any }>;
 
   constructor() {
     super('incommand-offline');
     this.version(1).stores({
-      offlineOperations: '++id, type, timestamp, status'
+      offlineQueue: '++id, type, status, timestamp',
+      offlinePhotos: 'id, timestamp'
     });
   }
 }
 
-export class OfflineSyncManager {
+class OfflineSyncManager {
   private static instance: OfflineSyncManager;
   private db: OfflineDatabase;
-  private isOnline: boolean = typeof window !== 'undefined' ? navigator.onLine : true;
   private syncInProgress: boolean = false;
+  private onlineStatus: boolean = navigator.onLine;
   private syncProgress: SyncProgress = {
     total: 0,
     completed: 0,
@@ -49,10 +47,8 @@ export class OfflineSyncManager {
 
   private constructor() {
     this.db = new OfflineDatabase();
-    // Only setup listeners in browser environment
-    if (typeof window !== 'undefined') {
-      this.setupOnlineOfflineListeners();
-    }
+    this.setupOnlineStatusListener();
+    this.setupBackgroundSync();
   }
 
   static getInstance(): OfflineSyncManager {
@@ -62,86 +58,53 @@ export class OfflineSyncManager {
     return OfflineSyncManager.instance;
   }
 
-  // Setup online/offline event listeners
-  private setupOnlineOfflineListeners(): void {
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.onOnline();
-    });
-
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-      this.onOffline();
-    });
-  }
-
-  // Handle online event
-  private async onOnline(): Promise<void> {
-    console.log('[OfflineSync] Back online, starting sync...');
-    this.triggerSync();
-  }
-
-  // Handle offline event
-  private onOffline(): void {
-    console.log('[OfflineSync] Gone offline');
-    this.syncProgress.inProgress = false;
-  }
-
-  // Queue an operation for offline processing
-  async queueOperation(operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount' | 'status'>): Promise<number> {
+  // Queue an operation for offline sync
+  async queueOperation(operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<number> {
     const offlineOperation: OfflineOperation = {
       ...operation,
       timestamp: Date.now(),
       retryCount: 0,
-      maxRetries: 3,
       status: 'pending'
     };
 
-    const id = await this.db.offlineOperations.add(offlineOperation);
-    console.log(`[OfflineSync] Queued operation ${id}:`, operation.type);
-
-    // If online, try to sync immediately
-    if (this.isOnline) {
-      this.triggerSync();
+    const id = await this.db.offlineQueue.add(offlineOperation);
+    console.log('Operation queued for offline sync:', { id, type: operation.type });
+    
+    // Trigger sync if online
+    if (this.onlineStatus && !this.syncInProgress) {
+      this.syncOfflineData();
     }
 
-    return Number(id);
+    return id as number;
   }
 
-  // Trigger background sync
-  async triggerSync(): Promise<void> {
-    if (this.syncInProgress || !this.isOnline) {
-      return;
-    }
-
-    this.syncInProgress = true;
-    this.syncProgress.inProgress = true;
-
-    try {
-      // Check if Background Sync API is supported
-      if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-        const registration = await navigator.serviceWorker.ready;
-        if ('sync' in registration) {
-          await (registration as any).sync.register('offlineQueue');
-          console.log('[OfflineSync] Background sync registered');
-        } else {
-          // Fallback: immediate sync
-          await this.performSync();
-        }
-      } else {
-        // Fallback: immediate sync
-        await this.performSync();
+  // Queue photo upload for offline sync
+  async queuePhotoUpload(file: File, metadata: any): Promise<string> {
+    const photoId = `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    await this.db.offlinePhotos.add({
+      id: photoId,
+      file,
+      metadata: {
+        ...metadata,
+        timestamp: Date.now()
       }
-    } catch (error) {
-      console.error('[OfflineSync] Failed to trigger sync:', error);
-      this.syncInProgress = false;
-      this.syncProgress.inProgress = false;
-    }
+    });
+
+    // Queue the upload operation
+    await this.queueOperation({
+      type: 'photo_upload',
+      data: { photoId, metadata },
+      maxRetries: 5,
+      priority: 'high'
+    });
+
+    return photoId;
   }
 
-  // Perform the actual sync operation
-  async performSync(): Promise<void> {
-    if (this.syncInProgress) {
+  // Sync all offline operations
+  async syncOfflineData(): Promise<void> {
+    if (this.syncInProgress || !this.onlineStatus) {
       return;
     }
 
@@ -149,7 +112,8 @@ export class OfflineSyncManager {
     this.syncProgress.inProgress = true;
 
     try {
-      const pendingOperations = await this.db.offlineOperations
+      // Get all pending operations
+      const pendingOperations = await this.db.offlineQueue
         .where('status')
         .equals('pending')
         .toArray();
@@ -158,76 +122,164 @@ export class OfflineSyncManager {
       this.syncProgress.completed = 0;
       this.syncProgress.failed = 0;
 
-      console.log(`[OfflineSync] Starting sync of ${pendingOperations.length} operations`);
+      console.log(`Starting sync of ${pendingOperations.length} offline operations`);
 
-      for (const operation of pendingOperations) {
+      // Process operations by priority
+      const highPriority = pendingOperations.filter(op => op.priority === 'high');
+      const mediumPriority = pendingOperations.filter(op => op.priority === 'medium');
+      const lowPriority = pendingOperations.filter(op => op.priority === 'low');
+
+      const orderedOperations = [...highPriority, ...mediumPriority, ...lowPriority];
+
+      for (const operation of orderedOperations) {
         try {
           await this.processOperation(operation);
           this.syncProgress.completed++;
         } catch (error) {
-          console.error(`[OfflineSync] Failed to process operation ${operation.id}:`, error);
-          await this.handleOperationError(operation, error);
+          console.error('Failed to process operation:', error);
+          await this.handleOperationError(operation, error as Error);
           this.syncProgress.failed++;
         }
       }
 
-      console.log(`[OfflineSync] Sync completed. ${this.syncProgress.completed} successful, ${this.syncProgress.failed} failed`);
+      console.log('Offline sync completed:', this.syncProgress);
     } catch (error) {
-      console.error('[OfflineSync] Sync failed:', error);
+      console.error('Offline sync failed:', error);
     } finally {
       this.syncInProgress = false;
       this.syncProgress.inProgress = false;
     }
   }
 
-  // Process individual operation
+  // Process a single offline operation
   private async processOperation(operation: OfflineOperation): Promise<void> {
     // Mark as processing
-    await this.db.offlineOperations.update(operation.id!, { status: 'processing' });
+    await this.db.offlineQueue.update(operation.id!, { status: 'processing' });
 
-    try {
-      const response = await fetch(operation.url, {
-        method: operation.method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...operation.headers
-        },
-        body: operation.method !== 'GET' ? JSON.stringify(operation.data) : undefined
-      });
+    switch (operation.type) {
+      case 'incident_create':
+        await this.processIncidentCreate(operation);
+        break;
+      case 'incident_update':
+        await this.processIncidentUpdate(operation);
+        break;
+      case 'photo_upload':
+        await this.processPhotoUpload(operation);
+        break;
+      case 'notification_send':
+        await this.processNotificationSend(operation);
+        break;
+      default:
+        throw new Error(`Unknown operation type: ${operation.type}`);
+    }
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+    // Mark as completed
+    await this.db.offlineQueue.update(operation.id!, { status: 'completed' });
+  }
 
-      // Mark as completed
-      await this.db.offlineOperations.update(operation.id!, { 
-        status: 'completed',
-        timestamp: Date.now()
-      });
+  // Process incident creation
+  private async processIncidentCreate(operation: OfflineOperation): Promise<void> {
+    const { data } = operation;
+    
+    const { error } = await supabase
+      .from('incident_logs')
+      .insert([data]);
 
-      console.log(`[OfflineSync] Operation ${operation.id} completed successfully`);
-    } catch (error) {
-      throw error;
+    if (error) {
+      throw new Error(`Failed to create incident: ${error.message}`);
     }
   }
 
-  // Handle operation errors
-  private async handleOperationError(operation: OfflineOperation, error: any): Promise<void> {
+  // Process incident update
+  private async processIncidentUpdate(operation: OfflineOperation): Promise<void> {
+    const { data } = operation;
+    
+    const { error } = await supabase
+      .from('incident_logs')
+      .update(data.update)
+      .eq('id', data.id);
+
+    if (error) {
+      throw new Error(`Failed to update incident: ${error.message}`);
+    }
+  }
+
+  // Process photo upload
+  private async processPhotoUpload(operation: OfflineOperation): Promise<void> {
+    const { photoId, metadata } = operation.data;
+    
+    // Get the photo from IndexedDB
+    const photoData = await this.db.offlinePhotos.get(photoId);
+    if (!photoData) {
+      throw new Error(`Photo not found: ${photoId}`);
+    }
+
+    // Upload to Supabase Storage
+    const fileName = `incidents/${Date.now()}_${photoData.file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('incident-photos')
+      .upload(fileName, photoData.file);
+
+    if (uploadError) {
+      throw new Error(`Failed to upload photo: ${uploadError.message}`);
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('incident-photos')
+      .getPublicUrl(fileName);
+
+    // Update incident with photo URL if needed
+    if (metadata.incidentId) {
+      const { error: updateError } = await supabase
+        .from('incident_logs')
+        .update({ 
+          photos: supabase.sql`array_append(photos, ${publicUrl})`
+        })
+        .eq('id', metadata.incidentId);
+
+      if (updateError) {
+        throw new Error(`Failed to update incident with photo: ${updateError.message}`);
+      }
+    }
+
+    // Remove photo from IndexedDB
+    await this.db.offlinePhotos.delete(photoId);
+  }
+
+  // Process notification send
+  private async processNotificationSend(operation: OfflineOperation): Promise<void> {
+    const { data } = operation;
+    
+    const response = await fetch('/api/notifications/send-push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send notification: ${response.statusText}`);
+    }
+  }
+
+  // Handle operation errors with retry logic
+  private async handleOperationError(operation: OfflineOperation, error: Error): Promise<void> {
     const newRetryCount = operation.retryCount + 1;
     
-    if (newRetryCount >= operation.maxRetries!) {
+    if (newRetryCount >= operation.maxRetries) {
       // Mark as failed after max retries
-      await this.db.offlineOperations.update(operation.id!, {
+      await this.db.offlineQueue.update(operation.id!, {
         status: 'failed',
         error: error.message,
         retryCount: newRetryCount
       });
     } else {
-      // Mark for retry
-      await this.db.offlineOperations.update(operation.id!, {
+      // Reset to pending for retry
+      await this.db.offlineQueue.update(operation.id!, {
         status: 'pending',
-        retryCount: newRetryCount,
-        error: error.message
+        retryCount: newRetryCount
       });
     }
   }
@@ -237,30 +289,26 @@ export class OfflineSyncManager {
     return { ...this.syncProgress };
   }
 
-  // Get offline status
-  isOffline(): boolean {
-    return !this.isOnline;
-  }
-
-  // Get pending operations count
-  async getPendingOperationsCount(): Promise<number> {
-    return await this.db.offlineOperations
-      .where('status')
-      .equals('pending')
-      .count();
-  }
-
-  // Get all operations
-  async getAllOperations(): Promise<OfflineOperation[]> {
-    return await this.db.offlineOperations
-      .orderBy('timestamp')
-      .reverse()
-      .toArray();
+  // Get offline queue status
+  async getQueueStatus(): Promise<{
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+  }> {
+    const operations = await this.db.offlineQueue.toArray();
+    
+    return {
+      pending: operations.filter(op => op.status === 'pending').length,
+      processing: operations.filter(op => op.status === 'processing').length,
+      completed: operations.filter(op => op.status === 'completed').length,
+      failed: operations.filter(op => op.status === 'failed').length
+    };
   }
 
   // Clear completed operations
   async clearCompletedOperations(): Promise<void> {
-    await this.db.offlineOperations
+    await this.db.offlineQueue
       .where('status')
       .equals('completed')
       .delete();
@@ -268,102 +316,66 @@ export class OfflineSyncManager {
 
   // Clear failed operations
   async clearFailedOperations(): Promise<void> {
-    await this.db.offlineOperations
+    await this.db.offlineQueue
       .where('status')
       .equals('failed')
       .delete();
   }
 
-  // Retry failed operations
-  async retryFailedOperations(): Promise<void> {
-    const failedOperations = await this.db.offlineOperations
-      .where('status')
-      .equals('failed')
-      .toArray();
+  // Setup online status listener
+  private setupOnlineStatusListener(): void {
+    window.addEventListener('online', () => {
+      this.onlineStatus = true;
+      console.log('Device is online, triggering sync');
+      this.syncOfflineData();
+    });
 
-    for (const operation of failedOperations) {
-      await this.db.offlineOperations.update(operation.id!, {
-        status: 'pending',
-        retryCount: 0,
-        error: undefined
+    window.addEventListener('offline', () => {
+      this.onlineStatus = false;
+      console.log('Device is offline');
+    });
+  }
+
+  // Setup background sync
+  private setupBackgroundSync(): void {
+    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.sync.register('offline-queue').catch((error) => {
+          console.error('Background sync registration failed:', error);
+        });
       });
     }
+  }
 
-    if (failedOperations.length > 0) {
-      this.triggerSync();
+  // Manual sync trigger
+  async triggerManualSync(): Promise<void> {
+    if (!this.onlineStatus) {
+      throw new Error('Cannot sync while offline');
     }
+    
+    await this.syncOfflineData();
   }
 
-  // Queue incident creation
-  async queueIncidentCreation(incidentData: any): Promise<number> {
-    return await this.queueOperation({
-      type: 'incident_create',
-      data: incidentData,
-      url: '/api/incidents',
-      method: 'POST'
-    });
+  // Get offline photos
+  async getOfflinePhotos(): Promise<{ id: string; file: File; metadata: any }[]> {
+    return await this.db.offlinePhotos.toArray();
   }
 
-  // Queue incident update
-  async queueIncidentUpdate(incidentId: string, updateData: any): Promise<number> {
-    return await this.queueOperation({
-      type: 'incident_update',
-      data: updateData,
-      url: `/api/incidents/${incidentId}`,
-      method: 'PUT'
-    });
+  // Remove offline photo
+  async removeOfflinePhoto(photoId: string): Promise<void> {
+    await this.db.offlinePhotos.delete(photoId);
   }
 
-  // Queue photo upload
-  async queuePhotoUpload(photoData: any): Promise<number> {
-    return await this.queueOperation({
-      type: 'photo_upload',
-      data: photoData,
-      url: '/api/upload',
-      method: 'POST'
-    });
+  // Check if device is online
+  isOnline(): boolean {
+    return this.onlineStatus;
   }
 
-  // Queue notification send
-  async queueNotificationSend(notificationData: any): Promise<number> {
-    return await this.queueOperation({
-      type: 'notification_send',
-      data: notificationData,
-      url: '/api/notifications/send-push',
-      method: 'POST'
-    });
-  }
-
-  // Initialize offline sync
-  async initialize(): Promise<void> {
-    try {
-      await this.db.open();
-      console.log('[OfflineSync] Database initialized');
-      
-      // Trigger initial sync if online
-      if (this.isOnline) {
-        this.triggerSync();
-      }
-    } catch (error) {
-      console.error('[OfflineSync] Failed to initialize:', error);
-    }
-  }
-
-  // Close database
-  async close(): Promise<void> {
-    await this.db.close();
+  // Check if sync is in progress
+  isSyncInProgress(): boolean {
+    return this.syncInProgress;
   }
 }
 
 // Export singleton instance
 export const offlineSyncManager = OfflineSyncManager.getInstance();
-
-// Export utility functions
-export const queueOfflineOperation = (operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount' | 'status'>) => 
-  offlineSyncManager.queueOperation(operation);
-
-export const triggerOfflineSync = () => offlineSyncManager.triggerSync();
-export const getOfflineSyncProgress = () => offlineSyncManager.getSyncProgress();
-export const isOffline = () => offlineSyncManager.isOffline();
-export const getPendingOperationsCount = () => offlineSyncManager.getPendingOperationsCount();
-export const initializeOfflineSync = () => offlineSyncManager.initialize();

@@ -7,7 +7,20 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
-import { Incident } from '@/hooks/useIncidents'
+
+interface Incident {
+  id: number
+  log_number: string
+  timestamp: string
+  callsign_from: string
+  callsign_to: string
+  occurrence: string
+  incident_type: string
+  action_taken: string
+  is_closed: boolean
+  event_id: string
+  status: string
+}
 
 const getIncidentTypeStyle = (type: string) => {
   switch(type) {
@@ -63,7 +76,7 @@ const getRowStyle = (incident: Incident) => {
 
 // Global subscription tracking to prevent duplicates
 const activeSubscriptions = new Map<string, boolean>();
-const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void>();
+const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id'>) => void>();
 const recentToasts = new Map<string, number>(); // Track recent toasts to prevent duplicates
 
 // Add debugging
@@ -81,7 +94,7 @@ export default function IncidentTable({
 }: { 
   filter?: string; 
   onDataLoaded?: (data: Incident[]) => void; 
-  onToast?: (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void;
+  onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
   viewMode?: 'table' | 'board';
   onViewModeChange?: (mode: 'table' | 'board') => void;
   currentUser?: any;
@@ -286,6 +299,7 @@ export default function IncidentTable({
                   title: `New ${incident.incident_type} Incident`,
                   message: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
                   duration: isHighPriority ? 12000 : 8000, // Increased from 8000/5000 to 12000/8000
+                  urgent: isHighPriority
                 });
                 console.log('📢 TOAST SENT FOR NEW INCIDENT:', incident.log_number);
               } else {
@@ -420,7 +434,7 @@ export default function IncidentTable({
     setIncidents(prev => 
       prev.map(inc => 
         inc.id === incident.id 
-          ? { ...inc, is_closed: newStatus, status: newStatus ? 'closed' : 'open' }
+          ? { ...inc, is_closed: newStatus }
           : inc
       )
     );
@@ -430,7 +444,6 @@ export default function IncidentTable({
         .from('incident_logs')
         .update({ 
           is_closed: newStatus,
-          status: newStatus ? 'closed' : 'open',
           updated_at: new Date().toISOString()
         })
         .eq('id', incident.id);
@@ -472,7 +485,7 @@ export default function IncidentTable({
       setIncidents(prev => 
         prev.map(inc => 
           inc.id === incident.id 
-            ? { ...inc, is_closed: incident.is_closed, status: incident.status }
+            ? { ...inc, is_closed: incident.is_closed }
             : inc
         )
       );
@@ -708,7 +721,7 @@ export default function IncidentTable({
           ) : (
         <>
           {/* Enhanced Mobile Card Layout */}
-          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2" style={{ overflowY: 'auto', position: 'relative' }}>
+          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', position: 'relative' }}>
             {/* Enhanced Mobile Table Header */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] flex items-center px-4 py-3 text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider rounded-t-2xl shadow-lg">
               <div className="basis-[28%]">Log #</div>
@@ -839,7 +852,7 @@ export default function IncidentTable({
           </div>
 
           {/* Enhanced Desktop Table Layout */}
-          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6" style={{ overflowY: 'auto', position: 'relative' }}>
+          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', position: 'relative' }}>
             {/* Enhanced Desktop Table Header */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] rounded-t-2xl shadow-lg">
               <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
@@ -1001,11 +1014,32 @@ export default function IncidentTable({
     </>
   ) : (
     /* Board View */
-    <div className="bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
+    <div className="h-[600px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
       <CollaborationBoard
         eventId={propCurrentEventId || currentEventId || ''}
         currentUser={currentUser}
         searchQuery={searchQuery}
+        incidents={incidents}
+        loading={loading}
+        error={error}
+        updateIncident={async (id, updates) => {
+          // Find the incident and update it
+          const incident = incidents.find(inc => inc.id.toString() === id);
+          if (!incident) return;
+          
+          // Update the incident in the database
+          const { error: updateError } = await supabase
+            .from('incident_logs')
+            .update(updates)
+            .eq('id', incident.id);
+          
+          if (updateError) {
+            throw updateError;
+          }
+          
+          // Refresh the incidents list
+          await fetchIncidents();
+        }}
         onIncidentSelect={(incident) => {
           // Handle incident selection - could open details modal
           console.log('Selected incident:', incident);

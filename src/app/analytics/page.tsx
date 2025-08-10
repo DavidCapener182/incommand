@@ -39,6 +39,7 @@ import {
   FireIcon,
   ChartPieIcon
 } from '@heroicons/react/24/outline';
+import IconSidebar from '../../components/IconSidebar';
 
 ChartJS.register(
   CategoryScale,
@@ -916,34 +917,25 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
-          <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-            <div className="flex items-center space-x-2">
-              <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+      <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+        <IconSidebar
+          navigation={navigation}
+          activeItem={activeSection}
+          onItemClick={setActiveSection}
+          title="Analytics"
+        />
+        
+        <main className="flex-1 ml-16 lg:ml-64">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                  <Skeleton height={20} width="50%" />
+                  <Skeleton height={40} width="100%" />
+                </div>
+              ))}
             </div>
-          </div>
-          <nav className="flex-1 space-y-2 py-4 px-2">
-            {navigation.map(item => (
-              <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left bg-gray-100 dark:bg-[#1a2a57] text-gray-400 dark:text-gray-200">
-                <item.icon className="h-5 w-5 text-gray-400 dark:text-blue-300" />
-                {item.name}
-              </div>
-            ))}
-          </nav>
-        </aside>
-        {/* Main Content */}
-        <main className="flex-1 p-8">
-          <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Analytics Dashboard</h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <Skeleton height={20} width="50%" />
-                <Skeleton height={40} width="100%" />
-              </div>
-            ))}
           </div>
         </main>
       </div>
@@ -951,430 +943,413 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
-        <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-          <div className="flex items-center space-x-2">
-            <ChartBarIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Analytics</span>
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] transition-colors duration-300">
+      <IconSidebar
+        navigation={navigation}
+        activeItem={activeSection}
+        onItemClick={setActiveSection}
+        title="Analytics"
+      />
+      
+      <main className="flex-1 ml-16 lg:ml-64">
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Analytics Dashboard</h1>
+              </div>
+              <p className="mt-1 text-gray-600 dark:text-gray-300">Monitor performance and insights for your events</p>
+            </div>
           </div>
-        </div>
-        <nav className="flex-1 space-y-2 py-4 px-2">
-          {navigation.map(item => {
-            const active = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
-                  ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
-                `}
-              >
-                <item.icon className={`h-5 w-5 ${active ? 'text-blue-700 dark:text-blue-200' : 'text-gray-400 dark:text-blue-300'}`} />
-                {item.name}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Analytics Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-300">Monitor performance and insights for your events</p>
-          </div>
-        </div>
 
         {/* Show content based on active section */}
         {(activeSection === 'overview' || activeSection === 'attendance' || activeSection === 'incidents' || activeSection === 'performance' || activeSection === 'heatmap' || activeSection === 'predictions' || activeSection === 'ai-insights' || activeSection === 'debrief' || activeSection === 'reports') && (
           <div>
       
-      {/* Top Analytics Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {kpiData.map((kpi, index) => (
-            <div key={index} className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-white">{kpi.title}</h3>
-                  <div className="text-lg">
-                    {getKpiIcon(kpi.title)}
-          </div>
-                </div>
-                {kpi.value ? (
-                  <p className="text-2xl font-bold dark:text-white">{kpi.value}</p>
-                ) : (
-                  <div className="group relative">
-                    <p className="text-2xl font-bold text-gray-400 dark:text-white">—</p>
-                    <span className="absolute bottom-full mb-2 hidden group-hover:block w-max bg-gray-700 text-white text-xs rounded py-1 px-2">
-                      Awaiting data
-                    </span>
-            </div>
-          )}
-        </div>
-              <div className="text-xs text-gray-400 dark:text-white mt-2">
-                {(() => {
-                  let trend;
-                  if (previousEventKpis) {
-                    if (kpi.title === 'Total Incidents') {
-                      trend = calculateTrend(totalIncidentsCountable.length, previousEventKpis.total);
-                    } else if (kpi.title === 'Open Incidents') {
-                      trend = calculateTrend(openIncidents.length, previousEventKpis.open);
-                    } else if (kpi.title === 'Closed Incidents') {
-                      trend = calculateTrend(statusCounts['Closed'], previousEventKpis.closed);
-                    } else if (kpi.title === 'Peak Attendance') {
-                      trend = calculateTrend(peakAttendance, previousEventKpis.peak);
-                    }
-                  }
-
-                  if (trend && trend.percentage !== null) {
-                    const color = trend.direction === 'up' ? 'text-green-500' : 'text-red-500';
-                    return (
-                      <span className={trend.percentage === 0 ? 'text-gray-500' : color}>
-                        {trend.percentage > 0 ? '+' : ''}{trend.percentage}% vs last event
-                      </span>
-                    );
-                  }
-                  return <span className="text-gray-400">No trend data</span>;
-                })()}
-          </div>
-              </div>
-          ))}
-            </div>
-
-      {/* Main Grid for Charts and Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Attendance Chart */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Timeline</h2>
-          <div className="flex-grow relative">
-            {attendanceData.length > 0 ? (
-              <Line data={attendanceChartData} options={attendanceChartOptions} />
-            ) : (
-              <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-          )}
-        </div>
-            </div>
-        {/* Attendance Log */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Attendance Log</h2>
-          <div className="flex-grow overflow-y-auto">
-            {attendanceData.length > 0 ? (
-              <table className="w-full">
-                <thead className="sticky top-0 bg-white z-10">
-                  <tr>
-                    <th className="font-semibold text-left text-gray-900 dark:text-white p-2">Time</th>
-                    <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Count</th>
-                    <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Change</th>
-                    <th className="font-semibold text-left text-gray-900 dark:text-white p-2 w-28"></th>
-                    </tr>
-                  </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {attendanceData.slice(-5).reverse().map((rec, index, arr) => {
-                    const prevRec = arr[index + 1];
-                    const change = prevRec ? rec.count - prevRec.count : null;
-                    const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
-                    return (
-                      <tr key={index}>
-                        <td colSpan={4} className="p-0">
-                          <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
-                            <div className="p-2 text-base w-1/4 text-gray-900 dark:text-white">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                            <div className="p-2 text-right font-mono text-base w-1/4 text-gray-900 dark:text-white">{rec.count.toLocaleString()}</div>
-                            <div className="p-2 text-right font-mono text-base w-1/4 text-gray-900 dark:text-white">
-                              {change !== null ? (
-                                <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
-                                  {Math.abs(change).toLocaleString()}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </div>
-                            <div className="p-2 align-middle w-1/4 text-gray-900 dark:text-white">
-                              <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
-                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  </tbody>
-                </table>
-            ) : (
-              <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-            )}
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
-            {eventDetails?.expected_attendance && (
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
-                  <span className="font-bold text-gray-900 dark:text-white">{Math.round(attendancePercentage)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
-                </div>
-                <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
-                  {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
-                </p>
-              </div>
-            )}
-            <h3 className="font-semibold mb-2 text-gray-700 dark:text-white">Quick Stats</h3>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-gray-500 dark:text-white">Peak</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{peakAttendance.toLocaleString()}</p>
-          </div>
-              <div>
-                <p className="text-gray-500 dark:text-white">Average</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{averageAttendance.toLocaleString()}</p>
-        </div>
-              <div>
-                <p className="text-gray-500 dark:text-white">Median</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{medianAttendance.toLocaleString()}</p>
-      </div>
-              <div>
-                <p className="text-gray-500 dark:text-white">Peak Time</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
-          </div>
-              </div>
-              </div>
-            </div>
-        {/* Live Now Card */}
-        <div className={`bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200 lg:col-span-1 min-h-[340px]`}>
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Live Status</h2>
-              <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${mostRecentOpen ? getPriorityColor(mostRecentOpen.priority) : 'bg-green-500'}`}>
-                {mostRecentOpen ? 'Action Required' : 'All Clear'}
-              </span>
-            </div>
-            <div className="mt-4">
-              {mostRecentOpen ? (
-                <div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{mostRecentOpen.incident_type}</p>
-                  <p className="text-sm text-gray-500 dark:text-white">
-                    {new Date(mostRecentOpen.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <p className="text-sm mt-2 text-gray-900 dark:text-white">{mostRecentOpen.occurrence}</p>
-                </div>
-              ) : (
-                <p className="text-center text-gray-500 dark:text-white py-4">No incidents currently active.</p>
-          )}
-        </div>
-          </div>
-      </div>
-
-      {/* Second Row: Lower Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Merged Incident Analysis Card */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[270px] flex flex-col lg:col-span-1 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Incident Analysis</h2>
-          <div className="flex-grow grid grid-cols-2 gap-4">
-            {/* Incident Volume Chart */}
-            <div className="flex flex-col">
-              <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Volume Over Time</h3>
-              <div className="flex-grow relative">
-                {filteredIncidents.length > 0 ? (
-                  <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
-                ) : (
-                  <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
-                )}
-              </div>
-            </div>
-            {/* Incident Types Pie */}
-            <div className="flex flex-col">
-              <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Breakdown by Type</h3>
-              <div className="flex-grow relative">
-              {filteredIncidents.length > 0 ? (
-                  <div className="h-full w-full flex items-center justify-center">
-                    <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
+            {/* Top Analytics Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 sm:mb-8">
+              {kpiData.map((kpi, index) => (
+                <div key={index} className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 flex flex-col justify-between shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                  <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600" />
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-gray-600 dark:text-blue-100">{kpi.title}</h3>
+                      <div className="text-lg">{getKpiIcon(kpi.title)}</div>
+                    </div>
+                    {kpi.value ? (
+                      <p className="mt-2 text-3xl font-extrabold tracking-tight">{kpi.value}</p>
+                    ) : (
+                      <div className="group relative mt-2">
+                        <p className="text-3xl font-extrabold text-gray-300 dark:text-blue-200/60">—</p>
+                        <span className="absolute bottom-full mb-2 hidden group-hover:block w-max bg-gray-800 text-white text-xs rounded py-1 px-2">Awaiting data</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
-          )}
-        </div>
+                  <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
+                    {(() => {
+                      let trend;
+                      if (previousEventKpis) {
+                        if (kpi.title === 'Total Incidents') {
+                          trend = calculateTrend(totalIncidentsCountable.length, previousEventKpis.total);
+                        } else if (kpi.title === 'Open Incidents') {
+                          trend = calculateTrend(openIncidents.length, previousEventKpis.open);
+                        } else if (kpi.title === 'Closed Incidents') {
+                          trend = calculateTrend(statusCounts['Closed'], previousEventKpis.closed);
+                        } else if (kpi.title === 'Peak Attendance') {
+                          trend = calculateTrend(peakAttendance, previousEventKpis.peak);
+                        }
+                      }
+ 
+                      if (trend && trend.percentage !== null) {
+                        const color = trend.direction === 'up' ? 'text-green-600' : 'text-red-600';
+                        return (
+                          <span className={trend.percentage === 0 ? 'text-gray-500' : color}>
+                            {trend.percentage > 0 ? '+' : ''}{trend.percentage}% vs last event
+                          </span>
+                        );
+                      }
+                      return <span className="text-gray-400">No trend data</span>;
+                    })()}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
 
-        {/* Trends & Predictive AI */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Trends</h2>
-            {aiInsights.length > 1 && (
-              <div className="flex items-center space-x-2">
-                <button onClick={prevInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
-                  <FaChevronLeft className="w-4 h-4 text-gray-600" />
-                </button>
-                <span className="text-sm text-gray-500">
-                  {aiInsightIndex + 1} / {aiInsights.length}
-                </span>
-                <button onClick={nextInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
-                  <FaChevronRight className="w-4 h-4 text-gray-600" />
-                </button>
+            {/* Main Grid for Charts and Widgets */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
+              {/* Attendance Chart */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 min-h-[340px] flex flex-col shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Timeline</h2>
+                <div className="flex-grow relative">
+                  {attendanceData.length > 0 ? (
+                    <Line data={attendanceChartData} options={attendanceChartOptions} />
+                  ) : (
+                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          <div className="flex-grow overflow-y-auto pr-2">
-            {aiLoading ? (
-              <div className="space-y-2 pt-2">
-                <Skeleton height={20} />
-                <Skeleton height={20} width="90%" />
-                <Skeleton height={20} width="80%" />
-        </div>
-            ) : aiError ? (
-              <p className="text-red-500 pt-2">{aiError}</p>
-            ) : (
-              <div className="text-gray-600 h-full">
-                {aiInsights.length > 0 && aiInsights[aiInsightIndex] ? (
-                  renderInsight(aiInsights[aiInsightIndex])
-                ) : (
-                  <span className="text-gray-400">No AI insights available.</span>
-                )}
-      </div>
-            )}
-        </div>
-      </div>
-        </div>
-
-      {/* Third Row: Heatmap & More */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Debrief Summary */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col lg:col-span-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex justify-between items-center flex-shrink-0 mb-4">
-            <h2 className="font-bold text-2xl text-gray-900 dark:text-white">Debrief Summary</h2>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => eventId && handleGenerateDebrief(eventId)}
-                disabled={isGeneratingDebrief}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow disabled:bg-gray-400 flex items-center"
-              >
-                {isGeneratingDebrief ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Debrief'
-                )}
-              </button>
-              <button onClick={handleExport} className="p-2 text-gray-600 hover:text-black disabled:opacity-50" disabled={!debrief.eventOverview && !manualNotes} title="Export as PDF">
-                <FaFileExport />
-              </button>
-              <button onClick={handlePrint} className="p-2 text-gray-600 hover:text-black" title="Print">
-                <FaPrint />
-              </button>
-            </div>
-          </div>
-          <div className="flex-grow overflow-y-auto pr-2">
-            {loadingDebrief ? (
-              <Skeleton height={200} />
-            ) : (
-              <div id="debrief-report" className="p-2">
-                {debriefError && <p className="text-red-500 mb-4">Error: {debriefError}</p>}
-                <section className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Event Overview and Key Statistics</h3>
-                  <p className="text-gray-700 mb-2">
-                    {debrief.eventOverview}
-                  </p>
-                  {debrief.attendanceSummary && <p className="text-gray-700 mt-2">{debrief.attendanceSummary}</p>}
-                </section>
-
-                <section className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Significant Incidents</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border text-sm bg-white dark:bg-[#23408e] text-gray-900 dark:text-white">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-[#23408e] dark:text-white">
-                          <th className="border px-3 py-2 text-left">Date</th>
-                          <th className="border px-3 py-2 text-left">Type</th>
-                          <th className="border px-3 py-2 text-left">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {debrief.significantIncidents?.map((incident, index) => (
-                          <tr key={index}>
-                            <td className="border px-3 py-2">{incident.date}</td>
-                            <td className="border px-3 py-2">{incident.type}</td>
-                            <td className="border px-3 py-2">{incident.details}</td>
+              {/* Attendance Log */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 min-h-[340px] flex flex-col shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Log</h2>
+                <div className="flex-grow overflow-y-auto">
+                  {attendanceData.length > 0 ? (
+                    <table className="w-full">
+                      <thead className="sticky top-0 bg-white z-10">
+                        <tr>
+                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2">Time</th>
+                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Count</th>
+                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Change</th>
+                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2 w-36"></th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                <section className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Key Learning Points & Recommendations</h3>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {debrief.learningPoints?.map((point, index) => (
-                      <li key={index}>{point}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section className="mb-4">
-                  <label htmlFor="supervisor-notes" className="block text-md font-semibold mb-1">Supervisor Notes:</label>
-                  <textarea
-                    id="supervisor-notes"
-                    rows={3}
-                    placeholder="Add manual notes here..."
-                    value={manualNotes}
-                    onChange={(e) => setManualNotes(e.target.value)}
-                    className="w-full border rounded p-2 text-gray-700 focus:ring-2 focus:ring-blue-200"
-                  />
-                  <button
-                    onClick={handleSaveNotes}
-                    disabled={isSavingNotes}
-                    className="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow disabled:bg-gray-400"
-                  >
-                    {isSavingNotes ? 'Saving...' : 'Save Notes'}
-                  </button>
-                </section>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Doors Open Time</label>
-                  <div className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
-                    {doorsOpenTimeDisplay}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {attendanceData.slice(-5).reverse().map((rec, index, arr) => {
+                            const prevRec = arr[index + 1];
+                            const change = prevRec ? rec.count - prevRec.count : null;
+                            const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
+                            return (
+                              <tr key={index}>
+                                <td colSpan={4} className="p-0">
+                                  <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
+                                    <div className="p-2 text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                                    <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{rec.count.toLocaleString()}</div>
+                                    <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">
+                                      {change !== null ? (
+                                        <span className={`flex items-center justify-end font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {change > 0 ? <FaArrowUp className="mr-1 h-3 w-3" /> : <FaArrowDown className="mr-1 h-3 w-3" />}
+                                          {change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString()}
+                                        </span>
+                                      ) : (
+                                        <span className="text-gray-400">-</span>
+                                      )}
+                                    </div>
+                                    <div className="p-2 align-middle w-1/4 text-gray-900 dark:text-white">
+                                      <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
+                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          </tbody>
+                        </table>
+                  ) : (
+                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
+                  )}
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
+                  {eventDetails?.expected_attendance && (
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
+                        <span className="font-extrabold text-gray-900 dark:text-white">{Math.round(attendancePercentage)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
+                      </div>
+                      <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
+                        {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  <h3 className="font-semibold mb-2 text-gray-700 dark:text-white">Quick Stats</h3>
+                  <div className="grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <p className="text-gray-500 dark:text-white">Peak</p>
+                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{peakAttendance.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-white">Average</p>
+                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{averageAttendance.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-white">Median</p>
+                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{medianAttendance.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-white">Peak Time</p>
+                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-        {/* Predictive Insights */}
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <h2 className="font-bold text-2xl mb-4 text-gray-900 dark:text-white">Predictive Insights</h2>
-            <div className="flex-grow flex items-center justify-center">
-              {loadingPredictions ? (
-                <Skeleton height={80} />
-              ) : (
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <FaExclamationTriangle className="mx-auto text-red-500 h-8 w-8 mb-2" />
-                    <p className="font-semibold text-sm">Most Likely Incident</p>
-                    <p className="text-lg">{predictions.likelyType || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <FaMapMarkerAlt className="mx-auto text-blue-500 h-8 w-8 mb-2" />
-                    <p className="font-semibold text-sm">Most Likely Location</p>
-                    <p className="text-lg">{predictions.likelyLocation || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <FaClock className="mx-auto text-green-500 h-8 w-8 mb-2" />
-                    <p className="font-semibold text-sm">Most Likely Hour</p>
-                    <p className="text-lg">{predictions.likelyHour || 'N/A'}</p>
-                  </div>
+              {/* Live Now Card */}
+              <div className={`bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm p-4 sm:p-6 flex flex-col hover:shadow-2xl hover:-translate-y-1 transition-all duration-200 xl:col-span-1 min-h-[340px]`}>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Live Status</h2>
+                  <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${mostRecentOpen ? getPriorityColor(mostRecentOpen.priority) : 'bg-green-500'}`}>
+                    {mostRecentOpen ? 'Action Required' : 'All Clear'}
+                  </span>
                 </div>
-              )}
+                <div className="mt-4">
+                  {mostRecentOpen ? (
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{mostRecentOpen.incident_type}</p>
+                      <p className="text-sm text-gray-500 dark:text-white">
+                        {new Date(mostRecentOpen.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-sm mt-2 text-gray-900 dark:text-white">{mostRecentOpen.occurrence}</p>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 dark:text-white py-4">No incidents currently active.</p>
+                  )}
+                </div>
+              </div>
             </div>
-        </div>
+
+            {/* Second Row: Lower Widgets */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
+              {/* Merged Incident Analysis Card */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm p-4 sm:p-6 min-h-[270px] flex flex-col xl:col-span-1 hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Incident Analysis</h2>
+                <div className="flex-grow grid grid-cols-2 gap-4">
+                  {/* Incident Volume Chart */}
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Volume Over Time</h3>
+                    <div className="flex-grow relative">
+                      {filteredIncidents.length > 0 ? (
+                        <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
+                      ) : (
+                        <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Incident Types Pie */}
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Breakdown by Type</h3>
+                    <div className="flex-grow relative">
+                      {filteredIncidents.length > 0 ? (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-        </div>
+              </div>
+
+              {/* Trends & Predictive AI */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm p-4 sm:p-6 min-h-[340px] flex flex-col xl:col-span-2 hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
+                  <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Trends</h2>
+                  {aiInsights.length > 1 && (
+                    <div className="flex items-center space-x-2">
+                      <button onClick={prevInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
+                        <FaChevronLeft className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <span className="text-sm text-gray-500">
+                        {aiInsightIndex + 1} / {aiInsights.length}
+                      </span>
+                      <button onClick={nextInsight} className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50" disabled={aiLoading}>
+                        <FaChevronRight className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-grow overflow-y-auto pr-2">
+                  {aiLoading ? (
+                    <div className="space-y-2 pt-2">
+                      <Skeleton height={20} />
+                      <Skeleton height={20} width="90%" />
+                      <Skeleton height={20} width="80%" />
+                    </div>
+                  ) : aiError ? (
+                    <p className="text-red-500 pt-2">{aiError}</p>
+                  ) : (
+                    <div className="text-gray-600 h-full">
+                      {aiInsights.length > 0 && aiInsights[aiInsightIndex] ? (
+                        renderInsight(aiInsights[aiInsightIndex])
+                      ) : (
+                        <span className="text-gray-400">No AI insights available.</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Third Row: Heatmap & More */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+              {/* Debrief Summary */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm p-4 sm:p-6 min-h-[340px] flex flex-col xl:col-span-2 hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 mb-4 gap-2">
+                  <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Debrief Summary</h2>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => eventId && handleGenerateDebrief(eventId)}
+                      disabled={isGeneratingDebrief}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow disabled:bg-gray-400 flex items-center"
+                    >
+                      {isGeneratingDebrief ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Generating...
+                        </>
+                      ) : (
+                        'Generate Debrief'
+                      )}
+                    </button>
+                    <button onClick={handleExport} className="p-2 text-gray-600 hover:text-black disabled:opacity-50" disabled={!debrief.eventOverview && !manualNotes} title="Export as PDF">
+                      <FaFileExport />
+                    </button>
+                    <button onClick={handlePrint} className="p-2 text-gray-600 hover:text-black" title="Print">
+                      <FaPrint />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-grow overflow-y-auto pr-2">
+                  {loadingDebrief ? (
+                    <Skeleton height={200} />
+                  ) : (
+                    <div id="debrief-report" className="p-2">
+                      {debriefError && <p className="text-red-500 mb-4">Error: {debriefError}</p>}
+                      <section className="mb-6">
+                        <h3 className="text-lg font-semibold mb-2">Event Overview and Key Statistics</h3>
+                        <p className="text-gray-700 mb-2">
+                          {debrief.eventOverview}
+                        </p>
+                        {debrief.attendanceSummary && <p className="text-gray-700 mt-2">{debrief.attendanceSummary}</p>}
+                      </section>
+
+                      <section className="mb-6">
+                        <h3 className="text-lg font-semibold mb-2">Significant Incidents</h3>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full border text-sm bg-white dark:bg-[#23408e] text-gray-900 dark:text-white">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-[#23408e] dark:text-white">
+                                <th className="border px-3 py-2 text-left">Date</th>
+                                <th className="border px-3 py-2 text-left">Type</th>
+                                <th className="border px-3 py-2 text-left">Details</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {debrief.significantIncidents?.map((incident, index) => (
+                                <tr key={index}>
+                                  <td className="border px-3 py-2">{incident.date}</td>
+                                  <td className="border px-3 py-2">{incident.type}</td>
+                                  <td className="border px-3 py-2">{incident.details}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+
+                      <section className="mb-6">
+                        <h3 className="text-lg font-semibold mb-2">Key Learning Points & Recommendations</h3>
+                        <ul className="list-disc list-inside space-y-1 text-gray-700">
+                          {debrief.learningPoints?.map((point, index) => (
+                            <li key={index}>{point}</li>
+                          ))}
+                        </ul>
+                      </section>
+
+                      <section className="mb-4">
+                        <label htmlFor="supervisor-notes" className="block text-md font-semibold mb-1">Supervisor Notes:</label>
+                        <textarea
+                          id="supervisor-notes"
+                          rows={3}
+                          placeholder="Add manual notes here..."
+                          value={manualNotes}
+                          onChange={(e) => setManualNotes(e.target.value)}
+                          className="w-full border rounded p-2 text-gray-700 focus:ring-2 focus:ring-blue-200"
+                        />
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={isSavingNotes}
+                          className="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow disabled:bg-gray-400"
+                        >
+                          {isSavingNotes ? 'Saving...' : 'Save Notes'}
+                        </button>
+                      </section>
+
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Doors Open Time</label>
+                        <div className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
+                          {doorsOpenTimeDisplay}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Predictive Insights */}
+              <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-white rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm p-4 sm:p-6 min-h-[340px] flex flex-col hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
+                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Predictive Insights</h2>
+                <div className="flex-grow flex items-center justify-center">
+                  {loadingPredictions ? (
+                    <Skeleton height={80} />
+                  ) : (
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <FaExclamationTriangle className="mx-auto text-red-500 h-8 w-8 mb-2" />
+                        <p className="font-semibold text-sm">Most Likely Incident</p>
+                        <p className="text-lg">{predictions.likelyType || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <FaMapMarkerAlt className="mx-auto text-blue-500 h-8 w-8 mb-2" />
+                        <p className="font-semibold text-sm">Most Likely Location</p>
+                        <p className="text-lg">{predictions.likelyLocation || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <FaClock className="mx-auto text-green-500 h-8 w-8 mb-2" />
+                        <p className="font-semibold text-sm">Most Likely Hour</p>
+                        <p className="text-lg">{predictions.likelyHour || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
+        </div>
       </main>
     </div>
   );

@@ -1,13 +1,8 @@
-const webpack = require('webpack');
-
-module.exports = {
-  webpack: (config) => {
-    config.plugins = config.plugins || [];
-    config.plugins.push(
-      new webpack.ProvidePlugin({
-        Buffer: ['buffer', 'Buffer'],
-      })
-    );
-    return config;
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    domains: ['api.supabase.co'],
   },
-};
+}
+
+module.exports = nextConfig

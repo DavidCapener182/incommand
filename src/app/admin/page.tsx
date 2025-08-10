@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { 
   UserGroupIcon, 
   BuildingOfficeIcon, 
@@ -16,11 +16,15 @@ import {
   ClockIcon,
   CurrencyDollarIcon,
   ChartPieIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  UserIcon,
+  MusicalNoteIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import UserManagementModal from '@/components/UserManagementModal';
 import CompanyCreationModal from '@/components/CompanyCreationModal';
 import EventPricingCalculator from '@/components/EventPricingCalculator';
+import IconSidebar from '@/components/IconSidebar';
 
 interface Company {
   id: string;
@@ -43,6 +47,7 @@ interface User {
   role: string;
   created_at: string;
   company_id: string;
+  avatar_url?: string; // Add avatar_url
   company?: {
     id: string;
     name: string;
@@ -64,6 +69,16 @@ interface Event {
   company?: {
     name: string;
   };
+  expected_attendance?: number;
+  source_table?: string;
+  is_current?: boolean;
+  route_length?: number;
+  assembly_point?: string;
+  dispersal_point?: string;
+  duration_days?: number;
+  camping_available?: boolean;
+  client_company?: string;
+  event_purpose?: string;
 }
 
 interface AuditLog {
@@ -135,6 +150,8 @@ interface DevMetrics {
   projected_monthly_revenue: number;
   break_even_subscribers: number;
   roi_timeline_months: number;
+  total_paid_out: number; // new: sum of all paid out (subscriptions)
+  total_dev_time_cost: number; // new: sum of all dev time (sessions)
 }
 
 interface SubscriptionCost {
@@ -146,6 +163,45 @@ interface SubscriptionCost {
   end_date?: string;
   description: string;
   created_at: string;
+}
+
+interface SupportTicket {
+  id: string;
+  user_id: string;
+  company_id?: string;
+  subject: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: 'general' | 'technical' | 'billing' | 'feature_request' | 'bug_report';
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  assigned_to?: string;
+  user?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  company?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface SupportMessage {
+  id: string;
+  ticket_id: string;
+  sender_id: string;
+  sender_type: 'user' | 'admin';
+  message: string;
+  is_internal: boolean;
+  created_at: string;
+  read_at?: string;
+  sender?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
 }
 
 interface DevSettings {
@@ -190,16 +246,16 @@ const navigation = [
 
 const AdminPage = () => {
   const [activeSection, setActiveSection] = useState('overview')
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [events, setEvents] = useState<Event[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [events, setEvents] = useState<any[]>([])
+  const [usersGroupedByCompany, setUsersGroupedByCompany] = useState<Record<string, any[]>>({})
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | undefined>()
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
   const [companyFilters, setCompanyFilters] = useState<CompanyFilters>({
     search: '',
     subscription_plan: [],
@@ -261,7 +317,9 @@ const AdminPage = () => {
     avg_session_length: 0,
     projected_monthly_revenue: 0,
     break_even_subscribers: 0,
-    roi_timeline_months: 0
+    roi_timeline_months: 0,
+    total_paid_out: 0, // new: sum of all paid out (subscriptions)
+    total_dev_time_cost: 0, // new: sum of all dev time (sessions)
   });
   const [newSession, setNewSession] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -287,11 +345,27 @@ const AdminPage = () => {
     description: ''
   });
 
-
+  // Add state for modal/expanded company
+  // const [selectedCompanyUsers, setSelectedCompanyUsers] = useState<any[] | null>(null);
+  // const [selectedCompanyEvents, setSelectedCompanyEvents] = useState<any[] | null>(null);
+  // const [showUsersModal, setShowUsersModal] = useState(false);
+  // const [showEventsModal, setShowEventsModal] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  // Add state for editing user/company
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  
+  // Support system state
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportFilter, setSupportFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
+  const [newSupportMessage, setNewSupportMessage] = useState('');
 
   useEffect(() => {
     fetchData()
     fetchDevData()
+    fetchSupportData()
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -409,72 +483,46 @@ const AdminPage = () => {
     try {
       setLoading(true)
       setError(null)
-      console.log('Fetching data...')
-      
-      // Fetch companies
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-      
-      if (companiesError) {
-        console.error('Error fetching companies:', companiesError)
-        setError('Failed to fetch companies')
-        return
-      }
-
-      console.log('Companies data:', companiesData)
-
-      // Fetch all users/profiles
+      // Fetch all users from profiles
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*')
-      
+        .order('company', { ascending: true })
+        .order('full_name', { ascending: true })
+      console.log('DEBUG: usersData', usersData, 'usersError', usersError)
       if (usersError) {
-        console.error('Error fetching users:', usersError)
         setError('Failed to fetch users')
+        setLoading(false)
         return
       }
-
-      console.log('Users data:', usersData)
-
-      // Group users by company
-      const companiesWithUsers = companiesData?.map(company => ({
-        ...company,
-        users: usersData?.filter(user => user.company_id === company.id) || []
-      })) || []
-
-      // Add users without company to "No Company" group
-      const usersWithoutCompany = usersData?.filter(user => !user.company_id) || []
-      if (usersWithoutCompany.length > 0) {
-        companiesWithUsers.push({
-          id: 'no-company',
-          name: 'No Company',
-          users: usersWithoutCompany
-        })
+      // Fetch all companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name', { ascending: true })
+      console.log('DEBUG: companiesData', companiesData, 'companiesError', companiesError)
+      if (companiesError) {
+        setError('Failed to fetch companies')
+        setLoading(false)
+        return
       }
-
-      console.log('Companies with users:', companiesWithUsers)
-
-      // Fetch events
+      // Fetch all events
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('*')
-      
+        .order('event_date', { ascending: false })
+      console.log('DEBUG: eventsData', eventsData, 'eventsError', eventsError)
       if (eventsError) {
-        console.error('Error fetching events:', eventsError)
         setError('Failed to fetch events')
+        setLoading(false)
         return
       }
-
-      console.log('Events data:', eventsData)
-
-      setCompanies(companiesWithUsers)
       setUsers(usersData || [])
+      setCompanies(companiesData || [])
       setEvents(eventsData || [])
-    } catch (error) {
-      console.error('Error in fetchData:', error)
-      setError('An unexpected error occurred')
-    } finally {
+      setLoading(false)
+    } catch (err) {
+      setError('Unexpected error fetching admin data')
       setLoading(false)
     }
   }
@@ -525,7 +573,7 @@ const AdminPage = () => {
 
       await fetchData()
       setIsUserModalOpen(false)
-      setSelectedUser(undefined)
+      setSelectedUser(null)
     } catch (error) {
       console.error('Error updating user:', error)
     }
@@ -857,6 +905,24 @@ const AdminPage = () => {
     const breakEvenSubscribers = Math.ceil(totalInvestment / settings.subscription_price_monthly);
     const roiTimelineMonths = Math.ceil(totalInvestment / projectedMonthlyRevenue);
 
+    const totalDevTimeCost = -1 * sessions.reduce((sum, session) => sum + session.total_cost, 0); // negative
+    const totalPaidOut = -1 * subscriptions.reduce((sum, sub) => {
+      const cost = sub.cost;
+      if (sub.billing_period === 'monthly') {
+        const startDate = new Date(sub.start_date);
+        const endDate = sub.end_date ? new Date(sub.end_date) : new Date();
+        const months = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+        return sum + (cost * months);
+      } else if (sub.billing_period === 'yearly') {
+        const startDate = new Date(sub.start_date);
+        const endDate = sub.end_date ? new Date(sub.end_date) : new Date();
+        const years = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365)));
+        return sum + (cost * years);
+      } else {
+        return sum + cost;
+      }
+    }, 0); // negative
+
     setDevMetrics({
       total_hours: totalHours,
       total_dev_cost: totalDevCost,
@@ -867,7 +933,9 @@ const AdminPage = () => {
       avg_session_length: avgSessionLength,
       projected_monthly_revenue: projectedMonthlyRevenue,
       break_even_subscribers: breakEvenSubscribers,
-      roi_timeline_months: roiTimelineMonths
+      roi_timeline_months: roiTimelineMonths,
+      total_paid_out: totalPaidOut,
+      total_dev_time_cost: totalDevTimeCost,
     });
   };
 
@@ -1052,6 +1120,178 @@ const AdminPage = () => {
     }
   };
 
+  // Support system functions
+  const fetchSupportData = async () => {
+    try {
+      console.log('Fetching support data...');
+      // Fetch support tickets with user and company info
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          user:profiles!support_tickets_user_id_fkey(id, full_name, email),
+          company:companies!support_tickets_company_id_fkey(id, name)
+        `)
+        .order('created_at', { ascending: false });
+
+      console.log('Support tickets result:', { ticketsData, ticketsError });
+
+      if (ticketsError) {
+        console.error('Error fetching support tickets:', ticketsError);
+      } else {
+        console.log('Setting support tickets state with:', ticketsData);
+        setSupportTickets(ticketsData || []);
+        console.log('Support tickets state should now be:', ticketsData);
+      }
+    } catch (error) {
+      console.error('Error fetching support data:', error);
+    }
+  };
+
+  const fetchSupportMessages = async (ticketId: string) => {
+    try {
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('support_messages')
+        .select(`
+          *,
+          sender:profiles!support_messages_sender_id_fkey(id, full_name, email)
+        `)
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('Error fetching support messages:', messagesError);
+      } else {
+        setSupportMessages(messagesData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching support messages:', error);
+    }
+  };
+
+  const openSupportChat = async (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setIsSupportChatOpen(true);
+    await fetchSupportMessages(ticket.id);
+  };
+
+  const sendSupportMessage = async () => {
+    if (!selectedTicket || !newSupportMessage.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .insert({
+          ticket_id: selectedTicket.id,
+          sender_id: currentUser?.id,
+          sender_type: 'admin',
+          message: newSupportMessage.trim(),
+          is_internal: false
+        });
+
+      if (error) throw error;
+
+      setNewSupportMessage('');
+      await fetchSupportMessages(selectedTicket.id);
+    } catch (error) {
+      console.error('Error sending support message:', error);
+    }
+  };
+
+  const updateTicketStatus = async (ticketId: string, status: SupportTicket['status']) => {
+    try {
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ 
+          status,
+          resolved_at: status === 'resolved' ? new Date().toISOString() : null
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      await fetchSupportData();
+      if (selectedTicket?.id === ticketId) {
+        setSelectedTicket(prev => prev ? { ...prev, status } : null);
+      }
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+    }
+  };
+
+  const deleteSupportTicket = async (ticketId: string) => {
+    try {
+      console.log('Deleting ticket:', ticketId);
+      
+      // First check if the ticket is closed
+      const { data: ticket, error: fetchError } = await supabase
+        .from('support_tickets')
+        .select('status')
+        .eq('id', ticketId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (ticket.status !== 'closed') {
+        alert('Only closed tickets can be deleted.');
+        return;
+      }
+
+      console.log('Ticket is closed, proceeding with deletion...');
+
+      // Delete all messages for this ticket first
+      const { error: messagesError } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('ticket_id', ticketId);
+
+      if (messagesError) throw messagesError;
+      console.log('Messages deleted successfully');
+
+      // Then delete the ticket
+      const { error: ticketError } = await supabase
+        .from('support_tickets')
+        .delete()
+        .eq('id', ticketId);
+
+      if (ticketError) throw ticketError;
+      console.log('Ticket deleted successfully');
+
+      // Force refresh the data
+      console.log('Refreshing support data...');
+      await fetchSupportData();
+      
+      // Force a state update by setting the tickets to empty first
+      console.log('Force clearing tickets state...');
+      setSupportTickets([]);
+      
+      // Then fetch again
+      console.log('Fetching support data again...');
+      await fetchSupportData();
+      
+      // Check the state after a short delay
+      setTimeout(() => {
+        console.log('Current support tickets state after deletion:', supportTickets);
+      }, 1000);
+      
+      // Close chat if this ticket was selected
+      if (selectedTicket?.id === ticketId) {
+        setIsSupportChatOpen(false);
+        setSelectedTicket(null);
+      }
+
+      alert('Support ticket deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting support ticket:', error);
+      alert('Error deleting support ticket. Please try again.');
+    }
+  };
+
+  const filteredSupportTickets = supportTickets.filter(ticket => {
+    if (supportFilter === 'all') return true;
+    return ticket.status === supportFilter;
+  });
+
   const seedInitialData = async () => {
     try {
       // Historical development sessions based on our conversation history
@@ -1204,74 +1444,916 @@ const AdminPage = () => {
     }
   };
 
+  useEffect(() => {
+    // Group users by company name (or 'No Company')
+    const grouped: Record<string, any[]> = {};
+    users.forEach(user => {
+      const company = companies.find(c => c.id === user.company_id);
+      const companyName = company ? company.name : 'No Company';
+      if (!grouped[companyName]) grouped[companyName] = [];
+      grouped[companyName].push(user);
+    });
+    setUsersGroupedByCompany(grouped);
+    // REMOVE setCompanies(companiesWithCounts) to avoid overwriting companies
+  }, [users, companies, events]);
+
+  const handleCreateUser = async (userData: Partial<User>) => {
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        email_confirm: true,
+        user_metadata: { full_name: userData.full_name }
+      });
+      if (authError) throw authError;
+      // 2. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            email: userData.email,
+            full_name: userData.full_name,
+            company_id: userData.company_id,
+            role: userData.role
+          }
+        ]);
+      if (profileError) throw profileError;
+      await fetchData();
+      setIsUserModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      setError('Failed to create user');
+    }
+  };
+
+  const handleUpdateCompany = async (companyData: Partial<Company>) => {
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ name: companyData.name })
+        .eq('id', companyData.id);
+      if (error) throw error;
+      await fetchData();
+      setIsCompanyModalOpen(false);
+      setSelectedCompany(null);
+    } catch (error) {
+      console.error('Error updating company:', error);
+      setError('Failed to update company');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-[#101c36] py-8 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-[#23408e] rounded w-1/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-[#23408e] rounded w-1/2 mb-8"></div>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                  <div className="h-4 bg-gray-200 dark:bg-[#2d437a] rounded w-3/4 mb-4"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-[#2d437a] rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
+                  <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-[#23408e] rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-[#23408e] rounded w-1/2 mb-8"></div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+                <div className="h-4 bg-gray-200 dark:bg-[#2d437a] rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 dark:bg-[#2d437a] rounded w-1/2"></div>
+              </div>
+            ))}
           </div>
+        </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex flex-col shadow-lg z-10">
-        <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
-          <div className="flex items-center space-x-2">
-            <CogIcon className="h-6 w-6 text-blue-700 dark:text-blue-300" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Admin Panel</span>
+    <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+      <IconSidebar
+        navigation={navigation}
+        activeItem={activeSection}
+        onItemClick={setActiveSection}
+        title="Admin"
+      />
+      
+      <main className="flex-1 ml-16 lg:ml-64">
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Admin Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-300">Manage and monitor your platform settings and data</p>
+            </div>
           </div>
-        </div>
-        <nav className="flex-1 space-y-2 py-4 px-2">
-          {navigation.map(item => {
-            const active = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-colors w-full text-left
-                  ${active ? 'bg-blue-50 dark:bg-[#1a2a57] text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a2a57]'}
-                `}
-              >
-                <item.icon className={`h-5 w-5 ${active ? 'text-blue-700 dark:text-blue-200' : 'text-gray-400 dark:text-blue-300'}`} />
-                {item.name}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Manage and monitor your platform settings and data</h1>
-          </div>
-          <button 
-            onClick={setupDatabase}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-5 py-2 rounded-lg shadow transition-colors duration-200"
-          >
-            Setup Database
-          </button>
-        </div>
 
         {/* System Overview Card */}
         {activeSection === 'overview' && (
-          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-8">
             <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-blue-200">System Overview</h2>
-            <p className="text-gray-600 dark:text-blue-100">Welcome to the admin dashboard. Here you can manage companies, users, and view system statistics.</p>
+            <p className="text-gray-600 dark:text-blue-100 mb-4">Welcome to the admin dashboard. Here you can manage companies, users, and view system statistics.</p>
+            
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Companies</span>
+        </div>
+                <span className="text-2xl font-bold">{companies.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserGroupIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Users</span>
+                </div>
+                <span className="text-2xl font-bold">{users.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Total Events</span>
+                </div>
+                <span className="text-2xl font-bold">{events.length}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  <span className="font-semibold text-lg">Active Events</span>
+                </div>
+                <span className="text-2xl font-bold">{events.filter(event => new Date(event.end_datetime) > new Date()).length}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Management Section */}
+        {activeSection === 'users' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">User Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All users across inCommand platform sorted by company</p>
+            </div>
+            <button
+                onClick={() => setIsUserModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+            >
+                Add New User
+            </button>
+          </div>
+            
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{users.length}</div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
+        </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">{companies.length}</div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Companies</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                  {users.filter(user => user.role === 'admin' || user.role === 'superadmin').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Admins</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+                  {users.filter(user => !user.company_id).length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Unassigned</div>
+              </div>
+            </div>
+
+            {/* Users grouped by company, but filtered if companyFilter is set */}
+            <div className="space-y-6">
+              {Object.entries(usersGroupedByCompany)
+                .filter(([companyName, _]) => {
+                  if (!companyFilter) return true;
+                  const company = companies.find(c => c.id === companyFilter);
+                  return company && company.name === companyName;
+                })
+                .sort(([companyA], [companyB]) => companyA.localeCompare(companyB))
+                .map(([companyName, companyUsers]) => (
+                  <div key={companyName} className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a]">
+                    <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
+                        <BuildingOfficeIcon className="h-5 w-5" />
+                        {companyName} ({companyUsers.length} users)
+                        {companyFilter && (
+                          <button className="ml-4 text-xs text-blue-600 underline" onClick={() => setCompanyFilter(null)}>Clear filter</button>
+                        )}
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+                        <thead className="bg-gray-50 dark:bg-[#1e3a5f]">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">User</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Joined</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                          {companyUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-[#1e3a5f]">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    {user.avatar_url ? (
+                                      <img
+                                        src={user.avatar_url}
+                                        alt={user.full_name || user.email || 'User'}
+                                        className="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                                      />
+                                    ) : (
+                                      <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                        <UserIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-blue-100">
+                                      {user.full_name || 'No name'}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-blue-200">{user.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  user.role === 'superadmin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                  user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                  user.role === 'user' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                                }`}>
+                                  {user.role || 'user'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-blue-200">
+                                {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+              <button
+                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                onClick={() => {
+                                    setSelectedUser(user);
+                                    setIsUserModalOpen(true);
+                }}
+              >
+                                  Edit
+              </button>
+                                <button
+                                  className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                  onClick={() => handleResendInvite(user.email)}
+                                >
+                                  Resend
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Companies Section */}
+        {activeSection === 'companies' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Company Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All companies on inCommand platform with comprehensive metrics</p>
+              </div>
+          <button
+                onClick={() => setIsCompanyModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
+          >
+                Add Company
+          </button>
+        </div>
+        
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{companies.length}</div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Companies</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                  {companies.reduce((sum, company) => sum + users.filter(u => u.company_id === company.id).length, 0)}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Users</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                  {companies.reduce((sum, company) => sum + events.filter(e => e.company_id === company.id).length, 0)}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+                  {companies.filter(company => (company.event_count || 0) > 0).length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Active Companies</div>
+              </div>
+            </div>
+            
+            {/* Companies Table */}
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200">All Companies</h3>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Companies sorted by activity and event count</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+                  <thead className="bg-gray-50 dark:bg-[#1a2759]">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Company Details</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Users</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Events</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                    {companies.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-blue-100">
+                          No companies found
+                        </td>
+                      </tr>
+                    ) : (
+                      companies
+                        .sort((a, b) => (b.event_count || 0) - (a.event_count || 0)) // Sort by event count descending
+                        .map((company) => (
+                        <tr
+                          key={company.id}
+                          className="hover:bg-gray-50 dark:hover:bg-[#1a2759] cursor-pointer"
+                          onClick={() => {
+                            setCompanyFilter(company.id);
+                            setActiveSection('users');
+                          }}
+                        >
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-blue-200">
+                                {company.name}
+                              </div>
+                              <div className="text-xs text-gray-400 dark:text-blue-200 font-mono">
+                                ID: {company.id.substring(0, 8)}...
+                              </div>
+                              {(events.filter(e => e.company_id === company.id).length > 0) && (
+                                <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                  Active
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
+                                {users.filter(u => u.company_id === company.id).length}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                registered users
+                              </div>
+                              {(company.user_count || 0) > 0 && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
+                                     onClick={() => {
+                                       setActiveSection('users');
+                                       setCompanyFilter(company.id);
+                                     }}>
+                                  View users
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-semibold text-gray-900 dark:text-blue-200">
+                                {events.filter(e => e.company_id === company.id).length}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-100">
+                                total events
+                              </div>
+                              {(company.event_count || 0) > 0 && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
+                                     onClick={() => {
+                                       setActiveSection('events');
+                                       setCompanyFilter(company.id);
+                                     }}>
+                                  View events
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-500 dark:text-blue-100">
+                              {new Date(company.created_at).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-blue-200">
+                              {new Date(company.created_at).toLocaleDateString() === new Date().toLocaleDateString() 
+                                ? 'Today' 
+                                : `${Math.floor((new Date().getTime() - new Date(company.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago`
+                              }
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex space-x-2">
+                              <button 
+                                onClick={() => {
+                                  setSelectedCompany(company);
+                                  setIsCompanyModalOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  console.log('View company details:', company.id)
+                                  // Add view functionality
+                                }}
+                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-xs font-medium"
+                              >
+                                Details
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Events Section */}
+        {activeSection === 'events' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Event Management</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">All events grouped by company</p>
+            </div>
+            </div>
+            
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{events.length}</div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Events</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                  {events.filter(event => event.event_type === 'Concert').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Concerts</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+                  {events.filter(event => event.source_table === 'festival_events').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Festivals</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
+                  {events.filter(event => event.source_table === 'parade_events').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Parades</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-300">
+                  {events.filter(event => event.source_table === 'corporate_events').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Corporate</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
+                  {events.filter(event => event.is_current).length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Active Events</div>
+              </div>
+            </div>
+            
+            {/* Events grouped by company, but filtered if companyFilter is set */}
+            {(companyFilter
+              ? companies.filter(c => c.id === companyFilter)
+              : companies
+            ).map(company => {
+              const companyEvents = events.filter(e => e.company_id === company.id);
+              if (companyEvents.length === 0) return null;
+              return (
+                <div key={company.id} className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] my-4">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
+                      {company.name} ({companyEvents.length} events)
+                      {companyFilter && (
+                        <button className="ml-4 text-xs text-blue-600 underline" onClick={() => setCompanyFilter(null)}>Clear filter</button>
+                      )}
+                    </h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+                      <thead className="bg-gray-50 dark:bg-[#1a2759]">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Event Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Type</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Venue</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                        {companyEvents.map(event => (
+                          <tr key={event.id}>
+                            <td className="px-6 py-4">{event.event_name}</td>
+                            <td className="px-6 py-4">{event.event_date || event.created_at}</td>
+                            <td className="px-6 py-4">{event.event_type}</td>
+                            <td className="px-6 py-4">{event.venue_name}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Audit Logs Section */}
+        {activeSection === 'audit' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Audit Logs</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              {auditLogs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-[#2d437a]">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Action</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Type</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">User</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Details</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.slice(0, 50).map((log) => (
+                        <tr key={log.id} className="border-b border-gray-100 dark:border-[#2d437a] hover:bg-gray-50 dark:hover:bg-[#1a2a57] transition-colors">
+                          <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{log.action}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              log.action_type === 'user' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              log.action_type === 'company' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              log.action_type === 'event' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                            }`}>
+                              {log.action_type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100">{log.user?.full_name || log.performed_by}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100 max-w-xs truncate">{log.details}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-blue-100">
+                            {new Date(log.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <ClipboardDocumentListIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-blue-100">No audit logs available</p>
+                  <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">Audit logging may not be configured</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Platform Settings Section */}
+        {activeSection === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Platform Settings</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">System Configuration</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Default User Role
+                      </label>
+                      <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Session Timeout (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        defaultValue={60}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Database Management</h3>
+                  <div className="flex flex-wrap gap-4">
+            <button 
+              onClick={setupDatabase}
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+            >
+              Setup Database
+            </button>
+                    <button
+                      onClick={() => fetchData()}
+                      className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-400 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors duration-200"
+                    >
+                      Refresh All Data
+            </button>
+          </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Section */}
+        {activeSection === 'notifications' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">System Notifications</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="text-center py-8">
+                <BellIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-blue-100">Notification management coming soon</p>
+                <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">This section will allow you to manage system-wide notifications and alerts</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Support Section */}
+        {activeSection === 'support' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Live Support Center</h2>
+                <p className="text-gray-600 dark:text-blue-100 text-sm">Manage support tickets and provide real-time assistance to users</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    console.log('Manual refresh clicked');
+                    fetchSupportData();
+                  }}
+                  className="px-3 py-1 rounded-lg text-sm font-medium transition-colors bg-green-600 text-white hover:bg-green-700"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={() => setSupportFilter('all')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    supportFilter === 'all' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setSupportFilter('open')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    supportFilter === 'open' 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  Open
+                </button>
+                <button
+                  onClick={() => setSupportFilter('in_progress')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    supportFilter === 'in_progress' 
+                      ? 'bg-yellow-600 text-white' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  In Progress
+                </button>
+                <button
+                  onClick={() => setSupportFilter('resolved')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    supportFilter === 'resolved' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  Resolved
+                </button>
+                <button
+                  onClick={() => setSupportFilter('closed')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    supportFilter === 'closed' 
+                      ? 'bg-gray-600 text-white' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  Closed
+                </button>
+              </div>
+            </div>
+
+            {/* Support Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{supportTickets.length}</div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Total Tickets</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-300">
+                  {supportTickets.filter(t => t.status === 'open').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Open</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">
+                  {supportTickets.filter(t => t.status === 'in_progress').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">In Progress</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
+                  {supportTickets.filter(t => t.status === 'resolved').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Resolved</div>
+              </div>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-xl border border-gray-200 dark:border-[#2d437a] p-4">
+                <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">
+                  {supportTickets.filter(t => t.status === 'closed').length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-blue-100">Closed</div>
+              </div>
+            </div>
+
+            {/* Support Tickets */}
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Support Tickets</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+                  <thead className="bg-gray-50 dark:bg-[#1a2759]">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Ticket</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Priority</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Created</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-blue-200 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+                    {filteredSupportTickets.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-blue-100">
+                          No support tickets found
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSupportTickets.map((ticket) => (
+                        <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2759]">
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-blue-200">
+                                {ticket.subject}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-blue-300">
+                                {ticket.category}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 dark:text-blue-200">
+                              {ticket.user?.full_name || ticket.user?.email || 'Unknown'}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-blue-300">
+                              {ticket.company?.name || 'No Company'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              ticket.status === 'open' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                              ticket.status === 'resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
+                            }`}>
+                              {ticket.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              ticket.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              ticket.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                              ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            }`}>
+                              {ticket.priority}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-blue-200">
+                            {new Date(ticket.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => openSupportChat(ticket)}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                              >
+                                View Chat
+                              </button>
+                              
+                              {/* Status Update Buttons */}
+                              {ticket.status === 'open' && (
+                                <button
+                                  onClick={() => updateTicketStatus(ticket.id, 'in_progress')}
+                                  className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300 text-sm font-medium"
+                                >
+                                  Mark In Progress
+                                </button>
+                              )}
+                              
+                              {ticket.status === 'in_progress' && (
+                                <button
+                                  onClick={() => updateTicketStatus(ticket.id, 'resolved')}
+                                  className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium"
+                                >
+                                  Mark Resolved
+                                </button>
+                              )}
+                              
+                              {ticket.status === 'resolved' && (
+                                <button
+                                  onClick={() => updateTicketStatus(ticket.id, 'closed')}
+                                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium"
+                                >
+                                  Close Ticket
+                                </button>
+                              )}
+                              
+                              {/* Delete Button - Only for closed tickets */}
+                              {ticket.status === 'closed' && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this support ticket? This action cannot be undone.')) {
+                                      deleteSupportTicket(ticket.id);
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Billing Section */}
+        {activeSection === 'billing' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Billing & Subscriptions</h2>
+            
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+              <div className="text-center py-8">
+                <CreditCardIcon className="h-12 w-12 text-gray-400 dark:text-blue-300 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-blue-100">Billing management coming soon</p>
+                <p className="text-gray-500 dark:text-blue-300 text-sm mt-1">This section will provide subscription and billing management tools</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1279,8 +2361,8 @@ const AdminPage = () => {
         {activeSection === 'development' && isSuperAdmin && (
           <div className="space-y-6">
             {/* Development Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <ClockIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Hours</span>
@@ -1289,40 +2371,40 @@ const AdminPage = () => {
                 <p className="text-sm text-gray-600 dark:text-blue-100">{devMetrics.sessions_count} sessions</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <CurrencyDollarIcon className="h-6 w-6 text-green-600 dark:text-green-300" />
-                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Dev Cost</span>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Development Time Cost</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_dev_cost.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">@ £{devSettings.hourly_rate}/hour</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_dev_time_cost < 0 ? '-' : ''}£{Math.abs(devMetrics.total_dev_time_cost).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Unpaid, tracked as negative (your time)</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <CreditCardIcon className="h-6 w-6 text-orange-600 dark:text-orange-300" />
-                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Subscriptions</span>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Paid Out Costs</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_subscription_cost.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">{subscriptionCosts.length} active</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_paid_out < 0 ? '-' : ''}£{Math.abs(devMetrics.total_paid_out).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Expenses paid out (negative)</p>
               </div>
 
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <ChartPieIcon className="h-6 w-6 text-red-600 dark:text-red-300" />
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">Total Investment</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">£{devMetrics.total_investment.toFixed(2)}</span>
-                <p className="text-sm text-gray-600 dark:text-blue-100">Break-even: {devMetrics.break_even_subscribers} subs</p>
+                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{devMetrics.total_investment < 0 ? '-' : ''}£{Math.abs(devMetrics.total_investment).toFixed(2)}</span>
+                <p className="text-sm text-gray-600 dark:text-blue-100">Total Investment (negative, sum of your time and paid out)</p>
               </div>
             </div>
 
             {/* Input Forms and Settings */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Log Development Session */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Log Development Session</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Log Development Session</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
                     <input
@@ -1347,7 +2429,7 @@ const AdminPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
                     <input
@@ -1380,8 +2462,8 @@ const AdminPage = () => {
               </div>
 
               {/* Add Subscription */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Subscription</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Subscription</h3>
                 {newSubscription.billing_period === 'yearly' && (
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
                     <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -1389,7 +2471,7 @@ const AdminPage = () => {
                     </p>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Service Name</label>
                     <input
@@ -1413,7 +2495,7 @@ const AdminPage = () => {
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost (£)</label>
                     <input
@@ -1477,9 +2559,9 @@ const AdminPage = () => {
             </div>
 
             {/* Settings & Calculations */}
-            <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Development & Pricing Settings</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Development & Pricing Settings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hourly Rate (£)</label>
                   <input
@@ -1537,7 +2619,7 @@ const AdminPage = () => {
               {/* Tiered Pricing Display */}
               <div className="mb-6">
                 <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">6-Tier Per-Event Pricing Strategy</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
                     <h5 className="font-semibold text-red-800 dark:text-red-200 mb-2 text-sm">Light (1-3/month)</h5>
                     <p className="text-lg font-bold text-red-900 dark:text-red-100">£{devSettings.per_event_price_light?.toFixed(2) || '0.00'}</p>
@@ -1611,7 +2693,7 @@ const AdminPage = () => {
                 {/* Subscription Customers */}
                 <div className="mb-4">
                   <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Subscription Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Subscribers</label>
                       <input
@@ -1638,7 +2720,7 @@ const AdminPage = () => {
                 {/* Per-Event Customers */}
                 <div className="mb-4">
                   <h5 className="text-md font-medium mb-2 text-gray-800 dark:text-gray-200">Per-Event Customers</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-red-700 dark:text-red-300 mb-1">Light Users</label>
                       <input
@@ -1695,7 +2777,7 @@ const AdminPage = () => {
                 {/* Revenue Summary */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                   <h5 className="text-md font-medium mb-3 text-gray-800 dark:text-gray-200">Projected Monthly Revenue</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-gray-600 dark:text-gray-300">Monthly Subs:</p>
                       <p className="font-bold text-blue-600 dark:text-blue-400">£{(devSettings.subscribers_monthly * devSettings.subscription_price_monthly).toLocaleString()}</p>
@@ -1733,7 +2815,7 @@ const AdminPage = () => {
               {/* Profit Analysis */}
               <div className="mb-6">
                 <h4 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Profit Analysis</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                   {/* Yearly Subscriber Profit */}
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
                     <h5 className="font-semibold text-green-800 dark:text-green-200 mb-2">Yearly Subscriber</h5>
@@ -1804,10 +2886,10 @@ const AdminPage = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Development Sessions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Development Sessions</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Development Sessions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {devSessions.slice(0, 10).map((session) => (
                     <div key={session.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
@@ -1819,7 +2901,7 @@ const AdminPage = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{session.total_cost.toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">{'-£' + Math.abs(session.total_cost).toFixed(2)}</p>
                           <p className="text-sm text-gray-600 dark:text-blue-100">{session.duration_hours.toFixed(1)}h</p>
                         </div>
                       </div>
@@ -1841,8 +2923,8 @@ const AdminPage = () => {
               </div>
 
               {/* Active Subscriptions */}
-              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-                <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Subscriptions</h3>
+              <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Subscriptions</h3>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {subscriptionCosts.slice(0, 10).map((subscription) => (
                     <div key={subscription.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
@@ -1857,17 +2939,10 @@ const AdminPage = () => {
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100">£{subscription.cost.toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100">{'-£' + Math.abs(subscription.cost).toFixed(2)}</p>
                           <p className="text-sm text-gray-600 dark:text-blue-100">{subscription.billing_period}</p>
                         </div>
                       </div>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        subscription.billing_period === 'monthly' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        subscription.billing_period === 'yearly' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}>
-                        {subscription.billing_period}
-                      </span>
                     </div>
                   ))}
                   {subscriptionCosts.length === 0 && (
@@ -1881,7 +2956,7 @@ const AdminPage = () => {
 
                  {/* Non-Super Admin Message */}
          {activeSection === 'development' && !isSuperAdmin && (
-           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+           <div className="bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
              <div className="text-center">
                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Access Restricted</h3>
                <p className="text-gray-600 dark:text-blue-100 mb-4">Development tracking is only available to super administrators.</p>
@@ -1905,7 +2980,115 @@ const AdminPage = () => {
          )}
 
          {/* ...rest of the admin content... */}
+        </div>
       </main>
+
+      {/* Modals */}
+      <UserManagementModal
+        isOpen={isUserModalOpen}
+        onClose={() => {
+          setIsUserModalOpen(false)
+          setSelectedUser(null)
+        }}
+        user={selectedUser}
+        companies={companies}
+        onSubmit={selectedUser ? handleUpdateUser : handleCreateUser}
+      />
+      
+      <CompanyCreationModal
+        isOpen={isCompanyModalOpen}
+        onClose={() => {
+          setIsCompanyModalOpen(false)
+          setSelectedCompany(null)
+        }}
+        onSubmit={selectedCompany ? handleUpdateCompany : handleCreateCompany}
+      />
+
+      {/* Support Chat Modal */}
+      {isSupportChatOpen && selectedTicket && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a] flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-blue-200">
+                  Support Chat - {selectedTicket.subject}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-blue-100">
+                  {selectedTicket.user?.full_name || selectedTicket.user?.email} • {selectedTicket.company?.name || 'No Company'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedTicket.status}
+                  onChange={(e) => updateTicketStatus(selectedTicket.id, e.target.value as SupportTicket['status'])}
+                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 text-sm"
+                >
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+                <button
+                  onClick={() => setIsSupportChatOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {supportMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      message.sender_type === 'admin'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                    }`}
+                  >
+                    <div className="text-sm font-medium mb-1">
+                      {message.sender?.full_name || message.sender?.email || 'Unknown'}
+                    </div>
+                    <div className="text-sm">{message.message}</div>
+                    <div className="text-xs opacity-70 mt-1">
+                      {new Date(message.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Message Input */}
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-[#2d437a]">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSupportMessage}
+                  onChange={(e) => setNewSupportMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendSupportMessage()}
+                  placeholder="Type your message..."
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
+                />
+                <button
+                  onClick={sendSupportMessage}
+                  disabled={!newSupportMessage.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

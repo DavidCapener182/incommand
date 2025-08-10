@@ -6,7 +6,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
   XCircleIcon,
-  XMarkIcon
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 
 export interface ToastMessage {
@@ -17,7 +17,7 @@ export interface ToastMessage {
   duration?: number
   urgent?: boolean
   onClick?: () => void
-  meta?: any // e.g., { messageId: string }
+  meta?: any // e.g., { messageId: string, notificationId?: string }
 }
 
 interface ToastProps {
@@ -71,76 +71,58 @@ const getTextStyles = (type: ToastMessage['type']) => {
 }
 
 export default function Toast({ messages, onRemove }: ToastProps) {
-  useEffect(() => {
-    messages.forEach((message) => {
-      if (message.duration !== 0) { // duration 0 means persistent
-        const timer = setTimeout(() => {
-          onRemove(message.id)
-        }, message.duration || 8000) // Increased default from 5000ms to 8000ms (8 seconds)
-        
-        return () => clearTimeout(timer)
-      }
-    })
-  }, [messages, onRemove])
-
-  if (messages.length === 0) return null
-
   return (
-    <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
-      {messages.map((message) => {
-        const textStyles = getTextStyles(message.type)
-        
-        return (
-          <div
-            key={message.id}
-            className={`${getToastStyles(message.type, message.urgent)} p-4 transition-all duration-300 transform animate-slide-in-right ${message.onClick ? 'cursor-pointer hover:shadow-xl hover:bg-blue-100/60' : ''}`}
-            style={{
-              ...(message.urgent && {
-                boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2)',
-              })
-            }}
-            onClick={message.onClick}
-            tabIndex={message.onClick ? 0 : undefined}
-            role={message.onClick ? 'button' : undefined}
-            aria-label={message.title}
-          >
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                {getToastIcon(message.type)}
-              </div>
-              <div className="ml-3 flex-1">
-                <p className={`text-sm font-medium ${textStyles.title}`}>
-                  {message.title}
-                </p>
-                <p className={`mt-1 text-sm ${textStyles.message}`}>
-                  {message.message}
-                </p>
-              </div>
-              <div className="ml-4 flex-shrink-0 flex">
-                <button
-                  className={`inline-flex rounded-md ${textStyles.message} hover:opacity-75 focus:outline-none`}
-                  onClick={e => { e.stopPropagation(); onRemove(message.id); }}
-                  aria-label="Dismiss notification"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`${getToastStyles(message.type, message.urgent)} p-4 max-w-sm w-full transition-all duration-300 ease-in-out transform translate-x-0 opacity-100`}
+          onClick={message.onClick}
+          style={{ cursor: message.onClick ? 'pointer' : 'default' }}
+        >
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              {getToastIcon(message.type)}
+            </div>
+            <div className="ml-3 flex-1">
+              <p className={`text-sm font-medium ${getTextStyles(message.type)?.title}`}>
+                {message.title}
+              </p>
+              <p className={`mt-1 text-sm ${getTextStyles(message.type)?.message}`}>
+                {message.message}
+              </p>
+            </div>
+            <div className="ml-4 flex-shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemove(message.id)
+                }}
+                className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
-        )
-      })}
+        </div>
+      ))}
     </div>
   )
 }
 
-// Hook for managing toast messages
 export function useToast() {
   const [messages, setMessages] = useState<ToastMessage[]>([])
 
   const addToast = (toast: Omit<ToastMessage, 'id'>) => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-    console.log('🔔 Toast notification:', toast.title);
-    setMessages(prev => [...prev, { ...toast, id }]);
+    const id = Math.random().toString(36).substr(2, 9)
+    const newToast = { ...toast, id }
+    setMessages(prev => [...prev, newToast])
+
+    if (toast.duration !== 0) {
+      setTimeout(() => {
+        removeToast(id)
+      }, toast.duration || 5000)
+    }
   }
 
   const removeToast = (id: string) => {
@@ -155,6 +137,6 @@ export function useToast() {
     messages,
     addToast,
     removeToast,
-    clearAll
+    clearAll,
   }
 } 

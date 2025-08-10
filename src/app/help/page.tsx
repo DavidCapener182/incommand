@@ -2,23 +2,26 @@ import React from 'react';
 
 const HelpPage = () => {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] p-6 md:p-8 transition-colors duration-300">
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a] hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
+      <div className="max-w-6xl mx-auto bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a]">
         <header className="mb-10 border-b border-gray-200 dark:border-[#2d437a] pb-6">
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-white flex items-center">
-            <span className="material-icons text-blue-600 dark:text-blue-300 mr-3 text-5xl">help_outline</span>
-            Help &amp; Glossary
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Help &amp; Glossary</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Quick answers, definitions, and how-to guidance</p>
+            </div>
+          </div>
         </header>
         <section className="mb-12">
-          <h2 className="text-3xl font-semibold text-gray-700 dark:text-blue-200 mb-6 flex items-center">
-            <span className="material-icons text-blue-500 dark:text-blue-300 mr-2">info</span>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
+            <span className="material-icons text-blue-600 dark:text-blue-300">info</span>
             About This App
           </h2>
           <p className="text-lg leading-relaxed mb-4 text-gray-800 dark:text-gray-100">
             InCommand Event Control is a comprehensive platform designed to help event staff and security teams manage incidents, monitor venue occupancy, and generate detailed reports and analytics. The app streamlines the process of incident reporting, data collection, and analysis, ensuring a safer and more organized event experience.
           </p>
-          <ul className="list-none space-y-3 pl-0 mb-6">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 mb-6">
             <li className="flex items-start">
               <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
               <span className="text-lg text-gray-800 dark:text-gray-100">Report and track incidents in real time</span>
@@ -40,27 +43,27 @@ const HelpPage = () => {
               <span className="text-lg text-gray-800 dark:text-gray-100">Secure authentication and user management</span>
             </li>
           </ul>
-          <p className="text-lg leading-relaxed bg-blue-50 dark:bg-[#1a2a57] dark:text-blue-100 p-4 rounded-xl border border-blue-200 dark:border-[#2d437a] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <p className="text-base leading-relaxed bg-blue-50 dark:bg-[#1a2a57] dark:text-blue-100 p-4 rounded-xl border border-blue-200 dark:border-[#2d437a]">
             For further assistance, please contact your system administrator or refer to the documentation provided by your organization.
           </p>
         </section>
         <section>
-          <h2 className="text-3xl font-semibold text-gray-700 dark:text-blue-200 mb-8 flex items-center">
-            <span className="material-icons text-blue-500 dark:text-blue-300 mr-2">menu_book</span>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
+            <span className="material-icons text-blue-600 dark:text-blue-300">menu_book</span>
             Glossary of Terms
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {glossaryItems.map(({ title, description, icon }, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-6 rounded-xl shadow-xl border border-gray-100 dark:border-[#3451a1] hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+                className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-[#3451a1]"
               >
-                <div className="flex items-center mb-2">
-                  <span className={`material-icons text-blue-700 dark:text-blue-300 mr-2`}>{icon}</span>
-                  <h3 className="text-xl font-semibold text-blue-700 dark:text-blue-200 mb-0">{title}</h3>
-            </div>
-                <p className="text-gray-600 dark:text-blue-100 leading-relaxed">{description}</p>
-            </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`material-icons text-blue-700 dark:text-blue-300`}>{icon}</span>
+                  <h3 className="text-base sm:text-lg font-semibold text-blue-700 dark:text-blue-200 mb-0">{title}</h3>
+                </div>
+                <p className="text-gray-600 dark:text-blue-100 leading-relaxed text-sm">{description}</p>
+              </div>
             ))}
           </div>
         </section>

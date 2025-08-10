@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RecentAction } from '../pages/api/notifications/recent-actions';
 import AIChat from './AIChat';
-import { pushNotificationManager, getSubscriptionStatus } from '../lib/pushNotifications';
+
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -36,15 +36,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
   const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   
-  // Push notification state
-  const [pushStatus, setPushStatus] = useState<{
-    supported: boolean;
-    permission: NotificationPermission;
-    subscribed: boolean;
-    subscription: any;
-  } | null>(null);
-  const [pushLoading, setPushLoading] = useState(false);
-  const [pushError, setPushError] = useState<string | null>(null);
+
 
   // Load read notifications from localStorage on mount
   useEffect(() => {
@@ -110,89 +102,9 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     }
   }, [lastLogTimestamp, isOpen]);
 
-  // Load push notification status when drawer opens
-  useEffect(() => {
-    if (isOpen && activeTab === 'push-settings') {
-      loadPushNotificationStatus();
-    }
-  }, [isOpen, activeTab]);
 
-  // Load push notification status
-  const loadPushNotificationStatus = async () => {
-    try {
-      setPushLoading(true);
-      setPushError(null);
-      const status = await getSubscriptionStatus();
-      setPushStatus(status);
-    } catch (error) {
-      console.error('Error loading push notification status:', error);
-      setPushError('Failed to load push notification status');
-    } finally {
-      setPushLoading(false);
-    }
-  };
 
-  // Request push notification permission
-  const requestPushPermission = async () => {
-    try {
-      setPushLoading(true);
-      setPushError(null);
-      await pushNotificationManager.requestPermission();
-      await loadPushNotificationStatus();
-    } catch (error) {
-      console.error('Error requesting push permission:', error);
-      setPushError('Failed to request permission');
-    } finally {
-      setPushLoading(false);
-    }
-  };
 
-  // Subscribe to push notifications
-  const subscribeToPush = async () => {
-    try {
-      setPushLoading(true);
-      setPushError(null);
-      await pushNotificationManager.subscribe();
-      await loadPushNotificationStatus();
-    } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
-      setPushError('Failed to subscribe to push notifications');
-    } finally {
-      setPushLoading(false);
-    }
-  };
-
-  // Unsubscribe from push notifications
-  const unsubscribeFromPush = async () => {
-    try {
-      setPushLoading(true);
-      setPushError(null);
-      await pushNotificationManager.unsubscribe();
-      await loadPushNotificationStatus();
-    } catch (error) {
-      console.error('Error unsubscribing from push notifications:', error);
-      setPushError('Failed to unsubscribe from push notifications');
-    } finally {
-      setPushLoading(false);
-    }
-  };
-
-  // Send test notification
-  const sendTestNotification = async () => {
-    try {
-      setPushLoading(true);
-      setPushError(null);
-      const success = await pushNotificationManager.sendTestNotification();
-      if (!success) {
-        setPushError('Failed to send test notification');
-      }
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      setPushError('Failed to send test notification');
-    } finally {
-      setPushLoading(false);
-    }
-  };
 
   // Close drawer when clicking outside
   useEffect(() => {
@@ -391,7 +303,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col"
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="notification-drawer-title"

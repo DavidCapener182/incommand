@@ -37,6 +37,7 @@ import Toast, { useToast } from './Toast'
 import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
 import RotatingText from './RotatingText'
+import { createPortal } from 'react-dom';
 
 // <style>
 // {`
@@ -76,7 +77,7 @@ interface TimeCardProps {
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot }) => {
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+    <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
         <div className="md:block relative">
           <div className="hidden md:block">
@@ -88,23 +89,23 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                 <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
               </div>
             )}
-            {/* Happening Now absolutely positioned at bottom left on desktop */}
-            {currentSlot && (
-              <div className="hidden md:flex flex-col items-start absolute left-0 bottom-0 z-20 ml-[-1rem] mb-[-1rem]">
-                <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
-                <div className="text-base font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
-                <div className="text-sm text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
-              </div>
-            )}
           </div>
-          {/* Mobile: show Happening Now in normal flow */}
-          {currentSlot && (
-            <div className="md:hidden mt-6">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
-              <div className="text-base font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
-              <div className="text-sm text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
+          {/* Mobile: show current time and happening now */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Time</h2>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentTime}</p>
+              </div>
+              {currentSlot && (
+                <div className="text-right">
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                  <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
+                  <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
         <div>
           <div className='hidden md:block'>
@@ -128,6 +129,15 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           )}
         </div>
       </div>
+      
+      {/* Desktop: Happening Now positioned in bottom left corner */}
+      {currentSlot && (
+        <div className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm">
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">Happening Now</span>
+          <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
+          <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -165,6 +175,8 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [isDesktop, setIsDesktop] = React.useState(true);
+  const [tooltipPosition, setTooltipPosition] = React.useState({ top: 0, left: 0 });
+  const cardRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const checkScreen = () => setIsDesktop(window.innerWidth >= 768);
@@ -173,47 +185,81 @@ const StatCard: React.FC<StatCardProps> = ({
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  return (
-    <div 
-      onClick={isFilterable ? onClick : undefined}
-      className={`
-        bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-center text-center
-        ${isFilterable ? 'cursor-pointer' : ''}
-        ${isSelected ? 'ring-2 ring-blue-500' : ''}
-        ${pulse ? 'animate-pulse-once' : ''}
-        relative
-        ${className}
-        transition-all duration-300
-        hover:scale-110 hover:shadow-2xl hover:border-pink-500 hover:z-10
-      `}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onFocus={() => setShowTooltip(true)}
-      onBlur={() => setShowTooltip(false)}
-      onTouchStart={() => setShowTooltip(v => !v)}
-    >
-      {showPulse && (
-        <span className="absolute top-2 right-2 flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-        </span>
-      )}
-      <div className="flex-shrink-0 mb-2">
+  const handleMouseEnter = () => {
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top - 10,
+        left: rect.left + rect.width / 2
+      });
+    }
+    setShowTooltip(true);
+  };
+
+  const baseClasses = `
+    relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
+    p-4 md:p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 
+    ${isFilterable ? 'cursor-pointer' : ''}
+    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg' : 'hover:shadow-xl'}
+    ${pulse ? 'animate-pulse' : ''}
+    ${className || ''}
+  `;
+
+  const content = (
+    <div className="flex flex-col items-center text-center">
+      <div className={`mb-3 ${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}>
         {icon}
       </div>
-      <div className="flex flex-col items-center">
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-100 truncate mb-1">{title}</p>
-        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+      <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">
+        {value}
       </div>
-      {/* Tooltip */}
-      {tooltip && showTooltip && isDesktop && (
-        <div className="absolute z-20 left-1/2 top-full mt-2 w-40 p-2 bg-gray-800 text-white text-xs rounded shadow-lg -translate-x-1/2">
-          {tooltip}
+      <div className="text-sm font-medium text-gray-600 dark:text-gray-300">
+        {title}
+      </div>
+      {showPulse && (
+        <div className="absolute top-2 right-2">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+          <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
         </div>
       )}
     </div>
-  )
-}
+  );
+
+  if (isFilterable) {
+    return (
+      <div 
+        ref={cardRef}
+        className={baseClasses}
+        onClick={onClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        {content}
+        {tooltip && showTooltip && isDesktop && createPortal(
+          <div 
+            className="fixed z-[99999] px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap"
+            style={{
+              top: tooltipPosition.top,
+              left: tooltipPosition.left,
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none'
+            }}
+          >
+            {tooltip}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>,
+          document.body
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={baseClasses}>
+      {content}
+    </div>
+  );
+};
 
 // Add a helper to fetch What3Words address via API route (to keep API key secret)
 async function fetchWhat3Words(lat: number, lon: number): Promise<string | null> {
@@ -318,7 +364,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
     
     // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage
     const filtered = safeIncidents.filter((i: any) => {
-      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage'].includes(i.incident_type);
+      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage', 'Artist off Stage', 'Artist on Stage'].includes(i.incident_type);
     });
     
     // Count by type
@@ -758,9 +804,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 md:p-8">
-              {/* Event Header - Sticky */}
-        <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-6 md:p-8">
+      {/* Event Header - Sticky */}
+      <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-8">
         {/* Desktop view */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
           <CurrentEvent
@@ -781,7 +827,7 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile view */}
-        <div className="md:hidden bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] transition-colors duration-300">
+        <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300">
           {loadingCurrentEvent && <p className="p-3">Loading event...</p>}
           {!loadingCurrentEvent && currentEvent && (
             <div>
@@ -794,7 +840,7 @@ export default function Dashboard() {
               </div>
               <hr className="border-t border-gray-200" />
               {(currentSlot || nextSlot) ? (
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-b-lg">
+                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-b-lg">
                   {currentSlot ? (
                     <div className="flex flex-col items-start">
                       <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
@@ -830,42 +876,49 @@ export default function Dashboard() {
 
       {/* Incident Dashboard */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-            Incident Dashboard
-            {isRefreshing && (
-              <span className="ml-2 text-xs text-blue-500 flex items-center animate-pulse">
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce"></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce delay-150"></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-300"></span>
-                <span className="ml-1">Live</span>
-              </span>
-            )}
-          </h2>
-          <div className="relative inline-flex rounded-md shadow-sm">
-          <button 
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center mb-2">
+              <div className="h-8 w-1 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3"></div>
+              Incident Dashboard
+              {isRefreshing && (
+                <span className="ml-3 text-sm text-blue-500 flex items-center animate-pulse">
+                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce"></span>
+                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce delay-150"></span>
+                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-300"></span>
+                  <span className="ml-1">Live</span>
+                </span>
+              )}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              Track and manage security incidents in real-time
+            </p>
+          </div>
+          <div className="relative inline-flex rounded-xl shadow-lg">
+            <button 
               type="button"
               onClick={() => {
                 setInitialIncidentType(undefined)
                 setIsIncidentModalOpen(true)
               }}
-            disabled={!hasCurrentEvent}
-              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white rounded-l-xl shadow-lg ${
-              hasCurrentEvent 
-                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors duration-200`}
-          >
-            New Incident
-          </button>
+              disabled={!hasCurrentEvent}
+              className={`relative inline-flex items-center px-6 py-3 text-sm font-semibold text-white rounded-l-xl ${
+                hasCurrentEvent 
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              New Incident
+            </button>
             <Menu as="div" className="-ml-px block">
               <Menu.Button
                 disabled={!hasCurrentEvent}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-xl shadow-lg ${
+                className={`relative inline-flex items-center px-3 py-3 rounded-r-xl ${
                   hasCurrentEvent
-                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                } focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors duration-200`}
+                } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200`}
               >
                 <span className="sr-only">Open options</span>
                 <ChevronDownIcon
@@ -882,7 +935,7 @@ export default function Dashboard() {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-xl bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl ring-1 ring-black/5 dark:ring-white/10 focus:outline-none border border-gray-200/50 dark:border-[#2d437a]/50">
                   <div className="py-1 flex flex-col max-h-60 overflow-y-auto">
                     {incidentTypes.map(type => (
                       <Menu.Item key={type}>
@@ -896,10 +949,10 @@ export default function Dashboard() {
                             className={`
                               ${
                                 active
-                                  ? 'bg-gray-100 text-gray-900'
-                                  : 'text-gray-700'
+                                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200'
+                                  : 'text-gray-700 dark:text-gray-200'
                               }
-                              block px-4 py-2 text-sm w-full text-left'
+                              block px-4 py-3 text-sm w-full text-left transition-colors duration-150'
                             `}
                           >
                             {type}
@@ -913,87 +966,84 @@ export default function Dashboard() {
             </Menu>
           </div>
         </div>
-        <p className="text-gray-600 dark:text-white mb-6">
-          Track and manage security incidents in real-time
-        </p>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-4 mb-6">
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4 mb-8">
           <StatCard
-                title="Total"
+            title="Total"
             value={incidentStats.total}
-                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
             isSelected={selectedFilter === null}
             onClick={() => setSelectedFilter(null)}
             isFilterable={true}
-                tooltip="All logs including Attendance and Sit Reps."
+            tooltip="All logs including Attendance and Sit Reps."
           />
           <StatCard
             title="Open"
             value={incidentStats.open}
-                icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
-                isSelected={selectedFilter === 'open'}
-                onClick={() => setSelectedFilter('open')}
-                isFilterable={true}
-            color="yellow"
-                tooltip="Incidents that are currently open."
-            />
-            <StatCard
-                title="High Prio"
-                value={incidentStats.high}
-                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-                isSelected={selectedFilter === 'high'}
-                onClick={() => setSelectedFilter('high')}
+            icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+            isSelected={selectedFilter === 'open'}
+            onClick={() => setSelectedFilter('open')}
             isFilterable={true}
-                color="red"
-                tooltip="Incidents marked as high priority."
-                showPulse={incidentStats.hasOpenHighPrio}
+            color="yellow"
+            tooltip="Incidents that are currently open."
+          />
+          <StatCard
+            title="High Prio"
+            value={incidentStats.high}
+            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+            isSelected={selectedFilter === 'high'}
+            onClick={() => setSelectedFilter('high')}
+            isFilterable={true}
+            color="red"
+            tooltip="Incidents marked as high priority."
+            showPulse={incidentStats.hasOpenHighPrio}
           />
           <StatCard
             title="Closed"
             value={incidentStats.closed}
-                icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
-                isSelected={selectedFilter === 'closed'}
-                onClick={() => setSelectedFilter('closed')}
-                isFilterable={true}
+            icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+            isSelected={selectedFilter === 'closed'}
+            onClick={() => setSelectedFilter('closed')}
+            isFilterable={true}
             color="green"
-                tooltip="Incidents that have been closed."
+            tooltip="Incidents that have been closed."
           />
           <StatCard
             title="Refusals"
             value={incidentStats.refusals}
-                icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={selectedFilter === 'Refusal'}
-                onClick={() => setSelectedFilter('Refusal')}
+            icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            isSelected={selectedFilter === 'Refusal'}
+            onClick={() => setSelectedFilter('Refusal')}
             isFilterable={true}
-                tooltip="Incidents where entry was refused."
+            tooltip="Incidents where entry was refused."
           />
           <StatCard
             title="Ejections"
             value={incidentStats.ejections}
-                icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={selectedFilter === 'Ejection'}
-                onClick={() => setSelectedFilter('Ejection')}
+            icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            isSelected={selectedFilter === 'Ejection'}
+            onClick={() => setSelectedFilter('Ejection')}
             isFilterable={true}
-                tooltip="Incidents where someone was ejected."
+            tooltip="Incidents where someone was ejected."
           />
           <StatCard
             title="Medicals"
             value={incidentStats.medicals}
-                icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-                isSelected={selectedFilter === 'Medical'}
-                onClick={() => setSelectedFilter('Medical')}
-                isFilterable={true}
-                tooltip="Medical-related incidents."
-            />
-            <StatCard
-                title="Other"
-                value={incidentStats.other}
-                icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={selectedFilter === 'Other'}
-                onClick={() => setSelectedFilter('Other')}
+            icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+            isSelected={selectedFilter === 'Medical'}
+            onClick={() => setSelectedFilter('Medical')}
             isFilterable={true}
-                tooltip="All other incident types."
+            tooltip="Medical-related incidents."
+          />
+          <StatCard
+            title="Other"
+            value={incidentStats.other}
+            icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            isSelected={selectedFilter === 'Other'}
+            onClick={() => setSelectedFilter('Other')}
+            isFilterable={true}
+            tooltip="All other incident types."
           />
         </div>
 
@@ -1001,13 +1051,13 @@ export default function Dashboard() {
         <div>
           {/* Mobile: Venue Occupancy full width */}
           <div className="block md:hidden mb-4">
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 w-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
           </div>
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
@@ -1016,7 +1066,7 @@ export default function Dashboard() {
                 largeLogo={false}
               />
             </div>
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
@@ -1027,9 +1077,9 @@ export default function Dashboard() {
               />
             </div>
           </div>
-                    {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
+          {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
           <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
             {/* WeatherCard: render only the WeatherCard, no extra card container */}
@@ -1043,7 +1093,7 @@ export default function Dashboard() {
                 curfewTime={currentEvent.curfew_time ?? ''}
               />
             )}
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1 cursor-pointer">
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 cursor-pointer">
               <What3WordsMapCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
@@ -1052,7 +1102,7 @@ export default function Dashboard() {
                 largeLogo={false}
               />
             </div>
-            <div className="h-[115px] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-2 flex flex-col items-center justify-center bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 col-span-1">
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1">
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
@@ -1082,8 +1132,6 @@ export default function Dashboard() {
         onIncidentCreated={handleIncidentCreated}
         initialIncidentType={initialIncidentType}
       />
-
-
 
       {/* Venue Occupancy Modal */}
       <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />

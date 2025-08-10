@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon, PencilSquareIcon, TrashIcon, MagnifyingGlassIcon, ChevronDownIcon, Squares2X2Icon, CheckCircleIcon, ExclamationTriangleIcon, UsersIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
+import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
+const RadioSignOut = dynamic(() => import('../radio-sign-out/page'), { ssr: false });
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -71,9 +74,6 @@ function getNewId() {
 const StaffList = () => (
   <div className="p-8 text-gray-900 dark:text-gray-100">Staff List view coming soon...</div>
 );
-const RadioSignOut = () => (
-  <div className="p-8 text-gray-900 dark:text-gray-100">Radio Sign Out view coming soon...</div>
-);
 const ShiftRoster = () => (
   <div className="p-8 text-gray-900 dark:text-gray-100">Shift Roster view coming soon...</div>
 );
@@ -85,11 +85,10 @@ const navItems = [
   { name: 'Staff Management', icon: UserGroupIcon, key: 'staff' },
   { name: 'Callsign Assignment', icon: KeyIcon, key: 'callsign' },
   { name: 'Radio Sign Out', icon: DevicePhoneMobileIcon, key: 'radio' },
-  { name: 'Shift Roster', icon: CalendarDaysIcon, key: 'shift' },
-  { name: 'Accreditation', icon: IdentificationIcon, key: 'accreditation' },
 ];
 
-const SKILL_OPTIONS = [
+// Move SKILL_OPTIONS to the top of the file
+const SKILL_OPTIONS: string[] = [
   "Head of Security (HOS)",
   "Deputy Head of Security",
   "Security Manager",
@@ -120,7 +119,7 @@ const SKILL_OPTIONS = [
   "Logistics Coordinator",
 ];
 
-// Add this type above StaffListView
+// Add StaffForm type near the top
 type StaffForm = {
   id?: string;
   full_name: string;
@@ -180,20 +179,20 @@ export default function StaffCommandCentre() {
     fetchCurrentEvent();
   }, []);
 
-  // Load roles and assignments from Supabase when eventId changes
+  // Load positions and assignments from Supabase when eventId changes
   useEffect(() => {
     if (!eventId) return;
     const loadRolesAndAssignments = async () => {
       setSaveStatus("Loading saved callsigns...");
-      // Load roles
+      // Load positions
       const { data: roles, error: rolesError } = await supabase
-        .from("callsign_roles")
-        .select("id, area, short_code, callsign, position")
+        .from("callsign_positions")
+        .select("id, area, short_code, callsign, position, required")
         .eq("event_id", eventId);
       // Load assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("callsign_assignments")
-        .select("callsign_role_id, assigned_name")
+        .select("position_id, user_id, assigned_name")
         .eq("event_id", eventId);
       if (rolesError || assignmentsError) {
         setSaveStatus("Error loading saved data");
@@ -210,6 +209,7 @@ export default function StaffCommandCentre() {
             callsign: r.callsign,
             short: r.short_code,
             position: r.position,
+            required: r.required,
           });
         });
         for (const area in areaMap) {
@@ -220,10 +220,16 @@ export default function StaffCommandCentre() {
         setGroups(initialGroups);
       }
       if (assignmentsData && assignmentsData.length > 0) {
-        // Map assignments by callsign_role_id
+        // Map assignments by position_id
         const assignMap: Record<string, string> = {};
         assignmentsData.forEach((a) => {
-          assignMap[a.callsign_role_id] = a.assigned_name;
+          if (a.user_id) {
+            // store the id string for assignedStaff usage elsewhere
+            // we keep assigned_name for legacy fallbacks
+            assignMap[a.position_id as unknown as string] = a.assigned_name || "";
+          } else if (a.assigned_name) {
+            assignMap[a.position_id as unknown as string] = a.assigned_name;
+          }
         });
         setAssignments(assignMap);
       } else {
@@ -235,24 +241,24 @@ export default function StaffCommandCentre() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  // Fetch previous unique names for each callsign_role_id (excluding current event)
+  // Fetch previous unique names for each position_id (excluding current event)
   useEffect(() => {
     if (!eventId) return;
     const fetchPreviousNames = async () => {
       // Get all previous assignments for all roles, excluding current event
       const { data, error } = await supabase
         .from("callsign_assignments")
-        .select("callsign_role_id, assigned_name, assigned_at")
+        .select("position_id, assigned_name, assigned_at")
         .neq("event_id", eventId)
         .order("assigned_at", { ascending: false });
       if (error) return;
-      // Map: callsign_role_id -> unique names (most recent first)
+      // Map: position_id -> unique names (most recent first)
       const map: Record<string, string[]> = {};
       data?.forEach((row) => {
         if (!row.assigned_name) return;
-        if (!map[row.callsign_role_id]) map[row.callsign_role_id] = [];
-        if (!map[row.callsign_role_id].includes(row.assigned_name)) {
-          map[row.callsign_role_id].push(row.assigned_name);
+        if (!map[row.position_id]) map[row.position_id] = [];
+        if (!map[row.position_id].includes(row.assigned_name)) {
+          map[row.position_id].push(row.assigned_name);
         }
       });
       setPreviousNames(map);
@@ -348,7 +354,7 @@ export default function StaffCommandCentre() {
 
       // Upsert roles with correct conflict target
       const { data: upsertedRoles, error: rolesError } = await supabase
-        .from("callsign_roles")
+        .from("callsign_positions")
         .upsert(uniqueRoles, { onConflict: "event_id,area,short_code" })
         .select();
       if (rolesError) throw rolesError;
@@ -406,8 +412,8 @@ export default function StaffCommandCentre() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
-      {/* Sidebar - pixel-perfect match to settings sidebar */}
-      <aside className="hidden md:flex w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex-col shadow-lg z-10">
+      {/* Sidebar - restored */}
+      <aside className="hidden md:flex w-64 flex-none bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex-col shadow-lg z-10">
         {/* Top bar with section title */}
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
           <div className="flex items-center space-x-2">
@@ -435,7 +441,6 @@ export default function StaffCommandCentre() {
             );
           })}
         </nav>
-        {/* TODO: Add mobile nav/drawer for sidebar on small screens */}
       </aside>
       {/* Main content area */}
       <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
@@ -443,8 +448,6 @@ export default function StaffCommandCentre() {
           {activeView === 'staff' && <StaffListView />}
           {activeView === 'callsign' && <CallsignAssignmentView eventId={eventId} />}
           {activeView === 'radio' && <RadioSignOut />}
-          {activeView === 'shift' && <ShiftRoster />}
-          {activeView === 'accreditation' && <Accreditation />}
         </div>
       </main>
     </div>
@@ -455,12 +458,12 @@ export default function StaffCommandCentre() {
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Default categories with better structure
   const defaultCategories = [
-    { id: 1, name: 'Management', color: 'bg-purple-400', positions: [] },
-    { id: 2, name: 'Internal Security', color: 'bg-blue-400', positions: [] },
-    { id: 3, name: 'External Security', color: 'bg-green-400', positions: [] },
-    { id: 4, name: 'Venue Operations', color: 'bg-orange-400', positions: [] },
-    { id: 5, name: 'Medical & Welfare', color: 'bg-red-400', positions: [] },
-    { id: 6, name: 'Traffic & Logistics', color: 'bg-slate-400', positions: [] },
+    { id: 1, name: 'Management', color: 'bg-gradient-to-r from-purple-500 to-purple-600', positions: [] },
+    { id: 2, name: 'Internal Security', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
+    { id: 3, name: 'External Security', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
+    { id: 4, name: 'Venue Operations', color: 'bg-gradient-to-r from-orange-500 to-orange-600', positions: [] },
+    { id: 5, name: 'Medical & Welfare', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
+    { id: 6, name: 'Traffic & Logistics', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
   ];
 
   type Position = { 
@@ -468,8 +471,10 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     callsign: string; 
     position: string;
     short?: string;
-    assignedStaff?: number;
+    assignedStaff?: string; // changed to string for uuid
+    assignedName?: string; // fallback if not linked to staff
     required?: boolean;
+    skills?: string[];
   };
   
   type Category = { 
@@ -488,11 +493,60 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   const [pendingChanges, setPendingChanges] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{categoryId: number, positionId: string} | null>(null);
+  // In CallsignAssignmentView, add state for assignedNames
+  const [assignedNames, setAssignedNames] = useState<string[]>([]);
 
   // Real staff data from Supabase
   const [staffList, setStaffList] = useState<any[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [loadingStaff, setLoadingStaff] = useState(true);
+
+  // --- NEW: Load roles and assignments from Supabase ---
+  useEffect(() => {
+    const fetchRolesAndAssignments = async () => {
+      if (!eventId || !userCompanyId) return;
+      // 1. Fetch roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('callsign_positions')
+        .select('id, area, short_code, callsign, position, required')
+        .eq('event_id', eventId);
+      if (rolesError) return;
+      // 2. Fetch assignments
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('callsign_assignments')
+        .select('position_id, user_id, assigned_name')
+        .eq('event_id', eventId);
+      if (assignmentsError) return;
+      // 3. Map roles to categories
+      const areaMap: Record<string, Position[]> = {};
+      const assignedNamesArr: string[] = [];
+      roles?.forEach((role) => {
+        if (!areaMap[role.area]) areaMap[role.area] = [];
+        // Find assignment for this role
+        const assignment = assignments?.find(a => a.position_id === role.id);
+        if (assignment?.assigned_name) assignedNamesArr.push(assignment.assigned_name);
+        areaMap[role.area].push({
+          id: role.id,
+          callsign: role.callsign,
+          short: role.short_code,
+          position: role.position,
+          required: role.required,
+          assignedStaff: (assignment?.user_id as string) || undefined,
+          assignedName: assignment?.assigned_name || undefined,
+        });
+      });
+      // 4. Map to defaultCategories structure
+      const newCategories = defaultCategories.map(cat => {
+        const positions = areaMap[cat.name] || [];
+        return { ...cat, positions };
+      });
+      setCategories(newCategories);
+      setAssignedNames(assignedNamesArr);
+    };
+    fetchRolesAndAssignments();
+    // Only run when eventId or userCompanyId changes
+  }, [eventId, userCompanyId]);
 
   // Load staff data from Supabase
   useEffect(() => {
@@ -538,19 +592,20 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('id, full_name, skill_tags, notes, active')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
         .eq('company_id', userCompanyId)
-        .eq('active', true)
         .order('full_name');
       
       if (error) throw error;
 
       const formattedStaff = data?.map(staff => ({
         id: staff.id,
-        name: staff.full_name,
-        role: staff.skill_tags?.[0] || 'Staff Member',
-        skills: staff.skill_tags || [],
-        avatar: '👤'
+        full_name: staff.full_name,
+        contact_number: staff.contact_number,
+        email: staff.email,
+        skill_tags: staff.skill_tags || [],
+        notes: staff.notes,
+        active: staff.active,
       })) || [];
 
       setStaffList(formattedStaff);
@@ -561,12 +616,19 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     }
   }
 
-  // Get assigned staff IDs
-  const assignedStaffIds = categories.flatMap(cat => 
+  // Get assigned staff IDs (now includes assignedName for count)
+  const assignedCount = categories.flatMap(cat =>
+    cat.positions.filter(pos => pos.assignedStaff || pos.assignedName)
+  ).length;
+
+  const assignedStaffIds = categories.flatMap(cat =>
     cat.positions.map(pos => pos.assignedStaff).filter(Boolean)
   );
 
-  const unassignedStaff = staffList.filter(staff => !assignedStaffIds.includes(staff.id));
+  // Filter staffList to only include staff not assigned to any position (by id or by name)
+  const unassignedStaff = staffList.filter(
+    staff => !assignedStaffIds.includes(staff.id) && !assignedNames.includes(staff.full_name)
+  );
 
   // Filter positions based on global search
   const filteredCategories = categories.map(category => ({
@@ -574,26 +636,28 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     positions: category.positions.filter(position => 
       position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
       position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
-      (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.name.toLowerCase().includes(globalSearch.toLowerCase()))
+      (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.full_name.toLowerCase().includes(globalSearch.toLowerCase()))
     )
   })).filter(category => 
     category.positions.length > 0 || globalSearch === ''
   );
 
   // Assign staff to position
-  const assignStaff = (categoryId: number, positionId: string, staffId: number) => {
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
-        ? {
-            ...cat,
-            positions: cat.positions.map(pos => 
-              pos.id === positionId 
-                ? { ...pos, assignedStaff: staffId }
-                : pos
-            )
-          }
-          : cat
-      ));
+  const assignStaff = (categoryId: number, positionId: string, staffId: string) => {
+    setCategories(prev => prev.map(cat => ({
+      ...cat,
+      positions: cat.positions.map(pos => {
+        // Remove staff from any other position
+        if (pos.assignedStaff === staffId) {
+          return { ...pos, assignedStaff: undefined };
+        }
+        // Assign staff to the selected position
+        if (cat.id === categoryId && pos.id === positionId) {
+          return { ...pos, assignedStaff: staffId };
+        }
+        return pos;
+      })
+    })));
     setPendingChanges(true);
   };
 
@@ -673,7 +737,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     try {
       // Fetch existing roles for this event
       const { data: existingRoles, error: fetchError } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, area, short_code')
         .eq('event_id', eventId);
       if (fetchError) throw fetchError;
@@ -681,6 +745,13 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       (existingRoles || []).forEach(role => {
         roleIdMap.set(`${role.area}|${role.short_code}`, role.id);
       });
+
+      // Fetch all valid user ids from profiles
+      const { data: validUsers, error: userError } = await supabase
+        .from('profiles')
+        .select('id');
+      if (userError) throw userError;
+      const validUserIds = new Set((validUsers || []).map(u => u.id));
 
       // 1. Upsert all positions (callsign_roles)
       const roles = categories.flatMap(category =>
@@ -708,7 +779,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       const uniqueRoles = Array.from(uniqueRolesMap.values());
 
       // Upsert roles with correct conflict target
-      const { error: rolesError } = await supabase.from('callsign_roles').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
+      const { error: rolesError } = await supabase.from('callsign_positions').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
       uniqueRoles.forEach(role => {
@@ -716,21 +787,80 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       });
       // 2. Upsert all assignments (callsign_assignments)
       const assignmentsArr = categories.flatMap(category =>
-        category.positions.map(pos => ({
-          event_id: eventId,
-          role_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
-        }))
+        category.positions.map(pos => {
+          let user_id = null;
+          let assigned_name = pos.assignedName || null;
+          if (pos.assignedStaff && validUserIds.has(pos.assignedStaff)) {
+            user_id = pos.assignedStaff;
+            // Optionally, you could also set assigned_name to the staff name if you want
+          } else if (pos.assignedStaff) {
+            // If assignedStaff is set but not a valid user, fallback to assigned_name
+            user_id = null;
+            assigned_name = staffList.find(s => s.id === pos.assignedStaff)?.full_name || null;
+          }
+          return {
+            event_id: eventId,
+            position_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
+            user_id,
+            assigned_name,
+          };
+        })
       );
       if (assignmentsArr.length > 0) {
         const { error: assignError } = await supabase
           .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,role_id" });
+          .upsert(assignmentsArr, { onConflict: "event_id,position_id" });
         if (assignError) throw assignError;
       }
       alert("Assignments and roles saved successfully.");
     } catch (err: any) {
       alert("Error saving: " + (err.message || err));
     }
+  };
+
+  // Add deletePosition function
+  const handleDeletePosition = (categoryId: number, positionId: string) => {
+    setDeleteConfirm({ categoryId, positionId });
+  };
+  const confirmDeletePosition = async () => {
+    if (!deleteConfirm) return;
+    const { categoryId, positionId } = deleteConfirm;
+    setDeleteConfirm(null);
+    // Remove from UI
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, positions: cat.positions.filter(pos => pos.id !== positionId) }
+        : cat
+    ));
+    // Remove from DB
+    try {
+      await supabase.from('callsign_assignments').delete().eq('position_id', positionId);
+      await supabase.from('callsign_positions').delete().eq('id', positionId);
+    } catch (err) {
+      const e = err as any;
+      alert('Error deleting position: ' + (e.message || e));
+    }
+  };
+  const cancelDeletePosition = () => setDeleteConfirm(null);
+
+  // In CallsignAssignmentView, filter available staff by assignment and assigned name
+  const getMatchingStaff = (position: { skills?: string[] }) => {
+    // Only staff not assigned to any position and not in assignedNames
+    const assignedStaffIds = categories.flatMap(cat =>
+      cat.positions.map(pos => pos.assignedStaff).filter(Boolean)
+    );
+    return staffList.filter((staff: { id: string; skill_tags: string[]; full_name: string }) => {
+      if (assignedStaffIds.includes(staff.id)) return false;
+      if (assignedNames.includes(staff.full_name)) return false;
+      if (position.skills && position.skills.length > 0) {
+        return (staff.skill_tags || []).some((skill: string) =>
+          position.skills!.some((reqSkill: string) =>
+            skill.trim().toLowerCase() === reqSkill.trim().toLowerCase()
+          )
+        );
+      }
+      return true;
+    });
   };
 
   if (loadingStaff) {
@@ -745,162 +875,159 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#101c36] transition-colors duration-300">
-      {/* Sticky Header with Search */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a] shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-white font-bold">📋</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#101c36] dark:to-[#1a2a57] transition-colors duration-300">
+      {/* Enhanced Sticky Header with Search */}
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm border-b border-gray-200 dark:border-[#2d437a] shadow-lg">
+      <div className="px-4 sm:px-6 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
+                <Squares2X2Icon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-300">Manage staff assignments and callsigns</p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Callsign Assignment</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Assign your team to positions for the current event</p>
               </div>
             </div>
             
-            {/* Search Bar */}
-            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-96">
+            {/* Enhanced Search Bar */}
+            <div className="flex items-center gap-4 flex-1 lg:flex-none lg:w-96">
               <div className="relative flex-1">
-        <input
-          type="text"
+                <input
+                  type="text"
                   placeholder="Search by callsign, role, or staff name..."
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200"
                 />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-      </div>
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Enhanced Action Buttons */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAddCategoryModal(true)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-lg transition-colors"
-              >
-                + Department
+              <button onClick={() => setShowAddPositionModal(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow">
+                <PlusIcon className="w-5 h-5" />
+                Position
               </button>
-              <button
-                onClick={() => setShowAddPositionModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded-lg transition-colors"
-              >
-                + Position
+              <button onClick={() => setShowAddCategoryModal(true)} className="inline-flex items-center gap-2 bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a] py-2.5 px-4 rounded-lg shadow-sm hover:shadow">
+                <PlusIcon className="w-5 h-5" />
+                Department
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4 py-4">
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {categories.reduce((sum, cat) => sum + cat.positions.length, 0)}
+      <div className="px-6 py-6">
+        {/* Enhanced Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              label: 'Total Positions',
+              value: categories.reduce((sum, c) => sum + c.positions.length, 0),
+              color: 'text-gray-900 dark:text-white',
+              icon: <Squares2X2Icon className="w-6 h-6 text-blue-600" />,
+            },
+            {
+              label: 'Assigned',
+              value: assignedCount,
+              color: 'text-green-600 dark:text-green-400',
+              icon: <CheckCircleIcon className="w-6 h-6 text-green-600" />,
+            },
+            {
+              label: 'Vacant',
+              value: categories.reduce((sum, c) => sum + c.positions.length, 0) - assignedCount,
+              color: 'text-amber-600 dark:text-amber-400',
+              icon: <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />,
+            },
+            {
+              label: 'Available Staff',
+              value: unassignedStaff.length,
+              color: 'text-blue-600 dark:text-blue-400',
+              icon: <UsersIcon className="w-6 h-6 text-blue-600" />,
+            },
+          ].map((kpi) => (
+            <div key={kpi.label} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className={`text-3xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-300">{kpi.label}</div>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-[#182447] flex items-center justify-center">
+                  {kpi.icon}
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Total Positions</div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {assignedStaffIds.length}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Assigned</div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {categories.reduce((sum, cat) => sum + cat.positions.length, 0) - assignedStaffIds.length}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Vacant</div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {unassignedStaff.length}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">Available Staff</div>
-          </div>
+          ))}
         </div>
 
         {/* Available Staff Section */}
-        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 mb-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Available Staff</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-300">Drag and drop staff to assign them to positions</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Available Staff</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-300">Assign staff to open positions</p>
             </div>
-            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1 rounded-full font-medium">
+            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1.5 rounded-full font-medium">
               {unassignedStaff.length} available
             </span>
           </div>
           
           {unassignedStaff.length === 0 ? (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              <div className="text-lg mb-1">👥</div>
-              <div className="font-medium text-sm mb-1">All staff assigned</div>
-              <div className="text-xs">Great job! All available staff have been assigned to positions.</div>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-4xl mb-3">🎉</div>
+              <div className="font-medium text-lg mb-2">All staff assigned</div>
+              <div className="text-sm">Great job! All available staff have been assigned to positions.</div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-              {unassignedStaff.map((staff) => (
-                <div
-                  key={staff.id}
-                  className="relative bg-gray-50 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg p-2 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500 group"
-                  title={`${staff.name}${staff.skills && staff.skills.length > 0 ? '\nSkills: ' + staff.skills.join(', ') : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs flex-shrink-0">
-                      {staff.name.split(' ').map((n: string) => n[0]).join('')}
-                    </div>
-                    <div className="font-medium text-gray-900 dark:text-white text-xs truncate">{staff.name}</div>
-                  </div>
-                  
-                  {/* Tooltip */}
-                  {staff.skills && staff.skills.length > 0 && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-                      <div className="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
-                        <div className="font-medium mb-1">{staff.name}</div>
-                        <div className="text-gray-300">Skills: {staff.skills.join(', ')}</div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
-                      </div>
-                    </div>
-                  )}
+            <div className="flex flex-wrap gap-2">
+              {unassignedStaff.map(staff => (
+                <div key={staff.id} className="bg-gray-50 dark:bg-[#182447] px-3 py-1.5 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-[#2d437a] cursor-default select-none">
+                  {staff.full_name}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Department Cards */}
-        <div className="space-y-3">
+        {/* Enhanced Department Cards */}
+        <div className="space-y-6">
           {filteredCategories.map((category) => (
-            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-              {/* Department Header - Made Much Smaller */}
-              <div className={`${category.color} px-4 py-2`}>
+            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden">
+              {/* Department Header - neutral, compact */}
+              <div className="px-4 sm:px-6 py-3 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a]">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-white">{category.name}</h2>
-                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-                      {category.positions.length} positions
-                    </span>
-                    <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-                      {category.positions.filter(p => p.assignedStaff).length} assigned
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{category.name}</h2>
+                    <div className="hidden sm:flex gap-2">
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                        {category.positions.length} positions
+                      </span>
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                        {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
+                      </span>
+                      {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
+                        <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                          {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
-              <button
+                    <button
                       onClick={() => {
                         setEditingCategory(category);
                         setShowEditCategoryModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-blue-900/20"
                       title="Edit Department"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
@@ -909,42 +1036,47 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                         setSelectedCategory(category.id);
                         setShowAddPositionModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
+                      className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-blue-900/20"
                       title="Add Position"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-              </button>
-            </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Positions Grid */}
-              <div className="p-3">
+              {/* Enhanced Positions Grid */}
+              <div className="p-6">
                 {category.positions.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                    <div className="text-2xl mb-1">📝</div>
-                    <div className="text-sm font-medium mb-1">No positions yet</div>
-                    <div className="text-xs">Click the + button above to add positions to this department</div>
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <div className="text-4xl mb-3">📝</div>
+                    <div className="text-lg font-medium mb-2">No positions yet</div>
+                    <div className="text-sm">Click the + button above to add positions to this department</div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     {category.positions.map((position) => {
                       const assignedStaff = position.assignedStaff 
                         ? staffList.find(s => s.id === position.assignedStaff)
                         : null;
+                      const isAssigned = !!assignedStaff || !!position.assignedName;
 
-                return (
+                      return (
                         <PositionCard
                           key={position.id}
                           position={position}
                           assignedStaff={assignedStaff}
+                          assignedName={position.assignedName}
+                          isAssigned={isAssigned}
                           category={category}
                           unassignedStaff={unassignedStaff}
                           onAssign={(staffId) => assignStaff(category.id, position.id, staffId)}
                           onUnassign={() => unassignStaff(category.id, position.id)}
                           onEdit={() => setEditingPosition(position)}
+                          onDelete={() => handleDeletePosition(category.id, position.id)}
+                          getMatchingStaff={getMatchingStaff}
                         />
                       );
                     })}
@@ -956,18 +1088,21 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         </div>
       </div>
 
-      {/* Fixed Save Bar */}
+      {/* Enhanced Fixed Save Bar */}
       {pendingChanges && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-            <span className="font-medium">You have unsaved changes</span>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span className="font-medium">You have unsaved changes</span>
+            </div>
             <button
               onClick={saveChanges}
-              className="bg-white text-blue-600 px-4 py-1 rounded font-medium hover:bg-gray-100 transition-colors"
+              className="bg-white text-blue-600 px-6 py-2 rounded-xl font-medium hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Save Changes
             </button>
-                    </div>
+          </div>
         </div>
       )}
 
@@ -988,7 +1123,15 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         position={editingPosition}
         onClose={() => setEditingPosition(null)}
         onSave={(updatedPosition) => {
-          // Update position logic here
+          // Update the correct position in categories
+          setCategories(prev => prev.map(cat => ({
+            ...cat,
+            positions: cat.positions.map(pos =>
+              pos.id === updatedPosition.id
+                ? { ...pos, ...updatedPosition }
+                : pos
+            )
+          })));
           setEditingPosition(null);
           setPendingChanges(true);
         }}
@@ -1010,6 +1153,19 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         onEdit={editCategory}
         onDelete={deleteCategory}
       />
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Delete Position</h2>
+            <p className="mb-6 text-gray-700 dark:text-gray-200">Are you sure you want to delete this position? This cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={cancelDeletePosition} className="px-6 py-2 rounded-xl bg-gray-200 text-gray-800 hover:bg-gray-300 transition-all duration-200">Cancel</button>
+              <button onClick={confirmDeletePosition} className="px-6 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all duration-200">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1018,142 +1174,181 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
 function PositionCard({ 
   position, 
   assignedStaff, 
+  assignedName,
+  isAssigned,
   category, 
   unassignedStaff, 
   onAssign, 
   onUnassign, 
-  onEdit 
+  onEdit, 
+  onDelete,
+  getMatchingStaff
 }: {
   position: any;
   assignedStaff: any;
+  assignedName?: string;
+  isAssigned: boolean;
   category: any;
   unassignedStaff: any[];
-  onAssign: (staffId: number) => void;
+  onAssign: (staffId: string) => void;
   onUnassign: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  getMatchingStaff: (position: any) => any[];
 }) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{top: number, left: number} | null>(null);
+  const assignBtnRef = useRef<HTMLButtonElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showAssignMenu) {
         const target = event.target as Element;
-        if (!target.closest('.assign-dropdown-container')) {
+        if (!target.closest('.assign-dropdown-container') && !target.closest('.assign-btn')) {
           setShowAssignMenu(false);
         }
       }
     };
-
     if (showAssignMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showAssignMenu]);
 
+  useEffect(() => {
+    if (showAssignMenu && assignBtnRef.current) {
+      const rect = assignBtnRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [showAssignMenu]);
+
+  const isVacant = !assignedStaff && !assignedName;
+
+  const matchingStaff = getMatchingStaff(position);
+
   return (
-    <div className={`relative bg-white dark:bg-[#182447] rounded-lg border-2 transition-all duration-200 hover:shadow-lg ${
-      assignedStaff 
-        ? 'border-green-300 dark:border-green-600 shadow-md' 
-        : 'border-gray-200 dark:border-[#2d437a] hover:border-blue-300 dark:hover:border-blue-500'
-    }`}>
-      {/* Status Indicator */}
-      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-        assignedStaff ? 'bg-green-500' : 'bg-orange-400'
+    <div className={`relative rounded-2xl border-2 transition-all duration-300 hover:shadow-xl ${
+      isAssigned 
+        ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-700' 
+        : 'bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-blue-300 dark:hover:border-blue-500'
+    } ${isAssigned ? 'shadow-lg' : 'hover:shadow-xl'}`}>
+      {/* Enhanced Status Indicator */}
+      <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
+        isAssigned ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
       }`}>
-        {assignedStaff ? '✓' : '!'}
+        {isAssigned ? '✓' : '!'}
       </div>
-
-      <div className="p-2">
-        {/* Header with Callsign & Position */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-gray-900 dark:text-white truncate">{position.callsign}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 truncate">{position.position}</div>
-          </div>
-          <button
-            onClick={onEdit}
-            className="ml-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex-shrink-0"
-            title="Edit position"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+      
+      {/* Enhanced Edit/Delete Buttons */}
+      <div className="absolute top-2 right-10 flex gap-1 z-10">
+        <button 
+          onClick={onEdit} 
+          title="Edit position" 
+          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" />
+          </svg>
+        </button>
+        <button 
+          onClick={onDelete} 
+          title="Delete position" 
+          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div className="p-4 flex flex-col gap-3">
+        {/* Enhanced Role Badge Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <span className="inline-block bg-white/90 dark:bg-[#23408e]/90 border-2 border-gray-200 dark:border-[#2d437a] rounded-xl px-3 py-1.5 text-sm font-bold text-gray-900 dark:text-white shadow-sm">
+            {position.callsign}
+          </span>
+          <span className="inline-block bg-gray-100 dark:bg-[#182447] border-2 border-gray-200 dark:border-[#2d437a] rounded-xl px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm">
+            {position.position}
+          </span>
         </div>
-
-        {/* Assigned Staff */}
-                    {assignedStaff ? (
-          <div className="mb-2">
-            <div className="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-700">
-              <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center text-green-700 dark:text-green-200 font-bold text-xs flex-shrink-0">
-                {assignedStaff.name.split(' ').map((n: string) => n[0]).join('')}
+        
+        {/* Enhanced Assigned Staff or Name with Photo/Initials */}
+        {isAssigned && (
+          <div className="flex items-center gap-3 mt-2">
+            {assignedStaff && assignedStaff.photoUrl ? (
+              <img src={assignedStaff.photoUrl} alt={assignedStaff.full_name} className="h-10 w-10 rounded-full object-cover border-2 border-gray-300 shadow-md" />
+            ) : assignedStaff ? (
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                {(assignedStaff.full_name || '').split(' ').map((n: string) => n[0]).join('')}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-green-900 dark:text-green-100 text-xs truncate">{assignedStaff.name}</div>
+            ) : assignedName ? (
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                {(assignedName || '').split(' ').map((n: string) => n[0]).join('')}
               </div>
-                        <button
-                onClick={onUnassign}
-                className="w-4 h-4 rounded-full bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400 text-xs font-bold transition-colors flex-shrink-0"
-                title="Unassign staff"
-                        >
-                ×
-                        </button>
-            </div>
-                      </div>
-                    ) : (
-          <div className="mb-2">
-            <div className="p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-700 text-center">
-              <div className="text-orange-600 dark:text-orange-300 text-xs font-medium">Vacant</div>
-            </div>
+            ) : null}
+            <span className="inline-block bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800 dark:to-emerald-800 text-green-800 dark:text-green-200 text-sm px-3 py-1.5 rounded-xl font-medium shadow-sm">
+              {assignedStaff ? assignedStaff.full_name : assignedName}
+            </span>
           </div>
         )}
-
-        {/* Action Buttons */}
-        {!assignedStaff && (
-          <div className="flex gap-1">
-            <div className="relative flex-1 assign-dropdown-container" style={{ zIndex: showAssignMenu ? 60 : 'auto' }}>
+        
+        {/* Enhanced Vacant State */}
+        {isVacant && (
+          <div className="mt-3 flex flex-col items-center gap-3">
+            <span className="inline-block text-sm text-gray-500 dark:text-gray-400 font-medium">No one assigned</span>
+            <button
+              ref={assignBtnRef}
+              className="text-blue-600 text-sm font-medium hover:text-blue-800 bg-transparent p-0 border-0 assign-btn hover:underline transition-all duration-200"
+              onClick={() => setShowAssignMenu(v => !v)}
+              type="button"
+              style={{ minWidth: 0 }}
+            >
+              Assign Staff
+            </button>
+            {showAssignMenu && dropdownPos && createPortal(
+              <div 
+                className="assign-dropdown-container" 
+                style={{
+                  position: 'fixed', 
+                  top: dropdownPos.top, 
+                  left: dropdownPos.left, 
+                  zIndex: 9999, 
+                  background: 'white', 
+                  border: '2px solid #e5e7eb', 
+                  borderRadius: 12, 
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)', 
+                  width: 220, 
+                  padding: 12,
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <div className="text-sm text-gray-700 dark:text-gray-200 mb-3 font-medium">Select staff to assign:</div>
+                {matchingStaff.length === 0 ? (
+                  <div className="text-sm text-gray-400 text-center py-4">No available staff</div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto">
+                    {matchingStaff.map(staff => (
                       <button
-                onClick={() => setShowAssignMenu(!showAssignMenu)}
-                className="w-full px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 rounded transition-colors"
-                      >
-                Assign
-                      </button>
-              
-              {/* Assignment Dropdown */}
-              {showAssignMenu && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a] rounded-lg shadow-xl max-h-48 overflow-y-auto" style={{ zIndex: 9999 }}>
-                          {unassignedStaff.length === 0 ? (
-                    <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No available staff</div>
-                          ) : (
-                    unassignedStaff.map((staff) => (
-                                <button
                         key={staff.id}
-                                  onClick={() => {
-                          onAssign(staff.id);
-                          setShowAssignMenu(false);
-                        }}
-                        className="w-full text-left p-2 hover:bg-gray-50 dark:hover:bg-[#2d437a] transition-colors"
+                        className="block w-full text-left px-3 py-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 text-sm text-gray-900 dark:text-gray-100 transition-all duration-200"
+                        onClick={() => { onAssign(staff.id); setShowAssignMenu(false); }}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xs">
-                            {staff.name.split(' ').map((n: string) => n[0]).join('')}
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white text-xs">{staff.name}</div>
-                          </div>
-                        </div>
-                                </button>
-                              ))
-                          )}
-                        </div>
-              )}
-            </div>
-                      </div>
-                    )}
+                        {staff.full_name}
+                      </button>
+                    ))}
                   </div>
-            </div>
+                )}
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1165,11 +1360,21 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
   selectedCategory: number | null;
   onAdd: (categoryId: number, position: any) => void;
 }) {
-  const [formData, setFormData] = useState({
+  // AddPositionModal formData type
+  type AddPositionFormData = {
+    callsign: string;
+    position: string;
+    categoryId: number;
+    required: boolean;
+    skills: string[];
+  };
+
+  const [formData, setFormData] = useState<AddPositionFormData>({
     callsign: '',
     position: '',
     categoryId: selectedCategory || categories[0]?.id || 1,
-    required: false
+    required: false,
+    skills: []
   });
 
   useEffect(() => {
@@ -1178,15 +1383,47 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
     }
   }, [selectedCategory]);
 
+  // In AddPositionModal, add an Amount field and callsign suggestion logic
+  const [amount, setAmount] = useState(1);
+
+  // Suggest next available callsign based on department and last used
+  useEffect(() => {
+    if (!categories || !formData.categoryId) return;
+    const cat = categories.find(c => c.id === formData.categoryId);
+    if (!cat) return;
+    // Find last used callsign in this category
+    const lastCallsign = cat.positions.length > 0 ? cat.positions[cat.positions.length - 1].callsign : '';
+    // Extract prefix and number
+    const match = lastCallsign.match(/([A-Za-z]+)(\d+)/);
+    let prefix = cat.name.split(' ')[0].toUpperCase().charAt(0);
+    let nextNum = 1;
+    if (match) {
+      prefix = match[1];
+      nextNum = parseInt(match[2], 10) + 1;
+    }
+    // Only auto-suggest if callsign is empty
+    if (!formData.callsign) {
+      setFormData(prev => ({ ...prev, callsign: `${prefix}${nextNum}` }));
+    }
+  }, [formData.categoryId, categories]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.callsign.trim() && formData.position.trim()) {
-      onAdd(formData.categoryId, {
-        callsign: formData.callsign.trim(),
+      // Bulk creation logic
+      const cat = categories.find(c => c.id === formData.categoryId);
+      let baseCallsign = formData.callsign.trim();
+      let prefix = baseCallsign.replace(/\d+$/, '');
+      let startNum = parseInt(baseCallsign.match(/\d+$/)?.[0] || '1', 10);
+      const positions = Array.from({ length: amount }, (_, i) => ({
+        callsign: `${prefix}${startNum + i}`,
         position: formData.position.trim(),
-        required: formData.required
-      });
-      setFormData({ callsign: '', position: '', categoryId: categories[0]?.id || 1, required: false });
+        required: formData.required,
+        skills: formData.skills
+      }));
+      positions.forEach(pos => onAdd(formData.categoryId, pos));
+      setFormData({ callsign: '', position: '', categoryId: categories[0]?.id || 1, required: false, skills: [] });
+      setAmount(1);
       onClose();
     }
   };
@@ -1194,11 +1431,20 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add New Position</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] w-full max-w-xl mx-4 overflow-hidden">
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+              <PlusIcon className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Add New Position</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Department
@@ -1206,7 +1452,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData(prev => ({ ...prev, categoryId: Number(e.target.value) }))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -1223,7 +1469,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               value={formData.callsign}
               onChange={(e) => setFormData(prev => ({ ...prev, callsign: e.target.value }))}
               placeholder="e.g., ALPHA-1, BRAVO-2"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               required
             />
         </div>
@@ -1237,7 +1483,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               value={formData.position}
               onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
               placeholder="e.g., Door Supervisor, Control Room Operator"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               required
             />
       </div>
@@ -1255,14 +1501,43 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
             </label>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100">Cancel</button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold">Add Position</button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Required Skills
+            </label>
+            <select
+              multiple
+              value={formData.skills}
+              onChange={e => {
+                const options = Array.from(e.target.selectedOptions).map(opt => opt.value as string);
+                setFormData(prev => ({ ...prev, skills: options }));
+              }}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              {SKILL_OPTIONS.map((skill: string) => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Amount
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={amount}
+              onChange={e => setAmount(Math.max(1, Math.min(20, Number(e.target.value))))}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="px-0 pt-2 pb-1 flex gap-3 justify-end">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300">Cancel</button>
+            <button type="submit" className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow">Add Position</button>
           </div>
         </form>
       </div>
@@ -1277,20 +1552,48 @@ function EditPositionModal({ isOpen, position, onClose, onSave }: {
   onClose: () => void;
   onSave: (position: any) => void;
 }) {
+  const [formData, setFormData] = useState(position || {});
+  useEffect(() => {
+    setFormData(position || {});
+  }, [position]);
   if (!isOpen || !position) return null;
-
+  const handleUnassign = () => {
+    setFormData({ ...formData, assignedStaff: undefined, assignedName: undefined });
+  };
+  const assignedPerson = formData.assignedStaff
+    ? formData.assignedName || ''
+    : formData.assignedName || '';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Position</h2>
-        {/* Edit form would go here */}
-        <div className="flex gap-3 pt-4">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-[#2d437a] hover:bg-gray-300 dark:hover:bg-[#23408e] rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
+        <div className="mb-4 p-3 rounded bg-gray-50 dark:bg-[#182447] border border-gray-200 dark:border-[#2d437a]">
+          <div className="font-semibold text-gray-800 dark:text-gray-100 text-sm mb-1">{formData.callsign || position.callsign}</div>
+          <input
+            type="text"
+            className="w-full text-xs font-medium text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 mb-1"
+            value={formData.position || ''}
+            onChange={e => setFormData({ ...formData, position: e.target.value })}
+            placeholder="Role/Position (e.g., Pit Supervisor, Gate Supervisor)"
+          />
+          {(formData.assignedStaff || formData.assignedName) && (
+            <div className="text-xs text-green-700 dark:text-green-300 font-medium">Assigned to: {assignedPerson}</div>
+          )}
+        </div>
+        {(formData.assignedStaff || formData.assignedName) && (
+          <>
+            <div className="mb-2 text-xs text-gray-700 dark:text-gray-200">This will remove the current assignment from this position.</div>
+            <button
+              onClick={handleUnassign}
+              className="mb-4 px-4 py-2 rounded border border-orange-500 text-orange-600 font-semibold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+            >
+              Unassign
+            </button>
+          </>
+        )}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">Cancel</button>
+          <button onClick={() => onSave(formData)} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
@@ -1311,6 +1614,9 @@ function StaffListView() {
   });
   const [staff, setStaff] = useState<any[]>([]);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
 
   useEffect(() => {
     fetchUserCompany();
@@ -1351,22 +1657,31 @@ function StaffListView() {
       return;
     }
     
+    setLoadingStaff(true);
     try {
       const { data, error } = await supabase
         .from('staff')
-        .select('*')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
         .eq('company_id', userCompanyId)
         .order('full_name');
       
-      if (error) {
-        console.error('Error fetching staff:', error);
-        setStaff([]);
-      } else {
-    setStaff(data || []);
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching staff:', err);
-      setStaff([]);
+      if (error) throw error;
+
+      const formattedStaff = data?.map(staff => ({
+        id: staff.id,
+        full_name: staff.full_name,
+        contact_number: staff.contact_number,
+        email: staff.email,
+        skill_tags: staff.skill_tags || [],
+        notes: staff.notes,
+        active: staff.active,
+      })) || [];
+
+      setStaff(formattedStaff);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+    } finally {
+      setLoadingStaff(false);
     }
   }
 
@@ -1457,113 +1772,216 @@ function StaffListView() {
   }
   }
 
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+
+  // Use a static list of all possible skills for the filter dropdown
+  const ALL_SKILLS = [
+    "Head of Security (HOS)",
+    "Deputy Head of Security",
+    "Security Manager",
+    "Supervisor",
+    "SIA Security Officer",
+    "(SIA)",
+    "Steward",
+    "Control Room Operator",
+    "Event Control Manager",
+    "Radio Controller",
+    "Welfare Team",
+    "Medic / Paramedic",
+    "Traffic Marshal",
+    "Traffic Management",
+    "Venue Manager",
+    "Duty Manager",
+    "Site Manager",
+    "Access Control",
+    "Accreditation",
+    "Production Manager",
+    "Stage Manager",
+    "Artist Liaison",
+    "Front of House",
+    "Fire Steward",
+    "Health & Safety",
+    "Dog Handler (K9)",
+    "CCTV Operator",
+    "Logistics Coordinator"
+  ];
+  const allSkills = ALL_SKILLS;
+
+  // Filtered staff based on search and filters
+  const filteredStaff = staff.filter(member => {
+    const matchesName = member.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSkill = selectedSkill ? (member.skill_tags || []).includes(selectedSkill) : true;
+    const matchesStatus = selectedStatus === '' ? true : selectedStatus === 'active' ? !!member.active : !member.active;
+    return matchesName && matchesSkill && matchesStatus;
+  });
+
+  const openProfileModal = (member: any) => {
+    setSelectedProfile(member);
+    setProfileModalOpen(true);
+  };
+  const closeProfileModal = () => {
+    setProfileModalOpen(false);
+    setSelectedProfile(null);
+  };
+
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Staff Management</h2>
-          <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
+    <div className="p-6 sm:p-8">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Staff Management</h2>
+            <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
+          </div>
+          <button
+            onClick={openAddModal}
+            className="hidden sm:inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Add Staff
+          </button>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add Staff
-        </button>
+
+        {/* Toolbar */}
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+            {/* Search */}
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+            {/* Skill filter */}
+            <select
+              value={selectedSkill}
+              onChange={e => setSelectedSkill(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 py-2 px-3"
+            >
+              <option value="">All Skills</option>
+              {allSkills.map((skill: string) => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
+            {/* Status filter + action */}
+            <div className="flex items-center justify-between md:justify-end gap-3">
+              <div className="inline-flex rounded-lg border border-gray-300 dark:border-[#2d437a] overflow-hidden">
+                {[
+                  { id: '', label: 'All' },
+                  { id: 'active', label: 'Active' },
+                  { id: 'inactive', label: 'Inactive' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSelectedStatus(opt.id)}
+                    className={`px-3 py-2 text-sm font-medium ${selectedStatus === opt.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#182447] text-gray-700 dark:text-gray-100'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={openAddModal}
+                className="sm:hidden inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Add
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500 dark:text-blue-100">Showing {filteredStaff.length} of {staff.length}</div>
+        </div>
       </div>
 
-      {staff.length === 0 ? (
+      {filteredStaff.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           <UserGroupIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No staff found</h3>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">Get started by adding your first team member</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">Try adjusting your search or filters.</p>
           <button
             onClick={openAddModal}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
-            Add First Staff Member
+            Add Staff
           </button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-[#2d437a]">
+              <thead className="bg-gray-50 dark:bg-[#2d437a] sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Skills
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
               </tr>
             </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
-                {staff.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a]">
+              <tbody className="divide-y divide-gray-100 dark:divide-[#2d437a]">
+                {filteredStaff.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a] cursor-pointer" onClick={() => openProfileModal(member)}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                          <span className="text-blue-700 dark:text-blue-200 font-medium text-sm">
-                            {member.full_name.split(' ').map((n: string) => n[0]).join('')}
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-inner">
+                          <span className="text-white font-semibold text-sm">
+                            {(member.full_name || '').split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             {member.full_name}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {member.email}
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {member.email || ''}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {member.contact_number || 'Not provided'}
+                      {member.contact_number ? (
+                        <a href={`tel:${member.contact_number}`} className="text-blue-600 dark:text-blue-300 hover:underline">{member.contact_number}</a>
+                      ) : (
+                        'Not provided'
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {(member.skill_tags || []).map((skill: string) => (
                           <span
                             key={skill}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-800/60 dark:text-blue-100"
                           >
                             {skill}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        member.active 
-                          ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
-                      }`}>
-                        {member.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
-                        onClick={() => openEditModal(member)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
+                        onClick={(e) => { e.stopPropagation(); openEditModal(member); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                       >
-                        Edit
+                        <PencilSquareIcon className="w-4 h-4" /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(member.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(member.id); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 dark:border-red-700 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
                       >
-                        Delete
+                        <TrashIcon className="w-4 h-4" /> Delete
                       </button>
                   </td>
                 </tr>
@@ -1875,4 +2293,4 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
       </div>
     </div>
   );
-} 
+}

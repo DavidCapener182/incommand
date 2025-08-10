@@ -1,186 +1,156 @@
 import { useState, useEffect, useCallback } from 'react';
-import { pushNotificationManager, PushSubscriptionData } from '../lib/pushNotifications';
+import { pushNotificationManager, NotificationPayload } from '../lib/pushNotifications';
 
-export interface UsePushNotificationsReturn {
-  // State
-  supported: boolean;
+export interface PushNotificationState {
+  isSupported: boolean;
   permission: NotificationPermission;
-  subscribed: boolean;
-  subscription: globalThis.PushSubscription | null;
-  loading: boolean;
+  subscriptionStatus: 'subscribed' | 'unsubscribed' | 'not-supported';
+  isSubscribing: boolean;
   error: string | null;
-  
-  // Actions
+}
+
+export interface PushNotificationActions {
   requestPermission: () => Promise<NotificationPermission>;
-  subscribe: () => Promise<boolean>;
-  unsubscribe: () => Promise<boolean>;
-  sendTestNotification: () => Promise<boolean>;
-  
-  // Utilities
+  subscribe: () => Promise<void>;
+  unsubscribe: () => Promise<void>;
+  testNotification: () => Promise<void>;
+  sendNotification: (userId: string, payload: NotificationPayload) => Promise<void>;
   clearError: () => void;
 }
 
-export const usePushNotifications = (): UsePushNotificationsReturn => {
-  const [supported, setSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
-  const [subscribed, setSubscribed] = useState(false);
-  const [subscription, setSubscription] = useState<globalThis.PushSubscription | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function usePushNotifications(): [PushNotificationState, PushNotificationActions] {
+  const [state, setState] = useState<PushNotificationState>({
+    isSupported: pushNotificationManager.isSupported(),
+    permission: pushNotificationManager.getPermissionStatus(),
+    subscriptionStatus: pushNotificationManager.getSubscriptionStatus(),
+    isSubscribing: false,
+    error: null
+  });
 
-  // Initialize push notifications
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const status = await pushNotificationManager.getSubscriptionStatus();
-        
-        setSupported(status.supported);
-        setPermission(status.permission);
-        setSubscribed(status.subscribed);
-        setSubscription(status.subscription);
-      } catch (err) {
-        console.error('Failed to initialize push notifications:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize push notifications');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initialize();
+  // Update subscription status
+  const updateSubscriptionStatus = useCallback(async () => {
+    const status = pushNotificationManager.getSubscriptionStatus();
+    setState(prev => ({
+      ...prev,
+      subscriptionStatus: status
+    }));
   }, []);
 
-  // Request permission
+  // Update permission status
+  const updatePermissionStatus = useCallback(() => {
+    const permission = pushNotificationManager.getPermissionStatus();
+    setState(prev => ({
+      ...prev,
+      permission
+    }));
+  }, []);
+
+  // Setup service worker message listener
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+          // Handle push notification received
+          console.log('Push notification received:', event.data.payload);
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      };
+    }
+  }, []);
+
+  // Initial status check
+  useEffect(() => {
+    updateSubscriptionStatus();
+    updatePermissionStatus();
+  }, [updateSubscriptionStatus, updatePermissionStatus]);
+
+  // Actions
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const newPermission = await pushNotificationManager.requestPermission();
-      setPermission(newPermission);
-
-      return newPermission;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to request permission';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, error: null }));
+      const permission = await pushNotificationManager.requestPermission();
+      updatePermissionStatus();
+      return permission;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to request permission';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      throw error;
     }
-  }, []);
+  }, [updatePermissionStatus]);
 
-  // Subscribe to push notifications
-  const subscribe = useCallback(async (): Promise<boolean> => {
+  const subscribe = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
-      setError(null);
+      setState(prev => ({ 
+        ...prev, 
+        isSubscribing: true, 
+        error: null 
+      }));
 
-      const newSubscription = await pushNotificationManager.subscribe();
-      
-      if (newSubscription) {
-        setSubscribed(true);
-        setSubscription(newSubscription);
-        return true;
-      }
-      
-      return false;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to subscribe to push notifications';
-      setError(errorMessage);
-      return false;
+      await pushNotificationManager.subscribe();
+      await updateSubscriptionStatus();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe';
+      setState(prev => ({ 
+        ...prev, 
+        error: errorMessage 
+      }));
+      throw error;
     } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, isSubscribing: false }));
     }
-  }, []);
+  }, [updateSubscriptionStatus]);
 
-  // Unsubscribe from push notifications
-  const unsubscribe = useCallback(async (): Promise<boolean> => {
+  const unsubscribe = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const success = await pushNotificationManager.unsubscribe();
-      
-      if (success) {
-        setSubscribed(false);
-        setSubscription(null);
-      }
-      
-      return success;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to unsubscribe from push notifications';
-      setError(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, error: null }));
+      await pushNotificationManager.unsubscribe();
+      await updateSubscriptionStatus();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to unsubscribe';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      throw error;
     }
-  }, []);
+  }, [updateSubscriptionStatus]);
 
-  // Send test notification
-  const sendTestNotification = useCallback(async (): Promise<boolean> => {
+  const testNotification = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const success = await pushNotificationManager.sendTestNotification();
-      
-      if (!success) {
-        setError('Failed to send test notification');
-      }
-      
-      return success;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send test notification';
-      setError(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, error: null }));
+      await pushNotificationManager.testNotification();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send test notification';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      throw error;
     }
   }, []);
 
-  // Refresh status
-  const refreshStatus = useCallback(async () => {
+  const sendNotification = useCallback(async (userId: string, payload: NotificationPayload): Promise<void> => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const status = await pushNotificationManager.getSubscriptionStatus();
-      
-      setSupported(status.supported);
-      setPermission(status.permission);
-      setSubscribed(status.subscribed);
-      setSubscription(status.subscription);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh status';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, error: null }));
+      await pushNotificationManager.sendNotification(userId, payload);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send notification';
+      setState(prev => ({ ...prev, error: errorMessage }));
+      throw error;
     }
   }, []);
 
-  // Clear error
   const clearError = useCallback(() => {
-    setError(null);
+    setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  return {
-    // State
-    supported,
-    permission,
-    subscribed,
-    subscription,
-    loading,
-    error,
-    
-    // Actions
+  const actions: PushNotificationActions = {
     requestPermission,
     subscribe,
     unsubscribe,
-    sendTestNotification,
-    
-    // Utilities
+    testNotification,
+    sendNotification,
     clearError
   };
-};
+
+  return [state, actions];
+}
