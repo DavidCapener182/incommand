@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RecentAction } from '../pages/api/notifications/recent-actions';
 import AIChat from './AIChat';
+import { pushNotificationManager, getSubscriptionStatus } from '../lib/pushNotifications';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface AISummaryData {
 }
 
 export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMarkAllRead, onClearAll }: NotificationDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'notifications' | 'chat'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'chat' | 'push-settings'>('notifications');
   const [actions, setActions] = useState<RecentAction[]>([]);
   const [aiSummary, setAISummary] = useState<AISummaryData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,16 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
   const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  
+  // Push notification state
+  const [pushStatus, setPushStatus] = useState<{
+    supported: boolean;
+    permission: NotificationPermission;
+    subscribed: boolean;
+    subscription: any;
+  } | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // Load read notifications from localStorage on mount
   useEffect(() => {
@@ -98,6 +109,90 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       return () => clearTimeout(timer);
     }
   }, [lastLogTimestamp, isOpen]);
+
+  // Load push notification status when drawer opens
+  useEffect(() => {
+    if (isOpen && activeTab === 'push-settings') {
+      loadPushNotificationStatus();
+    }
+  }, [isOpen, activeTab]);
+
+  // Load push notification status
+  const loadPushNotificationStatus = async () => {
+    try {
+      setPushLoading(true);
+      setPushError(null);
+      const status = await getSubscriptionStatus();
+      setPushStatus(status);
+    } catch (error) {
+      console.error('Error loading push notification status:', error);
+      setPushError('Failed to load push notification status');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Request push notification permission
+  const requestPushPermission = async () => {
+    try {
+      setPushLoading(true);
+      setPushError(null);
+      await pushNotificationManager.requestPermission();
+      await loadPushNotificationStatus();
+    } catch (error) {
+      console.error('Error requesting push permission:', error);
+      setPushError('Failed to request permission');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Subscribe to push notifications
+  const subscribeToPush = async () => {
+    try {
+      setPushLoading(true);
+      setPushError(null);
+      await pushNotificationManager.subscribe();
+      await loadPushNotificationStatus();
+    } catch (error) {
+      console.error('Error subscribing to push notifications:', error);
+      setPushError('Failed to subscribe to push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Unsubscribe from push notifications
+  const unsubscribeFromPush = async () => {
+    try {
+      setPushLoading(true);
+      setPushError(null);
+      await pushNotificationManager.unsubscribe();
+      await loadPushNotificationStatus();
+    } catch (error) {
+      console.error('Error unsubscribing from push notifications:', error);
+      setPushError('Failed to unsubscribe from push notifications');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  // Send test notification
+  const sendTestNotification = async () => {
+    try {
+      setPushLoading(true);
+      setPushError(null);
+      const success = await pushNotificationManager.sendTestNotification();
+      if (!success) {
+        setPushError('Failed to send test notification');
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      setPushError('Failed to send test notification');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   // Close drawer when clicking outside
   useEffect(() => {
@@ -359,7 +454,17 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-                            AI Assistant
+            AI Assistant
+          </button>
+          <button
+            onClick={() => setActiveTab('push-settings')}
+            className={`flex-1 px-4 py-3 text-sm font-medium ${
+              activeTab === 'push-settings'
+                ? 'text-[#2A3990] border-b-2 border-[#2A3990] bg-white'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Push Settings
           </button>
         </div>
 
@@ -539,6 +644,177 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
           {/* Chat Tab - AI Assistant */}
           {activeTab === 'chat' && (
             <AIChat isVisible={activeTab === 'chat'} />
+          )}
+
+          {/* Push Settings Tab */}
+          {activeTab === 'push-settings' && (
+            <div className="p-4 space-y-6">
+              {/* Push Notification Status */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Push Notification Status</h3>
+                
+                {pushLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#2A3990]"></div>
+                    <span className="ml-2 text-sm text-gray-600">Loading...</span>
+                  </div>
+                ) : pushError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-sm text-red-700">{pushError}</p>
+                  </div>
+                ) : pushStatus ? (
+                  <div className="space-y-4">
+                    {/* Support Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Browser Support:</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        pushStatus.supported 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {pushStatus.supported ? 'Supported' : 'Not Supported'}
+                      </span>
+                    </div>
+
+                    {/* Permission Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Permission:</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        pushStatus.permission === 'granted' 
+                          ? 'bg-green-100 text-green-800'
+                          : pushStatus.permission === 'denied'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {pushStatus.permission === 'granted' ? 'Granted' : 
+                         pushStatus.permission === 'denied' ? 'Denied' : 'Default'}
+                      </span>
+                    </div>
+
+                    {/* Subscription Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Subscription:</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        pushStatus.subscribed 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {pushStatus.subscribed ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <p>Click "Check Status" to load push notification information</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Push Notification Controls */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Push Notification Controls</h3>
+                
+                <div className="space-y-3">
+                  {/* Check Status Button */}
+                  <button
+                    onClick={loadPushNotificationStatus}
+                    disabled={pushLoading}
+                    className="w-full px-4 py-2 text-sm font-medium text-[#2A3990] bg-white border border-[#2A3990] rounded-md hover:bg-[#2A3990] hover:text-white transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {pushLoading ? 'Loading...' : 'Check Status'}
+                  </button>
+
+                  {/* Request Permission Button */}
+                  {pushStatus && pushStatus.permission === 'default' && (
+                    <button
+                      onClick={requestPushPermission}
+                      disabled={pushLoading}
+                      className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {pushLoading ? 'Requesting...' : 'Request Permission'}
+                    </button>
+                  )}
+
+                  {/* Subscribe/Unsubscribe Button */}
+                  {pushStatus && pushStatus.permission === 'granted' && (
+                    <button
+                      onClick={pushStatus.subscribed ? unsubscribeFromPush : subscribeToPush}
+                      disabled={pushLoading}
+                      className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        pushStatus.subscribed
+                          ? 'text-red-700 bg-white border border-red-700 hover:bg-red-700 hover:text-white'
+                          : 'text-green-700 bg-white border border-green-700 hover:bg-green-700 hover:text-white'
+                      }`}
+                    >
+                      {pushLoading ? 'Processing...' : 
+                       pushStatus.subscribed ? 'Unsubscribe' : 'Subscribe'}
+                    </button>
+                  )}
+
+                  {/* Test Notification Button */}
+                  {pushStatus && pushStatus.subscribed && (
+                    <button
+                      onClick={sendTestNotification}
+                      disabled={pushLoading}
+                      className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-purple-600 rounded-md hover:bg-purple-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {pushLoading ? 'Sending...' : 'Send Test Notification'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Push Notification Preferences */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Incident Alerts</p>
+                      <p className="text-xs text-gray-500">Get notified when new incidents are created</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">High Priority Alerts</p>
+                      <p className="text-xs text-gray-500">Urgent notifications for critical incidents</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">System Updates</p>
+                      <p className="text-xs text-gray-500">Notifications about app updates and maintenance</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Help Information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">How Push Notifications Work</h4>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>• Push notifications work even when the app is closed</li>
+                  <li>• You'll receive alerts for new incidents and updates</li>
+                  <li>• Click on notifications to open the relevant page</li>
+                  <li>• You can manage preferences in your browser settings</li>
+                </ul>
+              </div>
+            </div>
           )}
         </div>
 
