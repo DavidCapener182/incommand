@@ -28,6 +28,7 @@
     "chartjs-plugin-annotation": "^3.1.0",
     "cross-fetch": "^4.1.0",
     "date-fns": "^4.1.0",
+    "dexie": "^3.2.4",
     "framer-motion": "^12.19.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
@@ -50,9 +51,8 @@
     "three": "^0.177.0",
     "typescript": "^5",
     "weather-icons-react": "^1.2.0",
-    "dexie": "^3.2.4",
-    "workbox-window": "^7.0.0",
-    "web-push": "^3.6.6"
+    "web-push": "^3.6.7",
+    "workbox-window": "^7.0.0"
   },
   "devDependencies": {
     "@heroicons/react": "^2.2.0",
@@ -63,6 +63,7 @@
     "@types/react-dom": "^18",
     "@types/react-modal": "^3.16.3",
     "@types/uuid": "^10.0.0",
+    "@types/web-push": "^3.6.4",
     "@what3words/api": "^5.4.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",

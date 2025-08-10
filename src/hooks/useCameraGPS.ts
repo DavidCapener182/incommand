@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cameraGPSManager, LocationData, PhotoData, CameraOptions, GPSOptions } from '../lib/cameraGPS';
 
+// Re-export types for use in other components
+export type { PhotoData, LocationData, CameraOptions, GPSOptions };
+
 export interface UseCameraGPSReturn {
   // State
   cameraSupported: boolean;

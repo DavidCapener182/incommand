@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { pushNotificationManager, PushSubscription } from '../lib/pushNotifications';
+import { pushNotificationManager, PushSubscriptionData } from '../lib/pushNotifications';
 
 export interface UsePushNotificationsReturn {
   // State
   supported: boolean;
   permission: NotificationPermission;
   subscribed: boolean;
-  subscription: PushSubscription | null;
+  subscription: globalThis.PushSubscription | null;
   loading: boolean;
   error: string | null;
   
@@ -17,7 +17,6 @@ export interface UsePushNotificationsReturn {
   sendTestNotification: () => Promise<boolean>;
   
   // Utilities
-  refreshStatus: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -25,7 +24,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [subscribed, setSubscribed] = useState(false);
-  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [subscription, setSubscription] = useState<globalThis.PushSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +181,6 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
     sendTestNotification,
     
     // Utilities
-    refreshStatus,
     clearError
   };
 };

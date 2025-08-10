@@ -11,7 +11,7 @@ export interface OfflineOperation {
   headers?: Record<string, string>;
   timestamp: number;
   retryCount: number;
-  maxRetries: number;
+  maxRetries?: number;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   error?: string;
 }
@@ -105,7 +105,7 @@ export class OfflineSyncManager {
       this.triggerSync();
     }
 
-    return id;
+    return Number(id);
   }
 
   // Trigger background sync
@@ -121,8 +121,13 @@ export class OfflineSyncManager {
       // Check if Background Sync API is supported
       if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
         const registration = await navigator.serviceWorker.ready;
-        await registration.sync.register('offlineQueue');
-        console.log('[OfflineSync] Background sync registered');
+        if ('sync' in registration) {
+          await (registration as any).sync.register('offlineQueue');
+          console.log('[OfflineSync] Background sync registered');
+        } else {
+          // Fallback: immediate sync
+          await this.performSync();
+        }
       } else {
         // Fallback: immediate sync
         await this.performSync();
@@ -210,7 +215,7 @@ export class OfflineSyncManager {
   private async handleOperationError(operation: OfflineOperation, error: any): Promise<void> {
     const newRetryCount = operation.retryCount + 1;
     
-    if (newRetryCount >= operation.maxRetries) {
+    if (newRetryCount >= operation.maxRetries!) {
       // Mark as failed after max retries
       await this.db.offlineOperations.update(operation.id!, {
         status: 'failed',

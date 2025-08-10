@@ -10,7 +10,7 @@ import { Analytics } from '@vercel/analytics/react'
 import IncidentCreationModal from '../components/IncidentCreationModal'
 import FloatingAIChat from '../components/FloatingAIChat'
 import { NotificationDrawerProvider, useNotificationDrawer } from '../contexts/NotificationDrawerContext'
-import { ToastProvider } from '../components/Toast'
+import { ToastProvider, useToast } from '../components/Toast'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 import { PWAInstallPrompt } from '../components/PWAInstallPrompt'
 import { supabase } from '../lib/supabase'
@@ -227,39 +227,135 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered successfully:', registration);
-          
-          // Handle service worker updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker available
-                  console.log('New service worker available');
-                  // You can show a notification to the user here
-                }
-              });
-            }
-          });
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+    // Enhanced service worker registration with proper error handling and update management
+    const registerServiceWorker = async () => {
+      if (!('serviceWorker' in navigator)) {
+        console.warn('Service Worker not supported');
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered successfully:', registration);
+        
+        // Handle service worker updates with user notification
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New service worker available - notify user
+                console.log('New service worker available');
+                
+                // Show notification to user (will be handled by toast context)
+                const event = new CustomEvent('serviceWorkerUpdate', {
+                  detail: {
+                    title: 'Update Available',
+                    message: 'A new version is available. Reload to update.',
+                    type: 'info',
+                    duration: 10000
+                  }
+                });
+                window.dispatchEvent(event);
+              }
+            });
+          }
         });
 
-      // Handle service worker messages
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'SW_UPDATED') {
-          console.log('Service worker updated');
-          // Reload the page to use the new service worker
-          window.location.reload();
-        }
-      });
-    }
+        // Handle service worker errors with retry logic
+        registration.addEventListener('error', (event) => {
+          console.error('Service Worker error:', event);
+          
+          // Retry registration after delay
+          setTimeout(async () => {
+            try {
+              console.log('Retrying service worker registration...');
+              await navigator.serviceWorker.register('/sw.js');
+            } catch (retryError) {
+              console.error('Service Worker retry failed:', retryError);
+              
+              // Show error notification to user
+              const event = new CustomEvent('serviceWorkerError', {
+                detail: {
+                  title: 'Service Worker Error',
+                  message: 'Failed to register service worker. Some features may not work properly.',
+                  type: 'error',
+                  duration: 8000
+                }
+              });
+              window.dispatchEvent(event);
+            }
+          }, 5000);
+        });
+
+        // Handle service worker messages
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'SW_UPDATED') {
+            console.log('Service worker updated');
+            
+            // Show success notification
+            const successEvent = new CustomEvent('serviceWorkerSuccess', {
+              detail: {
+                title: 'Update Complete',
+                message: 'The app has been updated successfully.',
+                type: 'success',
+                duration: 5000
+              }
+            });
+            window.dispatchEvent(successEvent);
+            
+            // Reload the page to use the new service worker
+            window.location.reload();
+          }
+          
+          // Handle other service worker messages
+          if (event.data && event.data.type === 'SW_ERROR') {
+            console.error('Service Worker reported error:', event.data.error);
+            
+            const errorEvent = new CustomEvent('serviceWorkerError', {
+              detail: {
+                title: 'Service Worker Error',
+                message: event.data.error || 'An error occurred in the service worker.',
+                type: 'error',
+                duration: 8000
+              }
+            });
+            window.dispatchEvent(errorEvent);
+          }
+        });
+
+        // Handle service worker controller change
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('Service Worker controller changed');
+        });
+
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+        
+        // Show error notification to user
+        const errorEvent = new CustomEvent('serviceWorkerError', {
+          detail: {
+            title: 'Service Worker Error',
+            message: 'Failed to register service worker. Some features may not work properly.',
+            type: 'error',
+            duration: 8000
+          }
+        });
+        window.dispatchEvent(errorEvent);
+        
+        // Retry registration after delay
+        setTimeout(async () => {
+          try {
+            console.log('Retrying service worker registration...');
+            await navigator.serviceWorker.register('/sw.js');
+          } catch (retryError) {
+            console.error('Service Worker retry failed:', retryError);
+          }
+        }, 10000);
+      }
+    };
+
+    registerServiceWorker();
 
     // Add PWA meta tags
     const addPWAMetaTags = () => {

@@ -1,19 +1,22 @@
 import { supabase } from './supabase';
 
-// VAPID configuration - these should be environment variables
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BM8Pgl061UR0U7UwqSorQlLNVwD48UO5vJg-BM_WsF1lnyQA2Xp1pmkJMLP_Yj8efhSSnAKpJvazEWZS5Wfeq4k';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'EFT-mlOW0JzJsFZQnb4FDLn1qgXP08Ruqfo1nbMd1PM';
+// VAPID configuration - must be set via environment variables
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-// Validate VAPID keys
-if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'your-vapid-public-key') {
-  console.warn('VAPID public key not configured. Push notifications may not work properly.');
+// Debug logging
+console.log('VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY ? 'SET' : 'NOT SET');
+
+// Validate VAPID public key on module load (client-side)
+if (!VAPID_PUBLIC_KEY) {
+  throw new Error('NEXT_PUBLIC_VAPID_PUBLIC_KEY environment variable is required for push notifications');
 }
 
-if (!VAPID_PRIVATE_KEY || VAPID_PRIVATE_KEY === 'your-vapid-private-key') {
-  console.warn('VAPID private key not configured. Push notifications may not work properly.');
+// Additional validation for key format
+if (VAPID_PUBLIC_KEY.length < 40) {
+  throw new Error('VAPID_PUBLIC_KEY appears to be invalid (too short)');
 }
 
-export interface PushSubscription {
+export interface PushSubscriptionData {
   id?: number;
   user_id: string;
   endpoint: string;
@@ -49,7 +52,7 @@ export interface NotificationAction {
 export class PushNotificationManager {
   private static instance: PushNotificationManager;
   private registration: ServiceWorkerRegistration | null = null;
-  private subscription: PushSubscription | null = null;
+  private subscription: globalThis.PushSubscription | null = null;
 
   private constructor() {}
 
@@ -94,7 +97,7 @@ export class PushNotificationManager {
   }
 
   // Subscribe to push notifications
-  async subscribe(): Promise<PushSubscription | null> {
+  async subscribe(): Promise<globalThis.PushSubscription | null> {
     try {
       if (!this.registration) {
         await this.initialize();
@@ -111,7 +114,7 @@ export class PushNotificationManager {
       }
 
       // Convert VAPID key
-      const vapidPublicKey = this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      const vapidPublicKey = this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY!);
 
       // Subscribe to push manager
       const subscription = await this.registration.pushManager.subscribe({
@@ -155,7 +158,7 @@ export class PushNotificationManager {
   }
 
   // Get current subscription
-  async getSubscription(): Promise<PushSubscription | null> {
+  async getSubscription(): Promise<globalThis.PushSubscription | null> {
     if (!this.registration) {
       await this.initialize();
     }
@@ -174,14 +177,14 @@ export class PushNotificationManager {
   }
 
   // Save subscription to database
-  private async saveSubscriptionToDatabase(subscription: PushSubscription): Promise<void> {
+  private async saveSubscriptionToDatabase(subscription: globalThis.PushSubscription): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      const subscriptionData = {
+      const subscriptionData: PushSubscriptionData = {
         user_id: user.id,
         endpoint: subscription.endpoint,
         p256dh: this.arrayBufferToBase64(subscription.getKey('p256dh')!),
@@ -206,7 +209,7 @@ export class PushNotificationManager {
   }
 
   // Remove subscription from database
-  private async removeSubscriptionFromDatabase(subscription: PushSubscription): Promise<void> {
+  private async removeSubscriptionFromDatabase(subscription: globalThis.PushSubscription): Promise<void> {
     try {
       const { error } = await supabase
         .from('push_subscriptions')
@@ -321,7 +324,7 @@ export class PushNotificationManager {
     supported: boolean;
     permission: NotificationPermission;
     subscribed: boolean;
-    subscription: PushSubscription | null;
+    subscription: globalThis.PushSubscription | null;
   }> {
     const supported = 'serviceWorker' in navigator && 'PushManager' in window;
     const permission = supported ? Notification.permission : 'denied';

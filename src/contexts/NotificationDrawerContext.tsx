@@ -1,34 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { pushNotificationManager, PushSubscription, NotificationPayload } from '../lib/pushNotifications';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { pushNotificationManager, PushSubscriptionData, NotificationPayload } from '../lib/pushNotifications';
 import { supabase } from '../lib/supabase';
 
-interface NotificationDrawerContextType {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  // Push notification state
-  pushSupported: boolean;
-  pushPermission: NotificationPermission;
-  pushSubscribed: boolean;
-  pushSubscription: PushSubscription | null;
-  // Push notification actions
-  requestPushPermission: () => Promise<NotificationPermission>;
-  subscribeToPush: () => Promise<boolean>;
-  unsubscribeFromPush: () => Promise<boolean>;
-  sendTestNotification: () => Promise<boolean>;
-  // Notification preferences
-  notificationPreferences: NotificationPreferences;
-  updateNotificationPreferences: (preferences: Partial<NotificationPreferences>) => void;
-  // Real-time notifications
-  notifications: NotificationItem[];
-  markNotificationAsRead: (id: string) => void;
-  markAllNotificationsAsRead: () => void;
-  // Offline notifications
-  offlineNotifications: NotificationItem[];
-  clearOfflineNotifications: () => void;
-}
-
+// Types
 interface NotificationPreferences {
   sound: boolean;
   vibration: boolean;
@@ -53,6 +29,223 @@ interface NotificationItem {
   }>;
 }
 
+// State interfaces
+interface PushNotificationState {
+  supported: boolean;
+  permission: NotificationPermission;
+  subscribed: boolean;
+  subscription: globalThis.PushSubscription | null;
+}
+
+interface NotificationPreferencesState {
+  preferences: NotificationPreferences;
+}
+
+interface NotificationItemsState {
+  notifications: NotificationItem[];
+  offlineNotifications: NotificationItem[];
+}
+
+interface DrawerState {
+  isOpen: boolean;
+}
+
+// Combined state
+interface NotificationDrawerState {
+  drawer: DrawerState;
+  push: PushNotificationState;
+  preferences: NotificationPreferencesState;
+  items: NotificationItemsState;
+}
+
+// Action types
+type DrawerAction = 
+  | { type: 'SET_DRAWER_OPEN'; payload: boolean };
+
+type PushAction = 
+  | { type: 'SET_PUSH_SUPPORTED'; payload: boolean }
+  | { type: 'SET_PUSH_PERMISSION'; payload: NotificationPermission }
+  | { type: 'SET_PUSH_SUBSCRIBED'; payload: boolean }
+  | { type: 'SET_PUSH_SUBSCRIPTION'; payload: globalThis.PushSubscription | null }
+  | { type: 'INITIALIZE_PUSH'; payload: { supported: boolean; permission: NotificationPermission; subscribed: boolean; subscription: globalThis.PushSubscription | null } };
+
+type PreferencesAction = 
+  | { type: 'UPDATE_PREFERENCES'; payload: Partial<NotificationPreferences> }
+  | { type: 'LOAD_PREFERENCES'; payload: NotificationPreferences };
+
+type ItemsAction = 
+  | { type: 'ADD_NOTIFICATION'; payload: NotificationItem }
+  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
+  | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
+  | { type: 'CLEAR_OFFLINE_NOTIFICATIONS' }
+  | { type: 'ADD_OFFLINE_NOTIFICATION'; payload: NotificationItem };
+
+type NotificationDrawerAction = 
+  | { type: 'DRAWER'; payload: DrawerAction }
+  | { type: 'PUSH'; payload: PushAction }
+  | { type: 'PREFERENCES'; payload: PreferencesAction }
+  | { type: 'ITEMS'; payload: ItemsAction };
+
+// Initial state
+const initialState: NotificationDrawerState = {
+  drawer: {
+    isOpen: false
+  },
+  push: {
+    supported: false,
+    permission: 'default',
+    subscribed: false,
+    subscription: null
+  },
+  preferences: {
+    preferences: {
+      sound: true,
+      vibration: true,
+      incidentAlerts: true,
+      systemUpdates: true,
+      eventReminders: true,
+      emergencyAlerts: true
+    }
+  },
+  items: {
+    notifications: [],
+    offlineNotifications: []
+  }
+};
+
+// Reducers
+const drawerReducer = (state: DrawerState, action: DrawerAction): DrawerState => {
+  switch (action.type) {
+    case 'SET_DRAWER_OPEN':
+      return { ...state, isOpen: action.payload };
+    default:
+      return state;
+  }
+};
+
+const pushReducer = (state: PushNotificationState, action: PushAction): PushNotificationState => {
+  switch (action.type) {
+    case 'SET_PUSH_SUPPORTED':
+      return { ...state, supported: action.payload };
+    case 'SET_PUSH_PERMISSION':
+      return { ...state, permission: action.payload };
+    case 'SET_PUSH_SUBSCRIBED':
+      return { ...state, subscribed: action.payload };
+    case 'SET_PUSH_SUBSCRIPTION':
+      return { ...state, subscription: action.payload };
+    case 'INITIALIZE_PUSH':
+      return { ...state, ...action.payload };
+    default:
+      return state;
+  }
+};
+
+const preferencesReducer = (state: NotificationPreferencesState, action: PreferencesAction): NotificationPreferencesState => {
+  switch (action.type) {
+    case 'UPDATE_PREFERENCES':
+      return {
+        ...state,
+        preferences: { ...state.preferences, ...action.payload }
+      };
+    case 'LOAD_PREFERENCES':
+      return {
+        ...state,
+        preferences: action.payload
+      };
+    default:
+      return state;
+  }
+};
+
+const itemsReducer = (state: NotificationItemsState, action: ItemsAction): NotificationItemsState => {
+  switch (action.type) {
+    case 'ADD_NOTIFICATION':
+      return {
+        ...state,
+        notifications: [action.payload, ...state.notifications]
+      };
+    case 'MARK_NOTIFICATION_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(notification =>
+          notification.id === action.payload
+            ? { ...notification, read: true }
+            : notification
+        )
+      };
+    case 'MARK_ALL_NOTIFICATIONS_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(notification => ({ ...notification, read: true }))
+      };
+    case 'CLEAR_OFFLINE_NOTIFICATIONS':
+      return {
+        ...state,
+        offlineNotifications: []
+      };
+    case 'ADD_OFFLINE_NOTIFICATION':
+      return {
+        ...state,
+        offlineNotifications: [action.payload, ...state.offlineNotifications]
+      };
+    default:
+      return state;
+  }
+};
+
+// Main reducer
+const notificationDrawerReducer = (state: NotificationDrawerState, action: NotificationDrawerAction): NotificationDrawerState => {
+  switch (action.type) {
+    case 'DRAWER':
+      return {
+        ...state,
+        drawer: drawerReducer(state.drawer, action.payload)
+      };
+    case 'PUSH':
+      return {
+        ...state,
+        push: pushReducer(state.push, action.payload)
+      };
+    case 'PREFERENCES':
+      return {
+        ...state,
+        preferences: preferencesReducer(state.preferences, action.payload)
+      };
+    case 'ITEMS':
+      return {
+        ...state,
+        items: itemsReducer(state.items, action.payload)
+      };
+    default:
+      return state;
+  }
+};
+
+// Context interface
+interface NotificationDrawerContextType {
+  // State
+  isOpen: boolean;
+  pushSupported: boolean;
+  pushPermission: NotificationPermission;
+  pushSubscribed: boolean;
+  pushSubscription: globalThis.PushSubscription | null;
+  notificationPreferences: NotificationPreferences;
+  notifications: NotificationItem[];
+  offlineNotifications: NotificationItem[];
+  
+  // Actions
+  setIsOpen: (open: boolean) => void;
+  requestPushPermission: () => Promise<NotificationPermission>;
+  subscribeToPush: () => Promise<boolean>;
+  unsubscribeFromPush: () => Promise<boolean>;
+  sendTestNotification: () => Promise<boolean>;
+  updateNotificationPreferences: (preferences: Partial<NotificationPreferences>) => void;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  clearOfflineNotifications: () => void;
+}
+
+// Context
 const NotificationDrawerContext = createContext<NotificationDrawerContextType | undefined>(undefined);
 
 export const useNotificationDrawer = () => {
@@ -63,45 +256,35 @@ export const useNotificationDrawer = () => {
   return context;
 };
 
+// Provider
 interface NotificationDrawerProviderProps {
   children: ReactNode;
 }
 
 export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProps> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // Push notification state
-  const [pushSupported, setPushSupported] = useState(false);
-  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
-  const [pushSubscribed, setPushSubscribed] = useState(false);
-  const [pushSubscription, setPushSubscription] = useState<PushSubscription | null>(null);
-  
-  // Notification preferences
-  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
-    sound: true,
-    vibration: true,
-    incidentAlerts: true,
-    systemUpdates: true,
-    eventReminders: true,
-    emergencyAlerts: true
-  });
-  
-  // Real-time notifications
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [offlineNotifications, setOfflineNotifications] = useState<NotificationItem[]>([]);
+  const [state, dispatch] = useReducer(notificationDrawerReducer, initialState);
 
   // Initialize push notifications
   useEffect(() => {
     const initializePushNotifications = async () => {
       try {
         const supported = await pushNotificationManager.initialize();
-        setPushSupported(supported);
+        dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_SUPPORTED', payload: supported } });
         
         if (supported) {
           const status = await pushNotificationManager.getSubscriptionStatus();
-          setPushPermission(status.permission);
-          setPushSubscribed(status.subscribed);
-          setPushSubscription(status.subscription);
+          dispatch({
+            type: 'PUSH',
+            payload: {
+              type: 'INITIALIZE_PUSH',
+              payload: {
+                supported: status.supported,
+                permission: status.permission,
+                subscribed: status.subscribed,
+                subscription: status.subscription
+              }
+            }
+          });
         }
       } catch (error) {
         console.error('Failed to initialize push notifications:', error);
@@ -117,7 +300,7 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     if (savedPreferences) {
       try {
         const preferences = JSON.parse(savedPreferences);
-        setNotificationPreferences(preferences);
+        dispatch({ type: 'PREFERENCES', payload: { type: 'LOAD_PREFERENCES', payload: preferences } });
       } catch (error) {
         console.error('Failed to load notification preferences:', error);
       }
@@ -126,8 +309,8 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
 
   // Save notification preferences to localStorage
   useEffect(() => {
-    localStorage.setItem('notificationPreferences', JSON.stringify(notificationPreferences));
-  }, [notificationPreferences]);
+    localStorage.setItem('notificationPreferences', JSON.stringify(state.preferences.preferences));
+  }, [state.preferences.preferences]);
 
   // Setup service worker message handling
   useEffect(() => {
@@ -144,10 +327,10 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
           actions: event.data.actions
         };
 
-        setNotifications(prev => [notification, ...prev]);
+        dispatch({ type: 'ITEMS', payload: { type: 'ADD_NOTIFICATION', payload: notification } });
         
         // Show toast notification
-        if (notificationPreferences.sound) {
+        if (state.preferences.preferences.sound) {
           // Play notification sound
           const audio = new Audio('/notification-sound.mp3');
           audio.play().catch(() => {
@@ -156,7 +339,7 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
           });
         }
 
-        if (notificationPreferences.vibration && 'vibrate' in navigator) {
+        if (state.preferences.preferences.vibration && 'vibrate' in navigator) {
           navigator.vibrate(200);
         }
       }
@@ -176,7 +359,7 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
         navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
       }
     };
-  }, [notificationPreferences]);
+  }, [state.preferences.preferences]);
 
   // Setup real-time notifications from Supabase
   useEffect(() => {
@@ -197,7 +380,7 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
           data: payload.new.data
         };
 
-        setNotifications(prev => [notification, ...prev]);
+        dispatch({ type: 'ITEMS', payload: { type: 'ADD_NOTIFICATION', payload: notification } });
       })
       .subscribe();
 
@@ -206,11 +389,15 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     };
   }, []);
 
-  // Request push notification permission
+  // Action creators
+  const setIsOpen = (open: boolean) => {
+    dispatch({ type: 'DRAWER', payload: { type: 'SET_DRAWER_OPEN', payload: open } });
+  };
+
   const requestPushPermission = async (): Promise<NotificationPermission> => {
     try {
       const permission = await pushNotificationManager.requestPermission();
-      setPushPermission(permission);
+      dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_PERMISSION', payload: permission } });
       return permission;
     } catch (error) {
       console.error('Failed to request push permission:', error);
@@ -218,13 +405,12 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     }
   };
 
-  // Subscribe to push notifications
   const subscribeToPush = async (): Promise<boolean> => {
     try {
       const subscription = await pushNotificationManager.subscribe();
       if (subscription) {
-        setPushSubscribed(true);
-        setPushSubscription(subscription);
+        dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_SUBSCRIBED', payload: true } });
+        dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_SUBSCRIPTION', payload: subscription } });
         return true;
       }
       return false;
@@ -234,13 +420,12 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     }
   };
 
-  // Unsubscribe from push notifications
   const unsubscribeFromPush = async (): Promise<boolean> => {
     try {
       const success = await pushNotificationManager.unsubscribe();
       if (success) {
-        setPushSubscribed(false);
-        setPushSubscription(null);
+        dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_SUBSCRIBED', payload: false } });
+        dispatch({ type: 'PUSH', payload: { type: 'SET_PUSH_SUBSCRIPTION', payload: null } });
       }
       return success;
     } catch (error) {
@@ -249,7 +434,6 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     }
   };
 
-  // Send test notification
   const sendTestNotification = async (): Promise<boolean> => {
     try {
       return await pushNotificationManager.sendTestNotification();
@@ -259,51 +443,42 @@ export const NotificationDrawerProvider: React.FC<NotificationDrawerProviderProp
     }
   };
 
-  // Update notification preferences
   const updateNotificationPreferences = (preferences: Partial<NotificationPreferences>) => {
-    setNotificationPreferences(prev => ({ ...prev, ...preferences }));
+    dispatch({ type: 'PREFERENCES', payload: { type: 'UPDATE_PREFERENCES', payload: preferences } });
   };
 
-  // Mark notification as read
   const markNotificationAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+    dispatch({ type: 'ITEMS', payload: { type: 'MARK_NOTIFICATION_READ', payload: id } });
   };
 
-  // Mark all notifications as read
   const markAllNotificationsAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    dispatch({ type: 'ITEMS', payload: { type: 'MARK_ALL_NOTIFICATIONS_READ' } });
   };
 
-  // Clear offline notifications
   const clearOfflineNotifications = () => {
-    setOfflineNotifications([]);
+    dispatch({ type: 'ITEMS', payload: { type: 'CLEAR_OFFLINE_NOTIFICATIONS' } });
   };
 
   const value: NotificationDrawerContextType = {
-    isOpen,
+    // State
+    isOpen: state.drawer.isOpen,
+    pushSupported: state.push.supported,
+    pushPermission: state.push.permission,
+    pushSubscribed: state.push.subscribed,
+    pushSubscription: state.push.subscription,
+    notificationPreferences: state.preferences.preferences,
+    notifications: state.items.notifications,
+    offlineNotifications: state.items.offlineNotifications,
+    
+    // Actions
     setIsOpen,
-    pushSupported,
-    pushPermission,
-    pushSubscribed,
-    pushSubscription,
     requestPushPermission,
     subscribeToPush,
     unsubscribeFromPush,
     sendTestNotification,
-    notificationPreferences,
     updateNotificationPreferences,
-    notifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-    offlineNotifications,
     clearOfflineNotifications
   };
 

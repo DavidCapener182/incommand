@@ -63,7 +63,7 @@ const getRowStyle = (incident: Incident) => {
 
 // Global subscription tracking to prevent duplicates
 const activeSubscriptions = new Map<string, boolean>();
-const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id'>) => void>();
+const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void>();
 const recentToasts = new Map<string, number>(); // Track recent toasts to prevent duplicates
 
 // Add debugging
@@ -81,7 +81,7 @@ export default function IncidentTable({
 }: { 
   filter?: string; 
   onDataLoaded?: (data: Incident[]) => void; 
-  onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+  onToast?: (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void;
   viewMode?: 'table' | 'board';
   onViewModeChange?: (mode: 'table' | 'board') => void;
   currentUser?: any;
@@ -286,7 +286,6 @@ export default function IncidentTable({
                   title: `New ${incident.incident_type} Incident`,
                   message: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
                   duration: isHighPriority ? 12000 : 8000, // Increased from 8000/5000 to 12000/8000
-                  urgent: isHighPriority
                 });
                 console.log('📢 TOAST SENT FOR NEW INCIDENT:', incident.log_number);
               } else {
