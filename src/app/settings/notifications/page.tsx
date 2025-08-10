@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import Toast, { useToast } from '../../../components/Toast';
+import { useToast } from '../../../components/Toast';
 
 interface NotificationSettings {
   // Incident Notifications
@@ -62,7 +62,7 @@ export default function NotificationSettingsPage() {
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { messages, addToast, removeToast } = useToast();
+  const { toasts, addToast, removeToast } = useToast();
   const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -451,8 +451,7 @@ export default function NotificationSettingsPage() {
         </div>
       </div>
 
-      {/* Toast Notification */}
-      <Toast messages={messages} onRemove={removeToast} />
+      {/* Toast Notifications are handled by ToastProvider in layout */}
     </div>
   );
 } 

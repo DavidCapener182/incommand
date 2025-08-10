@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, Fragment } from 'react'
 import IncidentTable from './IncidentTable'
+import { CollaborationBoard } from './CollaborationBoard'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
 import IncidentCreationModal, {
@@ -21,6 +22,8 @@ import {
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
   PlusIcon,
+  ViewColumnsIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import { geocodeAddress } from '../utils/geocoding'
@@ -33,7 +36,7 @@ import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import AttendanceModal from './AttendanceModal'
 import { getIncidentTypeStyle } from './IncidentTable'
-import Toast, { useToast } from './Toast'
+import { useToast } from './Toast'
 import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
 import RotatingText from './RotatingText'
@@ -76,8 +79,24 @@ interface TimeCardProps {
 }
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot }) => {
+  // Determine if the current slot is actually happening now or just the next one coming up
+  const isActuallyHappening = () => {
+    if (!currentSlot) return false;
+    
+    const now = new Date();
+    const currentTimeNumber = now.getHours() * 60 + now.getMinutes();
+    const [hours, minutes] = currentSlot.time.split(':').map(Number);
+    const slotTimeNumber = hours * 60 + minutes;
+    
+    // Consider an event "happening" if we're within 30 minutes of its start time
+    // This gives a reasonable window for events to be considered "active"
+    const timeWindow = 30; // minutes
+    return Math.abs(currentTimeNumber - slotTimeNumber) <= timeWindow;
+  };
+
+  const isHappeningNow = isActuallyHappening();
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+    <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
         <div className="md:block relative">
           <div className="hidden md:block">
@@ -99,7 +118,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               </div>
               {currentSlot && (
                 <div className="text-right">
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
+                    {isHappeningNow ? 'Happening Now' : 'Happening Next'}
+                  </span>
                   <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
                   <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
                 </div>
@@ -130,10 +151,12 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
         </div>
       </div>
       
-      {/* Desktop: Happening Now positioned at bottom left of the entire card */}
+      {/* Desktop: Happening Now/Next positioned in bottom left corner */}
       {currentSlot && (
-        <div className="hidden md:block absolute bottom-4 left-4 z-30 bg-white dark:bg-[#23408e] rounded-lg p-3 shadow-lg border border-gray-200 dark:border-[#2d437a]">
-          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">Happening Now</span>
+        <div className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm">
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
+            {isHappeningNow ? 'Happening Now' : 'Happening Next'}
+          </span>
           <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
           <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
         </div>
@@ -480,9 +503,11 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
   const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'board'>('table');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Toast notifications
-  const { messages, addToast, removeToast } = useToast();
+  const { toasts, addToast, removeToast } = useToast();
 
   // Add a state for showing the event creation modal if not already present
   const [showCreateEvent, setShowCreateEvent] = useState(false);
@@ -786,16 +811,79 @@ export default function Dashboard() {
         {showCreateEvent && (
           <EventCreationModal isOpen={showCreateEvent} onClose={() => setShowCreateEvent(false)} onEventCreated={fetchCurrentEvent} />
         )}
-        {/* Floating AI Chat and Create New Incident Button */}
+        {/* Collapsible Right Sidebar */}
         {hasCurrentEvent && (
-          <div className="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
-            <FloatingAIChat />
+          <div className="fixed top-8 right-0 z-50">
+            {/* Toggle Button */}
             <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg text-lg"
-              onClick={() => {}}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-l-lg shadow-lg transition-all duration-200 hover:shadow-xl"
             >
-              Create New Incident
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              </svg>
             </button>
+            
+            {/* Sidebar Content */}
+            <div className={`absolute right-0 top-12 bg-white dark:bg-[#23408e] rounded-l-lg shadow-xl border border-gray-200 dark:border-[#2d437a] transition-all duration-300 ${
+              isSidebarOpen ? 'w-80 opacity-100' : 'w-0 opacity-0 overflow-hidden'
+            }`}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* AI Chat Section */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AI Assistant</h4>
+                  <FloatingAIChat disablePositioning={true} />
+                </div>
+                
+                {/* Quick Incident Creation */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Actions</h4>
+                  <button
+                    onClick={() => {
+                      setInitialIncidentType(undefined);
+                      setIsIncidentModalOpen(true);
+                      setIsSidebarOpen(false);
+                    }}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 mb-2"
+                  >
+                    <PlusIcon className="h-4 w-4 inline mr-2" />
+                    New Incident
+                  </button>
+                </div>
+                
+                {/* Quick Incident Types */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quick Types</h4>
+                  <div className="space-y-1">
+                    {incidentTypes.slice(0, 5).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setInitialIncidentType(type);
+                          setIsIncidentModalOpen(true);
+                          setIsSidebarOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d437a] rounded-md transition-colors duration-150"
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         <div className="absolute bottom-2 right-4 text-xs text-blue-100 opacity-70 select-none">v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
@@ -804,9 +892,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-6 md:p-8">
-      {/* Event Header - Sticky */}
-      <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-8">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-6 md:p-8 flex flex-col overflow-hidden">
+      {/* Event Header - Fixed */}
+      <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-8 flex-shrink-0">
         {/* Desktop view */}
         <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
           <CurrentEvent
@@ -874,7 +962,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Incident Dashboard */}
+              {/* Incident Dashboard */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -894,6 +982,7 @@ export default function Dashboard() {
               Track and manage security incidents in real-time
             </p>
           </div>
+
           <div className="relative inline-flex rounded-xl shadow-lg">
             <button 
               type="button"
@@ -967,8 +1056,8 @@ export default function Dashboard() {
           </div>
         </div>
         
-        {/* Stats Grid */}
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4 mb-8">
+        {/* Stats Grid - Fixed */}
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4 mb-8 flex-shrink-0">
           <StatCard
             title="Total"
             value={incidentStats.total}
@@ -1047,8 +1136,8 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Stats Grid - Second Row */}
-        <div>
+        {/* Stats Grid - Second Row - Fixed */}
+        <div className="flex-shrink-0">
           {/* Mobile: Venue Occupancy full width */}
           <div className="block md:hidden mb-4">
             <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
@@ -1115,13 +1204,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Incident Table */}
-        <div className="pb-24">
+        {/* Scrollable Incident View */}
+        <div className="flex-1 overflow-y-auto pr-2">
           <IncidentTable 
             key={refreshKey}
             filter={typeof selectedFilter === 'string' ? selectedFilter : undefined} 
             onDataLoaded={setIncidents}
             onToast={addToast}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            currentUser={user}
+            currentEventId={currentEventId || ''}
           />
         </div>
       </div>
@@ -1136,8 +1229,7 @@ export default function Dashboard() {
       {/* Venue Occupancy Modal */}
       <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
       
-      {/* Toast Notifications */}
-      <Toast messages={messages} onRemove={removeToast} />
+      {/* Toast Notifications are handled by ToastProvider in layout */}
     </div>
   )
 } 

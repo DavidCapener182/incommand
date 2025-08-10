@@ -1,25 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
-
-interface Incident {
-  id: number
-  log_number: string
-  timestamp: string
-  callsign_from: string
-  callsign_to: string
-  occurrence: string
-  incident_type: string
-  action_taken: string
-  is_closed: boolean
-  event_id: string
-  status: string
-}
+import { CollaborationBoard } from './CollaborationBoard'
+import { Incident } from '@/hooks/useIncidents'
 
 const getIncidentTypeStyle = (type: string) => {
   switch(type) {
@@ -85,11 +73,19 @@ export { getIncidentTypeStyle };
 export default function IncidentTable({ 
   filter, 
   onDataLoaded, 
-  onToast 
+  onToast,
+  viewMode = 'table',
+  onViewModeChange,
+  currentUser,
+  currentEventId: propCurrentEventId
 }: { 
   filter?: string; 
   onDataLoaded?: (data: Incident[]) => void; 
   onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+  viewMode?: 'table' | 'board';
+  onViewModeChange?: (mode: 'table' | 'board') => void;
+  currentUser?: any;
+  currentEventId?: string;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
   console.log('🔧 IncidentTable component rendered. ID:', componentId.current, 'onToast available:', !!onToast);
@@ -114,6 +110,32 @@ export default function IncidentTable({
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
   const onToastRef = useRef(onToast)
+  
+  // Create a reusable fetchIncidents function
+  const fetchIncidents = useCallback(async () => {
+    if (!currentEventId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', currentEventId)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      setIncidents(data || []);
+      setLastUpdated(new Date());
+      if (onDataLoaded) {
+        onDataLoaded(data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching incidents:', err);
+      setError('Failed to fetch incidents');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentEventId, onDataLoaded]);
   
   // Keep refs in sync with state/props
   useEffect(() => {
@@ -185,28 +207,7 @@ export default function IncidentTable({
       return;
     }
 
-    const fetchIncidents = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('incident_logs')
-          .select('*')
-          .eq('event_id', currentEventId)
-          .order('timestamp', { ascending: false });
 
-        if (error) throw error;
-        setIncidents(data || []);
-        setLastUpdated(new Date());
-        if (onDataLoaded) {
-          onDataLoaded(data || []);
-        }
-      } catch (err) {
-        console.error('Error fetching incidents:', err);
-        setError('Failed to fetch incidents');
-      } finally {
-        setLoading(false);
-      }
-    };
 
     // DO NOT call cleanup() here!
 
@@ -420,7 +421,7 @@ export default function IncidentTable({
     setIncidents(prev => 
       prev.map(inc => 
         inc.id === incident.id 
-          ? { ...inc, is_closed: newStatus }
+          ? { ...inc, is_closed: newStatus, status: newStatus ? 'closed' : 'open' }
           : inc
       )
     );
@@ -430,6 +431,7 @@ export default function IncidentTable({
         .from('incident_logs')
         .update({ 
           is_closed: newStatus,
+          status: newStatus ? 'closed' : 'open',
           updated_at: new Date().toISOString()
         })
         .eq('id', incident.id);
@@ -471,7 +473,7 @@ export default function IncidentTable({
       setIncidents(prev => 
         prev.map(inc => 
           inc.id === incident.id 
-            ? { ...inc, is_closed: incident.is_closed }
+            ? { ...inc, is_closed: incident.is_closed, status: incident.status }
             : inc
         )
       );
@@ -646,6 +648,28 @@ export default function IncidentTable({
             )}
           </div>
           
+          {/* View Toggle - Center */}
+          {onViewModeChange && (
+            <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
+              <button
+                onClick={() => onViewModeChange('table')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  viewMode === 'table' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <TableCellsIcon className="h-4 w-4" /> Table
+              </button>
+              <button
+                onClick={() => onViewModeChange('board')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  viewMode === 'board' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <ViewColumnsIcon className="h-4 w-4" /> Board
+              </button>
+            </div>
+          )}
+          
           {/* Enhanced Last updated and live status - Right side */}
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-xl px-4 py-2 shadow-sm">
@@ -672,17 +696,20 @@ export default function IncidentTable({
         )}
       </div>
 
-      {/* Enhanced Empty State */}
-      {sortedIncidents.length === 0 ? (
-        <div className="mt-6 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-[#1a2a57] dark:to-[#23408e] shadow-2xl rounded-3xl border border-gray-200 dark:border-[#2d437a] p-12 text-center transition-colors duration-300">
-          <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No incidents to display</h3>
-          <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
-        </div>
-      ) : (
+      {/* Conditional Rendering for Table/Board Views */}
+      {viewMode === 'table' ? (
+        <>
+          {/* Enhanced Empty State */}
+          {sortedIncidents.length === 0 ? (
+            <div className="mt-6 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-[#1a2a57] dark:to-[#23408e] shadow-2xl rounded-3xl border border-gray-200 dark:border-[#2d437a] p-12 text-center transition-colors duration-300">
+              <div className="text-6xl mb-4">📋</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No incidents to display</h3>
+              <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
+            </div>
+          ) : (
         <>
           {/* Enhanced Mobile Card Layout */}
-          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', position: 'relative' }}>
+          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2" style={{ overflowY: 'auto', position: 'relative' }}>
             {/* Enhanced Mobile Table Header */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] flex items-center px-4 py-3 text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider rounded-t-2xl shadow-lg">
               <div className="basis-[28%]">Log #</div>
@@ -813,7 +840,7 @@ export default function IncidentTable({
           </div>
 
           {/* Enhanced Desktop Table Layout */}
-          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', position: 'relative' }}>
+          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6" style={{ overflowY: 'auto', position: 'relative' }}>
             {/* Enhanced Desktop Table Header */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] rounded-t-2xl shadow-lg">
               <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
@@ -972,6 +999,21 @@ export default function IncidentTable({
           )}
         </>
       )}
+    </>
+  ) : (
+    /* Board View */
+    <div className="bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
+      <CollaborationBoard
+        eventId={propCurrentEventId || currentEventId || ''}
+        currentUser={currentUser}
+        searchQuery={searchQuery}
+        onIncidentSelect={(incident) => {
+          // Handle incident selection - could open details modal
+          console.log('Selected incident:', incident);
+        }}
+      />
+    </div>
+  )}
     </>
   )
 } 

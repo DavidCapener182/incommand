@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase'
 import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
 import { useAuth } from '../contexts/AuthContext'
+import { usePresence } from '@/hooks/usePresence'
+import { CursorTracker } from '@/components/ui/CursorTracker'
+import { TypingIndicator } from '@/components/ui/TypingIndicator'
 
 interface Props {
   isOpen: boolean
@@ -1893,6 +1896,12 @@ export default function IncidentCreationModal({
   const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  
+  // Real-time collaboration
+  const modalRef = useRef<HTMLDivElement>(null);
+  const { users: presenceUsers, updateCursor, updateTyping, updateFocus, isConnected } = usePresence(
+    isOpen ? `incident-creation:${selectedEventId || 'global'}` : ''
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -2633,8 +2642,40 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
   }, [ejectionDetails.location, ejectionDetails.description, ejectionDetails.reason, formData.incident_type]);
 
   return (
-    <div className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-50 ${isOpen ? '' : 'hidden'}`}>
+    <div 
+      ref={modalRef}
+      className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-50 ${isOpen ? '' : 'hidden'}`}
+      onMouseMove={(e) => {
+        if (modalRef.current) {
+          const rect = modalRef.current.getBoundingClientRect();
+          updateCursor(e.clientX - rect.left, e.clientY - rect.top);
+        }
+      }}
+    >
       <div className="relative top-8 mx-auto p-8 border w-[95%] max-w-6xl shadow-2xl rounded-3xl bg-white dark:bg-[#23408e] dark:border-[#2d437a]">
+        {/* Real-time collaboration indicators */}
+        {isConnected && (
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {presenceUsers.filter(u => u.id !== user?.id).map((presenceUser) => (
+                <div
+                  key={presenceUser.id}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  style={{ backgroundColor: presenceUser.color }}
+                  title={presenceUser.name}
+                >
+                  {presenceUser.name.charAt(0).toUpperCase()}
+                </div>
+              ))}
+            </div>
+            <span className="text-xs text-gray-500">
+              {presenceUsers.filter(u => u.id !== user?.id).length} collaborating
+            </span>
+          </div>
+        )}
+        
+        {/* Cursor tracker */}
+        <CursorTracker users={presenceUsers} containerRef={modalRef} />
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-xl">
@@ -2682,13 +2723,19 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Details</label>
-                  <textarea
-                    value={formData.ai_input || ''}
-                    onChange={handleQuickInputChange}
-                    placeholder="Enter details (e.g. location, persons involved, brief summary)..."
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 shadow-sm resize-none"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={formData.ai_input || ''}
+                      onChange={handleQuickInputChange}
+                      onFocus={() => updateFocus('quick-input')}
+                      onBlur={() => updateTyping('quick-input', false)}
+                      onKeyDown={() => updateTyping('quick-input', true)}
+                      placeholder="Enter details (e.g. location, persons involved, brief summary)..."
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 shadow-sm resize-none"
+                    />
+                    <TypingIndicator users={presenceUsers} fieldName="quick-input" position="bottom" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Occurrence Preview</label>
@@ -2741,13 +2788,19 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Callsign From</label>
-                  <input
-                    type="text"
-                    value={formData.callsign_from || ''}
-                    onChange={(e) => setFormData({ ...formData, callsign_from: e.target.value })}
-                    placeholder="Enter callsign..."
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.callsign_from || ''}
+                      onChange={(e) => setFormData({ ...formData, callsign_from: e.target.value })}
+                      onFocus={() => updateFocus('callsign-from')}
+                      onBlur={() => updateTyping('callsign-from', false)}
+                      onKeyDown={() => updateTyping('callsign-from', true)}
+                      placeholder="Enter callsign..."
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm"
+                    />
+                    <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Callsign To</label>
@@ -2821,13 +2874,19 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Action Taken</label>
-                  <textarea
-                    value={formData.action_taken || ''}
-                    onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
-                    placeholder="Describe actions taken in response to the incident..."
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 shadow-sm resize-none"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={formData.action_taken || ''}
+                      onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
+                      onFocus={() => updateFocus('action-taken')}
+                      onBlur={() => updateTyping('action-taken', false)}
+                      onKeyDown={() => updateTyping('action-taken', true)}
+                      placeholder="Describe actions taken in response to the incident..."
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 shadow-sm resize-none"
+                    />
+                    <TypingIndicator users={presenceUsers} fieldName="action-taken" position="bottom" />
+                  </div>
                 </div>
               </div>
             </div>

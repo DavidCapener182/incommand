@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FaRobot, FaUsers, FaShieldAlt, FaExclamationCircle } from 'react-icons/fa';
+import { FaRobot, FaUsers, FaShieldAlt, FaExclamationCircle, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 import AIChat from './AIChat';
 import { useSession } from '@supabase/auth-helpers-react';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { VoiceMessageBubble } from '@/components/ui/VoiceMessageBubble';
+import { useToast } from '@/components/Toast';
 
 const mainGroups = [
   { key: 'ai', label: 'AI Chatbot', icon: <FaRobot />, pinned: true },
@@ -23,6 +26,9 @@ interface Message {
   id: number;
   sender: string; // user_id
   text: string;
+  voice_url?: string;
+  duration?: number;
+  message_type?: 'text' | 'voice';
 }
 
 interface Profile {
@@ -94,6 +100,28 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   const [profiles, setProfiles] = useState<{ [userId: string]: Profile }>({});
   const session = useSession();
   const currentUserId = session?.user?.id;
+  const { addToast } = useToast();
+  
+  // Voice recording functionality
+  const {
+    recordingState,
+    isRecording,
+    recordingDuration,
+    startRecording,
+    stopRecording,
+    cancelRecording
+  } = useVoiceRecording();
+
+  // Handle voice recording completion
+  useEffect(() => {
+    if (recordingState === 'idle' && recordingDuration > 0) {
+      // Voice recording completed, send the message
+      handleVoiceMessage({
+        url: '', // This will be set by the useVoiceRecording hook
+        duration: Math.round(recordingDuration / 1000)
+      });
+    }
+  }, [recordingState, recordingDuration]);
 
   // Fetch current event
   useEffect(() => {
@@ -129,28 +157,29 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   }, [currentEvent]);
 
   // Fetch messages from Supabase for selected group
-  useEffect(() => {
+  const fetchMessages = async () => {
     if (selectedGroup === 'ai') return;
-    async function fetchMessages() {
-      const { data, error } = await supabase
-        .from('event_chat_messages')
-        .select('id, user_id, message, created_at')
-        .eq('chat_id', selectedGroup)
-        .order('created_at', { ascending: true });
-      if (error) {
-        console.error('Error fetching messages:', error);
-        setMessagesByGroup(prev => ({ ...prev, [selectedGroup]: [] }));
-      } else if (data) {
-        setMessagesByGroup(prev => ({
-          ...prev,
-          [selectedGroup]: data.map((msg: any) => ({
-            id: new Date(msg.created_at).getTime(),
-            sender: msg.user_id,
-            text: msg.message,
-          })),
-        }));
-      }
+    const { data, error } = await supabase
+      .from('event_chat_messages')
+      .select('id, user_id, message, created_at')
+      .eq('chat_id', selectedGroup)
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error('Error fetching messages:', error);
+      setMessagesByGroup(prev => ({ ...prev, [selectedGroup]: [] }));
+    } else if (data) {
+      setMessagesByGroup(prev => ({
+        ...prev,
+        [selectedGroup]: data.map((msg: any) => ({
+          id: new Date(msg.created_at).getTime(),
+          sender: msg.user_id,
+          text: msg.message,
+        })),
+      }));
     }
+  };
+
+  useEffect(() => {
     fetchMessages();
   }, [selectedGroup]);
 
@@ -222,6 +251,83 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleSend();
+  };
+
+  const handleVoiceMessage = async (voiceData: { url: string; duration: number }) => {
+    if (!currentUserId || !selectedGroup) return;
+
+    try {
+      // Check if voice message columns exist in the database schema
+      const { data: tableInfo, error: schemaError } = await supabase
+        .from('event_chat_messages')
+        .select('voice_url, duration, message_type')
+        .limit(1);
+
+      if (schemaError) {
+        console.error('Voice message schema not supported:', schemaError);
+        addToast({
+          type: 'error',
+          title: 'Voice Messages Not Supported',
+          message: 'Voice message functionality is not available. Please contact your administrator.'
+        });
+        return;
+      }
+
+      // Check if the required columns exist by examining the table structure
+      const hasVoiceSupport = tableInfo && 
+        'voice_url' in (tableInfo[0] || {}) && 
+        'duration' in (tableInfo[0] || {}) && 
+        'message_type' in (tableInfo[0] || {});
+
+      if (!hasVoiceSupport) {
+        console.warn('Voice message columns not found in database schema');
+        addToast({
+          type: 'warning',
+          title: 'Voice Messages Unavailable',
+          message: 'Voice message feature requires database schema updates. Please contact your administrator.'
+        });
+        return;
+      }
+
+      // Send voice message to the database
+      const { error } = await supabase
+        .from('event_chat_messages')
+        .insert({
+          group_id: selectedGroup,
+          sender: currentUserId,
+          text: '', // Voice messages have empty text
+          voice_url: voiceData.url,
+          duration: voiceData.duration,
+          message_type: 'voice'
+        });
+
+      if (error) {
+        console.error('Error sending voice message:', error);
+        addToast({
+          type: 'error',
+          title: 'Send Failed',
+          message: 'Failed to send voice message. Please try again.'
+        });
+        return;
+      }
+
+      // Clear input and refresh messages
+      setInputValue('');
+      fetchMessages();
+      
+      addToast({
+        type: 'success',
+        title: 'Voice Message Sent',
+        message: 'Voice message sent successfully'
+      });
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+      addToast({
+        type: 'error',
+        title: 'Send Failed',
+        message: 'Failed to send voice message. Please try again.'
+      });
+    }
   };
 
   // Find selected group meta
@@ -360,7 +466,17 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
                       <span className="text-xs font-semibold mb-1">
                         {profile?.full_name || msg.sender}
                       </span>
-                      <span className="break-words">{msg.text}</span>
+                      {msg.message_type === 'voice' && msg.voice_url ? (
+                        <VoiceMessageBubble
+                          url={msg.voice_url}
+                          duration={msg.duration || 0}
+                          senderName={profile?.full_name || msg.sender}
+                          timestamp={msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          isOwnMessage={isCurrentUser}
+                        />
+                      ) : (
+                        <span className="break-words">{msg.text}</span>
+                      )}
                       <span className="text-[10px] text-gray-400 mt-1 self-end">
                         {msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
@@ -398,6 +514,57 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
               >
                 📎
               </button>
+              
+              {/* Voice Recording Button */}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                onMouseDown={!isRecording ? startRecording : undefined}
+                onMouseUp={isRecording ? stopRecording : undefined}
+                onMouseLeave={isRecording ? cancelRecording : undefined}
+                onTouchStart={!isRecording ? startRecording : undefined}
+                onTouchEnd={isRecording ? stopRecording : undefined}
+                style={{
+                  background: isRecording ? '#ef4444' : '#6366f1',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  animation: isRecording ? 'pulse 1s infinite' : 'none'
+                }}
+                title={isRecording ? 'Release to stop recording' : 'Hold to record voice message'}
+              >
+                {isRecording ? <FaMicrophoneSlash /> : <FaMicrophone />}
+              </button>
+              
+              {/* Recording indicator */}
+              {isRecording && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: '#ef4444',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#ef4444',
+                    animation: 'pulse 1s infinite'
+                  }} />
+                  Recording... {Math.floor(recordingDuration / 1000)}s
+                </div>
+              )}
+              
               <input
                 type="text"
                 value={inputValue}

@@ -8,9 +8,10 @@ interface FloatingAIChatProps {
   className?: string;
   isOpen?: boolean;
   onToggle?: () => void;
+  disablePositioning?: boolean;
 }
 
-export default function FloatingAIChat({ className = '', isOpen: isOpenProp, onToggle }: FloatingAIChatProps) {
+export default function FloatingAIChat({ className = '', isOpen: isOpenProp, onToggle, disablePositioning = false }: FloatingAIChatProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
@@ -41,7 +42,7 @@ export default function FloatingAIChat({ className = '', isOpen: isOpenProp, onT
     <>
       {/* Floating Chat Button */}
       {!isOpen && (
-        <div className={`fixed bottom-6 right-6 z-[60] ${className}`}>
+        <div className={`${disablePositioning ? '' : 'fixed bottom-6 right-6 z-[60]'} ${className}`}>
           <button
             onClick={toggleChat}
             className="relative w-14 h-14 bg-[#2A3990] hover:bg-[#1e2a6a] text-white dark:bg-white dark:text-[#2A3990] dark:hover:bg-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"

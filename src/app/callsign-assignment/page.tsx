@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon, PencilSquareIcon, TrashIcon, MagnifyingGlassIcon, ChevronDownIcon, Squares2X2Icon, CheckCircleIcon, ExclamationTriangleIcon, UsersIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import { createPortal } from 'react-dom';
@@ -179,20 +179,20 @@ export default function StaffCommandCentre() {
     fetchCurrentEvent();
   }, []);
 
-  // Load roles and assignments from Supabase when eventId changes
+  // Load positions and assignments from Supabase when eventId changes
   useEffect(() => {
     if (!eventId) return;
     const loadRolesAndAssignments = async () => {
       setSaveStatus("Loading saved callsigns...");
-      // Load roles
+      // Load positions
       const { data: roles, error: rolesError } = await supabase
-        .from("callsign_roles")
-        .select("id, area, short_code, callsign, position")
+        .from("callsign_positions")
+        .select("id, area, short_code, callsign, position, required")
         .eq("event_id", eventId);
       // Load assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("callsign_assignments")
-        .select("callsign_role_id, assigned_name")
+        .select("position_id, user_id, assigned_name")
         .eq("event_id", eventId);
       if (rolesError || assignmentsError) {
         setSaveStatus("Error loading saved data");
@@ -209,6 +209,7 @@ export default function StaffCommandCentre() {
             callsign: r.callsign,
             short: r.short_code,
             position: r.position,
+            required: r.required,
           });
         });
         for (const area in areaMap) {
@@ -219,10 +220,16 @@ export default function StaffCommandCentre() {
         setGroups(initialGroups);
       }
       if (assignmentsData && assignmentsData.length > 0) {
-        // Map assignments by callsign_role_id
+        // Map assignments by position_id
         const assignMap: Record<string, string> = {};
         assignmentsData.forEach((a) => {
-          assignMap[a.callsign_role_id] = a.assigned_name;
+          if (a.user_id) {
+            // store the id string for assignedStaff usage elsewhere
+            // we keep assigned_name for legacy fallbacks
+            assignMap[a.position_id as unknown as string] = a.assigned_name || "";
+          } else if (a.assigned_name) {
+            assignMap[a.position_id as unknown as string] = a.assigned_name;
+          }
         });
         setAssignments(assignMap);
       } else {
@@ -234,24 +241,24 @@ export default function StaffCommandCentre() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  // Fetch previous unique names for each callsign_role_id (excluding current event)
+  // Fetch previous unique names for each position_id (excluding current event)
   useEffect(() => {
     if (!eventId) return;
     const fetchPreviousNames = async () => {
       // Get all previous assignments for all roles, excluding current event
       const { data, error } = await supabase
         .from("callsign_assignments")
-        .select("callsign_role_id, assigned_name, assigned_at")
+        .select("position_id, assigned_name, assigned_at")
         .neq("event_id", eventId)
         .order("assigned_at", { ascending: false });
       if (error) return;
-      // Map: callsign_role_id -> unique names (most recent first)
+      // Map: position_id -> unique names (most recent first)
       const map: Record<string, string[]> = {};
       data?.forEach((row) => {
         if (!row.assigned_name) return;
-        if (!map[row.callsign_role_id]) map[row.callsign_role_id] = [];
-        if (!map[row.callsign_role_id].includes(row.assigned_name)) {
-          map[row.callsign_role_id].push(row.assigned_name);
+        if (!map[row.position_id]) map[row.position_id] = [];
+        if (!map[row.position_id].includes(row.assigned_name)) {
+          map[row.position_id].push(row.assigned_name);
         }
       });
       setPreviousNames(map);
@@ -347,7 +354,7 @@ export default function StaffCommandCentre() {
 
       // Upsert roles with correct conflict target
       const { data: upsertedRoles, error: rolesError } = await supabase
-        .from("callsign_roles")
+        .from("callsign_positions")
         .upsert(uniqueRoles, { onConflict: "event_id,area,short_code" })
         .select();
       if (rolesError) throw rolesError;
@@ -405,7 +412,7 @@ export default function StaffCommandCentre() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
-      {/* Sidebar - pixel-perfect match to settings sidebar */}
+      {/* Sidebar - restored */}
       <aside className="hidden md:flex w-64 bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] flex-col shadow-lg z-10">
         {/* Top bar with section title */}
         <div className="p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e]">
@@ -434,7 +441,6 @@ export default function StaffCommandCentre() {
             );
           })}
         </nav>
-        {/* TODO: Add mobile nav/drawer for sidebar on small screens */}
       </aside>
       {/* Main content area */}
       <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
@@ -502,14 +508,14 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       if (!eventId || !userCompanyId) return;
       // 1. Fetch roles
       const { data: roles, error: rolesError } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, area, short_code, callsign, position, required')
         .eq('event_id', eventId);
       if (rolesError) return;
       // 2. Fetch assignments
       const { data: assignments, error: assignmentsError } = await supabase
         .from('callsign_assignments')
-        .select('callsign_role_id, assigned_user_id, assigned_name')
+        .select('position_id, user_id, assigned_name')
         .eq('event_id', eventId);
       if (assignmentsError) return;
       // 3. Map roles to categories
@@ -518,7 +524,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       roles?.forEach((role) => {
         if (!areaMap[role.area]) areaMap[role.area] = [];
         // Find assignment for this role
-        const assignment = assignments?.find(a => a.callsign_role_id === role.id);
+        const assignment = assignments?.find(a => a.position_id === role.id);
         if (assignment?.assigned_name) assignedNamesArr.push(assignment.assigned_name);
         areaMap[role.area].push({
           id: role.id,
@@ -526,7 +532,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
           short: role.short_code,
           position: role.position,
           required: role.required,
-          assignedStaff: assignment?.assigned_user_id || undefined,
+          assignedStaff: (assignment?.user_id as string) || undefined,
           assignedName: assignment?.assigned_name || undefined,
         });
       });
@@ -731,7 +737,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     try {
       // Fetch existing roles for this event
       const { data: existingRoles, error: fetchError } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, area, short_code')
         .eq('event_id', eventId);
       if (fetchError) throw fetchError;
@@ -773,7 +779,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       const uniqueRoles = Array.from(uniqueRolesMap.values());
 
       // Upsert roles with correct conflict target
-      const { error: rolesError } = await supabase.from('callsign_roles').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
+      const { error: rolesError } = await supabase.from('callsign_positions').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
       uniqueRoles.forEach(role => {
@@ -782,20 +788,20 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       // 2. Upsert all assignments (callsign_assignments)
       const assignmentsArr = categories.flatMap(category =>
         category.positions.map(pos => {
-          let assigned_user_id = null;
+          let user_id = null;
           let assigned_name = pos.assignedName || null;
           if (pos.assignedStaff && validUserIds.has(pos.assignedStaff)) {
-            assigned_user_id = pos.assignedStaff;
+            user_id = pos.assignedStaff;
             // Optionally, you could also set assigned_name to the staff name if you want
           } else if (pos.assignedStaff) {
             // If assignedStaff is set but not a valid user, fallback to assigned_name
-            assigned_user_id = null;
+            user_id = null;
             assigned_name = staffList.find(s => s.id === pos.assignedStaff)?.full_name || null;
           }
           return {
             event_id: eventId,
-            callsign_role_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
-            assigned_user_id,
+            position_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
+            user_id,
             assigned_name,
           };
         })
@@ -803,7 +809,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       if (assignmentsArr.length > 0) {
         const { error: assignError } = await supabase
           .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
+          .upsert(assignmentsArr, { onConflict: "event_id,position_id" });
         if (assignError) throw assignError;
       }
       alert("Assignments and roles saved successfully.");
@@ -828,8 +834,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     ));
     // Remove from DB
     try {
-      await supabase.from('callsign_assignments').delete().eq('callsign_role_id', positionId);
-      await supabase.from('callsign_roles').delete().eq('id', positionId);
+      await supabase.from('callsign_assignments').delete().eq('position_id', positionId);
+      await supabase.from('callsign_positions').delete().eq('id', positionId);
     } catch (err) {
       const e = err as any;
       alert('Error deleting position: ' + (e.message || e));
@@ -872,15 +878,15 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#101c36] dark:to-[#1a2a57] transition-colors duration-300">
       {/* Enhanced Sticky Header with Search */}
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm border-b border-gray-200 dark:border-[#2d437a] shadow-lg">
-        <div className="px-6 py-6">
+      <div className="px-4 sm:px-6 py-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">📋</span>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
+                <Squares2X2Icon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-300">Manage staff assignments and callsigns</p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Callsign Assignment</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Assign your team to positions for the current event</p>
               </div>
             </div>
             
@@ -903,18 +909,14 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             </div>
 
             {/* Enhanced Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowAddCategoryModal(true)}
-                className="px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#23408e] rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                + Department
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowAddPositionModal(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow">
+                <PlusIcon className="w-5 h-5" />
+                Position
               </button>
-              <button
-                onClick={() => setShowAddPositionModal(true)}
-                className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                + Position
+              <button onClick={() => setShowAddCategoryModal(true)} className="inline-flex items-center gap-2 bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a] py-2.5 px-4 rounded-lg shadow-sm hover:shadow">
+                <PlusIcon className="w-5 h-5" />
+                Department
               </button>
             </div>
           </div>
@@ -924,68 +926,54 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       <div className="px-6 py-6">
         {/* Enhanced Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {categories.reduce((sum, cat) => sum + cat.positions.length, 0)}
+          {[
+            {
+              label: 'Total Positions',
+              value: categories.reduce((sum, c) => sum + c.positions.length, 0),
+              color: 'text-gray-900 dark:text-white',
+              icon: <Squares2X2Icon className="w-6 h-6 text-blue-600" />,
+            },
+            {
+              label: 'Assigned',
+              value: assignedCount,
+              color: 'text-green-600 dark:text-green-400',
+              icon: <CheckCircleIcon className="w-6 h-6 text-green-600" />,
+            },
+            {
+              label: 'Vacant',
+              value: categories.reduce((sum, c) => sum + c.positions.length, 0) - assignedCount,
+              color: 'text-amber-600 dark:text-amber-400',
+              icon: <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />,
+            },
+            {
+              label: 'Available Staff',
+              value: unassignedStaff.length,
+              color: 'text-blue-600 dark:text-blue-400',
+              icon: <UsersIcon className="w-6 h-6 text-blue-600" />,
+            },
+          ].map((kpi) => (
+            <div key={kpi.label} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className={`text-3xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-300">{kpi.label}</div>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-300">Total Positions</div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                <span className="text-blue-600 dark:text-blue-200 text-xl">📊</span>
+                <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-[#182447] flex items-center justify-center">
+                  {kpi.icon}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  {assignedCount}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-300">Assigned</div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-green-100 dark:bg-green-800 flex items-center justify-center">
-                <span className="text-green-600 dark:text-green-200 text-xl">✅</span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                  {categories.reduce((sum, cat) => sum + cat.positions.length, 0) - assignedCount}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-300">Vacant</div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-orange-100 dark:bg-orange-800 flex items-center justify-center">
-                <span className="text-orange-600 dark:text-orange-200 text-xl">⚠️</span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                  {unassignedStaff.length}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-300">Available Staff</div>
-              </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                <span className="text-blue-600 dark:text-blue-200 text-xl">👥</span>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Enhanced Available Staff Section */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 mb-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-lg">
+        {/* Available Staff Section */}
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 mb-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Available Staff</h2>
               <p className="text-sm text-gray-500 dark:text-gray-300">Assign staff to open positions</p>
             </div>
-            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-4 py-2 rounded-full font-medium">
+            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1.5 rounded-full font-medium">
               {unassignedStaff.length} available
             </span>
           </div>
@@ -997,9 +985,9 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
               <div className="text-sm">Great job! All available staff have been assigned to positions.</div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {unassignedStaff.map(staff => (
-                <div key={staff.id} className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 px-4 py-2 rounded-xl text-sm font-medium text-gray-900 dark:text-gray-100 border border-blue-200 dark:border-blue-700 cursor-pointer select-none hover:shadow-md transition-all duration-200">
+                <div key={staff.id} className="bg-gray-50 dark:bg-[#182447] px-3 py-1.5 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-[#2d437a] cursor-default select-none">
                   {staff.full_name}
                 </div>
               ))}
@@ -1010,33 +998,33 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         {/* Enhanced Department Cards */}
         <div className="space-y-6">
           {filteredCategories.map((category) => (
-            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              {/* Enhanced Department Header */}
-              <div className={`${category.color} px-6 py-4 shadow-lg`}>
+            <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden">
+              {/* Department Header - neutral, compact */}
+              <div className="px-4 sm:px-6 py-3 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-bold text-white">{category.name}</h2>
-                    <div className="flex gap-2">
-                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium backdrop-blur-sm">
+                    <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{category.name}</h2>
+                    <div className="hidden sm:flex gap-2">
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
                         {category.positions.length} positions
                       </span>
-                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium backdrop-blur-sm">
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
                         {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
                       </span>
                       {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
-                        <span className="bg-orange-200 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">
+                        <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs px-2.5 py-1 rounded-full font-medium">
                           {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
                         setEditingCategory(category);
                         setShowEditCategoryModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-2 rounded-lg transition-all duration-200"
+                      className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-blue-900/20"
                       title="Edit Department"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1048,7 +1036,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                         setSelectedCategory(category.id);
                         setShowAddPositionModal(true);
                       }}
-                      className="text-white hover:bg-white/20 p-2 rounded-lg transition-all duration-200"
+                      className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-blue-900/20"
                       title="Add Position"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1443,11 +1431,20 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Add New Position</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] w-full max-w-xl mx-4 overflow-hidden">
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+              <PlusIcon className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Add New Position</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Department
@@ -1455,7 +1452,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData(prev => ({ ...prev, categoryId: Number(e.target.value) }))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -1472,7 +1469,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               value={formData.callsign}
               onChange={(e) => setFormData(prev => ({ ...prev, callsign: e.target.value }))}
               placeholder="e.g., ALPHA-1, BRAVO-2"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               required
             />
         </div>
@@ -1486,7 +1483,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               value={formData.position}
               onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
               placeholder="e.g., Door Supervisor, Control Room Operator"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               required
             />
       </div>
@@ -1515,7 +1512,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
                 const options = Array.from(e.target.selectedOptions).map(opt => opt.value as string);
                 setFormData(prev => ({ ...prev, skills: options }));
               }}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               {SKILL_OPTIONS.map((skill: string) => (
                 <option key={skill} value={skill}>{skill}</option>
@@ -1533,18 +1530,14 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               max={20}
               value={amount}
               onChange={e => setAmount(Math.max(1, Math.min(20, Number(e.target.value))))}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100">Cancel</button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold">Add Position</button>
+          {/* Footer */}
+          <div className="px-0 pt-2 pb-1 flex gap-3 justify-end">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300">Cancel</button>
+            <button type="submit" className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow">Add Position</button>
           </div>
         </form>
       </div>
@@ -1821,7 +1814,8 @@ function StaffListView() {
   const filteredStaff = staff.filter(member => {
     const matchesName = member.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSkill = selectedSkill ? (member.skill_tags || []).includes(selectedSkill) : true;
-    return matchesName && matchesSkill;
+    const matchesStatus = selectedStatus === '' ? true : selectedStatus === 'active' ? !!member.active : !member.active;
+    return matchesName && matchesSkill && matchesStatus;
   });
 
   const openProfileModal = (member: any) => {
@@ -1834,38 +1828,74 @@ function StaffListView() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Staff Management</h2>
-          <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
-        </div>
-        <div className="flex flex-col md:flex-row gap-2 md:items-center">
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2 text-sm"
-            style={{ minWidth: 180 }}
-          />
-          <select
-            value={selectedSkill}
-            onChange={e => setSelectedSkill(e.target.value)}
-            className="rounded border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 p-2 text-sm"
-          >
-            <option value="">All Skills</option>
-            {allSkills.map((skill: string) => (
-              <option key={skill} value={skill}>{skill}</option>
-            ))}
-          </select>
+    <div className="p-6 sm:p-8">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Staff Management</h2>
+            <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
+          </div>
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="hidden sm:inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow"
           >
             <PlusIcon className="h-5 w-5" />
             Add Staff
           </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+            {/* Search */}
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+            {/* Skill filter */}
+            <select
+              value={selectedSkill}
+              onChange={e => setSelectedSkill(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#182447] text-gray-900 dark:text-gray-100 py-2 px-3"
+            >
+              <option value="">All Skills</option>
+              {allSkills.map((skill: string) => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
+            {/* Status filter + action */}
+            <div className="flex items-center justify-between md:justify-end gap-3">
+              <div className="inline-flex rounded-lg border border-gray-300 dark:border-[#2d437a] overflow-hidden">
+                {[
+                  { id: '', label: 'All' },
+                  { id: 'active', label: 'Active' },
+                  { id: 'inactive', label: 'Inactive' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSelectedStatus(opt.id)}
+                    className={`px-3 py-2 text-sm font-medium ${selectedStatus === opt.id ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#182447] text-gray-700 dark:text-gray-100'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={openAddModal}
+                className="sm:hidden inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Add
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500 dark:text-blue-100">Showing {filteredStaff.length} of {staff.length}</div>
         </div>
       </div>
 
@@ -1882,54 +1912,58 @@ function StaffListView() {
           </button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-[#2d437a]">
+              <thead className="bg-gray-50 dark:bg-[#2d437a] sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Skills
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
               </tr>
             </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-[#2d437a]">
+              <tbody className="divide-y divide-gray-100 dark:divide-[#2d437a]">
                 {filteredStaff.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a] cursor-pointer" onClick={() => openProfileModal(member)}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                          <span className="text-blue-700 dark:text-blue-200 font-medium text-sm">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-inner">
+                          <span className="text-white font-semibold text-sm">
                             {(member.full_name || '').split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             {member.full_name}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             {member.email || ''}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {member.contact_number || 'Not provided'}
+                      {member.contact_number ? (
+                        <a href={`tel:${member.contact_number}`} className="text-blue-600 dark:text-blue-300 hover:underline">{member.contact_number}</a>
+                      ) : (
+                        'Not provided'
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {(member.skill_tags || []).map((skill: string) => (
                           <span
                             key={skill}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-800/60 dark:text-blue-100"
                           >
                             {skill}
                           </span>
@@ -1938,16 +1972,16 @@ function StaffListView() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
-                        onClick={() => openEditModal(member)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
+                        onClick={(e) => { e.stopPropagation(); openEditModal(member); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                       >
-                        Edit
+                        <PencilSquareIcon className="w-4 h-4" /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(member.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(member.id); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 dark:border-red-700 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
                       >
-                        Delete
+                        <TrashIcon className="w-4 h-4" /> Delete
                       </button>
                   </td>
                 </tr>
@@ -2259,4 +2293,4 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
       </div>
     </div>
   );
-} 
+}

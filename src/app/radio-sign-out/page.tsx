@@ -1,12 +1,21 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-// Mock data for staff with assigned callsigns
-const mockAssignments = [
-  { id: 1, name: 'David Capener', callsign: 'A1', role: 'Head of Security' },
-  { id: 2, name: 'Phil Noe', callsign: 'A2', role: 'Site Coordinator' },
-  { id: 3, name: 'Luke Winterburne', callsign: 'S1', role: 'Pit Supervisor' },
-];
+// Assignment row type (built from Supabase data)
+type AssignmentRow = {
+  id: string; // unique row id
+  profileId?: string | null;
+  name: string;
+  callsign: string;
+  role: string;
+  radio: string;
+  pitCan: string;
+  earPiece: string;
+  status: string; // "Signed Out" | "Returned" | ""
+  signOutTime: string;
+  returnTime: string;
+};
 
 // Mock radio inventory
 const initialRadios = Array.from({ length: 10 }, (_, i) => ({
@@ -35,17 +44,85 @@ export default function RadioSignOutPage() {
   const [radios, setRadios] = useState(initialRadios);
   const [pitCans, setPitCans] = useState(initialPitCans);
   const [earPieces, setEarPieces] = useState(initialEarPieces);
-  const [assignments, setAssignments] = useState(
-    mockAssignments.map(staff => ({
-      ...staff,
-      radio: '',
-      pitCan: '',
-      earPiece: '',
-      status: '', // Not Signed Out by default
-      signOutTime: '',
-      returnTime: '',
-    }))
-  );
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [eventId, setEventId] = useState<string | null>(null);
+  // Load current event and assigned staff for that event
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        // 1) Get current event
+        const { data: event } = await supabase
+          .from('events')
+          .select('id')
+          .eq('is_current', true)
+          .single();
+        if (!event?.id) {
+          setEventId(null);
+          setAssignments([]);
+          setLoading(false);
+          return;
+        }
+        setEventId(event.id);
+
+        // 2) Fetch positions for event
+        const { data: roles } = await supabase
+          .from('callsign_positions')
+          .select('id, callsign, position')
+          .eq('event_id', event.id);
+        const roleById = new Map((roles || []).map(r => [r.id, r]));
+
+        // 3) Assignments for event
+        const { data: assigns } = await supabase
+          .from('callsign_assignments')
+          .select('position_id, user_id, assigned_name')
+          .eq('event_id', event.id);
+
+        const withAssignee = (assigns || []).filter(a => a.user_id || a.assigned_name);
+
+        // 4) Map profile IDs to names
+        const profileIds = Array.from(new Set(withAssignee.map(a => a.user_id).filter(Boolean))) as string[];
+        let profilesMap = new Map<string, string>();
+        if (profileIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', profileIds);
+          profilesMap = new Map((profiles || []).map(p => [p.id, p.full_name || '']));
+        }
+
+        // 5) Build assignment rows
+        const rows: AssignmentRow[] = withAssignee
+          .map(a => {
+            const role = roleById.get(a.position_id);
+            if (!role) return null;
+            const name = a.user_id ? (profilesMap.get(a.user_id) || '') : (a.assigned_name || '');
+            if (!name) return null; // skip if we cannot resolve a name
+            return {
+              id: `${a.position_id}`,
+              profileId: a.user_id || null,
+              name,
+              callsign: role.callsign,
+              role: role.position,
+              radio: '',
+              pitCan: '',
+              earPiece: '',
+              status: '',
+              signOutTime: '',
+              returnTime: '',
+            } as AssignmentRow;
+          })
+          .filter(Boolean) as AssignmentRow[];
+
+        setAssignments(rows);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   const [newRadioAmount, setNewRadioAmount] = useState(1);
   const [newPitCanAmount, setNewPitCanAmount] = useState(1);
   const [newEarPieceAmount, setNewEarPieceAmount] = useState(1);
@@ -92,21 +169,21 @@ export default function RadioSignOutPage() {
   const getAvailableEarPieces = () => earPieces.filter(e => e.assignedTo === null);
 
   // Handle equipment assignment change
-  const handleRadioChange = (staffId: number, radioNumber: string) => {
+  const handleRadioChange = (staffId: string, radioNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, radio: radioNumber };
     }));
   };
 
-  const handlePitCanChange = (staffId: number, pitCanNumber: string) => {
+  const handlePitCanChange = (staffId: string, pitCanNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, pitCan: pitCanNumber };
     }));
   };
 
-  const handleEarPieceChange = (staffId: number, earPieceNumber: string) => {
+  const handleEarPieceChange = (staffId: string, earPieceNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, earPiece: earPieceNumber };
@@ -114,7 +191,7 @@ export default function RadioSignOutPage() {
   };
 
   // Sign Out logic
-  const handleSignOut = (staffId: number) => {
+  const handleSignOut = (staffId: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       if (!staff.radio) return staff; // Must select a radio
@@ -129,28 +206,28 @@ export default function RadioSignOutPage() {
     setRadios(prev => prev.map(r => {
       const staff = assignments.find(s => s.id === staffId);
       if (r.number === staff?.radio) {
-        return { ...r, assignedTo: staffId };
+        return { ...r, assignedTo: staffId as any };
       }
       return r;
     }));
     setPitCans(prev => prev.map(p => {
       const staff = assignments.find(s => s.id === staffId);
       if (p.number === staff?.pitCan) {
-        return { ...p, assignedTo: staffId };
+        return { ...p, assignedTo: staffId as any };
       }
       return p;
     }));
     setEarPieces(prev => prev.map(e => {
       const staff = assignments.find(s => s.id === staffId);
       if (e.number === staff?.earPiece) {
-        return { ...e, assignedTo: staffId };
+        return { ...e, assignedTo: staffId as any };
       }
       return e;
     }));
   };
 
   // Sign In logic
-  const handleSignIn = (staffId: number) => {
+  const handleSignIn = (staffId: string) => {
     const staff = assignments.find(s => s.id === staffId);
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
@@ -207,92 +284,106 @@ export default function RadioSignOutPage() {
   const earPiecesAvailable = getAvailableEarPieces().length;
 
   return (
-    <div className="flex flex-col h-full w-full max-w-none">
-      <div className="flex-shrink-0 px-8 pt-8 pb-2">
-        <h1 className="text-2xl font-bold mb-4">Radio Sign Out</h1>
-        <div className="w-full flex flex-col gap-2 sm:flex-row sm:gap-4 mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Radio Sign Out</h1>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">Assign radios, pit cans and earpieces; track sign-outs and returns</p>
+            </div>
+          </div>
+        </div>
+
+        {loading && (
+          <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">Loading current event assignments…</div>
+        )}
+
+        {/* Controls */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Add Radios */}
-          <div className="flex-1 min-w-[220px] bg-gray-50 rounded-lg border border-gray-200 flex flex-col justify-center h-[64px]">
-            <div className="flex items-center gap-2 px-3 py-2 w-full">
-              <span className="font-medium whitespace-nowrap">Add Radios:</span>
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 shadow-sm">
+            <div className="flex items-center gap-2 w-full">
+              <span className="font-medium whitespace-nowrap">Add Radios</span>
               <input
                 type="number"
                 min={1}
                 max={200}
                 value={newRadioAmount}
                 onChange={e => setNewRadioAmount(Math.max(1, Math.min(200, Number(e.target.value))))}
-                className="w-14 px-2 py-1 rounded border border-gray-300 text-sm"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-300 text-sm bg-gray-50 dark:bg-[#182447] dark:border-[#2d437a] text-gray-900 dark:text-gray-100"
               />
               <button
                 onClick={handleAddRadios}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium text-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-sm shadow"
               >
                 Add
               </button>
-              <span className="ml-3 text-xs text-gray-500 whitespace-nowrap align-middle" style={{marginTop:2}}>Total: {radios.length} <span className="text-green-700 font-semibold">| Available: {radiosAvailable}</span></span>
+              <span className="ml-auto text-xs text-gray-500 whitespace-nowrap">Total: {radios.length} · <span className="text-green-700 font-semibold">Available: {radiosAvailable}</span></span>
             </div>
           </div>
           {/* Add Pit Cans */}
-          <div className="flex-1 min-w-[220px] bg-gray-50 rounded-lg border border-gray-200 flex flex-col justify-center h-[64px]">
-            <div className="flex items-center gap-2 px-3 py-2 w-full">
-              <span className="font-medium whitespace-nowrap">Add Pit Cans:</span>
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 shadow-sm">
+            <div className="flex items-center gap-2 w-full">
+              <span className="font-medium whitespace-nowrap">Add Pit Cans</span>
               <input
                 type="number"
                 min={1}
                 max={200}
                 value={newPitCanAmount}
                 onChange={e => setNewPitCanAmount(Math.max(1, Math.min(200, Number(e.target.value))))}
-                className="w-14 px-2 py-1 rounded border border-gray-300 text-sm"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-300 text-sm bg-gray-50 dark:bg-[#182447] dark:border-[#2d437a] text-gray-900 dark:text-gray-100"
               />
               <button
                 onClick={handleAddPitCans}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium text-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-sm shadow"
               >
                 Add
               </button>
-              <span className="ml-3 text-xs text-gray-500 whitespace-nowrap align-middle" style={{marginTop:2}}>Total: {pitCans.length} <span className="text-green-700 font-semibold">| Available: {pitCansAvailable}</span></span>
+              <span className="ml-auto text-xs text-gray-500 whitespace-nowrap">Total: {pitCans.length} · <span className="text-green-700 font-semibold">Available: {pitCansAvailable}</span></span>
             </div>
           </div>
           {/* Add Ear Pieces */}
-          <div className="flex-1 min-w-[220px] bg-gray-50 rounded-lg border border-gray-200 flex flex-col justify-center h-[64px]">
-            <div className="flex items-center gap-2 px-3 py-2 w-full">
-              <span className="font-medium whitespace-nowrap">Add Ear Pieces:</span>
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 shadow-sm">
+            <div className="flex items-center gap-2 w-full">
+              <span className="font-medium whitespace-nowrap">Add Ear Pieces</span>
               <input
                 type="number"
                 min={1}
                 max={200}
                 value={newEarPieceAmount}
                 onChange={e => setNewEarPieceAmount(Math.max(1, Math.min(200, Number(e.target.value))))}
-                className="w-14 px-2 py-1 rounded border border-gray-300 text-sm"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-300 text-sm bg-gray-50 dark:bg-[#182447] dark:border-[#2d437a] text-gray-900 dark:text-gray-100"
               />
               <button
                 onClick={handleAddEarPieces}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium text-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-sm shadow"
               >
                 Add
               </button>
-              <span className="ml-3 text-xs text-gray-500 whitespace-nowrap align-middle" style={{marginTop:2}}>Total: {earPieces.length} <span className="text-green-700 font-semibold">| Available: {earPiecesAvailable}</span></span>
+              <span className="ml-auto text-xs text-gray-500 whitespace-nowrap">Total: {earPieces.length} · <span className="text-green-700 font-semibold">Available: {earPiecesAvailable}</span></span>
             </div>
           </div>
         </div>
-      </div>
-      <div className="flex-1 overflow-auto px-8 pb-8">
-        <div className="bg-white rounded-lg shadow border border-gray-200 h-full flex flex-col">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+        
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a] text-sm">
+            <thead className="bg-gray-50 dark:bg-[#2d437a] sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Name</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Callsign/Role</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Radio Number</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Pit Can</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Ear Piece</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Status</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Sign Out Time</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Return Time</th>
-                <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Actions</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Name</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Callsign/Role</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Radio Number</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Pit Can</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Ear Piece</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Status</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Sign Out Time</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Return Time</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-200 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100 dark:divide-[#2d437a]">
               {assignments.map(staff => {
                 const availableRadios = getAvailableRadios().concat(
                   staff.radio && staff.status === 'Signed Out'
@@ -315,7 +406,7 @@ export default function RadioSignOutPage() {
                     <td className="px-3 py-2 whitespace-nowrap">{staff.callsign} <span className="text-xs text-gray-400">{staff.role}</span></td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <select
-                        className="rounded border border-gray-300 px-2 py-1"
+                        className="rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] px-2 py-1"
                         value={staff.radio}
                         disabled={staff.status === 'Signed Out'}
                         onChange={e => handleRadioChange(staff.id, e.target.value)}
@@ -328,7 +419,7 @@ export default function RadioSignOutPage() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <select
-                        className="rounded border border-gray-300 px-2 py-1"
+                        className="rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] px-2 py-1"
                         value={staff.pitCan}
                         disabled={staff.status === 'Signed Out'}
                         onChange={e => handlePitCanChange(staff.id, e.target.value)}
@@ -341,7 +432,7 @@ export default function RadioSignOutPage() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <select
-                        className="rounded border border-gray-300 px-2 py-1"
+                        className="rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] px-2 py-1"
                         value={staff.earPiece}
                         disabled={staff.status === 'Signed Out'}
                         onChange={e => handleEarPieceChange(staff.id, e.target.value)}
@@ -360,7 +451,7 @@ export default function RadioSignOutPage() {
                     <td className="px-3 py-2 whitespace-nowrap">
                       <input
                         type="text"
-                        className="rounded border border-gray-300 px-2 py-1 bg-gray-100 text-gray-700 w-32"
+                        className="rounded-lg border border-gray-300 dark:border-[#2d437a] px-2 py-1 bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-100 w-36"
                         value={staff.signOutTime ? staff.signOutTime.replace('T', ' ') : ''}
                         readOnly
                       />
@@ -368,7 +459,7 @@ export default function RadioSignOutPage() {
                     <td className="px-3 py-2 whitespace-nowrap">
                       <input
                         type="text"
-                        className="rounded border border-gray-300 px-2 py-1 bg-gray-100 text-gray-700 w-32"
+                        className="rounded-lg border border-gray-300 dark:border-[#2d437a] px-2 py-1 bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-100 w-36"
                         value={staff.returnTime ? staff.returnTime.replace('T', ' ') : ''}
                         readOnly
                       />
@@ -376,7 +467,7 @@ export default function RadioSignOutPage() {
                     <td className="px-3 py-2 whitespace-nowrap">
                       {(!staff.status || staff.status === 'Returned') && (
                         <button
-                          className="text-blue-600 hover:underline mr-2"
+                          className="text-blue-600 hover:underline mr-2 font-semibold"
                           disabled={!staff.radio}
                           onClick={() => handleSignOut(staff.id)}
                         >
@@ -385,7 +476,7 @@ export default function RadioSignOutPage() {
                       )}
                       {staff.status === 'Signed Out' && (
                         <button
-                          className="text-green-600 hover:underline mr-2"
+                          className="text-green-600 hover:underline mr-2 font-semibold"
                           onClick={() => handleSignIn(staff.id)}
                         >
                           Sign In
