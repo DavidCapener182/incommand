@@ -1,306 +1,426 @@
-'use client'
+'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { handleError } from '../lib/errorHandler'
+import React, { useState, useRef, useEffect } from 'react';
+import { useCameraGPS, PhotoData } from '../hooks/useCameraGPS';
 
 interface CameraCaptureProps {
-  onCapture: (blob: Blob, coordinates?: { latitude: number; longitude: number }) => void
-  onError?: (error: Error) => void
-  className?: string
-  showGPS?: boolean
+  onPhotoCaptured: (photoData: PhotoData) => void;
+  onClose: () => void;
+  enableLocation?: boolean;
+  quality?: number;
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({
-  onCapture,
-  onError,
-  className = '',
-  showGPS = true
+export const CameraCapture: React.FC<CameraCaptureProps> = ({
+  onPhotoCaptured,
+  onClose,
+  enableLocation = true,
+  quality = 0.8
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
-  const [selectedDevice, setSelectedDevice] = useState<string>('')
-  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null)
-  const [isCapturing, setIsCapturing] = useState(false)
+  const {
+    cameraSupported,
+    gpsSupported,
+    cameraPermission,
+    gpsPermission,
+    currentLocation,
+    cameraStream,
+    loading,
+    error,
+    requestCameraAccess,
+    capturePhoto,
+    switchCamera,
+    stopCamera,
+    formatLocation,
+    isLocationAccurate
+  } = useCameraGPS();
 
-  /**
-   * Get available camera devices
-   */
-  const getCameraDevices = useCallback(async () => {
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<PhotoData | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const captureButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const switchButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus management
+  useEffect(() => {
+    if (closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case 'Escape':
+          onClose();
+          break;
+        case 'Enter':
+        case ' ':
+          if (document.activeElement === captureButtonRef.current && !isCapturing) {
+            event.preventDefault();
+            handleCapture();
+          }
+          break;
+        case 'Tab':
+          // Ensure focus stays within the modal
+          const focusableElements = document.querySelectorAll(
+            'button, [tabindex]:not([tabindex="-1"])'
+          );
+          const firstElement = focusableElements[0] as HTMLElement;
+          const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+          if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+          } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+          }
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isCapturing, onClose]);
+
+  // Initialize camera on mount
+  useEffect(() => {
+    const initCamera = async () => {
+      try {
+        await requestCameraAccess({
+          facingMode,
+          enableLocation,
+          quality
+        });
+      } catch (error) {
+        console.error('Failed to initialize camera:', error);
+      }
+    };
+
+    if (cameraSupported) {
+      initCamera();
+    }
+
+    return () => {
+      stopCamera();
+    };
+  }, [cameraSupported, facingMode, enableLocation, quality, requestCameraAccess, stopCamera]);
+
+  // Set video stream when available
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  const handleCapture = async () => {
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter(device => device.kind === 'videoinput')
-      setDevices(videoDevices)
+      setIsCapturing(true);
+      const photoData = await capturePhoto({
+        facingMode,
+        enableLocation,
+        quality
+      });
       
-      if (videoDevices.length > 0 && !selectedDevice) {
-        setSelectedDevice(videoDevices[0].deviceId)
-      }
+      setCapturedPhoto(photoData);
+      setShowPreview(true);
+      
+      // Announce to screen readers
+      const announcement = document.createElement('div');
+      announcement.setAttribute('aria-live', 'polite');
+      announcement.setAttribute('aria-atomic', 'true');
+      announcement.className = 'sr-only';
+      announcement.textContent = 'Photo captured successfully';
+      document.body.appendChild(announcement);
+      setTimeout(() => document.body.removeChild(announcement), 1000);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to enumerate devices')
-      handleError(err, {
-        component: 'CameraCapture',
-        action: 'getCameraDevices'
-      }, 'medium', false)
-      onError?.(err)
-    }
-  }, [selectedDevice, onError])
-
-  /**
-   * Start camera stream
-   */
-  const startStream = useCallback(async (deviceId?: string) => {
-    try {
-      // Stop existing stream first
-      await stopStream()
-
-      const constraints: MediaStreamConstraints = {
-        video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      streamRef.current = stream
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setIsStreaming(true)
-      }
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to start camera stream')
-      handleError(err, {
-        component: 'CameraCapture',
-        action: 'startStream',
-        additionalData: { deviceId }
-      }, 'high', true)
-      onError?.(err)
-    }
-  }, [onError])
-
-  /**
-   * Stop camera stream with proper cleanup
-   */
-  const stopStream = useCallback(async () => {
-    if (streamRef.current) {
-      const tracks = streamRef.current.getTracks()
-      tracks.forEach(track => {
-        track.stop()
-      })
-      streamRef.current = null
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-
-    setIsStreaming(false)
-  }, [])
-
-  /**
-   * Get GPS coordinates
-   */
-  const getGPSLocation = useCallback(async (): Promise<{ latitude: number; longitude: number } | null> => {
-    if (!showGPS || !navigator.geolocation) {
-      return null
-    }
-
-    try {
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('GPS location request timed out'))
-        }, 10000) // 10 second timeout
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            clearTimeout(timeoutId)
-            const coords = {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude
-            }
-            setCoordinates(coords)
-            resolve(coords)
-          },
-          (error) => {
-            clearTimeout(timeoutId)
-            reject(new Error(`GPS error: ${error.message}`))
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-          }
-        )
-      })
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to get GPS location')
-      handleError(err, {
-        component: 'CameraCapture',
-        action: 'getGPSLocation'
-      }, 'low', false)
-      return null
-    }
-  }, [showGPS])
-
-  /**
-   * Capture photo
-   */
-  const capturePhoto = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current || !isStreaming) {
-      return
-    }
-
-    setIsCapturing(true)
-
-    try {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
-
-      if (!context) {
-        throw new Error('Failed to get canvas context')
-      }
-
-      // Set canvas dimensions to match video
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-
-      // Draw video frame to canvas
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      // Convert to blob
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob)
-          } else {
-            reject(new Error('Failed to create blob from canvas'))
-          }
-        }, 'image/jpeg', 0.9)
-      })
-
-      // Get GPS coordinates if enabled
-      let gpsCoords = coordinates
-      if (showGPS && !coordinates) {
-        gpsCoords = await getGPSLocation()
-      }
-
-      // Call onCapture with blob and coordinates
-      onCapture(blob, gpsCoords || undefined)
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to capture photo')
-      handleError(err, {
-        component: 'CameraCapture',
-        action: 'capturePhoto'
-      }, 'medium', true)
-      onError?.(err)
+      console.error('Failed to capture photo:', error);
+      
+      // Announce error to screen readers
+      const announcement = document.createElement('div');
+      announcement.setAttribute('aria-live', 'assertive');
+      announcement.setAttribute('aria-atomic', 'true');
+      announcement.className = 'sr-only';
+      announcement.textContent = 'Failed to capture photo. Please try again.';
+      document.body.appendChild(announcement);
+      setTimeout(() => document.body.removeChild(announcement), 1000);
     } finally {
-      setIsCapturing(false)
+      setIsCapturing(false);
     }
-  }, [isStreaming, coordinates, showGPS, getGPSLocation, onCapture, onError])
+  };
 
-  /**
-   * Handle device selection change
-   */
-  const handleDeviceChange = useCallback(async (deviceId: string) => {
-    setSelectedDevice(deviceId)
-    await startStream(deviceId)
-  }, [startStream])
+  const handleRetake = () => {
+    setCapturedPhoto(null);
+    setShowPreview(false);
+    
+    // Announce to screen readers
+    const announcement = document.createElement('div');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.setAttribute('aria-atomic', 'true');
+    announcement.className = 'sr-only';
+    announcement.textContent = 'Ready to take a new photo';
+    document.body.appendChild(announcement);
+    setTimeout(() => document.body.removeChild(announcement), 1000);
+  };
 
-  /**
-   * Initialize camera on mount
-   */
-  useEffect(() => {
-    getCameraDevices()
-    startStream()
-
-    return () => {
-      stopStream()
+  const handleUsePhoto = () => {
+    if (capturedPhoto) {
+      onPhotoCaptured(capturedPhoto);
+      onClose();
     }
-  }, [getCameraDevices, startStream, stopStream])
+  };
 
-  /**
-   * Cleanup on unmount
-   */
-  useEffect(() => {
-    return () => {
-      stopStream()
+  const handleSwitchCamera = async () => {
+    try {
+      const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+      setFacingMode(newFacingMode);
+      await switchCamera();
+      
+      // Announce camera switch to screen readers
+      const announcement = document.createElement('div');
+      announcement.setAttribute('aria-live', 'polite');
+      announcement.setAttribute('aria-atomic', 'true');
+      announcement.className = 'sr-only';
+      announcement.textContent = `Switched to ${newFacingMode} camera`;
+      document.body.appendChild(announcement);
+      setTimeout(() => document.body.removeChild(announcement), 1000);
+    } catch (error) {
+      console.error('Failed to switch camera:', error);
     }
-  }, [stopStream])
+  };
+
+  if (!cameraSupported) {
+    return (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="camera-not-supported-title"
+        aria-describedby="camera-not-supported-description"
+      >
+        <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+          <h3 id="camera-not-supported-title" className="text-lg font-semibold mb-4">
+            Camera Not Supported
+          </h3>
+          <p id="camera-not-supported-description" className="text-gray-600 mb-4">
+            Your device doesn't support camera access. Please use a device with a camera.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            aria-label="Close camera dialog"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (cameraPermission === 'denied') {
+    return (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="camera-permission-denied-title"
+        aria-describedby="camera-permission-denied-description"
+      >
+        <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+          <h3 id="camera-permission-denied-title" className="text-lg font-semibold mb-4">
+            Camera Permission Denied
+          </h3>
+          <p id="camera-permission-denied-description" className="text-gray-600 mb-4">
+            Please enable camera access in your browser settings to take photos.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            aria-label="Close camera dialog"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`camera-capture ${className}`}>
-      <div className="camera-controls mb-4">
-        {devices.length > 1 && (
-          <select
-            value={selectedDevice}
-            onChange={(e) => handleDeviceChange(e.target.value)}
-            className="mb-2 p-2 border rounded"
-          >
-            {devices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `Camera ${device.deviceId.slice(0, 8)}`}
-              </option>
-            ))}
-          </select>
-        )}
-
-        <div className="flex gap-2">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="camera-capture-title"
+      aria-describedby="camera-capture-description"
+    >
+      <div className="bg-white rounded-lg overflow-hidden max-w-md w-full mx-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 id="camera-capture-title" className="text-lg font-semibold">
+            Take Photo
+          </h3>
           <button
-            onClick={startStream}
-            disabled={isStreaming}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            ref={closeButtonRef}
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 rounded-md p-1"
+            aria-label="Close camera capture"
           >
-            Start Camera
-          </button>
-          <button
-            onClick={stopStream}
-            disabled={!isStreaming}
-            className="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50"
-          >
-            Stop Camera
-          </button>
-          <button
-            onClick={capturePhoto}
-            disabled={!isStreaming || isCapturing}
-            className="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
-          >
-            {isCapturing ? 'Capturing...' : 'Capture Photo'}
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
-        {showGPS && (
-          <div className="mt-2 text-sm text-gray-600">
-            {coordinates ? (
-              <span>
-                📍 GPS: {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
-              </span>
-            ) : (
-              <span>📍 GPS: Not available</span>
+        {/* Camera View */}
+        {!showPreview && (
+          <div className="relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-64 object-cover"
+              aria-label="Camera preview"
+              role="img"
+              aria-describedby="camera-preview-description"
+            />
+            <div id="camera-preview-description" className="sr-only">
+              Live camera preview. Use the capture button to take a photo.
+            </div>
+            
+            {/* Location Indicator */}
+            {enableLocation && currentLocation && (
+              <div 
+                className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="flex items-center space-x-1">
+                  <div 
+                    className={`w-2 h-2 rounded-full ${isLocationAccurate(currentLocation) ? 'bg-green-400' : 'bg-yellow-400'}`}
+                    aria-label={isLocationAccurate(currentLocation) ? 'Location accurate' : 'Location may be inaccurate'}
+                  ></div>
+                  <span>{formatLocation(currentLocation)}</span>
+                </div>
+              </div>
             )}
+
+            {/* Camera Controls */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
+              {/* Switch Camera Button */}
+              <button
+                ref={switchButtonRef}
+                onClick={handleSwitchCamera}
+                className="p-2 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-label={`Switch to ${facingMode === 'user' ? 'back' : 'front'} camera`}
+                disabled={loading}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+
+              {/* Capture Button */}
+              <button
+                ref={captureButtonRef}
+                onClick={handleCapture}
+                disabled={loading || isCapturing}
+                className="p-4 bg-white rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                aria-label={isCapturing ? 'Capturing photo...' : 'Take photo'}
+                aria-describedby="capture-button-description"
+              >
+                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
+                  {isCapturing ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+                  ) : (
+                    <div className="w-8 h-8 bg-white rounded-full" aria-hidden="true"></div>
+                  )}
+                </div>
+              </button>
+              <div id="capture-button-description" className="sr-only">
+                Press this button to capture a photo. Use Enter or Space key when focused.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Photo Preview */}
+        {showPreview && capturedPhoto && (
+          <div className="relative">
+            <img
+              src={URL.createObjectURL(capturedPhoto.file)}
+              alt="Captured photo preview"
+              className="w-full h-64 object-cover"
+              role="img"
+              aria-describedby="photo-preview-description"
+            />
+            <div id="photo-preview-description" className="sr-only">
+              Preview of the captured photo. Use the buttons below to retake or use this photo.
+            </div>
+            
+            {/* Location Info */}
+            {capturedPhoto.location && (
+              <div 
+                className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="flex items-center space-x-1">
+                  <div 
+                    className={`w-2 h-2 rounded-full ${isLocationAccurate(capturedPhoto.location) ? 'bg-green-400' : 'bg-yellow-400'}`}
+                    aria-label={isLocationAccurate(capturedPhoto.location) ? 'Location accurate' : 'Location may be inaccurate'}
+                  ></div>
+                  <span>{formatLocation(capturedPhoto.location)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Preview Controls */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
+              <button
+                onClick={handleRetake}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Retake photo"
+              >
+                Retake
+              </button>
+              <button
+                onClick={handleUsePhoto}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-label="Use this photo"
+              >
+                Use Photo
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div 
+            className="p-4 bg-red-50 border border-red-200 rounded-md m-4"
+            role="alert"
+            aria-live="assertive"
+          >
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="p-4 text-center">
+            <div 
+              className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"
+              aria-label="Loading camera"
+              role="status"
+            ></div>
+            <p className="text-gray-600 mt-2">Initializing camera...</p>
           </div>
         )}
       </div>
-
-      <div className="camera-view">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full max-w-md border rounded"
-        />
-        <canvas
-          ref={canvasRef}
-          style={{ display: 'none' }}
-        />
-      </div>
     </div>
-  )
-}
-
-export default CameraCapture
+  );
+};

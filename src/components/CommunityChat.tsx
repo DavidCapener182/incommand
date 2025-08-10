@@ -8,7 +8,7 @@ import { ToastMessage } from './Toast';
 export interface CommunityChatProps {
   chatId: string;
   chatName: string;
-  addToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+  addToast?: (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void;
   isMobile: boolean;
   inputRef?: React.RefObject<HTMLInputElement>;
   handleInputFocus?: () => void;
@@ -84,8 +84,6 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
                 type: 'info',
                 title: 'New Message',
                 message: `${lastMsg.profiles?.full_name || 'Someone'}: ${lastMsg.message}`,
-                onClick: jumpToMessage,
-                meta: { messageId: lastMsg.id },
               });
               lastToastMsgId.current = lastMsg.id;
             }

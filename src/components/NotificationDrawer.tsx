@@ -391,7 +391,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col"
+        className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="notification-drawer-title"

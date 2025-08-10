@@ -1,236 +1,297 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { handleError } from '../lib/errorHandler'
+import { useState, useEffect, useCallback } from 'react';
+import { cameraGPSManager, LocationData, PhotoData, CameraOptions, GPSOptions } from '../lib/cameraGPS';
 
-interface GPSLocation {
-  latitude: number
-  longitude: number
-  accuracy?: number
-  timestamp: number
+// Re-export types for use in other components
+export type { PhotoData, LocationData, CameraOptions, GPSOptions };
+
+export interface UseCameraGPSReturn {
+  // State
+  cameraSupported: boolean;
+  gpsSupported: boolean;
+  cameraPermission: PermissionState | null;
+  gpsPermission: PermissionState | null;
+  currentLocation: LocationData | null;
+  cameraStream: MediaStream | null;
+  loading: boolean;
+  error: string | null;
+  
+  // Camera actions
+  requestCameraAccess: (options?: CameraOptions) => Promise<MediaStream>;
+  capturePhoto: (options?: CameraOptions) => Promise<PhotoData>;
+  capturePhotoFromFile: (file: File, options?: CameraOptions) => Promise<PhotoData>;
+  switchCamera: () => Promise<MediaStream>;
+  stopCamera: () => void;
+  
+  // GPS actions
+  requestGPSAccess: (options?: GPSOptions) => Promise<LocationData>;
+  getCurrentLocation: (options?: GPSOptions) => Promise<LocationData>;
+  watchLocation: (callback: (location: LocationData) => void, options?: GPSOptions) => number;
+  stopWatchingLocation: (watchId: number) => void;
+  
+  // Utilities
+  formatLocation: (location: LocationData) => string;
+  calculateDistance: (location1: LocationData, location2: LocationData) => number;
+  isLocationRecent: (location: LocationData, maxAgeMs?: number) => boolean;
+  isLocationAccurate: (location: LocationData, maxAccuracyMeters?: number) => boolean;
+  clearError: () => void;
 }
 
-interface UseCameraGPSOptions {
-  enableHighAccuracy?: boolean
-  timeout?: number
-  maximumAge?: number
-  watchPosition?: boolean
-  watchInterval?: number
-}
+export const useCameraGPS = (): UseCameraGPSReturn => {
+  const [cameraSupported, setCameraSupported] = useState(false);
+  const [gpsSupported, setGpsSupported] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<PermissionState | null>(null);
+  const [gpsPermission, setGpsPermission] = useState<PermissionState | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-interface UseCameraGPSReturn {
-  location: GPSLocation | null
-  error: string | null
-  isLoading: boolean
-  getCurrentLocation: () => Promise<GPSLocation | null>
-  startWatching: () => void
-  stopWatching: () => void
-  isWatching: boolean
-}
+  // Check support on mount
+  useEffect(() => {
+    setCameraSupported(cameraGPSManager.isCameraSupported());
+    setGpsSupported(cameraGPSManager.isGPSSupported());
+  }, []);
 
-export const useCameraGPS = (options: UseCameraGPSOptions = {}): UseCameraGPSReturn => {
-  const {
-    enableHighAccuracy = true,
-    timeout = 10000,
-    maximumAge = 60000,
-    watchPosition = false,
-    watchInterval = 5000
-  } = options
-
-  const [location, setLocation] = useState<GPSLocation | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isWatching, setIsWatching] = useState(false)
-
-  const watchIdRef = useRef<number | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-
-  /**
-   * Get current GPS location
-   */
-  const getCurrentLocation = useCallback(async (): Promise<GPSLocation | null> => {
-    if (!navigator.geolocation) {
-      const err = new Error('Geolocation is not supported by this browser')
-      handleError(err, {
-        component: 'useCameraGPS',
-        action: 'getCurrentLocation'
-      }, 'medium', false)
-      setError('Geolocation not supported')
-      return null
-    }
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          const timeoutError = new Error('GPS location request timed out')
-          handleError(timeoutError, {
-            component: 'useCameraGPS',
-            action: 'getCurrentLocation'
-          }, 'medium', false)
-          setError('Location request timed out')
-          reject(timeoutError)
-        }, timeout)
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            clearTimeout(timeoutId)
-            const gpsLocation: GPSLocation = {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              timestamp: position.timestamp
-            }
-            setLocation(gpsLocation)
-            setIsLoading(false)
-            resolve(gpsLocation)
-          },
-          (geolocationError) => {
-            clearTimeout(timeoutId)
-            const err = new Error(`GPS error: ${geolocationError.message}`)
-            handleError(err, {
-              component: 'useCameraGPS',
-              action: 'getCurrentLocation',
-              additionalData: { code: geolocationError.code }
-            }, 'medium', false)
-            setError(geolocationError.message)
-            setIsLoading(false)
-            reject(err)
-          },
-          {
-            enableHighAccuracy,
-            timeout,
-            maximumAge
-          }
-        )
-      })
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to get GPS location')
-      handleError(err, {
-        component: 'useCameraGPS',
-        action: 'getCurrentLocation'
-      }, 'medium', false)
-      setError(err.message)
-      setIsLoading(false)
-      return null
-    }
-  }, [enableHighAccuracy, timeout, maximumAge])
-
-  /**
-   * Start watching GPS position
-   */
-  const startWatching = useCallback(() => {
-    if (!navigator.geolocation) {
-      const err = new Error('Geolocation is not supported by this browser')
-      handleError(err, {
-        component: 'useCameraGPS',
-        action: 'startWatching'
-      }, 'medium', false)
-      setError('Geolocation not supported')
-      return
-    }
-
-    if (watchIdRef.current) {
-      stopWatching()
-    }
-
-    try {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (position) => {
-          const gpsLocation: GPSLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp
-          }
-          setLocation(gpsLocation)
-          setError(null)
-        },
-        (geolocationError) => {
-          const err = new Error(`GPS watch error: ${geolocationError.message}`)
-          handleError(err, {
-            component: 'useCameraGPS',
-            action: 'startWatching',
-            additionalData: { code: geolocationError.code }
-          }, 'medium', false)
-          setError(geolocationError.message)
-        },
-        {
-          enableHighAccuracy,
-          timeout,
-          maximumAge
+  // Check permissions on mount
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        if (cameraSupported && 'permissions' in navigator) {
+          const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          setCameraPermission(cameraPermission.state);
+          
+          cameraPermission.addEventListener('change', () => {
+            setCameraPermission(cameraPermission.state);
+          });
         }
-      )
-      setIsWatching(true)
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to start GPS watching')
-      handleError(err, {
-        component: 'useCameraGPS',
-        action: 'startWatching'
-      }, 'medium', false)
-      setError(err.message)
-    }
-  }, [enableHighAccuracy, timeout, maximumAge])
 
-  /**
-   * Stop watching GPS position
-   */
-  const stopWatching = useCallback(() => {
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-      setIsWatching(false)
-    }
-  }, [])
+        if (gpsSupported && 'permissions' in navigator) {
+          const gpsPermission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          setGpsPermission(gpsPermission.state);
+          
+          gpsPermission.addEventListener('change', () => {
+            setGpsPermission(gpsPermission.state);
+          });
+        }
+      } catch (err) {
+        console.warn('Could not check permissions:', err);
+      }
+    };
 
-  /**
-   * Cleanup media streams
-   */
-  const cleanupMediaStreams = useCallback(() => {
-    if (streamRef.current) {
-      const tracks = streamRef.current.getTracks()
-      tracks.forEach(track => {
-        track.stop()
-      })
-      streamRef.current = null
-    }
-  }, [])
+    checkPermissions();
+  }, [cameraSupported, gpsSupported]);
 
-  /**
-   * Initialize GPS on mount if watchPosition is enabled
-   */
-  useEffect(() => {
-    if (watchPosition) {
-      startWatching()
-    } else {
-      getCurrentLocation()
-    }
+  // Request camera access
+  const requestCameraAccess = useCallback(async (options?: CameraOptions): Promise<MediaStream> => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    return () => {
-      stopWatching()
-      cleanupMediaStreams()
+      const stream = await cameraGPSManager.requestCameraAccess(options);
+      setCameraStream(stream);
+      
+      return stream;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to access camera';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [watchPosition, startWatching, stopWatching, cleanupMediaStreams, getCurrentLocation])
+  }, []);
 
-  /**
-   * Cleanup on unmount
-   */
-  useEffect(() => {
-    return () => {
-      stopWatching()
-      cleanupMediaStreams()
+  // Capture photo
+  const capturePhoto = useCallback(async (options?: CameraOptions): Promise<PhotoData> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const photoData = await cameraGPSManager.capturePhoto(options);
+      
+      // Update current location if photo has location data
+      if (photoData.location) {
+        setCurrentLocation(photoData.location);
+      }
+      
+      return photoData;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to capture photo';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [stopWatching, cleanupMediaStreams])
+  }, []);
+
+  // Capture photo from file
+  const capturePhotoFromFile = useCallback(async (file: File, options?: CameraOptions): Promise<PhotoData> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const photoData = await cameraGPSManager.capturePhotoFromFile(file, options);
+      
+      // Update current location if photo has location data
+      if (photoData.location) {
+        setCurrentLocation(photoData.location);
+      }
+      
+      return photoData;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load photo from file';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Switch camera
+  const switchCamera = useCallback(async (): Promise<MediaStream> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const stream = await cameraGPSManager.switchCamera();
+      setCameraStream(stream);
+      
+      return stream;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to switch camera';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Stop camera
+  const stopCamera = useCallback(() => {
+    try {
+      cameraGPSManager.stopCamera();
+      setCameraStream(null);
+    } catch (err) {
+      console.error('Failed to stop camera:', err);
+    }
+  }, []);
+
+  // Request GPS access
+  const requestGPSAccess = useCallback(async (options?: GPSOptions): Promise<LocationData> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const location = await cameraGPSManager.requestGPSAccess(options);
+      setCurrentLocation(location);
+      
+      return location;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to access GPS';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Get current location
+  const getCurrentLocation = useCallback(async (options?: GPSOptions): Promise<LocationData> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const location = await cameraGPSManager.getCurrentLocation(options);
+      setCurrentLocation(location);
+      
+      return location;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get current location';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Watch location
+  const watchLocation = useCallback((callback: (location: LocationData) => void, options?: GPSOptions): number => {
+    try {
+      const watchId = cameraGPSManager.watchGPSLocation((location) => {
+        setCurrentLocation(location);
+        callback(location);
+      }, options);
+      
+      return watchId;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to watch location';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
+  // Stop watching location
+  const stopWatchingLocation = useCallback((watchId: number) => {
+    try {
+      cameraGPSManager.clearGPSWatch(watchId);
+    } catch (err) {
+      console.error('Failed to stop watching location:', err);
+    }
+  }, []);
+
+  // Format location
+  const formatLocation = useCallback((location: LocationData): string => {
+    return cameraGPSManager.formatLocation(location);
+  }, []);
+
+  // Calculate distance
+  const calculateDistance = useCallback((location1: LocationData, location2: LocationData): number => {
+    return cameraGPSManager.calculateDistance(location1, location2);
+  }, []);
+
+  // Check if location is recent
+  const isLocationRecent = useCallback((location: LocationData, maxAgeMs: number = 300000): boolean => {
+    return cameraGPSManager.isLocationRecent(location, maxAgeMs);
+  }, []);
+
+  // Check if location is accurate
+  const isLocationAccurate = useCallback((location: LocationData, maxAccuracyMeters: number = 50): boolean => {
+    return cameraGPSManager.isLocationAccurate(location, maxAccuracyMeters);
+  }, []);
+
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   return {
-    location,
+    // State
+    cameraSupported,
+    gpsSupported,
+    cameraPermission,
+    gpsPermission,
+    currentLocation,
+    cameraStream,
+    loading,
     error,
-    isLoading,
+    
+    // Camera actions
+    requestCameraAccess,
+    capturePhoto,
+    capturePhotoFromFile,
+    switchCamera,
+    stopCamera,
+    
+    // GPS actions
+    requestGPSAccess,
     getCurrentLocation,
-    startWatching,
-    stopWatching,
-    isWatching
-  }
-}
-
-export default useCameraGPS
+    watchLocation,
+    stopWatchingLocation,
+    
+    // Utilities
+    formatLocation,
+    calculateDistance,
+    isLocationRecent,
+    isLocationAccurate,
+    clearError
+  };
+};

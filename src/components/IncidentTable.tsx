@@ -1,25 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
-
-interface Incident {
-  id: number
-  log_number: string
-  timestamp: string
-  callsign_from: string
-  callsign_to: string
-  occurrence: string
-  incident_type: string
-  action_taken: string
-  is_closed: boolean
-  event_id: string
-  status: string
-}
+import { CollaborationBoard } from './CollaborationBoard'
+import { Incident } from '@/hooks/useIncidents'
 
 const getIncidentTypeStyle = (type: string) => {
   switch(type) {
@@ -75,7 +63,7 @@ const getRowStyle = (incident: Incident) => {
 
 // Global subscription tracking to prevent duplicates
 const activeSubscriptions = new Map<string, boolean>();
-const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id'>) => void>();
+const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void>();
 const recentToasts = new Map<string, number>(); // Track recent toasts to prevent duplicates
 
 // Add debugging
@@ -85,11 +73,19 @@ export { getIncidentTypeStyle };
 export default function IncidentTable({ 
   filter, 
   onDataLoaded, 
-  onToast 
+  onToast,
+  viewMode = 'table',
+  onViewModeChange,
+  currentUser,
+  currentEventId: propCurrentEventId
 }: { 
   filter?: string; 
   onDataLoaded?: (data: Incident[]) => void; 
-  onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
+  onToast?: (toast: Omit<ToastMessage, 'id' | 'timestamp'>) => void;
+  viewMode?: 'table' | 'board';
+  onViewModeChange?: (mode: 'table' | 'board') => void;
+  currentUser?: any;
+  currentEventId?: string;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
   console.log('🔧 IncidentTable component rendered. ID:', componentId.current, 'onToast available:', !!onToast);
@@ -114,6 +110,32 @@ export default function IncidentTable({
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
   const onToastRef = useRef(onToast)
+  
+  // Create a reusable fetchIncidents function
+  const fetchIncidents = useCallback(async () => {
+    if (!currentEventId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', currentEventId)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      setIncidents(data || []);
+      setLastUpdated(new Date());
+      if (onDataLoaded) {
+        onDataLoaded(data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching incidents:', err);
+      setError('Failed to fetch incidents');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentEventId, onDataLoaded]);
   
   // Keep refs in sync with state/props
   useEffect(() => {
@@ -185,28 +207,7 @@ export default function IncidentTable({
       return;
     }
 
-    const fetchIncidents = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('incident_logs')
-          .select('*')
-          .eq('event_id', currentEventId)
-          .order('timestamp', { ascending: false });
 
-        if (error) throw error;
-        setIncidents(data || []);
-        setLastUpdated(new Date());
-        if (onDataLoaded) {
-          onDataLoaded(data || []);
-        }
-      } catch (err) {
-        console.error('Error fetching incidents:', err);
-        setError('Failed to fetch incidents');
-      } finally {
-        setLoading(false);
-      }
-    };
 
     // DO NOT call cleanup() here!
 
@@ -285,7 +286,6 @@ export default function IncidentTable({
                   title: `New ${incident.incident_type} Incident`,
                   message: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
                   duration: isHighPriority ? 12000 : 8000, // Increased from 8000/5000 to 12000/8000
-                  urgent: isHighPriority
                 });
                 console.log('📢 TOAST SENT FOR NEW INCIDENT:', incident.log_number);
               } else {
@@ -420,7 +420,7 @@ export default function IncidentTable({
     setIncidents(prev => 
       prev.map(inc => 
         inc.id === incident.id 
-          ? { ...inc, is_closed: newStatus }
+          ? { ...inc, is_closed: newStatus, status: newStatus ? 'closed' : 'open' }
           : inc
       )
     );
@@ -430,6 +430,7 @@ export default function IncidentTable({
         .from('incident_logs')
         .update({ 
           is_closed: newStatus,
+          status: newStatus ? 'closed' : 'open',
           updated_at: new Date().toISOString()
         })
         .eq('id', incident.id);
@@ -471,7 +472,7 @@ export default function IncidentTable({
       setIncidents(prev => 
         prev.map(inc => 
           inc.id === incident.id 
-            ? { ...inc, is_closed: incident.is_closed }
+            ? { ...inc, is_closed: incident.is_closed, status: incident.status }
             : inc
         )
       );
@@ -618,27 +619,27 @@ export default function IncidentTable({
 
   return (
     <>
-      {/* Search Bar and Last Updated on same line */}
-      <div className="mb-4 relative">
-        <div className="flex items-center justify-between gap-4 mt-2 mb-1">
-          {/* Search Bar - Left side */}
-          <div className="relative w-1/2">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      {/* Enhanced Search Bar and Last Updated */}
+      <div className="mb-6 relative">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          {/* Enhanced Search Bar - Left side */}
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-300" aria-hidden="true" />
             </div>
             <input
               type="text"
-              placeholder="Search incidents..."
+              placeholder="Search incidents by type, callsign, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-gray-900 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100"
+              className="block w-full pl-12 pr-12 py-4 border-2 border-gray-200 dark:border-[#2d437a] rounded-2xl leading-5 bg-white dark:bg-[#182447] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100 shadow-lg hover:shadow-xl transition-all duration-200"
             />
             {searchQuery && (
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-200"
                 >
                   <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
@@ -646,269 +647,372 @@ export default function IncidentTable({
             )}
           </div>
           
-          {/* Last updated and live status - Right side */}
-          <div className="flex items-center gap-2 pr-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Live" />
-              {lastUpdated && (
-                <span>Last updated: {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-              )}
-            </span>
+          {/* View Toggle - Center */}
+          {onViewModeChange && (
+            <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
+              <button
+                onClick={() => onViewModeChange('table')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  viewMode === 'table' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <TableCellsIcon className="h-4 w-4" /> Table
+              </button>
+              <button
+                onClick={() => onViewModeChange('board')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  viewMode === 'board' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <ViewColumnsIcon className="h-4 w-4" /> Board
+              </button>
+            </div>
+          )}
+          
+          {/* Enhanced Last updated and live status - Right side */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-xl px-4 py-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-lg" title="Live Updates" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-200">Live</span>
+                {lastUpdated && (
+                  <span className="text-xs text-green-600 dark:text-green-300">
+                    {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
         
         {searchQuery && (
-          <div className="mt-2 text-sm text-gray-600">
-            {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} found
-            {filter && <span> (filtered by {filter})</span>}
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-2">
+            <span className="font-medium text-blue-700 dark:text-blue-200">
+              {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} found
+            </span>
+            {filter && <span className="text-blue-600 dark:text-blue-300"> (filtered by {filter})</span>}
           </div>
         )}
       </div>
-      {/* If no incidents, show empty state below search bar */}
-      {sortedIncidents.length === 0 ? (
-        <div className="mt-4 bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 text-center text-gray-500 dark:text-gray-400 transition-colors duration-300">
-          No incidents to display
-        </div>
-      ) : (
+
+      {/* Conditional Rendering for Table/Board Views */}
+      {viewMode === 'table' ? (
         <>
-      {/* Mobile Card/Accordion Layout */}
-      <div ref={tableContainerRef} className="md:hidden mt-4 space-y-3 px-1" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', position: 'relative' }}>
-        {/* Mobile Table Header */}
-            <div className="sticky top-0 z-10 bg-gray-600 dark:bg-[#1e293b] flex items-center px-4 py-2 text-xs font-semibold text-white dark:text-gray-100 uppercase tracking-wider">
-          <div className="basis-[28%]">Log #</div>
-          <div className="basis-[24%] text-center">Type</div>
-          <div className="basis-[24%] text-center">Time</div>
-          <div className="basis-[24%] text-right">Status</div>
-        </div>
-        {sortedIncidents.map((incident) => (
-          <div
-            key={incident.id}
-                className={`bg-white dark:bg-gray-800 shadow rounded-lg p-4 cursor-pointer transition hover:shadow-md ${getRowStyle(incident)} ${
-              isHighPriorityAndOpen(incident) 
-                ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow' 
-                : ''
-            }`}
-                          style={{
-                ...(isHighPriorityAndOpen(incident) && {
-                  boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                  animation: 'pulse-glow 3s ease-in-out infinite'
-                })
-              }}
-            onClick={() => setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id)}
-            tabIndex={0}
-            role="button"
-            aria-label={`View details for log ${incident.log_number}`}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id);
-              }
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="basis-[28%] font-bold text-blue-700 text-sm truncate flex items-center gap-1">
-                {isHighPriorityAndOpen(incident) && (
-                  <MapPinIcon className="h-3 w-3 text-red-500" title="Pinned: High Priority Open" />
-                )}
-                {(() => {
-                  const match = incident.log_number.match(/(\d{3,})$/);
-                  return match ? match[1] : incident.log_number;
-                })()}
-              </div>
-              <div className="basis-[24%] flex items-center justify-center">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold mx-auto text-center ${getIncidentTypeStyle(incident.incident_type)} dark:bg-gray-700 dark:text-gray-100`}>{incident.incident_type}</span>
-              </div>
-                  <div className="basis-[24%] text-xs text-gray-500 dark:text-gray-300 flex items-center justify-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-              <div className="basis-[24%] flex items-center justify-end">
-                {incident.incident_type === 'Attendance' ? (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                    Logged
-                  </span>
-                ) : (
-                <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer ${incident.is_closed ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'}`}
-                  onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                >
-                  {incident.is_closed ? 'Closed' : 'Open'}
-                </span>
-                )}
-              </div>
+          {/* Enhanced Empty State */}
+          {sortedIncidents.length === 0 ? (
+            <div className="mt-6 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-[#1a2a57] dark:to-[#23408e] shadow-2xl rounded-3xl border border-gray-200 dark:border-[#2d437a] p-12 text-center transition-colors duration-300">
+              <div className="text-6xl mb-4">📋</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No incidents to display</h3>
+              <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
             </div>
-            {expandedIncidentId === incident.id && (
-              <div className="mt-3 border-t pt-3 space-y-2">
-                <div>
-                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">Occurrence</span>
-                      <span className="block text-sm text-gray-700 dark:text-gray-100">{incident.occurrence}</span>
-                </div>
-                <div>
-                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">Action</span>
-                      <span className="block text-sm text-gray-700 dark:text-gray-100">{incident.action_taken}</span>
-                </div>
-                <div className="flex gap-4 mt-2">
-                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">From:</span>
-                      <span className="block text-xs text-gray-700 dark:text-gray-100">{incident.callsign_from}</span>
-                      <span className="block text-xs text-gray-400 dark:text-gray-500 font-semibold">To:</span>
-                      <span className="block text-xs text-gray-700 dark:text-gray-100">{incident.callsign_to}</span>
+          ) : (
+        <>
+          {/* Enhanced Mobile Card Layout */}
+          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2" style={{ overflowY: 'auto', position: 'relative' }}>
+            {/* Enhanced Mobile Table Header */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] flex items-center px-4 py-3 text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider rounded-t-2xl shadow-lg">
+              <div className="basis-[28%]">Log #</div>
+              <div className="basis-[24%] text-center">Type</div>
+              <div className="basis-[24%] text-center">Time</div>
+              <div className="basis-[24%] text-right">Status</div>
+            </div>
+            
+            {sortedIncidents.map((incident) => (
+              <div
+                key={incident.id}
+                className={`bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${getRowStyle(incident)} ${
+                  isHighPriorityAndOpen(incident) 
+                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow border-red-300' 
+                    : 'border-gray-200 dark:border-[#2d437a] hover:border-blue-300 dark:hover:border-blue-500'
+                }`}
+                style={{
+                  ...(isHighPriorityAndOpen(incident) && {
+                    boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    animation: 'pulse-glow 3s ease-in-out infinite'
+                  })
+                }}
+                onClick={(e) => {
+                  // Only expand/collapse if not clicking on a button
+                  if (!(e.target as HTMLElement).closest('button')) {
+                    if (incident.incident_type === 'Attendance') {
+                      // For attendance incidents, just expand/collapse
+                      setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id);
+                    } else {
+                      // For non-attendance incidents, open the modal
+                      handleIncidentClick(incident);
+                    }
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`View details for log ${incident.log_number}`}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    if (incident.incident_type === 'Attendance') {
+                      setExpandedIncidentId(expandedIncidentId === incident.id ? null : incident.id);
+                    } else {
+                      handleIncidentClick(incident);
+                    }
+                  }
+                }}
+              >
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="basis-[28%] font-bold text-blue-700 dark:text-blue-300 text-sm truncate flex items-center gap-2">
+                      {isHighPriorityAndOpen(incident) && (
+                        <MapPinIcon className="h-4 w-4 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
+                      )}
+                      <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-lg">
+                        {(() => {
+                          const match = incident.log_number.match(/(\d{3,})$/);
+                          return match ? match[1] : incident.log_number;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="basis-[24%] flex items-center justify-center">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold mx-auto text-center shadow-sm ${getIncidentTypeStyle(incident.incident_type)} dark:bg-gray-700 dark:text-gray-100`}>
+                        {incident.incident_type}
+                      </span>
+                    </div>
+                    <div className="basis-[24%] text-xs text-gray-500 dark:text-gray-300 flex items-center justify-center font-medium">
+                      {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="basis-[24%] flex items-center justify-end">
+                      {incident.incident_type === 'Attendance' ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
+                          Logged
+                        </span>
+                      ) : (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer shadow-sm transition-all duration-200 ${
+                            incident.is_closed 
+                              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                              : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
+                          }`}
+                          onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                        >
+                          {incident.is_closed ? 'Closed' : 'Open'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {expandedIncidentId === incident.id && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#2d437a] space-y-3">
+                      <div className="bg-gray-50 dark:bg-[#182447] rounded-xl p-3">
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-1">Occurrence</span>
+                        <span className="block text-sm text-gray-700 dark:text-gray-100 leading-relaxed">{incident.occurrence}</span>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#182447] rounded-xl p-3">
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-1">Action Taken</span>
+                        <span className="block text-sm text-gray-700 dark:text-gray-100 leading-relaxed">{incident.action_taken}</span>
+                      </div>
+                      <div className="flex gap-4 bg-gray-50 dark:bg-[#182447] rounded-xl p-3">
+                        <div className="flex-1">
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-1">From</span>
+                          <span className="block text-sm text-gray-700 dark:text-gray-100 font-medium">{incident.callsign_from}</span>
+                        </div>
+                        <div className="flex-1">
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-1">To</span>
+                          <span className="block text-sm text-gray-700 dark:text-gray-100 font-medium">{incident.callsign_to}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+            ))}
+            
+            {/* Enhanced Back to Top Button (Mobile) */}
+            {showBackToTop && (
+              <button
+                className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in transform hover:scale-110 transition-all duration-200"
+                aria-label="Back to Top"
+                tabIndex={0}
+                onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ArrowUpIcon className="h-7 w-7" />
+              </button>
             )}
           </div>
-        ))}
-        {/* Back to Top Button (Mobile) */}
-        {showBackToTop && (
-          <button
-            className="fixed bottom-24 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in"
-            aria-label="Back to Top"
-            tabIndex={0}
-            onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
-            style={{ pointerEvents: 'auto' }}
-          >
-            <ArrowUpIcon className="h-7 w-7" />
-          </button>
-        )}
-      </div>
-      {/* Desktop Table Layout */}
-      <div ref={tableContainerRef} className="hidden md:flex flex-col mt-4" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', position: 'relative' }}>
-            <div className="sticky top-0 z-10 bg-gray-600 dark:bg-[#1e293b]">
-          <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Log</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Time</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">From</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">To</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Occurrence</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Type</div>
-                <div className="px-2 py-3 text-left text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider">Action</div>
-                <div className="py-3 text-right text-xs font-medium text-white dark:text-gray-100 uppercase tracking-wider pr-2">Status</div>
-          </div>
-        </div>
-            <div className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 px-1">
-          {sortedIncidents.map((incident, idx) => {
-            let rowColor = getRowStyle(incident);
-            if (rowColor === 'hover:bg-gray-50') {
-                  rowColor = idx % 2 === 0 ? 'bg-white dark:bg-gray-800 hover:bg-gray-50' : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600';
-            }
-            return (
-              <div
-                      key={incident.id} 
-                className={`grid items-center px-0 py-2 cursor-pointer ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-200 rounded-lg ${
-                  isHighPriorityAndOpen(incident) 
-                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow' 
-                    : ''
-                }`}
-                                  style={{ 
-                    gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%',
-                    minHeight: '48px',
-                    ...(isHighPriorityAndOpen(incident) && {
-                      boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                      animation: 'pulse-glow 3s ease-in-out infinite'
-                    })
-                  }}
-                      onClick={() => handleIncidentClick(incident)} 
-                    >
-                <div className="px-2 text-sm text-gray-900 font-medium flex items-center gap-1" style={{overflow: 'visible', whiteSpace: 'nowrap'}}>
-                  {isHighPriorityAndOpen(incident) && (
-                    <MapPinIcon className="h-3 w-3 text-red-500" title="Pinned: High Priority Open" />
-                  )}
-                  {(() => {
-                    const match = incident.log_number.match(/(\d{3,})$/);
-                    return match ? match[1] : incident.log_number;
-                  })()}
-                </div>
-                <div className="px-2 text-sm text-gray-500 flex items-center">{new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                <div className="px-2 text-sm text-gray-500 flex items-center">
-                        <span
-                    title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
-                          className="underline decoration-dotted cursor-help"
-                        >
-                          {incident.callsign_from}
-                        </span>
-                </div>
-                <div className="px-2 text-sm text-gray-500 flex items-center">
-                        <span
-                    title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
-                          className="underline decoration-dotted cursor-help"
-                        >
-                          {incident.callsign_to}
-                        </span>
-                </div>
-                <div className="px-2 text-sm text-gray-500 flex items-center" style={{
-                  lineHeight: '1.4',
-                  maxHeight: '2.8em',
-                  overflow: 'hidden',
-                  wordWrap: 'break-word',
-                  hyphens: 'auto'
-                }}>
-                  <span style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                        {incident.occurrence}
-                        </span>
-                </div>
-                <div className="px-2 text-sm text-gray-500 flex items-center">
-                  <span className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>{incident.incident_type}</span>
-                </div>
-                <div className="px-2 text-sm text-gray-500 flex items-center" style={{
-                  lineHeight: '1.4',
-                  maxHeight: '2.8em',
-                  overflow: 'hidden',
-                  wordWrap: 'break-word',
-                  hyphens: 'auto'
-                }}>
-                  <span style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                        {incident.action_taken}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end text-sm text-gray-500 pr-2">
-                        {incident.incident_type === 'Attendance' ? (
-                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">Logged</span>
-                        ) : (
-                          <button
-                      onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                            className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                              incident.is_closed 
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200' 
-                              : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200'
-                            }`}
-                          >
-                            {incident.is_closed ? 'Closed' : 'Open'}
-                          </button>
-                        )}
+
+          {/* Enhanced Desktop Table Layout */}
+          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6" style={{ overflowY: 'auto', position: 'relative' }}>
+            {/* Enhanced Desktop Table Header */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] rounded-t-2xl shadow-lg">
+              <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Log</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Time</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">From</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">To</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Occurrence</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Type</div>
+                <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Action</div>
+                <div className="py-4 text-right text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider pr-4">Status</div>
+              </div>
             </div>
+            
+            {/* Enhanced Desktop Table Body */}
+            <div className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a] rounded-b-2xl shadow-xl overflow-hidden">
+              {sortedIncidents.map((incident, idx) => {
+                let rowColor = getRowStyle(incident);
+                if (rowColor === 'hover:bg-gray-50') {
+                  rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
+                }
+                return (
+                  <div
+                    key={incident.id} 
+                    className={`grid items-center px-0 py-3 cursor-pointer ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-1 ${
+                      isHighPriorityAndOpen(incident) 
+                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow border border-red-300' 
+                        : 'border border-transparent hover:border-blue-300 dark:hover:border-blue-500'
+                    }`}
+                    style={{ 
+                      gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%',
+                      minHeight: '56px',
+                      ...(isHighPriorityAndOpen(incident) && {
+                        boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        animation: 'pulse-glow 3s ease-in-out infinite'
+                      })
+                    }}
+                    onClick={(e) => {
+                      // Only open modal if not clicking on a button
+                      if (!(e.target as HTMLElement).closest('button')) {
+                        handleIncidentClick(incident);
+                      }
+                    }}
+                  >
+                    <div className="px-4 text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      {isHighPriorityAndOpen(incident) && (
+                        <MapPinIcon className="h-4 w-4 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
+                      )}
+                      <span className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-lg font-mono">
+                        {(() => {
+                          const match = incident.log_number.match(/(\d{3,})$/);
+                          return match ? match[1] : incident.log_number;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center font-medium">
+                      {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                      <span
+                        title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
+                        className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                      >
+                        {incident.callsign_from}
+                      </span>
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                      <span
+                        title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
+                        className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                      >
+                        {incident.callsign_to}
+                      </span>
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center leading-relaxed" style={{
+                      lineHeight: '1.5',
+                      maxHeight: '3em',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    }}>
+                      <span style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {incident.occurrence}
+                      </span>
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                        {incident.incident_type}
+                      </span>
+                    </div>
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center leading-relaxed" style={{
+                      lineHeight: '1.5',
+                      maxHeight: '3em',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      hyphens: 'auto'
+                    }}>
+                      <span style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {incident.action_taken}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 pr-4">
+                      {incident.incident_type === 'Attendance' ? (
+                        <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
+                          Logged
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                          className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 ${
+                            incident.is_closed 
+                              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                              : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
+                          }`}
+                        >
+                          {incident.is_closed ? 'Closed' : 'Open'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Enhanced Back to Top Button (Desktop) */}
+            {showBackToTop && (
+              <button
+                className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in transform hover:scale-110 transition-all duration-200"
+                aria-label="Back to Top"
+                tabIndex={0}
+                onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ArrowUpIcon className="h-7 w-7" />
+              </button>
+            )}
           </div>
-            );
-          })}
-        </div>
-        {/* Back to Top Button (Desktop) */}
-        {showBackToTop && (
-          <button
-            className="fixed bottom-24 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in"
-            aria-label="Back to Top"
-            tabIndex={0}
-            onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
-            style={{ pointerEvents: 'auto' }}
-          >
-            <ArrowUpIcon className="h-7 w-7" />
-          </button>
-        )}
-      </div>
-      {isDetailsModalOpen && selectedIncidentId && (
-        <IncidentDetailsModal
-          isOpen={isDetailsModalOpen}
-          incidentId={selectedIncidentId}
-          onClose={handleCloseModal}
-        />
+          
+          {isDetailsModalOpen && selectedIncidentId && (
+            <IncidentDetailsModal
+              isOpen={isDetailsModalOpen}
+              incidentId={selectedIncidentId}
+              onClose={handleCloseModal}
+            />
           )}
         </>
       )}
+    </>
+  ) : (
+    /* Board View */
+    <div className="bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
+      <CollaborationBoard
+        eventId={propCurrentEventId || currentEventId || ''}
+        currentUser={currentUser}
+        searchQuery={searchQuery}
+        onIncidentSelect={(incident) => {
+          // Handle incident selection - could open details modal
+          console.log('Selected incident:', incident);
+        }}
+      />
+    </div>
+  )}
     </>
   )
 } 
