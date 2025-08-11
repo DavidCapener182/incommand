@@ -512,9 +512,9 @@ export default function ReportsPage() {
         {/* All logs except attendance, in chronological order, as a table */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white mt-6">All Logs (excluding Attendance)</label>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden text-sm">
-              <thead className="bg-gray-100 dark:bg-[#1a2a57]">
+          <div className="border border-gray-200 dark:border-[#2d437a] rounded-lg overflow-hidden max-h-96 overflow-y-auto scroll-smooth">
+            <table className="min-w-full text-sm">
+              <thead className="sticky top-0 z-10 bg-gray-100 dark:bg-[#1a2a57] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider">Type</th>
                   <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-blue-100 uppercase tracking-wider whitespace-nowrap" style={{ width: '80px', minWidth: '80px', maxWidth: '80px' }}>Time</th>
