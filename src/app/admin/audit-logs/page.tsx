@@ -12,6 +12,7 @@ import {
   ChartBarIcon 
 } from '@heroicons/react/24/outline';
 import { useRole } from '../../../hooks/useRole';
+import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
 
 interface AuditLog {
@@ -46,7 +47,8 @@ interface AuditFilter {
 }
 
 export default function AuditLogsPage() {
-  const { user, role } = useRole();
+  const { user } = useAuth();
+  const role = useRole();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
