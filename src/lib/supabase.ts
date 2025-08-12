@@ -1,26 +1,9 @@
 'use client'
 
-import { createClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-// Use dummy values if environment variables are not set
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-
-// Log warnings if environment variables are missing
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  console.warn('Warning: Missing NEXT_PUBLIC_SUPABASE_URL environment variable, using placeholder')
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  console.warn('Warning: Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable, using placeholder')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-})
+// Use the Next.js auth-helpers client so browser sessions are synced to server via cookies
+export const supabase = createClientComponentClient()
 
 export const createUser = async (email: string, password: string) => {
   try {

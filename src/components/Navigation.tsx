@@ -66,7 +66,7 @@ function useTheme() {
 
 export default function Navigation() {
   const pathname = usePathname() || '';
-  const { signOut, user, role } = useAuth()
+  const { signOut, user, role } = useAuth();
   const [reportsOpen, setReportsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNoEventModal, setShowNoEventModal] = useState(false);
@@ -489,9 +489,20 @@ export default function Navigation() {
           </button>
 
           <div className="mt-auto">
-            <button onClick={() => {
-              signOut();
-              setMobileMenuOpen(false);
+            <button onClick={async () => {
+              try {
+                if (signOut && typeof signOut === 'function') {
+                  await signOut();
+                } else {
+                  // Fallback if signOut is not available
+                  window.location.href = '/login';
+                }
+                setMobileMenuOpen(false);
+              } catch (error) {
+                console.error('Error during logout:', error);
+                // Fallback: redirect to login
+                window.location.href = '/login';
+              }
             }} className="w-full text-left py-3 px-4 rounded-md text-lg font-medium text-red-400 hover:bg-[#3b4a9b] hover:text-red-300">
               Sign Out
             </button>

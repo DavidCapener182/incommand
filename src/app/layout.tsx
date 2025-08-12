@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
 import LayoutWrapper from '../components/LayoutWrapper'
+import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className={inter.className + " bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <AuthProvider>
           <NotificationDrawerProvider>
+            <MaintenanceBanner />
             <LayoutWrapper>{children}</LayoutWrapper>
           </NotificationDrawerProvider>
         </AuthProvider>

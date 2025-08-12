@@ -1,4 +1,24 @@
 import React from 'react';
+import { 
+  InformationCircleIcon,
+  CheckCircleIcon,
+  BookOpenIcon,
+  ExclamationTriangleIcon,
+  ArrowRightOnRectangleIcon,
+  UsersIcon,
+  HomeIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  CloudIcon,
+  PencilIcon,
+  SunIcon,
+  TableCellsIcon,
+  PlusIcon,
+  CalendarDaysIcon,
+  Cog6ToothIcon,
+  LockClosedIcon,
+  CpuChipIcon
+} from '@heroicons/react/24/outline';
 
 const HelpPage = () => {
   return (
@@ -15,7 +35,7 @@ const HelpPage = () => {
         </header>
         <section className="mb-12">
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
-            <span className="material-icons text-blue-600 dark:text-blue-300">info</span>
+            <InformationCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
             About This App
           </h2>
           <p className="text-lg leading-relaxed mb-4 text-gray-800 dark:text-gray-100">
@@ -23,23 +43,23 @@ const HelpPage = () => {
           </p>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 mb-6">
             <li className="flex items-start">
-              <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
+              <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
               <span className="text-lg text-gray-800 dark:text-gray-100">Report and track incidents in real time</span>
             </li>
             <li className="flex items-start">
-              <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
+              <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
               <span className="text-lg text-gray-800 dark:text-gray-100">Monitor venue occupancy and safety metrics</span>
             </li>
             <li className="flex items-start">
-              <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
+              <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
               <span className="text-lg text-gray-800 dark:text-gray-100">Generate and export detailed reports</span>
             </li>
             <li className="flex items-start">
-              <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
+              <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
               <span className="text-lg text-gray-800 dark:text-gray-100">Access analytics for data-driven decision making</span>
             </li>
             <li className="flex items-start">
-              <span className="material-icons text-green-500 dark:text-green-400 mr-3 mt-1">check_circle_outline</span>
+              <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
               <span className="text-lg text-gray-800 dark:text-gray-100">Secure authentication and user management</span>
             </li>
           </ul>
@@ -49,7 +69,7 @@ const HelpPage = () => {
         </section>
         <section>
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
-            <span className="material-icons text-blue-600 dark:text-blue-300">menu_book</span>
+            <BookOpenIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
             Glossary of Terms
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -59,7 +79,7 @@ const HelpPage = () => {
                 className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-[#3451a1]"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`material-icons text-blue-700 dark:text-blue-300`}>{icon}</span>
+                  {getIconComponent(icon)}
                   <h3 className="text-base sm:text-lg font-semibold text-blue-700 dark:text-blue-200 mb-0">{title}</h3>
                 </div>
                 <p className="text-gray-600 dark:text-blue-100 leading-relaxed text-sm">{description}</p>
@@ -70,6 +90,46 @@ const HelpPage = () => {
       </div>
     </div>
   );
+};
+
+// Helper function to get icon component
+const getIconComponent = (iconName: string) => {
+  const iconClass = "h-5 w-5 text-blue-700 dark:text-blue-300";
+  
+  switch (iconName) {
+    case 'report_problem':
+      return <ExclamationTriangleIcon className={iconClass} />;
+    case 'logout':
+      return <ArrowRightOnRectangleIcon className={iconClass} />;
+    case 'people':
+      return <UsersIcon className={iconClass} />;
+    case 'dashboard':
+      return <HomeIcon className={iconClass} />;
+    case 'description':
+      return <DocumentTextIcon className={iconClass} />;
+    case 'analytics':
+      return <ChartBarIcon className={iconClass} />;
+    case 'cloud':
+      return <CloudIcon className={iconClass} />;
+    case 'edit':
+      return <PencilIcon className={iconClass} />;
+    case 'wb_sunny':
+      return <SunIcon className={iconClass} />;
+    case 'table_chart':
+      return <TableCellsIcon className={iconClass} />;
+    case 'add_alert':
+      return <PlusIcon className={iconClass} />;
+    case 'event':
+      return <CalendarDaysIcon className={iconClass} />;
+    case 'settings':
+      return <Cog6ToothIcon className={iconClass} />;
+    case 'lock':
+      return <LockClosedIcon className={iconClass} />;
+    case 'api':
+      return <CpuChipIcon className={iconClass} />;
+    default:
+      return <InformationCircleIcon className={iconClass} />;
+  }
 };
 
 const glossaryItems = [

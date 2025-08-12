@@ -6,7 +6,14 @@ import { supabase } from '@/lib/supabase';
 import { ChartBarIcon, CpuChipIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 export default function AIUsagePage() {
-  const { user } = useAuth();
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in AI usage page:', error);
+    auth = { user: null };
+  }
+  const { user } = auth;
   const isAdmin = useIsAdmin();
 
   const [logs, setLogs] = useState<any[]>([]);

@@ -5,7 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/hooks/useRole";
-import { ROLES } from "@/types/auth";
+import { ROLES, roleUtils } from "@/types/auth";
 
 function getInitials(nameOrEmail: string) {
   if (!nameOrEmail) return '?';
@@ -26,7 +26,14 @@ function getInitials(nameOrEmail: string) {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in profile page:', error);
+    auth = { user: null };
+  }
+  const { user } = auth;
   const role = useRole();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -175,11 +182,7 @@ export default function ProfilePage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Role</label>
                 <div className="mt-1">
-                  {role
-                    ? role.toLowerCase() === 'admin'
-                      ? 'Admin'
-                      : role.charAt(0).toUpperCase() + role.slice(1)
-                    : '-'}
+                  {roleUtils.getDisplayName(role)}
                 </div>
               </div>
               <div>

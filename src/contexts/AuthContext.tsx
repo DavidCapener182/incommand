@@ -5,6 +5,7 @@ import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { AuthContextType, UserRole } from '../types/auth'
+import { SystemSettings, UserPreferences, DEFAULT_USER_PREFERENCES, DEFAULT_SYSTEM_SETTINGS } from '../types/settings'
 
 // Role cache interface
 interface RoleCache {
@@ -22,6 +23,11 @@ const getRoleCacheKey = (userId: string) => `user_role_${userId}`
 // Helper functions for role caching
 const getCachedRole = (userId: string): UserRole | null => {
   try {
+    // Check if sessionStorage is available (SSR safety)
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return null
+    }
+    
     const cached = sessionStorage.getItem(getRoleCacheKey(userId))
     if (!cached) return null
     
@@ -44,6 +50,11 @@ const getCachedRole = (userId: string): UserRole | null => {
 
 const setCachedRole = (userId: string, role: UserRole): void => {
   try {
+    // Check if sessionStorage is available (SSR safety)
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return
+    }
+    
     const cache: RoleCache = {
       role,
       timestamp: Date.now(),
@@ -57,6 +68,11 @@ const setCachedRole = (userId: string, role: UserRole): void => {
 
 const clearCachedRole = (userId: string): void => {
   try {
+    // Check if sessionStorage is available (SSR safety)
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return
+    }
+    
     sessionStorage.removeItem(getRoleCacheKey(userId))
   } catch (error) {
     console.error('Error clearing cached role:', error)
@@ -68,6 +84,10 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   loading: true,
   signOut: async () => {},
+  invalidateRoleCache: () => {},
+  systemSettings: null,
+  userPreferences: null,
+  refreshSettings: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -75,8 +95,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
   const [showStayLoggedIn, setShowStayLoggedIn] = useState(false)
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null)
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+
+  const loadSystemSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_system_settings')
+        .single()
+
+      if (error) {
+        console.error('Error loading system settings:', error)
+        // Use default settings as fallback
+        setSystemSettings({
+          id: 'default',
+          ...DEFAULT_SYSTEM_SETTINGS,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        return
+      }
+
+      setSystemSettings({
+        id: 'current',
+        maintenance_mode: data.maintenance_mode || false,
+        maintenance_message: data.maintenance_message || DEFAULT_SYSTEM_SETTINGS.maintenance_message,
+        feature_flags: data.feature_flags || DEFAULT_SYSTEM_SETTINGS.feature_flags,
+        default_user_role: data.default_user_role || DEFAULT_SYSTEM_SETTINGS.default_user_role,
+        notification_settings: data.notification_settings || DEFAULT_SYSTEM_SETTINGS.notification_settings,
+        platform_config: data.platform_config || DEFAULT_SYSTEM_SETTINGS.platform_config,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('Error loading system settings:', error)
+      // Use default settings as fallback
+      setSystemSettings({
+        id: 'default',
+        ...DEFAULT_SYSTEM_SETTINGS,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }
+
+  const loadUserPreferences = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_preferences', { user_uuid: userId })
+        .single()
+
+      if (error) {
+        console.error('Error loading user preferences:', error)
+        // Create default preferences for user
+        const defaultPrefs: UserPreferences = {
+          id: 'default',
+          user_id: userId,
+          ...DEFAULT_USER_PREFERENCES,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        setUserPreferences(defaultPrefs)
+        return
+      }
+
+      setUserPreferences({
+        id: 'current',
+        user_id: userId,
+        theme: data.theme || DEFAULT_USER_PREFERENCES.theme,
+        dashboard_layout: data.dashboard_layout || DEFAULT_USER_PREFERENCES.dashboard_layout,
+        notification_preferences: data.notification_preferences || DEFAULT_USER_PREFERENCES.notification_preferences,
+        ui_preferences: data.ui_preferences || DEFAULT_USER_PREFERENCES.ui_preferences,
+        accessibility_settings: data.accessibility_settings || DEFAULT_USER_PREFERENCES.accessibility_settings,
+        privacy_settings: data.privacy_settings || DEFAULT_USER_PREFERENCES.privacy_settings,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('Error loading user preferences:', error)
+      // Use default preferences as fallback
+      const defaultPrefs: UserPreferences = {
+        id: 'default',
+        user_id: userId,
+        ...DEFAULT_USER_PREFERENCES,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      setUserPreferences(defaultPrefs)
+    }
+  }
+
+  const refreshSettings = async () => {
+    await loadSystemSettings()
+    if (user?.id) {
+      await loadUserPreferences(user.id)
+    }
+  }
 
   const fetchUserRole = async (userId: string) => {
     const maxRetries = 3
@@ -123,6 +239,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const userRole = data?.role as UserRole | null
         console.log('AuthContext - Setting role to:', userRole)
+        console.log('AuthContext - User ID:', userId)
+        console.log('AuthContext - Raw data:', data)
         
         // Cache the role if it exists
         if (userRole) {
@@ -147,6 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     while (retryCount < maxRetries) {
       try {
         const role = await attemptFetch()
+        console.log('AuthContext - Setting role in state:', role)
         setRole(role)
         return
       } catch (error) {
@@ -193,7 +312,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUser(session.user)
-        await fetchUserRole(session.user.id)
+        await Promise.all([
+          fetchUserRole(session.user.id),
+          loadSystemSettings(),
+          loadUserPreferences(session.user.id)
+        ])
+      } else {
+        await loadSystemSettings()
       }
       setLoading(false)
 
@@ -223,10 +348,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user)
-        await fetchUserRole(session.user.id)
+        await Promise.all([
+          fetchUserRole(session.user.id),
+          loadUserPreferences(session.user.id)
+        ])
       } else {
         setUser(null)
         setRole(null)
+        setUserPreferences(null)
         // Clear cached role when user logs out
         if (user?.id) {
           clearCachedRole(user.id)
@@ -255,13 +384,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading, pathname, router])
   */
 
-  const signOut = async () => {
-    // Clear cached role before signing out
+  const invalidateRoleCache = () => {
     if (user?.id) {
       clearCachedRole(user.id)
+      console.log('AuthContext - Role cache invalidated for user:', user.id)
     }
-    await supabase.auth.signOut()
-    router.push('/login')
+  }
+
+  const signOut = async () => {
+    try {
+      // Clear cached role before signing out
+      if (user?.id) {
+        clearCachedRole(user.id)
+      }
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error during sign out:', error)
+      // Fallback: redirect to login even if signOut fails
+      router.push('/login')
+    }
   }
 
   const handleStayLoggedIn = () => {
@@ -270,7 +412,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, signOut, invalidateRoleCache, systemSettings, userPreferences, refreshSettings }}>
       {!loading && (
         <>
           {showStayLoggedIn && (
@@ -294,5 +436,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useAuth = () => {
-  return useContext(AuthContext)
+  try {
+    const context = useContext(AuthContext)
+    if (context === undefined) {
+      console.error('useAuth called outside of AuthProvider')
+      // Return a safe fallback instead of throwing
+      return {
+        user: null,
+        role: null,
+        loading: true,
+        signOut: async () => {
+          console.warn('signOut called but AuthContext not available')
+          window.location.href = '/login'
+        },
+        invalidateRoleCache: () => {
+          console.warn('invalidateRoleCache called but AuthContext not available')
+        },
+        systemSettings: null,
+        userPreferences: null,
+        refreshSettings: async () => {
+          console.warn('refreshSettings called but AuthContext not available')
+        },
+      }
+    }
+    return context
+  } catch (error) {
+    console.error('Error in useAuth:', error)
+    // Return a safe fallback
+    return {
+      user: null,
+      role: null,
+      loading: true,
+      signOut: async () => {
+        console.warn('signOut called but AuthContext not available')
+        window.location.href = '/login'
+      },
+      invalidateRoleCache: () => {
+        console.warn('invalidateRoleCache called but AuthContext not available')
+      },
+      systemSettings: null,
+      userPreferences: null,
+      refreshSettings: async () => {
+        console.warn('refreshSettings called but AuthContext not available')
+      },
+    }
+  }
 } 

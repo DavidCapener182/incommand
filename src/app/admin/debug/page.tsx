@@ -5,7 +5,14 @@ import { useRole } from '@/hooks/useRole'
 import { ROLES } from '@/types/auth'
 
 export default function AdminDebugPage() {
-  const { user, loading } = useAuth()
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in debug page:', error);
+    auth = { user: null, loading: true };
+  }
+  const { user, loading } = auth;
   const role = useRole()
 
   if (loading) {

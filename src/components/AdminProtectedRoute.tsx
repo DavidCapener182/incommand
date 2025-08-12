@@ -2,6 +2,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsAdmin } from '@/hooks/useRole'
+import RoleAccessErrorBoundary from './RoleAccessErrorBoundary'
 
 interface AdminProtectedRouteProps {
   children: React.ReactNode
@@ -16,7 +17,14 @@ export default function AdminProtectedRoute({
   redirectTo,
   showAccessDenied = true
 }: AdminProtectedRouteProps) {
-  const { loading } = useAuth()
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in AdminProtectedRoute:', error);
+    auth = { loading: true };
+  }
+  const { loading } = auth;
   const isAdmin = useIsAdmin()
   const router = useRouter()
 
@@ -68,6 +76,10 @@ export default function AdminProtectedRoute({
     return fallback ? <>{fallback}</> : null
   }
 
-  // User is admin, render children
-  return <>{children}</>
+  // User is admin, render children wrapped in error boundary
+  return (
+    <RoleAccessErrorBoundary>
+      {children}
+    </RoleAccessErrorBoundary>
+  )
 }

@@ -57,7 +57,6 @@ interface Incident {
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
-  const { role } = useAuth()
   const isAdmin = useIsAdmin()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])

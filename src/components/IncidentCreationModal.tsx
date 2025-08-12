@@ -2046,7 +2046,14 @@ export default function IncidentCreationModal({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
-  const { user } = useAuth();
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in IncidentCreationModal:', error);
+    auth = { user: null };
+  }
+  const { user } = auth;
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   

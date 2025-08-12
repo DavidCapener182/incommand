@@ -143,30 +143,122 @@ export default function EventsSettingsPage() {
     alert(`Delete event ${event.event_name} functionality coming soon!`);
   };
   const handleDeleteLog = async (logId: string) => {
+    console.log('Attempting to delete log with ID:', logId, 'Type:', typeof logId);
     setDeletingLogId(logId);
     setError(null);
-    // Find the log in the logs state
-    const log = logs.find((l: any) => l.id === logId);
-    // If Attendance, delete from attendance_records by event_id and timestamp
-    if (log && log.incident_type === 'Attendance') {
-      await supabase
-        .from('attendance_records')
+    
+    try {
+      // Find the log in the logs state
+      const log = logs.find((l: any) => l.id === parseInt(logId) || l.id === logId);
+      
+      if (!log) {
+        console.log('Log not found in state. Available logs:', logs.map(l => ({ id: l.id, type: typeof l.id })));
+        setError('Log not found');
+        setDeletingLogId(null);
+        return;
+      }
+
+      console.log('Found log to delete:', log);
+
+      // Convert logId to integer for database operations
+      const numericLogId = parseInt(logId);
+
+      // Delete related data first (in reverse order of dependencies)
+      console.log('Deleting related data...');
+      
+      // Delete incident events
+      const { error: eventsError } = await supabase
+        .from('incident_events')
         .delete()
-        .eq('event_id', log.event_id)
-        .eq('timestamp', log.timestamp);
-    }
-    const { error } = await supabase
-      .from('incident_logs')
-      .delete()
-      .eq('id', logId);
-    setDeletingLogId(null);
-    if (error) {
-      setError('Failed to delete log: ' + error.message);
-      return;
-    }
-    // Refresh logs for selected event
-    if (selectedEvent) {
-      await fetchLogs(selectedEvent.id);
+        .eq('incident_id', numericLogId);
+      if (eventsError) console.log('Events deletion error:', eventsError);
+
+      // Delete incident attachments
+      const { error: attachmentsError } = await supabase
+        .from('incident_attachments')
+        .delete()
+        .eq('incident_id', numericLogId);
+      if (attachmentsError) console.log('Attachments deletion error:', attachmentsError);
+
+      // Delete incident links (both directions)
+      const { error: linksError } = await supabase
+        .from('incident_links')
+        .delete()
+        .or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`);
+      if (linksError) console.log('Links deletion error:', linksError);
+
+      // Delete incident escalations
+      const { error: escalationsError } = await supabase
+        .from('incident_escalations')
+        .delete()
+        .eq('incident_id', numericLogId);
+      if (escalationsError) console.log('Escalations deletion error:', escalationsError);
+
+      // Delete incident updates
+      const { error: updatesError } = await supabase
+        .from('incident_updates')
+        .delete()
+        .eq('incident_id', numericLogId);
+      if (updatesError) console.log('Updates deletion error:', updatesError);
+
+      // Delete staff assignments
+      const { error: assignmentsError } = await supabase
+        .from('staff_assignments')
+        .delete()
+        .eq('incident_id', numericLogId);
+      if (assignmentsError) console.log('Assignments deletion error:', assignmentsError);
+
+      // If this is an attendance log, also delete from attendance_records
+      if (log.incident_type === 'Attendance') {
+        console.log('Deleting attendance record for event_id:', log.event_id, 'timestamp:', log.timestamp);
+        const { error: attendanceError } = await supabase
+          .from('attendance_records')
+          .delete()
+          .eq('event_id', log.event_id)
+          .eq('timestamp', log.timestamp);
+        
+        if (attendanceError) {
+          console.error('Error deleting attendance record:', attendanceError);
+        } else {
+          console.log('Successfully deleted attendance record');
+        }
+      }
+
+      // Finally, delete the incident log itself
+      console.log('Deleting main incident log...');
+      const { error, count } = await supabase
+        .from('incident_logs')
+        .delete()
+        .eq('id', numericLogId);
+
+      console.log('Delete result:', { error, count });
+
+      if (error) {
+        console.error('Failed to delete log:', error);
+        setError('Failed to delete log: ' + error.message);
+        setDeletingLogId(null);
+        return;
+      }
+
+      console.log('Log deleted successfully. Updating UI...');
+
+      // Update local state immediately for better UX
+      setLogs(prevLogs => {
+        const filtered = prevLogs.filter(log => log.id !== numericLogId && log.id !== logId);
+        console.log('Filtered logs:', filtered.length, 'from', prevLogs.length);
+        return filtered;
+      });
+      
+      // Also refresh from database to ensure consistency
+      if (selectedEvent) {
+        console.log('Refreshing logs from database...');
+        await fetchLogs(selectedEvent.id);
+      }
+    } catch (error) {
+      console.error('Error deleting log:', error);
+      setError('Failed to delete log: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setDeletingLogId(null);
     }
   };
 

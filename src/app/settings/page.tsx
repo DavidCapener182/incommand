@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { supabase } from '@/lib/supabase';
 import { 
   UserIcon, 
@@ -12,7 +13,11 @@ import {
   EyeIcon,
   EyeSlashIcon,
   BuildingOfficeIcon,
-  KeyIcon
+  KeyIcon,
+  ArrowPathIcon,
+  CheckIcon,
+  DocumentTextIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface UserProfile {
@@ -36,7 +41,15 @@ interface CompanyData {
 }
 
 export default function GeneralSettingsPage() {
-  const { user } = useAuth();
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.error('Auth context not available in settings page:', error);
+    auth = { user: null };
+  }
+  const { user } = auth;
+  const { preferences } = useUserPreferences();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +65,7 @@ export default function GeneralSettingsPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -80,9 +94,13 @@ export default function GeneralSettingsPage() {
           if (!companyError) setCompany(companyData);
         }
 
-        // Get theme preference from localStorage
-        const savedTheme = localStorage.getItem('theme');
-        setDarkMode(savedTheme === 'dark');
+        // Get theme preference from centralized preferences
+        if (preferences?.theme) {
+          setDarkMode(preferences.theme === 'dark');
+        } else {
+          const savedTheme = localStorage.getItem('theme');
+          setDarkMode(savedTheme === 'dark');
+        }
 
       } catch (error: any) {
         setError(error.message);
@@ -439,6 +457,83 @@ export default function GeneralSettingsPage() {
           </div>
         </div>
         
+        {/* Settings Navigation */}
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
+              <CogIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Settings</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="/settings/preferences" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <CogIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Preferences</div>
+                <div className="text-sm text-gray-500 dark:text-blue-300">Customize your experience</div>
+              </div>
+            </a>
+
+            <a href="/settings/notifications" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <BellIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Notifications</div>
+                <div className="text-sm text-gray-500 dark:text-blue-300">Manage notification settings</div>
+              </div>
+            </a>
+
+            <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <DocumentTextIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Notification Templates</div>
+                <div className="text-sm text-gray-500 dark:text-blue-300">Manage notification templates</div>
+              </div>
+            </a>
+
+            <a href="/settings/notifications/scheduler" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                <ClockIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Notification Scheduler</div>
+                <div className="text-sm text-gray-500 dark:text-blue-300">Schedule automated notifications</div>
+              </div>
+            </a>
+
+            <a href="/settings/backup-restore" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+              <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
+                <ArrowPathIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">Backup & Restore</div>
+                <div className="text-sm text-gray-500 dark:text-blue-300">Manage data backups</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        {/* Sync Status */}
+        {preferences && (
+          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <CheckIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Preferences Sync</h2>
+            </div>
+            <div className="text-sm text-gray-600 dark:text-blue-300">
+              Your preferences are synced across all devices
+            </div>
+          </div>
+        )}
+
         {/* Account Actions */}
         <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
           <div className="flex items-center gap-3 mb-6">

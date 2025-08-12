@@ -12,14 +12,20 @@ export const ROLES = {
   SUPERADMIN: 'superadmin' as const,
 } as const
 
+import { SystemSettings, UserPreferences } from './settings'
+
 /**
- * Extended AuthContext type that includes role information
+ * Extended AuthContext type that includes role information and settings
  */
 export interface AuthContextType {
   user: any | null
   role: UserRole | null
   loading: boolean
   signOut: () => Promise<void>
+  invalidateRoleCache: () => void
+  systemSettings: SystemSettings | null
+  userPreferences: UserPreferences | null
+  refreshSettings: () => Promise<void>
 }
 
 /**
