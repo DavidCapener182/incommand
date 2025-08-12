@@ -2,6 +2,16 @@ import React, { useState, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/Toast';
+import EscalationTimer from './EscalationTimer';
+
+// Staff member interface for drag and drop
+interface StaffMember {
+  id: string;
+  name: string;
+  availability_status: string;
+  active_assignments: number;
+  skill_tags: string[];
+}
 
 // Import the style function from IncidentTable
 const getIncidentTypeStyle = (type: string) => {
@@ -44,6 +54,13 @@ interface Incident {
   is_closed: boolean;
   event_id: string;
   status: string;
+  priority?: string;
+  escalation_level?: number;
+  escalate_at?: string;
+  escalated?: boolean;
+  assigned_staff_ids?: string[];
+  auto_assigned?: boolean;
+  dependencies?: string[];
 }
 
 interface CollaborationBoardProps {
@@ -55,6 +72,8 @@ interface CollaborationBoardProps {
   loading: boolean;
   error: string | null;
   updateIncident: (id: string, updates: Partial<Incident>) => Promise<void>;
+  availableStaff?: StaffMember[];
+  onStaffAssignment?: (incidentId: string, staffIds: string[]) => Promise<void>;
 }
 
 const STATUS_COLUMNS = [
@@ -71,61 +90,36 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   incidents,
   loading,
   error,
-  updateIncident
+  updateIncident,
+  availableStaff = [],
+  onStaffAssignment
 }) => {
   const [draggedIncident, setDraggedIncident] = useState<string | null>(null);
   const [editingAction, setEditingAction] = useState<number | null>(null);
   const [actionText, setActionText] = useState('');
+  const [dragOverIncident, setDragOverIncident] = useState<string | null>(null);
+  const [showStaffPanel, setShowStaffPanel] = useState(false);
   const { addToast } = useToast();
 
   const getIncidentsByStatus = useCallback((status: string) => {
-    // Map incidents to board status based on is_closed and existing status
+    // Exclude attendance logs and sit reps from board view
     let filteredIncidents = incidents.filter(incident => {
-      // Exclude attendance logs and sit reps from board view
       if (incident.incident_type === 'Attendance' || incident.incident_type === 'Sit Rep') {
         return false;
       }
       
-      // For closed status, show all closed incidents (except attendance and sit reps)
-      if (status === 'closed') {
-        return incident.is_closed === true;
+      // Simplified status logic
+      switch (status) {
+        case 'open':
+          return !incident.is_closed && (!incident.status || incident.status === 'open');
+        case 'in_progress':
+          return !incident.is_closed && incident.status === 'in_progress';
+        case 'closed':
+          return incident.is_closed || incident.status === 'closed';
+        default:
+          return false;
       }
-      
-      // For open and in_progress, only show non-closed incidents
-      if (incident.is_closed === true) {
-        return false;
-      }
-      
-      // If incident has a status field that matches our board columns, use it
-      if (incident.status && ['open', 'in_progress'].includes(incident.status)) {
-        return incident.status === status;
-      }
-      
-      // Default mapping for incidents without explicit status
-      if (status === 'open') {
-        return !incident.status || incident.status === 'open';
-      } else if (status === 'in_progress') {
-        return incident.status === 'in_progress';
-      }
-      
-      return false;
     });
-    
-    console.log(`Board ${status} column:`, filteredIncidents.length, 'incidents');
-    console.log(`All incidents for debugging:`, incidents.map(inc => ({ 
-      log_number: inc.log_number, 
-      is_closed: inc.is_closed, 
-      status: inc.status,
-      incident_type: inc.incident_type
-    })));
-    
-    if (status === 'open') {
-      console.log('Open incidents:', filteredIncidents.map(inc => ({ 
-        log_number: inc.log_number, 
-        is_closed: inc.is_closed, 
-        status: inc.status 
-      })));
-    }
     
     // Apply search filter if searchQuery is provided
     if (searchQuery.trim()) {
@@ -144,20 +138,53 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   }, [incidents, searchQuery]);
 
   const handleDragStart = (result: DropResult) => {
-    console.log('Drag start:', result);
     setDraggedIncident(result.draggableId);
   };
 
   const handleDragEnd = async (result: DropResult) => {
-    console.log('Drag end:', result);
     setDraggedIncident(null);
     
     if (!result.destination) return;
 
-    const { draggableId, destination } = result;
+    const { draggableId, destination, source } = result;
     const newStatus = destination.droppableId;
+    const oldStatus = source.droppableId;
 
-    console.log('Updating incident:', draggableId, 'to status:', newStatus);
+    // Find the incident being moved
+    const incident = incidents.find(inc => inc.id.toString() === draggableId);
+    if (!incident) {
+      addToast({
+        type: 'error',
+        title: 'Invalid Incident',
+        message: 'Incident not found'
+      });
+      return;
+    }
+
+    // Validate status transitions
+    const isValidTransition = () => {
+      // Prevent moving closed incidents back to open/in-progress
+      if (incident.is_closed && newStatus !== 'closed') {
+        return false;
+      }
+      
+      // Prevent moving from closed to any other status
+      if (oldStatus === 'closed' && newStatus !== 'closed') {
+        return false;
+      }
+      
+      // Allow all other transitions
+      return true;
+    };
+
+    if (!isValidTransition()) {
+      addToast({
+        type: 'error',
+        title: 'Invalid Move',
+        message: 'Cannot move closed incidents back to open status'
+      });
+      return;
+    }
 
     try {
       // Update both status and is_closed fields
@@ -176,10 +203,23 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
       });
     } catch (error) {
       console.error('Error updating incident:', error);
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Failed to update incident status';
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
+          errorMessage = 'Permission denied. You may not have access to update this incident.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again.';
+        }
+      }
+      
       addToast({
         type: 'error',
         title: 'Update Failed',
-        message: 'Failed to update incident status'
+        message: errorMessage
       });
     }
   };
@@ -231,10 +271,6 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
 
   const handleMoveToNext = async (incident: Incident) => {
     try {
-      console.log('Move to Next clicked for incident:', incident);
-      console.log('Current status:', incident.status);
-      console.log('Current is_closed:', incident.is_closed);
-      
       let newStatus = 'open';
       
       // Determine next status based on current status
@@ -244,8 +280,6 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
         newStatus = 'closed';
       }
       
-      console.log('New status will be:', newStatus);
-      
       const updates: any = { status: newStatus };
       if (newStatus === 'closed') {
         updates.is_closed = true;
@@ -253,10 +287,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
         updates.is_closed = false;
       }
       
-      console.log('Updates to apply:', updates);
-      
       await updateIncident(incident.id.toString(), updates);
-      console.log('Update completed successfully');
       
       addToast({
         type: 'success',
@@ -272,6 +303,44 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
       });
     }
   };
+
+  // Drag and drop handlers for staff assignment
+  const handleStaffDragStart = useCallback((e: React.DragEvent, staffId: string) => {
+    e.dataTransfer.setData('staffId', staffId);
+  }, []);
+
+  const handleStaffDragOver = useCallback((e: React.DragEvent, incidentId: string) => {
+    e.preventDefault();
+    setDragOverIncident(incidentId);
+  }, []);
+
+  const handleStaffDragLeave = useCallback(() => {
+    setDragOverIncident(null);
+  }, []);
+
+  const handleStaffDrop = useCallback(async (e: React.DragEvent, incidentId: string) => {
+    e.preventDefault();
+    const staffId = e.dataTransfer.getData('staffId');
+    
+    if (staffId && onStaffAssignment) {
+      try {
+        await onStaffAssignment(incidentId, [staffId]);
+        addToast({
+          type: 'success',
+          title: 'Staff Assigned',
+          message: 'Staff member assigned successfully'
+        });
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'Assignment Failed',
+          message: 'Failed to assign staff member'
+        });
+      }
+    }
+    
+    setDragOverIncident(null);
+  }, [onStaffAssignment, addToast]);
 
   if (loading) {
     return (
@@ -291,15 +360,55 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Debug info */}
-      <div className="mb-2 text-xs text-gray-500">
-        Total incidents: {incidents.length} | 
-        Open: {getIncidentsByStatus('open').length} | 
-        In Progress: {getIncidentsByStatus('in_progress').length} | 
-        Closed: {getIncidentsByStatus('closed').length}
+      {/* Header with staff panel toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-xs text-gray-500">
+          Total incidents: {incidents.length} | 
+          Open: {getIncidentsByStatus('open').length} | 
+          In Progress: {getIncidentsByStatus('in_progress').length} | 
+          Closed: {getIncidentsByStatus('closed').length}
+        </div>
+        {availableStaff.length > 0 && (
+          <button
+            onClick={() => setShowStaffPanel(!showStaffPanel)}
+            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+          >
+            {showStaffPanel ? 'Hide' : 'Show'} Staff Panel
+          </button>
+        )}
       </div>
-      <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1" style={{ minHeight: '400px' }}>
+              <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className={`grid gap-4 flex-1 ${showStaffPanel ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`} style={{ minHeight: '400px' }}>
+            {/* Staff Panel */}
+            {showStaffPanel && (
+              <div className="flex flex-col h-full">
+                <div className="p-3 rounded-t-lg border bg-blue-100 border-blue-300">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800">Available Staff</h3>
+                    <span className="bg-white bg-opacity-50 rounded-full px-2 py-1 text-xs font-medium">
+                      {availableStaff.filter(s => s.availability_status === 'available').length}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 p-2 bg-gray-50 rounded-b-lg border-t-0 border border-gray-200 overflow-y-auto">
+                  <div className="space-y-2">
+                    {availableStaff.filter(s => s.availability_status === 'available').map((staff) => (
+                      <div
+                        key={staff.id}
+                        draggable
+                        onDragStart={(e) => handleStaffDragStart(e, staff.id)}
+                        className="p-2 bg-white rounded border border-gray-200 cursor-grab hover:border-blue-300 transition-colors"
+                      >
+                        <div className="text-sm font-medium text-gray-900">{staff.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {staff.active_assignments} assignments • {staff.skill_tags?.slice(0, 2).join(', ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           {STATUS_COLUMNS.map((column) => (
             <div key={column.id} className="flex flex-col h-full">
               {/* Column Header */}
@@ -435,6 +544,72 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                     </div>
                                   )}
                                 </div>
+
+                                {/* Assignment and Escalation Info */}
+                                {(incident.assigned_staff_ids?.length > 0 || incident.escalate_at) && (
+                                  <div className="mt-2 pt-2 border-t border-gray-100">
+                                    {/* Staff Assignment */}
+                                    {incident.assigned_staff_ids && incident.assigned_staff_ids.length > 0 && (
+                                      <div className="mb-2">
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <span className="text-xs text-gray-500">Assigned Staff:</span>
+                                          {incident.auto_assigned && (
+                                            <span className="text-xs bg-blue-100 text-blue-600 px-1 rounded">Auto</span>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {incident.assigned_staff_ids.slice(0, 2).map((staffId, index) => (
+                                            <span key={index} className="px-1 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                                              Staff {index + 1}
+                                            </span>
+                                          ))}
+                                          {incident.assigned_staff_ids.length > 2 && (
+                                            <span className="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                                              +{incident.assigned_staff_ids.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Escalation Timer */}
+                                    {incident.escalate_at && !incident.is_closed && (
+                                      <div className="mb-2">
+                                        <EscalationTimer
+                                          incidentId={incident.id.toString()}
+                                          escalationLevel={incident.escalation_level || 0}
+                                          escalateAt={incident.escalate_at}
+                                          escalated={incident.escalated || false}
+                                          incidentType={incident.incident_type}
+                                          priority={incident.priority || 'medium'}
+                                          className="text-xs"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Escalation Status Indicator */}
+                                    {incident.escalate_at && (
+                                      <div className="flex items-center gap-1 mb-1">
+                                        <span className="text-xs text-gray-500">Escalation:</span>
+                                        {incident.escalated ? (
+                                          <span className="text-xs bg-red-100 text-red-700 px-1 rounded">Escalated</span>
+                                        ) : (
+                                          <span className="text-xs bg-yellow-100 text-yellow-700 px-1 rounded">Active</span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Dependencies */}
+                                    {incident.dependencies && incident.dependencies.length > 0 && (
+                                      <div className="mb-2">
+                                        <span className="text-xs text-gray-500">Dependencies: </span>
+                                        <span className="text-xs bg-orange-100 text-orange-700 px-1 rounded">
+                                          {incident.dependencies.length} incident(s)
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* Action Buttons */}
                                 <div className="mt-2 pt-2 border-t border-gray-100">

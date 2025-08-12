@@ -38,6 +38,8 @@ import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
 import RotatingText from './RotatingText'
 import { createPortal } from 'react-dom';
+import StaffDeploymentCard from './StaffDeploymentCard'
+import { useStaffAvailability } from '../hooks/useStaffAvailability'
 
 // <style>
 // {`
@@ -64,6 +66,7 @@ interface EventTiming {
   title: string
   time: string
   isNext?: boolean
+  isActuallyHappeningNow?: boolean
 }
 
 interface TimeCardProps {
@@ -99,7 +102,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               </div>
               {currentSlot && (
                 <div className="text-right">
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
+                    {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+                  </span>
                   <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
                   <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
                 </div>
@@ -133,7 +138,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       {/* Desktop: Happening Now positioned in bottom left corner */}
       {currentSlot && (
         <div className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm">
-          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">Happening Now</span>
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
+            {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+          </span>
           <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
           <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
         </div>
@@ -393,6 +400,16 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
       <div className="w-full h-full flex flex-col items-center justify-center p-2">
         <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">Top 3 Incident Types</div>
         <div className="flex flex-col gap-1 w-full">
+          {/* Clear Filter Button - Show when a filter is active */}
+          {selectedType && (
+            <button
+              onClick={() => onTypeClick('')}
+              className="flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+            >
+              <span className="truncate">Clear Filter</span>
+            </button>
+          )}
+          
           {sorted.map(([type, count]) => {
             try {
               const styleClasses = getIncidentTypeStyle(type);
@@ -480,6 +497,17 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
   const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'board' | 'staff'>('table');
+  
+  // Staff availability hook
+  const { stats: staffStats } = useStaffAvailability(currentEventId || '', 50);
+  
+  // Calculate urgent incidents count
+  const urgentIncidentsCount = incidents.filter(incident => 
+    incident.priority === 'urgent' && 
+    incident.status !== 'closed' && 
+    (!incident.assigned_staff_ids || incident.assigned_staff_ids.length === 0)
+  ).length;
   
   // Toast notifications
   const { messages, addToast, removeToast } = useToast();
@@ -634,11 +662,24 @@ export default function Dashboard() {
         if (!next && filteredTimings.length > 0) {
           current = filteredTimings[filteredTimings.length - 1];
         }
+        
+        // Determine if current event is actually happening now
+        let isActuallyHappeningNow = false;
+        if (current) {
+          const eventTime = current.minutesSinceMidnight;
+          const timeWindow = 30; // 30 minutes window before and after event time
+          isActuallyHappeningNow = Math.abs(currentTimeNumber - eventTime) <= timeWindow;
+        }
+        
         // If current time is after or at Show Down, do not show any previous timings as Happening Now
         if (showDownMinutes !== null && currentTimeNumber >= showDownMinutes) {
           setCurrentSlot(null);
         } else {
-          setCurrentSlot(current ? { title: current.title, time: current.time } : null);
+          setCurrentSlot(current ? { 
+            title: current.title, 
+            time: current.time,
+            isActuallyHappeningNow 
+          } : null);
         }
         setNextSlot(next ? { title: next.title, time: next.time } : null);
         // For desktop, keep nextFiveTimings as before
@@ -843,7 +884,9 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-b-lg">
                   {currentSlot ? (
                     <div className="flex flex-col items-start">
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">Happening Now</span>
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
+                        {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+                      </span>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentSlot.title}</span>
                       <span className="text-xs font-bold text-gray-700 dark:text-gray-100">{currentSlot.time}</span>
                     </div>
@@ -1047,6 +1090,8 @@ export default function Dashboard() {
           />
         </div>
 
+
+
         {/* Stats Grid - Second Row */}
         <div>
           {/* Mobile: Venue Occupancy full width */}
@@ -1070,8 +1115,8 @@ export default function Dashboard() {
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
-                  // Filter by exact incident type
-                  setSelectedFilter(type);
+                  // Clear filter if empty string, otherwise filter by exact incident type
+                  setSelectedFilter(type === '' ? null : type);
                 }} 
                 selectedType={selectedFilter}
               />
@@ -1106,8 +1151,8 @@ export default function Dashboard() {
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
-                  // Filter by exact incident type
-                  setSelectedFilter(type);
+                  // Clear filter if empty string, otherwise filter by exact incident type
+                  setSelectedFilter(type === '' ? null : type);
                 }} 
                 selectedType={selectedFilter}
               />
@@ -1115,14 +1160,82 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Incident Table */}
+        {/* Incident Table and Staff Deployment */}
         <div className="pb-24">
           <IncidentTable 
             key={refreshKey}
             filter={typeof selectedFilter === 'string' ? selectedFilter : undefined} 
             onDataLoaded={setIncidents}
             onToast={addToast}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            currentUser={user}
+            currentEventId={currentEventId || undefined}
           />
+          
+          {/* Staff Deployment Card - Only show when view mode is 'staff' */}
+          {currentEventId && viewMode === 'staff' && (
+            <div className="mt-8 space-y-6">
+              {/* Staff Deployment Overview */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-700 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="h-6 w-6 rounded-lg bg-blue-500 flex items-center justify-center">
+                      <span className="text-white text-sm">👥</span>
+                    </span>
+                    Staff Deployment Overview
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{staffStats.totalStaff}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">Total Staff</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{staffStats.availableStaff}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">Available</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">{staffStats.assignedStaff}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">Assigned</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{urgentIncidentsCount}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">Urgent Needs</div>
+                  </div>
+                </div>
+                {urgentIncidentsCount > 0 && (
+                  <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-600">⚠️</span>
+                      <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                        {urgentIncidentsCount} high-priority incident{urgentIncidentsCount !== 1 ? 's' : ''} require{urgentIncidentsCount === 1 ? 's' : ''} immediate staff assignment
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Detailed Staff Deployment Card */}
+              <StaffDeploymentCard 
+                eventId={currentEventId}
+                onAssignStaff={(incidentId, staffIds) => {
+                  // Handle staff assignment - could open incident details or show notification
+                  console.log('Staff assigned:', { incidentId, staffIds });
+                  addToast({
+                    type: 'success',
+                    title: 'Staff Assignment',
+                    message: `Assigned ${staffIds.length} staff member(s) to incident`
+                  });
+                }}
+                onViewIncident={(incidentId) => {
+                  // Handle viewing incident - could open incident details modal
+                  console.log('View incident:', incidentId);
+                  // Could implement incident details modal here
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -8,6 +8,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePresence } from '@/hooks/usePresence'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
+import { autoAssignIncident, getRequiredSkillsForIncidentType } from '../lib/incidentAssignment'
+import { calculateEscalationTime } from '../lib/escalationEngine'
+import IncidentDependencySelector from './IncidentDependencySelector'
+import { useToast } from './Toast'
+import EscalationTimer from './EscalationTimer'
 
 interface Props {
   isOpen: boolean
@@ -27,6 +32,9 @@ interface IncidentFormData {
   status: string
   log_number: string
   what3words: string
+  priority: string
+  dependencies: string[]
+  auto_assign: boolean
 }
 
 interface RefusalDetails {
@@ -1828,7 +1836,8 @@ export default function IncidentCreationModal({
   initialIncidentType,
 }: Props) {
   if (!isOpen) return null;
-  // All hooks and logic come after this line
+  
+  const { addToast } = useToast();
 
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
@@ -1839,7 +1848,10 @@ export default function IncidentCreationModal({
     is_closed: false,
     status: 'open',
     log_number: '',
-    what3words: '///'
+    what3words: '///',
+    priority: 'medium',
+    dependencies: [],
+    auto_assign: true
   });
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
@@ -1879,6 +1891,147 @@ export default function IncidentCreationModal({
   const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
+  const [assignmentFeedback, setAssignmentFeedback] = useState<{
+    status: 'idle' | 'processing' | 'success' | 'error';
+    message: string;
+    details?: any;
+  }>({ status: 'idle', message: '' });
+
+  // AssignmentReasoningDisplay component
+  const AssignmentReasoningDisplay = ({ details }: { details: any }) => {
+    if (!details) return null;
+
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+        <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <span className="h-5 w-5 rounded-lg bg-blue-500 flex items-center justify-center">
+            <span className="text-white text-xs">🎯</span>
+          </span>
+          Auto-Assignment Details
+        </h5>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Staff Assigned:</span>
+            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+              {details.assignedStaff.length} member(s)
+            </span>
+          </div>
+          {details.assignmentNotes && (
+            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+              <p className="text-sm text-gray-700 dark:text-gray-200">{details.assignmentNotes}</p>
+            </div>
+          )}
+          {details.reasoning && details.reasoning.length > 0 && (
+            <div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 block mb-2">Assignment Reasoning:</span>
+              <div className="space-y-1">
+                {details.reasoning.map((reason: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{reason}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Skill Match</span>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  {Math.round(details.skillMatch * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${details.skillMatch * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Availability</span>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  {Math.round(details.availability * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${details.availability * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Workload</span>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  {Math.round(details.workload * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${details.workload * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Distance</span>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  {Math.round(details.distance * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${details.distance * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // performAutoAssignment function
+  const performAutoAssignment = async (incidentId: string, eventId: string) => {
+    setAssignmentFeedback({ status: 'processing', message: 'Processing auto-assignment...' });
+    
+    try {
+      const assignment = await autoAssignIncident(
+        incidentId, 
+        eventId, 
+        formData.incident_type, 
+        formData.priority
+      );
+      
+      if (assignment) {
+        setAssignmentFeedback({
+          status: 'success',
+          message: `Successfully assigned ${assignment.assignedStaff.length} staff member(s)`,
+          details: assignment
+        });
+        return assignment;
+      } else {
+        setAssignmentFeedback({
+          status: 'error',
+          message: 'No suitable staff found for auto-assignment'
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error('Auto-assignment error:', error);
+      setAssignmentFeedback({
+        status: 'error',
+        message: 'Auto-assignment failed. Please try manual assignment.'
+      });
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (initialIncidentType) {
@@ -2344,6 +2497,105 @@ export default function IncidentCreationModal({
 
       console.log('Successfully created incident:', insertedIncident);
 
+      // Handle auto-assignment and escalation if enabled
+      if (formData.auto_assign && insertedIncident) {
+        const assignment = await performAutoAssignment(insertedIncident.id, selectedEvent.id);
+
+        if (assignment) {
+          // Update incident with assigned staff
+          const { error: updateError } = await supabase
+            .from('incident_logs')
+            .update({
+              assigned_staff_ids: assignment.assignedStaff,
+              auto_assigned: true,
+              assignment_notes: assignment.assignmentNotes
+            })
+            .eq('id', insertedIncident.id);
+
+          if (updateError) {
+            console.error('Error updating incident with assignment:', updateError);
+            setAssignmentFeedback({
+              status: 'error',
+              message: 'Incident created but auto-assignment failed to save'
+            });
+          } else {
+            // Display assignment results to users
+            addToast({
+              type: 'success',
+              title: 'Auto-Assignment Complete',
+              message: `Successfully assigned ${assignment.assignedStaff.length} staff member(s) to incident ${logNumber}`
+            });
+          }
+        } else {
+          // Display feedback when no suitable staff found
+          addToast({
+            type: 'warning',
+            title: 'Auto-Assignment Unavailable',
+            message: 'No suitable staff available for auto-assignment. Please assign manually.'
+          });
+        }
+      }
+
+      // Get required skills for incident type and display in assignment feedback
+      if (insertedIncident && formData.incident_type) {
+        try {
+          const requiredSkills = await getRequiredSkillsForIncidentType(formData.incident_type);
+          if (requiredSkills.length > 0) {
+            console.log('Required skills for incident type:', requiredSkills);
+            // Update assignment feedback with skill requirements
+            if (assignmentFeedback.status === 'success' && assignmentFeedback.details) {
+              setAssignmentFeedback(prev => ({
+                ...prev,
+                details: {
+                  ...prev.details,
+                  requiredSkills
+                }
+              }));
+            }
+          }
+        } catch (error) {
+          console.error('Error getting required skills:', error);
+        }
+      }
+
+      // Calculate escalation time if priority is set
+      if (formData.priority && insertedIncident) {
+        try {
+          const escalationTime = await calculateEscalationTime(
+            formData.incident_type,
+            formData.priority
+          );
+
+          if (escalationTime) {
+            // Update incident with escalation time
+            await supabase
+              .from('incident_logs')
+              .update({
+                escalate_at: escalationTime.toISOString()
+              })
+              .eq('id', insertedIncident.id);
+          }
+        } catch (escalationError) {
+          console.error('Error calculating escalation time:', escalationError);
+          // Don't fail the incident creation if escalation calculation fails
+        }
+      }
+
+      // Update incident with dependencies if any
+      if (formData.dependencies.length > 0 && insertedIncident) {
+        try {
+          await supabase
+            .from('incident_logs')
+            .update({
+              dependencies: formData.dependencies
+            })
+            .eq('id', insertedIncident.id);
+        } catch (dependencyError) {
+          console.error('Error setting dependencies:', dependencyError);
+          // Don't fail the incident creation if dependency setting fails
+        }
+      }
+
       // Clear form and close modal
       setFormData({
         callsign_from: '',
@@ -2355,7 +2607,10 @@ export default function IncidentCreationModal({
         status: 'open',
         ai_input: '',
         log_number: '',
-        what3words: '///'
+        what3words: '///',
+        priority: 'medium',
+        dependencies: [],
+        auto_assign: true
       });
 
       setRefusalDetails({
@@ -2510,7 +2765,10 @@ export default function IncidentCreationModal({
       is_closed: false,
       status: 'open',
       log_number: '',
-      what3words: '///'
+      what3words: '///',
+      priority: 'medium',
+      dependencies: [],
+      auto_assign: true
     });
     setRefusalDetails({
       policeRequired: false,
@@ -2544,6 +2802,7 @@ export default function IncidentCreationModal({
     setIsEditing({ occurrence: false, action_taken: false });
     setW3wManuallyEdited(false);
     setShowMoreTypes(false);
+    setAssignmentFeedback({ status: 'idle', message: '' });
   };
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
@@ -2815,6 +3074,119 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
             </div>
 
+            {/* Priority, Dependencies, and Auto-Assignment Section */}
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-700">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span className="h-6 w-6 rounded-lg bg-indigo-500 flex items-center justify-center">
+                  <span className="text-white text-sm">⚙️</span>
+                </span>
+                Incident Configuration
+              </h4>
+              <div className="space-y-4">
+                {/* Priority Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Priority Level</label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+
+
+
+                {/* Assignment Feedback Display */}
+                {assignmentFeedback.status !== 'idle' && (
+                  <div className="mt-4">
+                    {assignmentFeedback.status === 'processing' && (
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <span className="text-sm text-blue-700 dark:text-blue-300">{assignmentFeedback.message}</span>
+                      </div>
+                    )}
+                    {assignmentFeedback.status === 'success' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                          <span className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </span>
+                          <span className="text-sm text-green-700 dark:text-green-300">{assignmentFeedback.message}</span>
+                        </div>
+                        {assignmentFeedback.details && (
+                          <AssignmentReasoningDisplay details={assignmentFeedback.details} />
+                        )}
+                      </div>
+                    )}
+                    {assignmentFeedback.status === 'error' && (
+                      <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
+                        <span className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
+                          <span className="text-white text-xs">✕</span>
+                        </span>
+                        <span className="text-sm text-red-700 dark:text-red-300">{assignmentFeedback.message}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dependencies Selector */}
+                {selectedEventId && (
+                  <div className="mb-4">
+                    <IncidentDependencySelector
+                      eventId={selectedEventId}
+                      selectedDependencies={formData.dependencies}
+                      onDependenciesChange={(dependencies) => setFormData({ ...formData, dependencies })}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+
+                {/* Escalation Timer Preview */}
+                {formData.priority && formData.incident_type && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Escalation Timer Preview</label>
+                    <div className="bg-white dark:bg-[#182447] rounded-lg p-4 border border-gray-200 dark:border-[#2d437a]">
+                      <EscalationTimer
+                        incidentId="preview"
+                        escalationLevel={0}
+                        escalateAt={null}
+                        escalated={false}
+                        incidentType={formData.incident_type}
+                        priority={formData.priority}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Auto-Assignment Configuration */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="auto_assign"
+                      checked={formData.auto_assign}
+                      onChange={(e) => setFormData({ ...formData, auto_assign: e.target.checked })}
+                      className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2 transition-all duration-200"
+                    />
+                    <label htmlFor="auto_assign" className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Auto-assign staff based on skills and availability
+                    </label>
+                  </div>
+                  
+                  {formData.auto_assign && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#1a2a57] p-3 rounded-lg">
+                      Staff will be automatically assigned based on incident type requirements, current availability, and skill matching.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Detailed Incident Information */}
             <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-700">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -2895,7 +3267,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span className="h-6 w-6 rounded-lg bg-slate-500 flex items-center justify-center">
-                  <span className="text-white text-sm">⚙️</span>
+                  <span className="text-white text-sm">📎</span>
                 </span>
                 Additional Options
               </h4>

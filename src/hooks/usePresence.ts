@@ -202,3 +202,4 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
     isConnected
   };
 };
+

@@ -202,3 +202,4 @@ export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
     </motion.div>
   );
 };
+

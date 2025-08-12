@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon } from '@heroicons/react/24/outline'
+import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
 
@@ -95,8 +95,8 @@ export default function IncidentTable({
   filter?: string; 
   onDataLoaded?: (data: Incident[]) => void; 
   onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
-  viewMode?: 'table' | 'board';
-  onViewModeChange?: (mode: 'table' | 'board') => void;
+  viewMode?: 'table' | 'board' | 'staff';
+  onViewModeChange?: (mode: 'table' | 'board' | 'staff') => void;
   currentUser?: any;
   currentEventId?: string;
 }) {
@@ -679,6 +679,14 @@ export default function IncidentTable({
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
               </button>
+              <button
+                onClick={() => onViewModeChange('staff')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  viewMode === 'staff' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <UserGroupIcon className="h-4 w-4" /> Staff
+              </button>
             </div>
           )}
           
@@ -708,8 +716,16 @@ export default function IncidentTable({
         )}
       </div>
 
-      {/* Conditional Rendering for Table/Board Views */}
-      {viewMode === 'table' ? (
+      {/* Conditional Rendering for Table/Board/Staff Views */}
+      {viewMode === 'staff' ? (
+        // Staff view - show staff deployment card
+        <div className="mt-6">
+          <div className="text-center text-gray-500 dark:text-gray-400">
+            <p>Staff deployment view is now handled by the Dashboard component.</p>
+            <p>Please use the "Staff" toggle button above to view staff deployment information.</p>
+          </div>
+        </div>
+      ) : viewMode === 'table' ? (
         <>
           {/* Enhanced Empty State */}
           {sortedIncidents.length === 0 ? (

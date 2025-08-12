@@ -16,6 +16,14 @@ import 'chartjs-adapter-date-fns';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { supabase } from '../lib/supabase';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { 
+  XMarkIcon, 
+  UsersIcon, 
+  ChartBarIcon, 
+  ClockIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon
+} from '@heroicons/react/24/outline';
 
 ChartJS.register(
   CategoryScale,
@@ -39,6 +47,8 @@ interface EventRecord {
   main_act_start_time: string;
   event_date: string;
   expected_attendance?: number;
+  event_name?: string;
+  venue_name?: string;
 }
 
 interface AttendanceModalProps {
@@ -81,22 +91,15 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
           x: new Date(rec.timestamp).getTime(),
           y: rec.count,
         })),
-        fill: false,
-        borderColor: '#2A3990',
-        backgroundColor: '#2A3990',
-        tension: 0.2,
-      },
-      {
-        label: `Doors Open: ${eventDetails?.doors_open_time || 'N/A'}`,
-        data: [],
-        borderColor: 'green',
-        backgroundColor: 'green',
-      },
-      {
-        label: `Main Act: ${eventDetails?.main_act_start_time || 'N/A'}`,
-        data: [],
-        borderColor: 'red',
-        backgroundColor: 'red',
+        fill: true,
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        pointBackgroundColor: '#3B82F6',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
     ],
   };
@@ -124,21 +127,88 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top' as const },
-      tooltip: { enabled: true, mode: 'index' as const, intersect: false },
-      title: { display: true, text: 'Attendance Over Time' },
-      annotation: { annotations },
+      legend: { 
+        display: false 
+      },
+      tooltip: { 
+        enabled: true, 
+        mode: 'index' as const, 
+        intersect: false,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: 'white',
+        bodyColor: 'white',
+        borderColor: '#3B82F6',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: false,
+        callbacks: {
+          title: (context: any) => {
+            return new Date(context[0].parsed.x).toLocaleTimeString('en-GB', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            });
+          },
+          label: (context: any) => {
+            return `Attendance: ${context.parsed.y.toLocaleString()}`;
+          }
+        }
+      },
+      title: { 
+        display: false 
+      },
+      annotation: { 
+        annotations 
+      },
     },
     scales: {
       x: {
         type: 'time' as const,
-        time: { unit: 'minute' as const, tooltipFormat: 'HH:mm', displayFormats: { minute: 'HH:mm' } },
-        title: { display: true, text: 'Time' },
+        time: { 
+          unit: 'minute' as const, 
+          tooltipFormat: 'HH:mm', 
+          displayFormats: { minute: 'HH:mm' } 
+        },
+        title: { 
+          display: true, 
+          text: 'Time',
+          color: '#6B7280'
+        },
+        grid: {
+          color: 'rgba(107, 114, 128, 0.1)',
+          drawBorder: false,
+        },
+        ticks: {
+          color: '#6B7280',
+          font: {
+            size: 11
+          }
+        }
       },
       y: {
-        title: { display: true, text: 'Attendance' },
+        title: { 
+          display: true, 
+          text: 'Attendance',
+          color: '#6B7280'
+        },
         beginAtZero: true,
+        grid: {
+          color: 'rgba(107, 114, 128, 0.1)',
+          drawBorder: false,
+        },
+        ticks: {
+          color: '#6B7280',
+          font: {
+            size: 11
+          },
+          callback: (value: any) => {
+            return value.toLocaleString();
+          }
+        }
       },
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
     },
   };
 
@@ -193,8 +263,9 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
+        
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
             <Transition.Child
@@ -206,113 +277,193 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-auto p-6">
-                <button
-                  onClick={onClose}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Attendance Timeline */}
-                  <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
-                    <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Timeline</h2>
-                    <div className="flex-grow relative min-h-[220px]">
-                      {loading ? (
-                        <div className="text-center text-gray-500 py-10">Loading...</div>
-                      ) : attendanceData.length > 0 ? (
-                        <Line data={attendanceChartData} options={attendanceChartOptions} />
-                      ) : (
-                        <p className="text-center text-gray-500 py-10">No attendance data to display.</p>
-                      )}
+              <Dialog.Panel className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl mx-auto overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <UsersIcon className="h-6 w-6" />
+                      <div>
+                        <Dialog.Title className="text-xl font-bold">
+                          Venue Occupancy Dashboard
+                        </Dialog.Title>
+                        {eventDetails && (
+                          <p className="text-blue-100 text-sm">
+                            {eventDetails.event_name} • {eventDetails.venue_name}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      onClick={onClose}
+                      className="rounded-full p-2 hover:bg-white/10 transition-colors"
+                      aria-label="Close"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
                   </div>
-                  {/* Attendance Log */}
-                  <div className="bg-white rounded-xl shadow p-6 min-h-[340px] flex flex-col hover:shadow-lg transition-shadow duration-300">
-                    <h2 className="font-bold text-2xl mb-4 text-gray-900">Attendance Log</h2>
-                    <div className="flex-grow overflow-y-auto">
-                      {loading ? (
-                        <div className="text-center text-gray-500 py-10">Loading...</div>
-                      ) : attendanceData.length > 0 ? (
-                        <table className="w-full">
-                          <thead className="sticky top-0 bg-white z-10">
-                            <tr>
-                              <th className="font-semibold text-left text-gray-500 p-2">Time</th>
-                              <th className="font-semibold text-right text-gray-500 p-2">Count</th>
-                              <th className="font-semibold text-right text-gray-500 p-2">Change</th>
-                              <th className="font-semibold text-left text-gray-500 p-2 w-28"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {attendanceData.slice(-5).reverse().map((rec, index, arr) => {
-                              const prevRec = arr[index + 1];
-                              const change = prevRec ? rec.count - prevRec.count : null;
-                              const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
-                              return (
-                                <tr key={index} className="hover:bg-gray-50">
-                                  <td className="p-2 text-base">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-                                  <td className="p-2 text-right font-mono text-base">{rec.count.toLocaleString()}</td>
-                                  <td className="p-2 text-right font-mono text-base">
-                                    {change !== null ? (
-                                      <span className={`flex items-center justify-end ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {change > 0 ? <FaArrowUp className="mr-1 h-2.5 w-2.5" /> : <FaArrowDown className="mr-1 h-2.5 w-2.5" />}
-                                        {Math.abs(change).toLocaleString()}
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-2 align-middle">
-                                    <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
-                                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <p className="text-center text-gray-500 py-10">No attendance data to display.</p>
-                      )}
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
+                  ) : attendanceData.length === 0 ? (
+                    <div className="text-center py-20">
+                      <UsersIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Attendance Data</h3>
+                      <p className="text-gray-500 dark:text-gray-400">Attendance records will appear here once they are logged.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Stats Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Current</p>
+                              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                                {currentAttendance.toLocaleString()}
+                              </p>
+                            </div>
+                            <UsersIcon className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-green-600 dark:text-green-400">Peak</p>
+                              <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                                {peakAttendance.toLocaleString()}
+                              </p>
+                            </div>
+                            <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200 dark:border-purple-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Average</p>
+                              <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                {averageAttendance.toLocaleString()}
+                              </p>
+                            </div>
+                            <ChartBarIcon className="h-8 w-8 text-purple-500" />
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Median</p>
+                              <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                                {medianAttendance.toLocaleString()}
+                              </p>
+                            </div>
+                            <ClockIcon className="h-8 w-8 text-orange-500" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar for Expected Attendance */}
                       {eventDetails?.expected_attendance && (
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-1">
-                            <h3 className="font-semibold text-gray-700">Attendance Progress</h3>
-                            <span className="font-bold text-gray-900">{Math.round(attendancePercentage)}%</span>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Attendance Progress</h3>
+                            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              {Math.round(attendancePercentage)}%
+                            </span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
-                            <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2">
+                            <div 
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                              style={{ width: `${Math.min(attendancePercentage, 100)}%` }}
+                            />
                           </div>
-                          <p className="text-right text-xs text-gray-500 mt-1">
-                            {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                            {currentAttendance.toLocaleString()} of {expectedAttendance.toLocaleString()} expected attendees
                           </p>
                         </div>
                       )}
-                      <h3 className="font-semibold mb-2 text-gray-700">Quick Stats</h3>
-                      <div className="grid grid-cols-4 gap-4 text-center">
-                        <div>
-                          <p className="text-gray-500">Peak</p>
-                          <p className="font-bold text-lg">{peakAttendance.toLocaleString()}</p>
+
+                      {/* Chart and Table Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Attendance Timeline Chart */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                              <ChartBarIcon className="h-5 w-5 mr-2 text-blue-500" />
+                              Attendance Timeline
+                            </h3>
+                          </div>
+                          <div className="p-6">
+                            <div className="h-80">
+                              <Line data={attendanceChartData} options={attendanceChartOptions} />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-gray-500">Average</p>
-                          <p className="font-bold text-lg">{averageAttendance.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Median</p>
-                          <p className="font-bold text-lg">{medianAttendance.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Peak Time</p>
-                          <p className="font-bold text-lg">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+
+                        {/* Recent Attendance Log */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                              <ClockIcon className="h-5 w-5 mr-2 text-green-500" />
+                              Recent Activity
+                            </h3>
+                          </div>
+                          <div className="p-6">
+                            <div className="space-y-3 max-h-80 overflow-y-auto">
+                              {attendanceData.slice(-8).reverse().map((rec, index, arr) => {
+                                const prevRec = arr[index + 1];
+                                const change = prevRec ? rec.count - prevRec.count : null;
+                                const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
+                                return (
+                                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="text-center">
+                                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                          {new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          {new Date(rec.timestamp).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                          {rec.count.toLocaleString()}
+                                        </div>
+                                        {change !== null && (
+                                          <div className={`text-xs font-medium flex items-center ${change > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {change > 0 ? <FaArrowUp className="mr-1 h-2 w-2" /> : <FaArrowDown className="mr-1 h-2 w-2" />}
+                                            {Math.abs(change).toLocaleString()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                        <div 
+                                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                                          style={{ width: `${loadWidth}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-right">
+                                        {Math.round(loadWidth)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </Dialog.Panel>
             </Transition.Child>

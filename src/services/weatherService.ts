@@ -14,7 +14,8 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
   try {
     const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
     if (!response.ok) {
-      throw new Error('Failed to fetch weather data');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch weather data');
     }
     const data = await response.json();
     console.log('Current weather API response:', data); // Debug log
