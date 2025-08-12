@@ -437,8 +437,8 @@ export default function AuditLogsPage() {
                       <div className="flex items-center gap-2 mb-2">
                         {getCategoryIcon(log.category ?? 'system')}
                         <h3 className="font-semibold text-gray-900 dark:text-white">{log.action}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(log.severity)}`}>
-                          {log.severity}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(log.severity || 'low')}`}>
+                          {log.severity || 'low'}
                         </span>
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
                           {(log.category ?? 'system')}
