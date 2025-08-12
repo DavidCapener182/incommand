@@ -4,7 +4,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 // Shared schemas (top-level so helpers can use them)
-export const dashboardLayoutSchema = z.object({
+const dashboardLayoutSchema = z.object({
   widgets: z.record(z.object({
     position: z.object({ x: z.number().int(), y: z.number().int() }),
     size: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
@@ -15,7 +15,7 @@ export const dashboardLayoutSchema = z.object({
   last_modified: z.string().datetime()
 })
 
-export const notificationPreferencesSchema = z.object({
+const notificationPreferencesSchema = z.object({
   email: z.object({
     enabled: z.boolean(),
     frequency: z.enum(['immediate','hourly','daily','weekly']),
@@ -50,7 +50,7 @@ export const notificationPreferencesSchema = z.object({
   })
 })
 
-export const uiPreferencesSchema = z.object({
+const uiPreferencesSchema = z.object({
   language: z.string(),
   timezone: z.string(),
   date_format: z.string(),
@@ -62,7 +62,7 @@ export const uiPreferencesSchema = z.object({
   color_scheme: z.enum(['default','high_contrast','colorblind_friendly'])
 })
 
-export const accessibilitySettingsSchema = z.object({
+const accessibilitySettingsSchema = z.object({
   font_size: z.enum(['small','medium','large','extra_large']),
   line_spacing: z.enum(['tight','normal','loose']),
   contrast_ratio: z.enum(['normal','high','maximum']),
@@ -72,7 +72,7 @@ export const accessibilitySettingsSchema = z.object({
   focus_indicators: z.boolean(),
 })
 
-export const privacySettingsSchema = z.object({
+const privacySettingsSchema = z.object({
   data_sharing: z.object({
     analytics: z.boolean(),
     crash_reports: z.boolean(),
@@ -89,7 +89,7 @@ export const privacySettingsSchema = z.object({
   }),
 })
 
-export const preferencesSchema = z.object({
+const preferencesSchema = z.object({
   theme: z.enum(['light','dark','auto']).optional(),
   dashboard_layout: dashboardLayoutSchema.optional(),
   notification_preferences: notificationPreferencesSchema.optional(),
@@ -98,7 +98,7 @@ export const preferencesSchema = z.object({
   privacy_settings: privacySettingsSchema.optional(),
 }).strict()
 
-export const scheduledNotificationSchema = z.object({
+const scheduledNotificationSchema = z.object({
   template_id: z.string().uuid().optional(),
   schedule_type: z.enum(['one_time','recurring','conditional']),
   cron_expression: z.string().max(200).optional(),
