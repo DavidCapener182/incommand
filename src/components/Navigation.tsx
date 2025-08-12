@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
+import { ROLES } from '../types/auth'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
 import ProfileCard from './ProfileCard'
@@ -65,7 +66,7 @@ function useTheme() {
 
 export default function Navigation() {
   const pathname = usePathname() || '';
-  const { signOut, user } = useAuth()
+  const { signOut, user, role } = useAuth()
   const [reportsOpen, setReportsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNoEventModal, setShowNoEventModal] = useState(false);
@@ -312,10 +313,12 @@ export default function Navigation() {
                 <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                   Settings
                 </Link>
-                {/* Temporary Admin Button */}
-                <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Admin
-                </Link>
+                {/* Admin Button - only show for admin users */}
+                {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+                  <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
+                    Admin
+                  </Link>
+                )}
                 {/* Theme Toggle Button */}
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -444,7 +447,9 @@ export default function Navigation() {
           </button>
           <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
           <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>
-          <Link href="/admin" className={`${isActive('/admin')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Admin</Link>
+          {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+            <Link href="/admin" className={`${isActive('/admin')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Admin</Link>
+          )}
           
           {/* AI Assistant for Mobile */}
           <button

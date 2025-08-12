@@ -231,7 +231,7 @@ export interface DataAccessLevel {
 }
 
 // Widget visibility interfaces
-export interface WidgetVisibilityState {
+export type WidgetVisibilityState = {
   [key in WidgetType]: boolean;
 }
 

@@ -377,7 +377,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
           </button>
         )}
       </div>
-              <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <DragDropContext onDragEnd={handleDragEnd}>
           <div className={`grid gap-4 flex-1 ${showStaffPanel ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`} style={{ minHeight: '400px' }}>
             {/* Staff Panel */}
             {showStaffPanel && (
@@ -440,14 +440,10 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                           index={index}
                         >
                           {(provided, snapshot) => (
-                            <motion.div
+                            <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -20 }}
-                              transition={{ duration: 0.2 }}
                               className={`mb-3 ${
                                 snapshot.isDragging ? 'rotate-2 shadow-xl' : ''
                               }`}
@@ -546,7 +542,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                 </div>
 
                                 {/* Assignment and Escalation Info */}
-                                {(incident.assigned_staff_ids?.length > 0 || incident.escalate_at) && (
+                                {((incident.assigned_staff_ids && incident.assigned_staff_ids.length > 0) || incident.escalate_at) && (
                                   <div className="mt-2 pt-2 border-t border-gray-100">
                                     {/* Staff Assignment */}
                                     {incident.assigned_staff_ids && incident.assigned_staff_ids.length > 0 && (
@@ -634,7 +630,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                   </div>
                                 </div>
                               </div>
-                            </motion.div>
+                            </div>
                           )}
                         </Draggable>
                       ))}

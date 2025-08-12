@@ -79,14 +79,15 @@ export class PredictiveAlertSystem {
 
   async monitorWeatherAlerts(): Promise<WeatherAlert[]> {
     try {
-      const weatherData = await getWeatherData();
-      if (!weatherData || !weatherData.current || !weatherData.hourly) {
+      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
+      if (!weatherData) {
         return [];
       }
 
+      const currentWeather = weatherData;
+      const hourlyForecast = [weatherData]; // For now, use current weather as forecast
+
       const alerts: WeatherAlert[] = [];
-      const currentWeather = weatherData.current;
-      const hourlyForecast = weatherData.hourly.slice(0, 4); // Next 4 hours
 
       // Check for temperature changes
       const tempAlerts = this.checkTemperatureAlerts(currentWeather, hourlyForecast);

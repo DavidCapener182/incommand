@@ -115,7 +115,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
       setIsOpen(false);
     } catch (error) {
       console.error('Export failed:', error);
-      alert(`Export failed: ${error.message}`);
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);
       setExportProgress(0);

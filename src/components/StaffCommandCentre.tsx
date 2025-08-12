@@ -579,7 +579,7 @@ export default function StaffCommandCentre() {
         .eq("event_id", eventId)
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = [...new Set(data.map((r) => r.assigned_name))];
+        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
         setAllPreviousNames(names);
         // Group by first letter for better organization
         const grouped: Record<string, string[]> = {};
@@ -602,7 +602,7 @@ export default function StaffCommandCentre() {
         .select("assigned_name")
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = [...new Set(data.map((r) => r.assigned_name))];
+        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
         setAllPreviousNames(names);
       }
     };

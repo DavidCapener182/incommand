@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { useAuth } from '@/contexts/AuthContext'
+import { useIsAdmin } from '@/hooks/useRole'
 import { 
   XMarkIcon, 
   ClockIcon, 
@@ -55,6 +57,8 @@ interface Incident {
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
+  const { role } = useAuth()
+  const isAdmin = useIsAdmin()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])
   const [newUpdate, setNewUpdate] = useState('')
@@ -68,7 +72,6 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [showFullImage, setShowFullImage] = useState(false)
-  const [role, setRole] = useState<string | null>(null)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -165,21 +168,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     }
   };
 
-  const fetchRole = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: staffData } = await supabase
-          .from('staff')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        setRole(staffData?.role || null);
-      }
-    } catch (error) {
-      console.error('Error fetching role:', error);
-    }
-  };
+
 
   const fetchIncidentDetails = async () => {
     if (!incidentId) return;
@@ -214,7 +203,6 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       // Fetch additional data
       await Promise.all([
         fetchAssignments(),
-        fetchRole(),
         getSignedUrl()
       ]);
 
@@ -697,7 +685,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                 )}
 
                 {/* Photo Attachment */}
-                {incident && incident.photo_url && photoUrl && ['admin','supervisor','manager'].includes((role||'').toLowerCase()) && (
+                {incident && incident.photo_url && photoUrl && isAdmin && (
                   <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                       <PhotoIcon className="h-5 w-5 mr-2 text-blue-600" />

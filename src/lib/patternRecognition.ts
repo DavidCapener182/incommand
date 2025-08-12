@@ -74,7 +74,7 @@ export class PatternRecognitionEngine {
             const crowdGroups = this.groupIncidentsByCrowdDensity(weatherIncidents);
             
             for (const [density, densityIncidents] of Object.entries(crowdGroups)) {
-              const incidentTypes = [...new Set(densityIncidents.map(i => i.incident_type))];
+              const incidentTypes = Array.from(new Set(densityIncidents.map(i => i.incident_type)));
               const riskLevel = this.calculateRiskLevel(densityIncidents.length, parseFloat(density));
               
               patterns.push({
@@ -103,8 +103,14 @@ export class PatternRecognitionEngine {
       const patterns = await this.analyzeIncidentPatterns();
       const riskFactors: RiskFactor[] = [];
 
-      // Weather risk factors
-      const weatherFactors = this.analyzeWeatherRiskFactors(patterns);
+      // Get weather-related risk factors
+      const weatherCorrelations = await this.analyzeWeatherCorrelations();
+      const weatherFactors = weatherCorrelations.map(wc => ({
+        factorType: 'weather' as const,
+        factorValue: wc.weatherCondition,
+        correlation: wc.incidentRate,
+        weight: wc.confidence
+      }));
       riskFactors.push(...weatherFactors);
 
       // Crowd density risk factors
@@ -162,7 +168,7 @@ export class PatternRecognitionEngine {
       const hotspots: LocationHotspot[] = [];
 
       for (const [location, locationIncidents] of Object.entries(locationGroups)) {
-        const incidentTypes = [...new Set(locationIncidents.map(i => i.incident_type))];
+        const incidentTypes = Array.from(new Set(locationIncidents.map(i => i.incident_type)));
         const riskScore = this.calculateLocationRiskScore(locationIncidents);
         const lastIncident = new Date(Math.max(...locationIncidents.map(i => new Date(i.created_at).getTime())));
 
@@ -196,7 +202,7 @@ export class PatternRecognitionEngine {
         const incidentRate = totalIncidents / totalPatterns;
 
         const allIncidentTypes = weatherPatterns.flatMap(p => p.incidentTypes);
-        const affectedTypes = [...new Set(allIncidentTypes)];
+        const affectedTypes = Array.from(new Set(allIncidentTypes));
 
         const confidence = this.calculateWeatherConfidence(weatherPatterns);
 

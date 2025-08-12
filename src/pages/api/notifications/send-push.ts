@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.log('Removed invalid subscription:', subscription.id);
           }
 
-          return { success: false, subscriptionId: subscription.id, error: error.message };
+          return { success: false, subscriptionId: subscription.id, error: error instanceof Error ? error.message : 'Unknown error' };
         }
       })
     );

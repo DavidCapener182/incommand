@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useRole } from "@/hooks/useRole";
+import { ROLES } from "@/types/auth";
 
 function getInitials(nameOrEmail: string) {
   if (!nameOrEmail) return '?';
@@ -25,6 +27,7 @@ function getInitials(nameOrEmail: string) {
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const role = useRole();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,10 +175,10 @@ export default function ProfilePage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-blue-200">Role</label>
                 <div className="mt-1">
-                  {profile?.role
-                    ? profile.role.toLowerCase() === 'admin'
+                  {role
+                    ? role.toLowerCase() === 'admin'
                       ? 'Admin'
-                      : profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+                      : role.charAt(0).toUpperCase() + role.slice(1)
                     : '-'}
                 </div>
               </div>

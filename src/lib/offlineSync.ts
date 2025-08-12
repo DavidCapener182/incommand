@@ -1,4 +1,4 @@
-import Dexie, { Table } from 'dexie';
+import Dexie from 'dexie';
 import { supabase } from './supabase';
 
 export interface OfflineOperation {
@@ -21,8 +21,8 @@ export interface SyncProgress {
 }
 
 class OfflineDatabase extends Dexie {
-  offlineQueue!: Table<OfflineOperation>;
-  offlinePhotos!: Table<{ id: string; file: File; metadata: any }>;
+  offlineQueue!: Dexie.Table<OfflineOperation, number>;
+  offlinePhotos!: Dexie.Table<{ id: string; file: File; metadata: any }, string>;
 
   constructor() {
     super('incommand-offline');
@@ -59,7 +59,7 @@ class OfflineSyncManager {
   }
 
   // Queue an operation for offline sync
-  async queueOperation(operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<number> {
+  async queueOperation(operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount' | 'status'>): Promise<number> {
     const offlineOperation: OfflineOperation = {
       ...operation,
       timestamp: Date.now(),
@@ -231,11 +231,24 @@ class OfflineSyncManager {
 
     // Update incident with photo URL if needed
     if (metadata.incidentId) {
+      // First get the current photos array
+      const { data: incidentData, error: fetchError } = await supabase
+        .from('incident_logs')
+        .select('photos')
+        .eq('id', metadata.incidentId)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch incident photos: ${fetchError.message}`);
+      }
+
+      // Append the new photo URL
+      const currentPhotos = incidentData?.photos || [];
+      const updatedPhotos = [...currentPhotos, publicUrl];
+
       const { error: updateError } = await supabase
         .from('incident_logs')
-        .update({ 
-          photos: supabase.sql`array_append(photos, ${publicUrl})`
-        })
+        .update({ photos: updatedPhotos })
         .eq('id', metadata.incidentId);
 
       if (updateError) {
@@ -340,7 +353,7 @@ class OfflineSyncManager {
   private setupBackgroundSync(): void {
     if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
       navigator.serviceWorker.ready.then((registration) => {
-        registration.sync.register('offline-queue').catch((error) => {
+        (registration as any).sync.register('offline-queue').catch((error: any) => {
           console.error('Background sync registration failed:', error);
         });
       });

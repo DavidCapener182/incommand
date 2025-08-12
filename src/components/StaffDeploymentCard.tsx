@@ -298,7 +298,7 @@ export default function StaffDeploymentCard({
               <span className="text-lg">{getStatusIcon(staff.availability_status, staff.active_assignments)}</span>
               <div>
                 <div className="font-medium text-gray-900">
-                  {staff.name}
+                  {staff.full_name}
                   {/* Callsign would be available if we had that data */}
                 </div>
                 <div className="text-sm text-gray-500">
@@ -362,7 +362,7 @@ export default function StaffDeploymentCard({
                         onDrop={(e) => handleDrop(e, suggestion.incidentId || '')}
                       >
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium">{staff.name}</span>
+                          <span className="text-sm font-medium">{staff.full_name}</span>
                           <span className="text-xs text-gray-500">
                             Score: {(suggestionItem.score * 100).toFixed(0)}%
                           </span>

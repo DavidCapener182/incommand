@@ -106,11 +106,7 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
             setConnectionError(null); // Clear any previous errors on successful update
           }
         )
-        .on('error', (error) => {
-          console.warn('Staff efficiency subscription error (non-critical):', error);
-          // Don't treat subscription errors as critical - data can still be fetched
-          setConnectionError(null);
-        })
+
         .subscribe((status) => {
           console.log(`Staff subscription status: ${status}`);
           // Show as connected if subscription works, or if we can fetch data
@@ -245,9 +241,6 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
         }
       }
       clearInterval(interval);
-      if (cleanupTimeout) {
-        clearTimeout(cleanupTimeout);
-      }
     };
   }, [eventId, isConnected, isReconnecting, setupSubscription]);
 

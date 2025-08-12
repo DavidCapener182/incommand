@@ -148,7 +148,7 @@ export function calculatePlatformStats(posts: SocialPost[], sentiments: Sentimen
     return { count: 0, avgSentiment: 0 };
   }
 
-  const totalSentiment = sentiments.reduce((sum, sentiment) => sum + sentiment, 0);
+  const totalSentiment = sentiments.reduce((sum, sentiment) => sum + sentiment, 0 as number);
   const avgSentiment = totalSentiment / posts.length;
 
   return {
@@ -178,7 +178,7 @@ export function calculateCombinedStats(
   const negativePosts = allSentiments.filter(s => s === -1).length;
   const neutralPosts = allSentiments.filter(s => s === 0).length;
 
-  const totalSentiment = allSentiments.reduce((sum, sentiment) => sum + sentiment, 0);
+  const totalSentiment = allSentiments.reduce((sum, sentiment) => sum + sentiment, 0 as number);
   const avgSentiment = Math.round((totalSentiment / totalPosts) * 100) / 100;
 
   return {

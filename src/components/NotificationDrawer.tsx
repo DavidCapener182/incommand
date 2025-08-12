@@ -34,6 +34,13 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
   const [error, setError] = useState<string | null>(null);
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
   const [lastLogTimestamp, setLastLogTimestamp] = useState<string | null>(null);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<{
+    supported: boolean;
+    permission: 'default' | 'granted' | 'denied';
+    subscribed: boolean;
+  } | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   
 
@@ -71,6 +78,72 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
   const updateLastViewedTimestamp = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('lastViewedNotifications', new Date().toISOString());
+    }
+  };
+
+  // Push notification functions
+  const loadPushNotificationStatus = async () => {
+    setPushLoading(true);
+    setPushError(null);
+    try {
+      // Mock implementation - replace with actual push notification status check
+      setPushStatus({
+        supported: true,
+        permission: 'default',
+        subscribed: false
+      });
+    } catch (error) {
+      setPushError('Failed to load push notification status');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const requestPushPermission = async () => {
+    setPushLoading(true);
+    try {
+      // Mock implementation - replace with actual permission request
+      setPushStatus(prev => prev ? { ...prev, permission: 'granted' } : null);
+    } catch (error) {
+      setPushError('Failed to request permission');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const subscribeToPush = async () => {
+    setPushLoading(true);
+    try {
+      // Mock implementation - replace with actual subscription
+      setPushStatus(prev => prev ? { ...prev, subscribed: true } : null);
+    } catch (error) {
+      setPushError('Failed to subscribe');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const unsubscribeFromPush = async () => {
+    setPushLoading(true);
+    try {
+      // Mock implementation - replace with actual unsubscription
+      setPushStatus(prev => prev ? { ...prev, subscribed: false } : null);
+    } catch (error) {
+      setPushError('Failed to unsubscribe');
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const sendTestNotification = async () => {
+    setPushLoading(true);
+    try {
+      // Mock implementation - replace with actual test notification
+      console.log('Sending test notification...');
+    } catch (error) {
+      setPushError('Failed to send test notification');
+    } finally {
+      setPushLoading(false);
     }
   };
 

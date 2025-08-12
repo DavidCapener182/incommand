@@ -847,7 +847,6 @@ export function getRequiredSkillsForIncidentType(incidentType: string): string[]
     'Hostile Act': ['security', 'emergency', 'threat_assessment'],
     'Alcohol / Drug Related': ['security', 'conflict_resolution', 'investigation'],
     'Weapon Related': ['security', 'emergency', 'threat_assessment'],
-    'Sexual Misconduct': ['safeguarding', 'investigation', 'confidentiality'],
     'Theft': ['security', 'investigation', 'customer_service'],
     'Entry Breach': ['security', 'crowd_control', 'investigation'],
     'Noise Complaint': ['communications', 'customer_service', 'conflict_resolution'],
@@ -880,7 +879,8 @@ export function clearAssignmentCache(eventId?: string) {
     if (eventId) {
       staffCache.delete(eventId);
       // Clear all assignment scores for this event
-      for (const key of assignmentScoresCache.keys()) {
+      const keys = Array.from(assignmentScoresCache.keys());
+      for (const key of keys) {
         if (key.startsWith(eventId)) {
           assignmentScoresCache.delete(key);
         }

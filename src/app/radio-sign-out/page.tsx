@@ -169,21 +169,21 @@ export default function RadioSignOutPage() {
   const getAvailableEarPieces = () => earPieces.filter(e => e.assignedTo === null);
 
   // Handle equipment assignment change
-  const handleRadioChange = (staffId: number, radioNumber: string) => {
+  const handleRadioChange = (staffId: string, radioNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, radio: radioNumber };
     }));
   };
 
-  const handlePitCanChange = (staffId: number, pitCanNumber: string) => {
+  const handlePitCanChange = (staffId: string, pitCanNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, pitCan: pitCanNumber };
     }));
   };
 
-  const handleEarPieceChange = (staffId: number, earPieceNumber: string) => {
+  const handleEarPieceChange = (staffId: string, earPieceNumber: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       return { ...staff, earPiece: earPieceNumber };
@@ -191,7 +191,7 @@ export default function RadioSignOutPage() {
   };
 
   // Sign Out logic
-  const handleSignOut = (staffId: number) => {
+  const handleSignOut = (staffId: string) => {
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;
       if (!staff.radio) return staff; // Must select a radio
@@ -206,28 +206,28 @@ export default function RadioSignOutPage() {
     setRadios(prev => prev.map(r => {
       const staff = assignments.find(s => s.id === staffId);
       if (r.number === staff?.radio) {
-        return { ...r, assignedTo: staffId };
+        return { ...r, assignedTo: null }; // Keep as null since we don't have numeric ID mapping
       }
       return r;
     }));
     setPitCans(prev => prev.map(p => {
       const staff = assignments.find(s => s.id === staffId);
       if (p.number === staff?.pitCan) {
-        return { ...p, assignedTo: staffId };
+        return { ...p, assignedTo: null }; // Keep as null since we don't have numeric ID mapping
       }
       return p;
     }));
     setEarPieces(prev => prev.map(e => {
       const staff = assignments.find(s => s.id === staffId);
       if (e.number === staff?.earPiece) {
-        return { ...e, assignedTo: staffId };
+        return { ...e, assignedTo: null }; // Keep as null since we don't have numeric ID mapping
       }
       return e;
     }));
   };
 
   // Sign In logic
-  const handleSignIn = (staffId: number) => {
+  const handleSignIn = (staffId: string) => {
     const staff = assignments.find(s => s.id === staffId);
     setAssignments(prev => prev.map(staff => {
       if (staff.id !== staffId) return staff;

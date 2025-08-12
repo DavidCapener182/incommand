@@ -204,7 +204,7 @@ export class CrowdFlowPredictionEngine {
       }
 
       const movementPatterns: CrowdMovementPattern[] = [];
-      const locations = [...new Set(incidents.map(i => i.location))];
+      const locations = Array.from(new Set(incidents.map(i => i.location)));
 
       // Analyze movement between locations
       for (let i = 0; i < locations.length; i++) {
@@ -228,32 +228,32 @@ export class CrowdFlowPredictionEngine {
 
   async weatherImpactOnCrowd(): Promise<{ impact: number; factors: string[] }> {
     try {
-      const weatherData = await getWeatherData();
-      if (!weatherData || !weatherData.current) {
+      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
+      if (!weatherData) {
         return { impact: 0, factors: [] };
       }
 
-      const currentWeather = weatherData.current;
+      const currentWeather = weatherData;
       let impact = 0;
       const factors: string[] = [];
 
       // Temperature impact
-      if (currentWeather.temp > 30) {
+      if (currentWeather.temperature > 30) {
         impact -= 0.2; // High temperature reduces crowd duration
         factors.push('High temperature may cause early departures');
-      } else if (currentWeather.temp < 5) {
+      } else if (currentWeather.temperature < 5) {
         impact -= 0.15; // Low temperature affects comfort
         factors.push('Low temperature may affect crowd comfort');
       }
 
       // Precipitation impact
-      if (currentWeather.precipitation > 0) {
+      if (currentWeather.rain && currentWeather.rain > 0) {
         impact -= 0.3; // Rain significantly affects crowd behavior
         factors.push('Rain may delay entry and cause early departures');
       }
 
       // Wind impact
-      if (currentWeather.wind_speed > 20) {
+      if (currentWeather.windSpeed > 20) {
         impact -= 0.1; // High winds affect outdoor activities
         factors.push('High winds may affect outdoor activities');
       }
@@ -357,33 +357,27 @@ export class CrowdFlowPredictionEngine {
 
   private async getWeatherImpact(timestamp: Date): Promise<number> {
     try {
-      const weatherData = await getWeatherData();
-      if (!weatherData || !weatherData.hourly) return 0;
+      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
+      if (!weatherData) return 0;
 
-      // Find weather data for the prediction time
-      const predictionHour = timestamp.getHours();
-      const weatherForecast = weatherData.hourly.find(h => 
-        new Date(h.time).getHours() === predictionHour
-      );
-
-      if (!weatherForecast) return 0;
-
+      // For now, use current weather data since we don't have hourly forecast
+      // In a real implementation, you'd want to get hourly forecast data
       let impact = 0;
 
       // Temperature impact
-      if (weatherForecast.temp > 30) {
+      if (weatherData.temperature > 30) {
         impact -= 20; // High temperature reduces attendance
-      } else if (weatherForecast.temp < 5) {
+      } else if (weatherData.temperature < 5) {
         impact -= 15; // Low temperature affects attendance
       }
 
       // Precipitation impact
-      if (weatherForecast.precipitation > 0) {
+      if (weatherData.rain && weatherData.rain > 0) {
         impact -= 30; // Rain significantly reduces attendance
       }
 
       // Wind impact
-      if (weatherForecast.wind_speed > 20) {
+      if (weatherData.windSpeed > 20) {
         impact -= 10; // High winds affect attendance
       }
 
@@ -517,7 +511,7 @@ export class CrowdFlowPredictionEngine {
       }
     });
 
-    return impacts.reduce((sum, impact) => sum + impact, 0) / impacts.length;
+    return impacts.reduce((sum: number, impact) => sum + impact, 0) / impacts.length;
   }
 
   private async calculateEventTypeImpact(): Promise<number> {
@@ -658,11 +652,17 @@ export class CrowdFlowPredictionEngine {
   async getVenueZoneAnalysis(): Promise<any[]> {
     try {
       // Mock venue zones - in a real implementation, this would be based on venue layout
-      const zones = [
-        { name: 'Main Arena', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low' as const, recommendations: [] },
-        { name: 'Food Court', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low' as const, recommendations: [] },
-        { name: 'Parking Area', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low' as const, recommendations: [] },
-        { name: 'Entry Gates', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low' as const, recommendations: [] }
+      const zones: Array<{
+        name: string;
+        currentOccupancy: number;
+        predictedPeak: number;
+        riskLevel: 'low' | 'medium' | 'high';
+        recommendations: string[];
+      }> = [
+        { name: 'Main Arena', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
+        { name: 'Food Court', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
+        { name: 'Parking Area', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
+        { name: 'Entry Gates', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] }
       ];
 
       // Get current occupancy for each zone

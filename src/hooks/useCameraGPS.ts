@@ -149,7 +149,7 @@ export function useCameraGPS(): [CameraGPSState, CameraGPSActions] {
       if (photoData.location) {
         setState(prev => ({
           ...prev,
-          currentLocation: photoData.location
+          currentLocation: photoData.location || null
         }));
         updateLocationAccuracy(photoData.location);
       }

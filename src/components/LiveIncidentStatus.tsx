@@ -92,11 +92,6 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
             setConnectionError(null); // Clear any previous errors on successful update
           }
         )
-        .on('error', (error) => {
-          console.warn('Live incident subscription error (non-critical):', error);
-          // Don't treat subscription errors as critical - data can still be fetched
-          setConnectionError(null);
-        })
         .subscribe((status) => {
           console.log(`Subscription status: ${status}`);
           // Show as connected if subscription works, or if we can fetch data
@@ -267,9 +262,6 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
         }
       }
       clearInterval(interval);
-      if (cleanupTimeout) {
-        clearTimeout(cleanupTimeout);
-      }
     };
   }, [eventId, isConnected, isReconnecting, setupSubscription]);
 
@@ -335,7 +327,8 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(currentIncident.priority)} ${getPriorityAnimation(currentIncident.priority)}`}>
+              <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(
+                currentIncident.priority || 'unknown')} ${getPriorityAnimation(currentIncident.priority || 'unknown')}`}>
                 {currentIncident.priority || 'Unknown'} Priority
               </div>
               <span className="text-sm text-gray-500">

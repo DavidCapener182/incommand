@@ -1,12 +1,13 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsAdmin } from '@/hooks/useRole';
 import { supabase } from '@/lib/supabase';
 import { ChartBarIcon, CpuChipIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 export default function AIUsagePage() {
   const { user } = useAuth();
-  const role = user?.user_metadata?.role;
+  const isAdmin = useIsAdmin();
 
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export default function AIUsagePage() {
     fetchLogs();
   }, []);
 
-  if (!role || !['admin', 'superadmin', 'super'].includes(role)) {
+  if (!isAdmin) {
     return (
       <div className="w-full max-w-4xl mx-auto">
         <div className="text-center py-8">

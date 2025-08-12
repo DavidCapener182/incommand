@@ -218,7 +218,7 @@ export default function IncidentDependencySelector({
           .from('incident_logs')
           .select('dependencies')
           .eq('id', currentId)
-          .single();
+          .single() as { data: { dependencies?: string[] } | null, error: any };
         
         if (error) {
           console.warn('Error fetching incident dependencies:', error);

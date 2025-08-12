@@ -108,31 +108,28 @@ export class RiskScoringEngine {
 
   async getWeatherRiskScore(): Promise<number> {
     try {
-      const weatherData = await getWeatherData();
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-      const weatherCorrelations = await this.patternEngine.analyzeWeatherCorrelations();
-
-      if (!weatherData || !weatherData.current) {
-        return 0.3; // Default moderate risk
+      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
+      if (!weatherData) {
+        return 0;
       }
 
-      const currentWeather = weatherData.current;
+      const currentWeather = weatherData;
       let weatherScore = 0;
 
       // Temperature risk
-      if (currentWeather.temp > 30) {
+      if (currentWeather.temperature > 30) {
         weatherScore += 0.4; // High temperature increases medical incidents
-      } else if (currentWeather.temp < 5) {
+      } else if (currentWeather.temperature < 5) {
         weatherScore += 0.3; // Low temperature affects crowd behavior
       }
 
       // Precipitation risk
-      if (currentWeather.precipitation > 0) {
+      if (currentWeather.rain && currentWeather.rain > 0) {
         weatherScore += 0.5; // Rain increases slip/fall incidents
       }
 
       // Wind risk
-      if (currentWeather.wind_speed > 20) {
+      if (currentWeather.windSpeed > 20) {
         weatherScore += 0.3; // High winds increase technical issues
       }
 
@@ -142,8 +139,9 @@ export class RiskScoringEngine {
       }
 
       // Apply historical correlations
+      const weatherCorrelations = await this.patternEngine.analyzeWeatherCorrelations();
       const matchingCorrelation = weatherCorrelations.find(c => 
-        c.weatherCondition === currentWeather.condition?.toLowerCase()
+        c.weatherCondition === currentWeather.description?.toLowerCase()
       );
 
       if (matchingCorrelation) {
@@ -227,7 +225,7 @@ export class RiskScoringEngine {
         'post-event': 0.3
       };
 
-      return phaseRisks[phase] || 0.3;
+      return phaseRisks[phase as keyof typeof phaseRisks] || 0.3;
     } catch (error) {
       console.error('Error calculating event phase risk score:', error);
       return 0.3;
@@ -257,7 +255,7 @@ export class RiskScoringEngine {
       const riskFactors = await this.patternEngine.identifyRiskFactors();
       
       // Get all incident types from patterns
-      const allIncidentTypes = [...new Set(patterns.flatMap(p => p.incidentTypes))];
+      const allIncidentTypes = Array.from(new Set(patterns.flatMap(p => p.incidentTypes)));
       
       const incidentTypeRisks: IncidentTypeRisk[] = [];
 

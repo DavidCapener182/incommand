@@ -68,28 +68,28 @@ export async function GET(request: NextRequest) {
 
     // Separate posts by platform
     const twitterPosts = allPosts.filter(post => post.platform === 'twitter');
-    const facebookPosts = allPosts.filter(post => post.platform === 'facebook');
+    const instagramPosts = allPosts.filter(post => post.platform === 'instagram');
 
     // Get sentiment scores for each platform
     const twitterSentiments = twitterPosts.map((_, index) => 
       sentiments[allPosts.findIndex(post => post.id === twitterPosts[index].id)]
     );
-    const facebookSentiments = facebookPosts.map((_, index) => 
-      sentiments[allPosts.findIndex(post => post.id === facebookPosts[index].id)]
+    const instagramSentiments = instagramPosts.map((_, index) => 
+      sentiments[allPosts.findIndex(post => post.id === instagramPosts[index].id)]
     );
 
     // Calculate platform statistics
     const twitterStats = calculatePlatformStats(twitterPosts, twitterSentiments);
-    const facebookStats = calculatePlatformStats(facebookPosts, facebookSentiments);
+    const instagramStats = calculatePlatformStats(instagramPosts, instagramSentiments);
 
     // Calculate combined statistics
-    const combined = calculateCombinedStats(twitterStats, facebookStats, sentiments);
+    const combined = calculateCombinedStats(twitterStats, instagramStats, sentiments);
 
     // Create summary response
     const summary: SocialPulseSummary = {
       platformStats: {
         twitter: twitterStats,
-        instagram: facebookStats, // Map Facebook to Instagram for UI compatibility
+        instagram: instagramStats,
       },
       combined,
     };

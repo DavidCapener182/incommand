@@ -125,13 +125,13 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
         }));
         setUsers(presenceUsers);
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string; newPresences: any[] }) => {
         console.log('User joined:', key, newPresences);
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string; leftPresences: any[] }) => {
         console.log('User left:', key, leftPresences);
       })
-      .on('broadcast', { event: 'cursor' }, ({ payload, user_id }) => {
+      .on('broadcast', { event: 'cursor' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
         if (user_id === user.id) return;
         
         setUsers(prev => 
@@ -142,7 +142,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           )
         );
       })
-      .on('broadcast', { event: 'typing' }, ({ payload, user_id }) => {
+      .on('broadcast', { event: 'typing' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
         if (user_id === user.id) return;
         
         setUsers(prev => 
@@ -153,7 +153,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           )
         );
       })
-      .on('broadcast', { event: 'stop-typing' }, ({ payload, user_id }) => {
+      .on('broadcast', { event: 'stop-typing' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
         if (user_id === user.id) return;
         
         setUsers(prev => 
@@ -164,7 +164,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           )
         );
       })
-      .on('broadcast', { event: 'focus' }, ({ payload, user_id }) => {
+      .on('broadcast', { event: 'focus' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
         if (user_id === user.id) return;
         
         setUsers(prev => 
@@ -175,7 +175,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           )
         );
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         setIsConnected(status === 'SUBSCRIBED');
         
         if (status === 'SUBSCRIBED') {

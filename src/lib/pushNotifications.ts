@@ -115,7 +115,7 @@ export class PushNotificationManager {
       // Subscribe to push notifications
       const pushSubscription = await this.registration!.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: vapidPublicKey
+        applicationServerKey: vapidPublicKey as any
       });
 
       // Store subscription in Supabase

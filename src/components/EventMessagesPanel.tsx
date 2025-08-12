@@ -155,28 +155,29 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   }, [currentEvent]);
 
   // Fetch messages from Supabase for selected group
-  useEffect(() => {
+  const fetchMessages = async () => {
     if (selectedGroup === 'ai') return;
-    async function fetchMessages() {
-      const { data, error } = await supabase
-        .from('event_chat_messages')
-        .select('id, user_id, message, created_at')
-        .eq('chat_id', selectedGroup)
-        .order('created_at', { ascending: true });
-      if (error) {
-        console.error('Error fetching messages:', error);
-        setMessagesByGroup(prev => ({ ...prev, [selectedGroup]: [] }));
-      } else if (data) {
-        setMessagesByGroup(prev => ({
-          ...prev,
-          [selectedGroup]: data.map((msg: any) => ({
-            id: new Date(msg.created_at).getTime(),
-            sender: msg.user_id,
-            text: msg.message,
-          })),
-        }));
-      }
+    const { data, error } = await supabase
+      .from('event_chat_messages')
+      .select('id, user_id, message, created_at')
+      .eq('chat_id', selectedGroup)
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error('Error fetching messages:', error);
+      setMessagesByGroup(prev => ({ ...prev, [selectedGroup]: [] }));
+    } else if (data) {
+      setMessagesByGroup(prev => ({
+        ...prev,
+        [selectedGroup]: data.map((msg: any) => ({
+          id: new Date(msg.created_at).getTime(),
+          sender: msg.user_id,
+          text: msg.message,
+        })),
+      }));
     }
+  };
+
+  useEffect(() => {
     fetchMessages();
   }, [selectedGroup]);
 

@@ -228,11 +228,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
             setConnectionError(null); // Clear any previous errors on successful update
           }
         )
-        .on('error', (error) => {
-          console.warn('Venue capacity subscription error (non-critical):', error);
-          // Don't treat subscription errors as critical - data can still be fetched
-          setConnectionError(null);
-        })
+
         .subscribe((status) => {
           console.log(`Venue capacity subscription status: ${status}`);
           // Show as connected if subscription works, or if we can fetch data
@@ -310,26 +306,36 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       
       // Try to filter by id if the column exists
       try {
-        eventQuery = eventQuery.eq('id', eventId).single();
+        const { data: eventData, error: eventError } = await eventQuery.eq('id', eventId).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          // Use default capacity if event data can't be fetched
+          setMaxCapacity(25000); // Default capacity
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          
+          // Generate predictions after setting capacity
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
+        }
       } catch (e) {
         // If id column doesn't exist, just get the first event
         console.warn('id column not found in events, fetching first event');
-        eventQuery = eventQuery.limit(1).single();
-      }
-      
-      const { data: eventData, error: eventError } = await eventQuery;
-
-      if (eventError) {
-        console.warn('Error fetching event data:', eventError);
-        // Use default capacity if event data can't be fetched
-        setMaxCapacity(25000); // Default capacity
-      } else if (eventData && eventData.expected_attendance) {
-        setMaxCapacity(eventData.expected_attendance);
-        
-        // Generate predictions after setting capacity
-        if (attendanceData && attendanceData.length > 0) {
-          const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
-          setPredictions(predictions);
+        const { data: eventData, error: eventError } = await eventQuery.limit(1).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          // Use default capacity if event data can't be fetched
+          setMaxCapacity(25000); // Default capacity
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          
+          // Generate predictions after setting capacity
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
         }
       }
       
@@ -391,26 +397,36 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       
       // Try to filter by id if the column exists
       try {
-        eventQuery = eventQuery.eq('id', eventId).single();
+        const { data: eventData, error: eventError } = await eventQuery.eq('id', eventId).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          // Use default capacity if event data can't be fetched
+          setMaxCapacity(25000); // Default capacity
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          
+          // Generate predictions after setting capacity
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
+        }
       } catch (e) {
         // If id column doesn't exist, just get the first event
         console.warn('id column not found in events, fetching first event');
-        eventQuery = eventQuery.limit(1).single();
-      }
-      
-      const { data: eventData, error: eventError } = await eventQuery;
-
-      if (eventError) {
-        console.warn('Error fetching event data:', eventError);
-        // Use default capacity if event data can't be fetched
-        setMaxCapacity(25000); // Default capacity
-      } else if (eventData && eventData.expected_attendance) {
-        setMaxCapacity(eventData.expected_attendance);
-        
-        // Generate predictions after setting capacity
-        if (attendanceData && attendanceData.length > 0) {
-          const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
-          setPredictions(predictions);
+        const { data: eventData, error: eventError } = await eventQuery.limit(1).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          // Use default capacity if event data can't be fetched
+          setMaxCapacity(25000); // Default capacity
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          
+          // Generate predictions after setting capacity
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
         }
       }
       
@@ -461,9 +477,6 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
         }
       }
       clearInterval(interval);
-      if (cleanupTimeout) {
-        clearTimeout(cleanupTimeout);
-      }
     };
   }, [eventId, isConnected, isReconnecting, setupSubscription]);
 

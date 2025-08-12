@@ -306,14 +306,14 @@ function generateWeatherProactiveMeasures(
   currentWeather: any,
   eventDate: string
 ): { priority: 'high' | 'medium' | 'low'; measure: string; reasoning: string; implementationTime: string }[] {
-  const measures = [];
+  const measures: { priority: 'high' | 'medium' | 'low'; measure: string; reasoning: string; implementationTime: string }[] = [];
 
   // High priority measures for critical weather risks
   weatherRisks
     .filter(risk => risk.severity === 'critical')
     .forEach(risk => {
       measures.push({
-        priority: 'high',
+        priority: 'high' as const,
         measure: risk.recommendations[0] || 'Implement emergency weather protocols',
         reasoning: `Critical ${risk.riskType} risk with ${risk.probability.toFixed(0)}% probability`,
         implementationTime: 'Immediate'
@@ -325,7 +325,7 @@ function generateWeatherProactiveMeasures(
     .filter(risk => risk.severity === 'high')
     .forEach(risk => {
       measures.push({
-        priority: 'medium',
+        priority: 'medium' as const,
         measure: risk.recommendations[0] || 'Prepare for weather-related incidents',
         reasoning: `High ${risk.riskType} risk with ${risk.probability.toFixed(0)}% probability`,
         implementationTime: 'Within 1 hour'
@@ -335,7 +335,7 @@ function generateWeatherProactiveMeasures(
   // General weather preparedness
   if (weatherRisks.length > 0) {
     measures.push({
-      priority: 'medium',
+      priority: 'medium' as const,
       measure: 'Review and update emergency weather procedures',
       reasoning: `${weatherRisks.length} weather-related risks identified`,
       implementationTime: 'Within 2 hours'

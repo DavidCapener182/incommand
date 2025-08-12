@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const validation = validateAssignmentRules(
+      const validation = await validateAssignmentRules(
         staffId,
         incident.incident_type,
         staff.active_assignments,
@@ -452,7 +452,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Validate assignment rules with skills
-      const validation = validateAssignmentRules(
+      const validation = await validateAssignmentRules(
         staffId,
         incident.incident_type,
         staff.active_assignments,
@@ -548,7 +548,7 @@ export async function DELETE(request: NextRequest) {
 
     if (staffId) {
       // Remove specific staff member
-      newAssignedStaff = newAssignedStaff.filter(id => id !== staffId);
+      newAssignedStaff = newAssignedStaff.filter((id: string) => id !== staffId);
     } else {
       // Remove all staff (clear assignment)
       newAssignedStaff = [];
