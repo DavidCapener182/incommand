@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
         predictedCount: prediction.predictedCount,
         predictedPercentage: (prediction.predictedCount / eventAccess.venue_capacity) * 100,
         confidence: prediction.confidence,
-        factors: prediction.factors || []
+        factors: Object.entries(prediction.factors || {}).map(([key, value]) => `${key}: ${value}`)
       })),
       flowAnalysis,
       capacityWarnings,
