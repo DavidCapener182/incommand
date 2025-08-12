@@ -226,9 +226,9 @@ export default function StaffCommandCentre() {
           if (a.user_id) {
             // store the id string for assignedStaff usage elsewhere
             // we keep assigned_name for legacy fallbacks
-            assignMap[a.position_id as unknown as string] = a.assigned_name || "";
+            assignMap[a.position_id] = a.assigned_name || "";
           } else if (a.assigned_name) {
-            assignMap[a.position_id as unknown as string] = a.assigned_name;
+            assignMap[a.position_id] = a.assigned_name;
           }
         });
         setAssignments(assignMap);
@@ -456,14 +456,14 @@ export default function StaffCommandCentre() {
 
 // --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
-  // Default categories with better structure
+  // Default categories with better structure - matching database areas
   const defaultCategories = [
     { id: 1, name: 'Management', color: 'bg-gradient-to-r from-purple-500 to-purple-600', positions: [] },
-    { id: 2, name: 'Internal Security', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
-    { id: 3, name: 'External Security', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
+    { id: 2, name: 'Internal', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
+    { id: 3, name: 'External', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
     { id: 4, name: 'Venue Operations', color: 'bg-gradient-to-r from-orange-500 to-orange-600', positions: [] },
-    { id: 5, name: 'Medical & Welfare', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
-    { id: 6, name: 'Traffic & Logistics', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
+    { id: 5, name: 'Medical', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
+    { id: 6, name: 'Traffic Management', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
   ];
 
   type Position = { 

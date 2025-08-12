@@ -23,6 +23,7 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
+import SocialMediaMonitoringCard from './SocialMediaMonitoringCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
@@ -1122,8 +1123,14 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          {/* Desktop: Venue, Weather, W3W, Top 3 in a single row */}
-          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
+          {/* Mobile: Social Media Monitoring Card */}
+          <div className="block md:hidden mb-8">
+            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+              <SocialMediaMonitoringCard eventId={currentEvent?.id} />
+            </div>
+          </div>
+          {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in a single row */}
+          <div className="hidden md:grid grid-cols-5 gap-4 mb-8">
             <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
               <VenueOccupancy currentEventId={currentEventId} />
             </div>
@@ -1157,6 +1164,7 @@ export default function Dashboard() {
                 selectedType={selectedFilter}
               />
             </div>
+            <SocialMediaMonitoringCard eventId={currentEvent?.id} />
           </div>
         </div>
 

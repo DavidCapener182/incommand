@@ -25,6 +25,11 @@ import UserManagementModal from '@/components/UserManagementModal';
 import CompanyCreationModal from '@/components/CompanyCreationModal';
 import EventPricingCalculator from '@/components/EventPricingCalculator';
 import IconSidebar from '@/components/IconSidebar';
+import { QuickActionItem } from '@/types/sidebar';
+import { 
+  ArrowPathIcon, 
+  UserPlusIcon
+} from '@heroicons/react/24/outline';
 
 interface Company {
   id: string;
@@ -268,6 +273,70 @@ const AdminPage = () => {
   const itemsPerPage = 10;
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+
+  // Section status mapping for sidebar indicators
+  const sectionStatus: Record<string, 'loading' | 'ready' | 'error' | 'none'> = {
+    overview: loading ? 'loading' : 'ready',
+    users: loading ? 'loading' : 'ready',
+    companies: loading ? 'loading' : 'ready',
+    events: loading ? 'loading' : 'ready',
+    pricing: 'ready',
+    development: 'ready',
+    billing: 'ready',
+    audit: 'ready',
+    settings: 'ready',
+    notifications: 'ready',
+    support: supportTickets.length > 0 ? 'ready' : 'none',
+  };
+
+  // Quick actions for sidebar
+  const quickActions: QuickActionItem[] = [
+    {
+      id: 'refresh-data',
+      label: 'Refresh Data',
+      icon: ArrowPathIcon,
+      onClick: () => {
+        fetchData();
+        fetchDevData();
+        fetchSupportData();
+      },
+      variant: 'secondary'
+    },
+    {
+      id: 'create-company',
+      label: 'Create Company',
+      icon: BuildingOfficeIcon,
+      onClick: () => setIsCompanyModalOpen(true),
+      variant: 'primary'
+    },
+    {
+      id: 'export-users',
+      label: 'Export Users',
+      icon: UserGroupIcon,
+      onClick: () => {
+        // Export users functionality
+        const csvContent = users.map(user => 
+          `${user.full_name || 'N/A'},${user.email},${user.role || 'user'},${user.company_id || 'N/A'}`
+        ).join('\n');
+        const blob = new Blob([`Name,Email,Role,Company\n${csvContent}`], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'users-export.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      variant: 'secondary'
+    },
+    {
+      id: 'system-settings',
+      label: 'System Settings',
+      icon: CogIcon,
+      onClick: () => setActiveSection('settings'),
+      variant: 'secondary'
+    }
+  ];
   
   // Development tracking state
   const [devSessions, setDevSessions] = useState<DevSession[]>([]);
@@ -1532,9 +1601,12 @@ const AdminPage = () => {
         activeItem={activeSection}
         onItemClick={setActiveSection}
         title="Admin"
+        sectionStatus={sectionStatus}
+        quickActions={quickActions}
+        onWidthChange={setSidebarWidth}
       />
       
-      <main className="flex-1 ml-16 lg:ml-64">
+      <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
             <div>

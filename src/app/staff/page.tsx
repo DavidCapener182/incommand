@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { UserGroupIcon, PlusIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 
@@ -73,34 +74,19 @@ export default function StaffManagementPage() {
           </div>
         </div>
 
-        {/* Directory table */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 overflow-x-auto hover:shadow-2xl hover:-translate-y-1 transition-all duration-200">
-          <table className="min-w-full text-left">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Name</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Role</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Contact</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Email</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Active</th>
-                <th className="px-4 py-2 text-gray-700 dark:text-blue-200 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="px-4 py-8 text-gray-900 dark:text-gray-100" colSpan={6}>
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <UserGroupIcon className="w-10 h-10 text-blue-600 mb-2" />
-                    <p className="text-gray-500 dark:text-blue-100">No staff yet.</p>
-                    <button className="mt-3 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow">
-                      <PlusIcon className="w-5 h-5" />
-                      Add your first staff member
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Staff list placeholder */}
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 shadow-sm">
+          <div className="text-center py-12">
+            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+            <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No staff members</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding your first staff member.</p>
+            <div className="mt-6">
+              <button className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow">
+                <PlusIcon className="w-4 h-4" />
+                Add Staff Member
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>

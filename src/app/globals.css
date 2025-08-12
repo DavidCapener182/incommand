@@ -15,6 +15,42 @@
   border: 0;
 }
 
+/* Battery and performance detection */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Device capability detection for animations */
+@media (max-width: 768px) {
+  .animate-mobile-optimized {
+    animation-duration: 0.3s !important;
+    transition-duration: 0.2s !important;
+  }
+}
+
+/* Battery saving mode detection */
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .animate-mobile-optimized {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High-end device optimizations */
+@media (min-width: 1024px) and (min-resolution: 2dppx) {
+  .animate-high-end {
+    animation-duration: 0.8s;
+    transition-duration: 0.4s;
+  }
+}
+
 /* Custom pulse glow animation for high priority incidents */
 @keyframes pulse-glow {
   0%, 100% {
@@ -22,6 +58,18 @@
   }
   50% {
     box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), 0 0 60px rgba(220, 38, 38, 0.4), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* Mobile-optimized pulse glow */
+@media (max-width: 768px) {
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.3), 0 0 20px rgba(220, 38, 38, 0.1), 0 10px 20px -6px rgba(0, 0, 0, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.5), 0 0 30px rgba(220, 38, 38, 0.2), 0 10px 20px -6px rgba(0, 0, 0, 0.2);
+    }
   }
 }
 
@@ -50,7 +98,7 @@ input:-webkit-autofill {
   animation-fill-mode: both;
 }
 
-/* Toast slide-in animation */
+/* Toast slide-in animation with mobile optimization */
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -66,6 +114,13 @@ input:-webkit-autofill {
   animation: slide-in-right 0.3s ease-out;
 }
 
+/* Mobile-optimized slide animation */
+@media (max-width: 768px) {
+  .animate-slide-in-right {
+    animation: slide-in-right 0.2s ease-out;
+  }
+}
+
 /* Line clamp utilities */
 .line-clamp-3 {
   overflow: hidden;
@@ -74,15 +129,458 @@ input:-webkit-autofill {
   -webkit-line-clamp: 3;
 }
 
+/* Enhanced fade-in animation with progressive enhancement */
 .fade-in {
   animation: fadeIn 0.5s cubic-bezier(0.4,0,0.2,1);
 }
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: none; }
+  from { 
+    opacity: 0; 
+    transform: translateY(12px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: none; 
+  }
+}
+
+/* Mobile-optimized fade-in */
+@media (max-width: 768px) {
+  .fade-in {
+    animation: fadeIn 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
 }
 
 /* Smooth scrolling for table containers */
 .scroll-smooth {
   scroll-behavior: smooth;
+}
+
+/* Enhanced fade-in animation for analytics dashboard with device optimization */
+.animate-fade-in {
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile-optimized fade-in-up */
+@media (max-width: 768px) {
+  .animate-fade-in {
+    animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+/* Card hover glow effect with performance optimization */
+.card-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.card-glow:hover {
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(59, 130, 246, 0.1),
+    0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+/* Mobile-optimized card glow */
+@media (max-width: 768px) {
+  .card-glow {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-glow:hover {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(59, 130, 246, 0.1),
+      0 0 10px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Staggered animation delays with mobile optimization */
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
+.animate-delay-600 { animation-delay: 0.6s; }
+
+/* Mobile-optimized delays */
+@media (max-width: 768px) {
+  .animate-delay-100 { animation-delay: 0.05s; }
+  .animate-delay-200 { animation-delay: 0.1s; }
+  .animate-delay-300 { animation-delay: 0.15s; }
+  .animate-delay-400 { animation-delay: 0.2s; }
+  .animate-delay-500 { animation-delay: 0.25s; }
+  .animate-delay-600 { animation-delay: 0.3s; }
+}
+
+/* Enhanced backdrop blur utilities */
+.backdrop-blur-card {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+/* Mobile-optimized backdrop blur */
+@media (max-width: 768px) {
+  .backdrop-blur-card {
+    backdrop-filter: blur(8px) saturate(150%);
+    -webkit-backdrop-filter: blur(8px) saturate(150%);
+  }
+}
+
+/* Smooth scale transition with performance optimization */
+.scale-smooth {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Mobile-optimized scale transition */
+@media (max-width: 768px) {
+  .scale-smooth {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Real-time status animations with accessibility considerations */
+.pulse-priority-high {
+  animation: pulseRed 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseRed {
+  0%, 100% { 
+    opacity: 1; 
+  }
+  50% { 
+    opacity: 0.7; 
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); 
+  }
+}
+
+/* Mobile-optimized pulse animation */
+@media (max-width: 768px) {
+  .pulse-priority-high {
+    animation: pulseRed 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulseRed {
+    0%, 100% { 
+      opacity: 1; 
+    }
+    50% { 
+      opacity: 0.8; 
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); 
+    }
+  }
+}
+
+/* Chart animation enhancements with device optimization */
+.chart-container {
+  animation: chartFadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes chartFadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* Mobile-optimized chart animation */
+@media (max-width: 768px) {
+  .chart-container {
+    animation: chartFadeIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  @keyframes chartFadeIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(10px) scale(0.98); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0) scale(1); 
+    }
+  }
+}
+
+/* Widget transition effects with performance optimization */
+.widget-update {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.widget-update:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Mobile-optimized widget transitions */
+@media (max-width: 768px) {
+  .widget-update {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .widget-update:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* AI insights cycling animations with accessibility */
+.insight-fade-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.insight-fade-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Mobile-optimized insight transitions */
+@media (max-width: 768px) {
+  .insight-fade-enter {
+    transform: translateX(10px);
+  }
+  
+  .insight-fade-enter-active {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+}
+
+/* Progress indicators with performance optimization */
+.progress-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  will-change: background-position;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Mobile-optimized shimmer */
+@media (max-width: 768px) {
+  .progress-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+/* High-end device optimizations */
+@media (min-width: 1024px) and (min-resolution: 2dppx) {
+  .chart-container {
+    animation: chartFadeIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .widget-update {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .widget-update:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Battery saving mode - disable all animations */
+@media (prefers-reduced-motion: reduce) {
+  .chart-container, 
+  .widget-update, 
+  .insight-fade-enter-active, 
+  .pulse-priority-high,
+  .card-glow,
+  .animate-fade-in,
+  .animate-slide-in-right,
+  .progress-shimmer,
+  .scale-smooth {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  
+  .card-glow:hover {
+    box-shadow: none !important;
+  }
+  
+  .widget-update:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .card-glow:hover {
+    box-shadow: none;
+  }
+  
+  .widget-update:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  /* Enable touch-friendly hover states */
+  .card-glow:active {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(59, 130, 246, 0.1);
+  }
+  
+  .widget-update:active {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Low-end device optimizations */
+@media (max-width: 480px) {
+  .backdrop-blur-card {
+    backdrop-filter: blur(4px) saturate(120%);
+    -webkit-backdrop-filter: blur(4px) saturate(120%);
+  }
+  
+  .animate-fade-in {
+    animation: fadeInUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  .animate-delay-100,
+  .animate-delay-200,
+  .animate-delay-300,
+  .animate-delay-400,
+  .animate-delay-500,
+  .animate-delay-600 {
+    animation-delay: 0s !important;
+  }
+}
+
+/* Print styles - disable animations */
+@media print {
+  * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  
+  .card-glow:hover,
+  .widget-update:hover {
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
+/* Sidebar width CSS custom property */
+:root {
+  --sidebar-width: 256px; /* Default expanded width */
+}
+
+:root[data-sidebar-collapsed="true"] {
+  --sidebar-width: 64px; /* Collapsed width */
+}
+
+/* Sidebar transition animations */
+.sidebar-transition {
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width;
+}
+
+.sidebar-content-transition {
+  transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: margin-left;
+}
+
+/* Mobile sidebar overlay */
+.sidebar-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 45;
+}
+
+.sidebar-mobile-slide {
+  transform: translateX(-100%);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-mobile-slide.open {
+  transform: translateX(0);
+}
+
+/* Status indicator animations */
+.status-indicator-loading {
+  animation: statusPulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Quick action button styles */
+.quick-action-button {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile optimizations */
+@media (max-width: 1024px) {
+  .sidebar-transition {
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Accessibility and reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-transition,
+  .sidebar-content-transition,
+  .sidebar-mobile-slide,
+  .status-indicator-loading,
+  .quick-action-button {
+    animation: none !important;
+    transition: none !important;
+  }
 } 
