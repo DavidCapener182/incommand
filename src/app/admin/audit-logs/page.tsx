@@ -535,8 +535,8 @@ export default function AuditLogsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Severity</label>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(selectedLog.severity)}`}>
-                  {selectedLog.severity}
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(selectedLog.severity || 'low')}`}>
+                  {selectedLog.severity || 'low'}
                 </span>
               </div>
               <div>
