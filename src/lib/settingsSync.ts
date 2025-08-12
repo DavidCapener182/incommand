@@ -186,7 +186,16 @@ export async function syncSettings(
         resolve(result)
       } catch (error) {
         console.error('Settings sync error:', error)
-        resolve({ success: false, conflicts: [], error: (error as Error)?.message || 'Unknown error' })
+        const message = (error as any)?.message || ''
+        if (/permission/i.test(message)) {
+          resolve({ success: false, conflicts: [], error: 'permission' })
+        } else if (/network|timeout|fetch/i.test(message)) {
+          resolve({ success: false, conflicts: [], error: 'network' })
+        } else if (/validation|schema/i.test(message)) {
+          resolve({ success: false, conflicts: [], error: 'validation' })
+        } else {
+          resolve({ success: false, conflicts: [], error: 'unknown' })
+        }
       } finally {
         pendingSyncs.delete(pendingKey)
       }
@@ -250,7 +259,7 @@ async function attemptSyncWithRetry(
         })
       if (saveError) throw saveError
       return { success: true, conflicts: resolvedConflicts }
-    } catch (err) {
+    } catch (err: any) {
       lastError = err
       try {
         if (typeof window !== 'undefined' && (window.navigator as any).onLine === false) {
@@ -259,12 +268,19 @@ async function attemptSyncWithRetry(
         }
       } catch {}
       if (attempt === maxRetries) break
+      // For validation or permission errors, do not retry
+      const msg = (err?.message || '').toLowerCase()
+      if (msg.includes('permission') || msg.includes('validation')) break
       await new Promise(r => setTimeout(r, backoff))
       backoff = Math.min(backoff * 2, 4000)
       attempt++
     }
   }
-  return { success: false, conflicts: [], error: lastError?.message || 'Unknown error' }
+  const msg = (lastError?.message || '').toLowerCase()
+  if (msg.includes('permission')) return { success: false, conflicts: [], error: 'permission' }
+  if (msg.includes('validation')) return { success: false, conflicts: [], error: 'validation' }
+  if (msg.includes('network') || msg.includes('timeout') || msg.includes('fetch')) return { success: false, conflicts: [], error: 'network' }
+  return { success: false, conflicts: [], error: 'unknown' }
 }
 
 // Offline queue support
@@ -290,16 +306,22 @@ export async function flushOfflineQueue() {
     if ((window.navigator as any).onLine === false) return
     const raw = window.localStorage.getItem(OFFLINE_QUEUE_KEY)
     if (!raw) return
-    const queue = JSON.parse(raw) as Array<{ userId: string; preferences: Partial<UserPreferences>; strategy: ConflictResolutionStrategy }>
+    const queue = JSON.parse(raw) as Array<{ userId: string; preferences: Partial<UserPreferences>; strategy: ConflictResolutionStrategy; enqueuedAt?: string }>
     const remaining: typeof queue = []
+    const now = Date.now()
     for (const item of queue) {
+      // Drop items older than 7 days to avoid indefinite accumulation
+      const ageMs = item.enqueuedAt ? (now - Date.parse(item.enqueuedAt)) : 0
+      if (ageMs > 7 * 24 * 60 * 60 * 1000) continue
       const res = await attemptSyncWithRetry(item.userId, item.preferences, item.strategy)
       if (!res.success) remaining.push(item)
     }
     if (remaining.length === 0) {
       window.localStorage.removeItem(OFFLINE_QUEUE_KEY)
     } else {
-      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining))
+      // Keep queue bounded
+      const bounded = remaining.slice(-200)
+      window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(bounded))
     }
   } catch {}
 }

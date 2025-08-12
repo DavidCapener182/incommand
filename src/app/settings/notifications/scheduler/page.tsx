@@ -10,7 +10,7 @@ import {
   PauseIcon, 
   PencilIcon 
 } from '@heroicons/react/24/outline';
-import { useRole } from '../../../../hooks/useRole';
+import { useIsAdmin } from '../../../../hooks/useRole';
 import { supabase } from '../../../../lib/supabase';
 import { ScheduledNotification as DBScheduledNotification } from '../../../../types/settings';
 
@@ -45,7 +45,7 @@ interface NotificationQueue {
 }
 
 export default function NotificationSchedulerPage() {
-  const role = useRole();
+  const isAdmin = useIsAdmin();
   // user comes from AuthContext via supabase; access through supabase.auth if needed, but keep existing logic simple
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function NotificationSchedulerPage() {
       const { data, error } = await supabase
         .from('scheduled_notifications')
         .insert([{
-          user_id: user?.id,
+          user_id: currentUserId,
           schedule_type: 'recurring',
           cron_expression: cronExpression,
           status: 'pending',
@@ -245,7 +245,7 @@ export default function NotificationSchedulerPage() {
     return tomorrow.toISOString();
   };
 
-  if (!currentUserId || !(role === 'admin' || role === 'superadmin')) {
+  if (!currentUserId || !isAdmin) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center">

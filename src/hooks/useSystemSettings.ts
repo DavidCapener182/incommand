@@ -8,19 +8,20 @@ import { supabase } from '../lib/supabase'
  * Hook for accessing system-wide settings
  */
 export const useSystemSettings = () => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
     console.error('Auth context not available in useSystemSettings:', error);
     auth = { systemSettings: null, refreshSettings: async () => {} };
   }
-  const { systemSettings, refreshSettings } = auth;
-  
+  const systemSettings: SystemSettings | null = auth?.systemSettings ?? null
+  const refreshSettings: () => Promise<void> = auth?.refreshSettings ?? (async () => {})
+
   return {
     systemSettings,
     refreshSettings,
-    isLoading: !systemSettings,
+    isLoading: systemSettings === null,
   }
 }
 
@@ -28,7 +29,7 @@ export const useSystemSettings = () => {
  * Hook for checking if maintenance mode is active
  */
 export const useMaintenanceMode = () => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -47,7 +48,7 @@ export const useMaintenanceMode = () => {
  * Hook for checking specific feature flags
  */
 export const useFeatureFlag = (flagName: FeatureFlagKey) => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -66,7 +67,7 @@ export const useFeatureFlag = (flagName: FeatureFlagKey) => {
  * Hook for checking multiple feature flags at once
  */
 export const useFeatureFlags = (flagNames: FeatureFlagKey[]) => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -91,7 +92,7 @@ export const useFeatureFlags = (flagNames: FeatureFlagKey[]) => {
  * Hook for updating system settings (admin only)
  */
 export const useUpdateSystemSettings = () => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -170,7 +171,7 @@ export const useUpdateSystemSettings = () => {
  * Hook for getting platform configuration
  */
 export const usePlatformConfig = () => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -192,7 +193,7 @@ export const usePlatformConfig = () => {
  * Hook for getting system notification settings
  */
 export const useSystemNotificationSettings = () => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {
@@ -218,7 +219,7 @@ export const useSystemNotificationSettings = () => {
  * Hook for checking if a feature is available for the current user
  */
 export const useFeatureAvailability = (featureName: string) => {
-  let auth;
+  let auth: any;
   try {
     auth = useAuth();
   } catch (error) {

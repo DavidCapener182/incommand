@@ -16,17 +16,23 @@ import { supabase } from '../../../lib/supabase';
 
 interface AuditLog {
   id: string;
-  userId: string;
-  userName: string;
-  action: string;
-  resource: string;
+  user_id: string | null;
+  table_name: string;
+  record_id?: string | null;
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+  old_values?: Record<string, any> | null;
+  new_values?: Record<string, any> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  // Derived UI fields
+  userName?: string;
+  category?: 'auth' | 'data' | 'settings' | 'admin' | 'system';
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  action?: string;
+  resource?: string;
   resourceId?: string;
-  details: any;
-  ipAddress?: string;
-  userAgent?: string;
-  timestamp: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  category: 'auth' | 'data' | 'settings' | 'admin' | 'system';
+  details?: any;
 }
 
 interface AuditFilter {
@@ -74,9 +80,9 @@ export default function AuditLogsPage() {
     setIsLoading(true);
     try {
       let query = supabase
-        .from('audit_logs')
+        .from('settings_audit_logs')
         .select('*', { count: 'exact' })
-        .order('timestamp', { ascending: false });
+        .order('created_at', { ascending: false });
 
       // Apply filters
       if (filters.category) {
@@ -89,13 +95,13 @@ export default function AuditLogsPage() {
         query = query.eq('action', filters.action);
       }
       if (filters.userId) {
-        query = query.eq('userId', filters.userId);
+        query = query.eq('user_id', filters.userId);
       }
       if (filters.dateFrom) {
-        query = query.gte('timestamp', filters.dateFrom);
+        query = query.gte('created_at', filters.dateFrom);
       }
       if (filters.dateTo) {
-        query = query.lte('timestamp', filters.dateTo);
+        query = query.lte('created_at', filters.dateTo);
       }
 
       // Pagination
@@ -107,7 +113,41 @@ export default function AuditLogsPage() {
 
       if (error) throw error;
 
-      setAuditLogs(data || []);
+      const raw: AuditLog[] = (data || []) as any
+      const userIds = Array.from(new Set(raw.map(r => r.user_id).filter(Boolean))) as string[]
+      const userMap: Record<string, string> = {}
+      if (userIds.length) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', userIds)
+        profiles?.forEach(p => {
+          userMap[p.id] = p.first_name || p.last_name ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (p.email || p.id)
+        })
+      }
+
+      const transformed = raw.map((r) => {
+        const category: AuditLog['category'] = r.table_name.includes('user') ? 'data'
+          : r.table_name.includes('system_settings') ? 'settings'
+          : 'system'
+        const severity: AuditLog['severity'] = r.operation === 'DELETE' ? 'high' : (r.operation === 'UPDATE' ? 'medium' : 'low')
+        const action = `${r.operation} ${r.table_name}`
+        const resource = r.table_name
+        const resourceId = r.record_id || undefined
+        const details = r.new_values || r.old_values || {}
+        return {
+          ...r,
+          userName: r.user_id ? (userMap[r.user_id] || r.user_id) : 'system',
+          category,
+          severity,
+          action,
+          resource,
+          resourceId,
+          details,
+        }
+      })
+
+      setAuditLogs(transformed);
       setTotalLogs(count || 0);
       setTotalPages(Math.ceil((count || 0) / logsPerPage));
     } catch (error) {
@@ -123,10 +163,10 @@ export default function AuditLogsPage() {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(log =>
-        log.action.toLowerCase().includes(searchTerm) ||
-        log.resource.toLowerCase().includes(searchTerm) ||
-        log.userName.toLowerCase().includes(searchTerm) ||
-        JSON.stringify(log.details).toLowerCase().includes(searchTerm)
+        (log.action || '').toLowerCase().includes(searchTerm) ||
+        (log.resource || '').toLowerCase().includes(searchTerm) ||
+        (log.userName || '').toLowerCase().includes(searchTerm) ||
+        JSON.stringify(log.details || {}).toLowerCase().includes(searchTerm)
       );
     }
 
@@ -405,9 +445,9 @@ export default function AuditLogsPage() {
                       <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                         <p><strong>User:</strong> {log.userName}</p>
                         <p><strong>Resource:</strong> {log.resource} {log.resourceId && `(${log.resourceId})`}</p>
-                        <p><strong>Time:</strong> {formatTimestamp(log.timestamp)}</p>
-                        {log.ipAddress && (
-                          <p><strong>IP:</strong> {log.ipAddress}</p>
+                        <p><strong>Time:</strong> {formatTimestamp(log.created_at)}</p>
+                        {log.ip_address && (
+                          <p><strong>IP:</strong> {log.ip_address}</p>
                         )}
                         <p><strong>Details:</strong> {truncateText(JSON.stringify(log.details))}</p>
                       </div>
@@ -499,18 +539,18 @@ export default function AuditLogsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timestamp</label>
-                <p className="text-gray-900 dark:text-white">{formatTimestamp(selectedLog.timestamp)}</p>
+                <p className="text-gray-900 dark:text-white">{formatTimestamp(selectedLog.created_at)}</p>
               </div>
-              {selectedLog.ipAddress && (
+              {selectedLog.ip_address && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IP Address</label>
-                  <p className="text-gray-900 dark:text-white">{selectedLog.ipAddress}</p>
+                  <p className="text-gray-900 dark:text-white">{selectedLog.ip_address}</p>
                 </div>
               )}
-              {selectedLog.userAgent && (
+              {selectedLog.user_agent && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User Agent</label>
-                  <p className="text-sm break-all text-gray-900 dark:text-white">{selectedLog.userAgent}</p>
+                  <p className="text-sm break-all text-gray-900 dark:text-white">{selectedLog.user_agent}</p>
                 </div>
               )}
               <div>

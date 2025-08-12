@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const loadSystemSettings = async () => {
+  const loadSystemSettings = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .rpc('get_system_settings')
@@ -139,9 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updated_at: new Date().toISOString(),
       })
     }
-  }
+  }, [])
 
-  const loadUserPreferences = async (userId: string) => {
+  const loadUserPreferences = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .rpc('get_user_preferences', { user_uuid: userId })
@@ -185,16 +185,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUserPreferences(defaultPrefs)
     }
-  }
+  }, [])
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     await loadSystemSettings()
     if (user?.id) {
       await loadUserPreferences(user.id)
     }
-  }
+  }, [loadSystemSettings, loadUserPreferences, user?.id])
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string) => {
     const maxRetries = 3
     let retryCount = 0
     
@@ -301,7 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }
+  }, [])
 
   useEffect(() => {
     let logoutTimeout: NodeJS.Timeout | null = null;
@@ -369,7 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (logoutTimeout) clearTimeout(logoutTimeout);
       if (stayLoggedInTimeout) clearTimeout(stayLoggedInTimeout);
     }
-  }, [])
+  }, [fetchUserRole, loadSystemSettings, loadUserPreferences, user?.id])
 
   // Temporarily disable route protection
   /*

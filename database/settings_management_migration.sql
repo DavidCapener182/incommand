@@ -141,7 +141,6 @@ CREATE POLICY "Users can view their own scheduled notifications" ON scheduled_no
 CREATE POLICY "Users can manage their own scheduled notifications" ON scheduled_notifications
     FOR ALL USING (auth.uid() = user_id);
 
--- RLS Policies for settings_audit_logs
 CREATE POLICY "Audit logs are readable by admin users" ON settings_audit_logs
     FOR SELECT USING (
         EXISTS (
@@ -151,15 +150,18 @@ CREATE POLICY "Audit logs are readable by admin users" ON settings_audit_logs
         )
     );
 
--- Restrict audit log inserts to SECURITY DEFINER functions only by checking request.auth.role
--- Using a strict check that the invoking role is postgres or the function context
-DROP POLICY IF EXISTS "Audit logs are insertable by system" ON settings_audit_logs;
-CREATE POLICY "Audit logs inserts via definer funcs" ON settings_audit_logs
-    FOR INSERT TO authenticated, anon, service_role
-    WITH CHECK (
-      -- Only allow when called through SECURITY DEFINER (auth.uid() can be null during server-side definer calls)
-      auth.uid() IS NOT NULL OR current_user = 'postgres'
-    );
+-- Allow inserts when executed by authenticated users, service contexts, or when no JWT is present (e.g., server-side/trigger contexts)
+DROP POLICY IF EXISTS "Audit logs inserts via definer funcs" ON settings_audit_logs;
+CREATE POLICY "Audit logs inserts (server + auth)" ON settings_audit_logs
+  FOR INSERT TO authenticated, anon, service_role
+  WITH CHECK (
+    -- Standard authenticated requests
+    auth.uid() IS NOT NULL
+    -- Or server-side contexts without a JWT (e.g., triggers, background jobs)
+    OR current_setting('request.jwt.claims', true) IS NULL
+    -- Or privileged roles commonly used in server-side operations
+    OR current_user IN ('postgres', 'service_role')
+  );
 
 -- Database functions for settings management
 
@@ -310,7 +312,7 @@ BEGIN
             operation,
             new_values
         ) VALUES (
-            auth.uid(),
+            COALESCE(auth.uid(), NEW.updated_by),
             TG_TABLE_NAME,
             NEW.id,
             'INSERT',
@@ -326,7 +328,7 @@ BEGIN
             old_values,
             new_values
         ) VALUES (
-            auth.uid(),
+            COALESCE(auth.uid(), NEW.updated_by),
             TG_TABLE_NAME,
             NEW.id,
             'UPDATE',
@@ -342,7 +344,7 @@ BEGIN
             operation,
             old_values
         ) VALUES (
-            auth.uid(),
+            COALESCE(auth.uid(), OLD.updated_by),
             TG_TABLE_NAME,
             OLD.id,
             'DELETE',
@@ -352,7 +354,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create triggers for audit logging
 CREATE TRIGGER audit_system_settings_changes
@@ -421,3 +423,90 @@ INSERT INTO notification_templates (
     'user',
     FALSE
 ) ON CONFLICT DO NOTHING;
+
+-- Additional tables for backups, restore jobs, and notification queue
+
+-- Backups table
+CREATE TABLE IF NOT EXISTS backups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    description TEXT,
+    size BIGINT DEFAULT 0,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('completed','failed','in_progress')),
+    type TEXT NOT NULL DEFAULT 'full' CHECK (type IN ('full','partial')),
+    tables TEXT[] DEFAULT '{}',
+    "userId" UUID REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- Restore jobs table
+CREATE TABLE IF NOT EXISTS restore_jobs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "backupId" UUID REFERENCES backups(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','in_progress','completed','failed')),
+    progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    "startedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "completedAt" TIMESTAMPTZ,
+    "errorMessage" TEXT,
+    "userId" UUID REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- Notification queue table
+CREATE TABLE IF NOT EXISTS notification_queue (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "scheduledNotificationId" UUID,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','failed')),
+    "scheduledFor" TIMESTAMPTZ NOT NULL,
+    "sentAt" TIMESTAMPTZ,
+    "errorMessage" TEXT,
+    "userId" UUID REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_backups_user ON backups("userId");
+CREATE INDEX IF NOT EXISTS idx_backups_created_at ON backups("createdAt");
+CREATE INDEX IF NOT EXISTS idx_restore_jobs_user ON restore_jobs("userId");
+CREATE INDEX IF NOT EXISTS idx_restore_jobs_started_at ON restore_jobs("startedAt");
+CREATE INDEX IF NOT EXISTS idx_notification_queue_user ON notification_queue("userId");
+CREATE INDEX IF NOT EXISTS idx_notification_queue_scheduled_for ON notification_queue("scheduledFor");
+
+-- Enable RLS
+ALTER TABLE backups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE restore_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_queue ENABLE ROW LEVEL SECURITY;
+
+-- RLS: backups - users can manage their own backups
+DROP POLICY IF EXISTS "Backups are selectable by owner" ON backups;
+CREATE POLICY "Backups are selectable by owner" ON backups
+  FOR SELECT USING (auth.uid() = "userId");
+
+DROP POLICY IF EXISTS "Backups are insertable by owner" ON backups;
+CREATE POLICY "Backups are insertable by owner" ON backups
+  FOR INSERT WITH CHECK (auth.uid() = "userId");
+
+DROP POLICY IF EXISTS "Backups are updatable by owner" ON backups;
+CREATE POLICY "Backups are updatable by owner" ON backups
+  FOR UPDATE USING (auth.uid() = "userId");
+
+DROP POLICY IF EXISTS "Backups are deletable by owner" ON backups;
+CREATE POLICY "Backups are deletable by owner" ON backups
+  FOR DELETE USING (auth.uid() = "userId");
+
+-- RLS: restore_jobs - users can view and manage their own restore jobs
+DROP POLICY IF EXISTS "Restore jobs are selectable by owner" ON restore_jobs;
+CREATE POLICY "Restore jobs are selectable by owner" ON restore_jobs
+  FOR SELECT USING (auth.uid() = "userId");
+
+DROP POLICY IF EXISTS "Restore jobs are insertable by owner" ON restore_jobs;
+CREATE POLICY "Restore jobs are insertable by owner" ON restore_jobs
+  FOR INSERT WITH CHECK (auth.uid() = "userId");
+
+DROP POLICY IF EXISTS "Restore jobs are updatable by owner" ON restore_jobs;
+CREATE POLICY "Restore jobs are updatable by owner" ON restore_jobs
+  FOR UPDATE USING (auth.uid() = "userId");
+
+-- RLS: notification_queue - users can view their queued notifications
+DROP POLICY IF EXISTS "Notification queue is selectable by owner" ON notification_queue;
+CREATE POLICY "Notification queue is selectable by owner" ON notification_queue
+  FOR SELECT USING (auth.uid() = "userId");
+

@@ -12,6 +12,7 @@ import {
   ArrowPathIcon 
 } from '@heroicons/react/24/outline';
 import { useRole } from '../../../hooks/useRole';
+import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
 
 interface Backup {
@@ -37,7 +38,8 @@ interface RestoreJob {
 }
 
 export default function BackupRestorePage() {
-  const { user, role } = useRole();
+  const role = useRole();
+  const { user } = useAuth();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [restoreJobs, setRestoreJobs] = useState<RestoreJob[]>([]);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
@@ -124,18 +126,16 @@ export default function BackupRestorePage() {
 
       if (error) throw error;
 
-      // Simulate backup process
-      setTimeout(() => {
-        updateBackupStatus(data.id, 'completed');
-        setBackupForm({
-          name: '',
-          description: '',
-          type: 'full',
-          tables: []
-        });
-        setIsCreatingBackup(false);
-        loadBackups();
-      }, 3000);
+      // Mark as queued. A server-side job should process this backup.
+      await updateBackupStatus(data.id, 'in_progress');
+      setBackupForm({
+        name: '',
+        description: '',
+        type: 'full',
+        tables: []
+      });
+      setIsCreatingBackup(false);
+      loadBackups();
 
     } catch (error) {
       console.error('Error creating backup:', error);
@@ -165,7 +165,7 @@ export default function BackupRestorePage() {
     try {
       const restoreJobData = {
         backupId: backup.id,
-        status: 'in_progress',
+        status: 'pending',
         progress: 0,
         startedAt: new Date().toISOString(),
         userId: user?.id
@@ -179,20 +179,10 @@ export default function BackupRestorePage() {
 
       if (error) throw error;
 
-      // Simulate restore process with progress updates
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        updateRestoreProgress(data.id, progress);
-
-        if (progress >= 100) {
-          clearInterval(interval);
-          updateRestoreStatus(data.id, 'completed');
-          setIsRestoring(false);
-          setSelectedBackup(null);
-          loadRestoreJobs();
-        }
-      }, 500);
+      // Leave processing to background workers. UI will reflect updates from DB polling.
+      setIsRestoring(false);
+      setSelectedBackup(null);
+      loadRestoreJobs();
 
     } catch (error) {
       console.error('Error starting restore:', error);
@@ -303,6 +293,19 @@ export default function BackupRestorePage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-200">
+        This page enqueues backup and restore jobs. Processing is handled by server-side workers. If you are running locally, these actions will create records but may not execute without a configured worker.
+      </div>
+      {/* Breadcrumbs */}
+      <nav aria-label="Breadcrumb" className="-mt-2">
+        <ol className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+          <li>
+            <a href="/settings" className="hover:underline">Settings</a>
+          </li>
+          <li>/</li>
+          <li className="text-gray-700 dark:text-gray-200 font-medium">Backup & Restore</li>
+        </ol>
+      </nav>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Backup & Restore</h1>

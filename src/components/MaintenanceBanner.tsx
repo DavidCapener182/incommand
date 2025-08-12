@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import DOMPurify from 'dompurify'
 import { useMaintenanceMode } from '../hooks/useSystemSettings'
 import { useUpdateSystemSettings } from '../hooks/useSystemSettings'
 import { useIsAdmin } from '../hooks/useRole'
@@ -92,9 +93,10 @@ export const MaintenanceBanner: React.FC<MaintenanceBannerProps> = ({ className 
           <div className="flex items-center space-x-3">
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-800 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-800">
-                {maintenanceMessage}
-              </p>
+              <p
+                className="text-sm font-medium text-yellow-800"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(maintenanceMessage || '') }}
+              />
               <p className="text-xs text-yellow-700 mt-1">
                 System maintenance in progress. Some features may be temporarily unavailable.
               </p>

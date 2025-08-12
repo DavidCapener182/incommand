@@ -31,10 +31,115 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json()
+    // Define strong schemas for nested structures
+    const dashboardLayoutSchema = z.object({
+      widgets: z.record(z.object({
+        position: z.object({ x: z.number().int(), y: z.number().int() }),
+        size: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
+        visible: z.boolean(),
+        settings: z.record(z.any()).optional()
+      })),
+      layout_version: z.number().int().min(1),
+      last_modified: z.string().datetime()
+    })
+
+    const notificationPreferencesSchema = z.object({
+      email: z.object({
+        enabled: z.boolean(),
+        frequency: z.enum(['immediate','hourly','daily','weekly']),
+        categories: z.object({
+          incidents: z.boolean(),
+          system_updates: z.boolean(),
+          reports: z.boolean(),
+          social_media: z.boolean()
+        })
+      }),
+      push: z.object({
+        enabled: z.boolean(),
+        sound: z.boolean(),
+        vibration: z.boolean(),
+        categories: z.object({
+          incidents: z.boolean(),
+          system_updates: z.boolean(),
+          reports: z.boolean(),
+          social_media: z.boolean()
+        })
+      }),
+      sms: z.object({
+        enabled: z.boolean(),
+        emergency_only: z.boolean(),
+        phone_number: z.string().optional()
+      }),
+      quiet_hours: z.object({
+        enabled: z.boolean(),
+        start: z.string(),
+        end: z.string(),
+        timezone: z.string()
+      })
+    })
+
+    const uiPreferencesSchema = z.object({
+      language: z.string(),
+      timezone: z.string(),
+      date_format: z.string(),
+      time_format: z.enum(['12h','24h']),
+      compact_mode: z.boolean(),
+      animations_enabled: z.boolean(),
+      auto_refresh_interval: z.number().int(),
+      sidebar_collapsed: z.boolean(),
+      color_scheme: z.enum(['default','high_contrast','colorblind_friendly'])
+    })
+
+    const accessibilitySettingsSchema = z.object({
+      font_size: z.enum(['small','medium','large','extra_large']),
+      line_spacing: z.enum(['tight','normal','loose']),
+      contrast_ratio: z.enum(['normal','high','maximum']),
+      reduce_motion: z.boolean(),
+      screen_reader_optimized: z.boolean(),
+      keyboard_navigation: z.boolean(),
+      focus_indicators: z.boolean(),
+    })
+
+    const privacySettingsSchema = z.object({
+      data_sharing: z.object({
+        analytics: z.boolean(),
+        crash_reports: z.boolean(),
+        usage_statistics: z.boolean(),
+      }),
+      visibility: z.object({
+        profile_public: z.boolean(),
+        activity_visible: z.boolean(),
+        location_sharing: z.boolean(),
+      }),
+      data_retention: z.object({
+        auto_delete_logs: z.boolean(),
+        retention_period_days: z.number().int()
+      }),
+    })
+
+    const preferencesSchema = z.object({
+      theme: z.enum(['light','dark','auto']).optional(),
+      dashboard_layout: dashboardLayoutSchema.optional(),
+      notification_preferences: notificationPreferencesSchema.optional(),
+      ui_preferences: uiPreferencesSchema.optional(),
+      accessibility_settings: accessibilitySettingsSchema.optional(),
+      privacy_settings: privacySettingsSchema.optional(),
+    }).strict()
+
+    const scheduledNotificationSchema = z.object({
+      template_id: z.string().uuid().optional(),
+      schedule_type: z.enum(['one_time','recurring','conditional']),
+      cron_expression: z.string().max(200).optional(),
+      scheduled_at: z.string().datetime().optional(),
+      status: z.enum(['pending','sent','failed','cancelled']).optional(),
+      variables: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+      max_retries: z.number().int().min(0).max(10).optional(),
+    }).strict()
+
     const schema = z.object({
-      preferences: z.any().optional(),
-      dashboard_layout: z.any().optional(),
-      scheduled_notifications: z.array(z.any()).optional(),
+      preferences: preferencesSchema.optional(),
+      dashboard_layout: z.record(z.any()).optional(),
+      scheduled_notifications: z.array(scheduledNotificationSchema).optional(),
       conflictResolution: z.enum(['merge', 'skip', 'overwrite']).optional().default('merge'),
       version: z.string().optional(),
     })
@@ -141,7 +246,11 @@ async function importUserPreferences(
 ): Promise<{ success: boolean; error?: string; conflicts?: any[] }> {
   try {
     // Basic sanitization
-    const sanitized = typeof preferences === 'object' ? preferences : {}
+      const parsedPreferences = preferencesSchema.safeParse(preferences)
+      if (!parsedPreferences.success) {
+        return { success: false, error: 'Invalid preferences structure' }
+      }
+      const sanitized = parsedPreferences.data
     // Get current user preferences
     const { data: currentPreferences } = await supabase
       .from('user_preferences')
@@ -188,7 +297,11 @@ async function importDashboardLayout(
   conflictResolution: string
 ): Promise<{ success: boolean; error?: string; conflicts?: any[] }> {
   try {
-    const sanitizedLayout = typeof dashboardLayout === 'object' ? dashboardLayout : {}
+    const parsedLayout = dashboardLayoutSchema.safeParse(dashboardLayout)
+    if (!parsedLayout.success) {
+      return { success: false, error: 'Invalid dashboard_layout structure' }
+    }
+    const sanitizedLayout = parsedLayout.data
     // Get current user preferences
     const { data: currentPreferences } = await supabase
       .from('user_preferences')
@@ -240,18 +353,20 @@ async function importScheduledNotifications(
 
     for (const notification of scheduledNotifications) {
       try {
-        // Basic validation
-        if (!notification || typeof notification !== 'object') {
+        // Strong validation
+        const parsed = scheduledNotificationSchema.safeParse(notification)
+        if (!parsed.success) {
           conflicts.push('Invalid notification entry')
           continue
         }
+        const validNotification = parsed.data
         // Check if notification already exists
         const { data: existingNotification } = await supabase
           .from('scheduled_notifications')
           .select('id')
           .eq('user_id', userId)
-          .eq('template_id', notification.template_id)
-          .eq('schedule_type', notification.schedule_type)
+          .eq('template_id', validNotification.template_id)
+          .eq('schedule_type', validNotification.schedule_type)
           .single()
 
         if (existingNotification && conflictResolution === 'skip') {
@@ -264,7 +379,7 @@ async function importScheduledNotifications(
           .from('scheduled_notifications')
           .upsert({
             user_id: userId,
-            ...notification,
+            ...validNotification,
             updated_at: new Date().toISOString()
           })
 

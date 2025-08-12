@@ -137,6 +137,16 @@ const PreferencesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Breadcrumbs */}
+        <nav aria-label="Breadcrumb" className="mb-4 text-sm">
+          <ol className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+            <li>
+              <a href="/settings" className="hover:underline">Settings</a>
+            </li>
+            <li>/</li>
+            <li className="text-gray-700 dark:text-gray-200 font-medium">Preferences</li>
+          </ol>
+        </nav>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">

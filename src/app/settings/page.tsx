@@ -94,12 +94,9 @@ export default function GeneralSettingsPage() {
           if (!companyError) setCompany(companyData);
         }
 
-        // Get theme preference from centralized preferences
+        // Get theme preference exclusively from centralized preferences
         if (preferences?.theme) {
           setDarkMode(preferences.theme === 'dark');
-        } else {
-          const savedTheme = localStorage.getItem('theme');
-          setDarkMode(savedTheme === 'dark');
         }
 
       } catch (error: any) {
@@ -166,11 +163,21 @@ export default function GeneralSettingsPage() {
     }
   };
 
-  const toggleTheme = () => {
-    const newTheme = !darkMode;
-    setDarkMode(newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark', newTheme);
+  const toggleTheme = async () => {
+    try {
+      const newTheme = !darkMode;
+      setDarkMode(newTheme);
+      document.documentElement.classList.toggle('dark', newTheme);
+      if (user) {
+        await supabase.from('user_preferences').upsert({
+          user_id: user.id,
+          theme: newTheme ? 'dark' : 'light',
+          updated_at: new Date().toISOString()
+        })
+      }
+    } catch (e) {
+      console.error('Failed to persist theme preference', e)
+    }
   };
 
   if (loading) {
@@ -420,7 +427,29 @@ export default function GeneralSettingsPage() {
                 </div>
               </div>
               <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
+                onClick={async () => {
+                  const next = !emailNotifications
+                  setEmailNotifications(next)
+                  try {
+                    if (user) {
+                      const current = preferences?.notification_preferences
+                      const updated = {
+                        ...current,
+                        email: {
+                          ...(current?.email || { enabled: true, frequency: 'immediate', categories: { incidents: true, system_updates: true, reports: true, social_media: false } }),
+                          enabled: next
+                        }
+                      }
+                      await supabase.from('user_preferences').upsert({
+                        user_id: user.id,
+                        notification_preferences: updated,
+                        updated_at: new Date().toISOString()
+                      })
+                    }
+                  } catch (e) {
+                    console.error('Failed to persist email notifications', e)
+                  }
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   emailNotifications ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
@@ -442,7 +471,29 @@ export default function GeneralSettingsPage() {
                 </div>
               </div>
               <button
-                onClick={() => setPushNotifications(!pushNotifications)}
+                onClick={async () => {
+                  const next = !pushNotifications
+                  setPushNotifications(next)
+                  try {
+                    if (user) {
+                      const current = preferences?.notification_preferences
+                      const updated = {
+                        ...current,
+                        push: {
+                          ...(current?.push || { enabled: true, sound: true, vibration: true, categories: { incidents: true, system_updates: true, reports: false, social_media: false } }),
+                          enabled: next
+                        }
+                      }
+                      await supabase.from('user_preferences').upsert({
+                        user_id: user.id,
+                        notification_preferences: updated,
+                        updated_at: new Date().toISOString()
+                      })
+                    }
+                  } catch (e) {
+                    console.error('Failed to persist push notifications', e)
+                  }
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   pushNotifications ? 'bg-blue-600' : 'bg-gray-200'
                 }`}

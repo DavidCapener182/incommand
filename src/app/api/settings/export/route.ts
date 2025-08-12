@@ -2,21 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { cookies } from 'next/headers'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 
-// Simple in-memory rate limiter per IP
-const rateMap = new Map<string, { count: number; ts: number }>()
-const RATE_LIMIT = 30 // per 10 minutes
-const RATE_WINDOW_MS = 10 * 60 * 1000
+// Distributed rate limiter with Upstash (falls back to in-memory if env not set)
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
+  : null
+const limiter = redis
+  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, '10 m') })
+  : null
+const fallbackRateMap = new Map<string, { count: number; ts: number }>()
+const FALLBACK_RATE_LIMIT = 30
+const FALLBACK_RATE_WINDOW_MS = 10 * 60 * 1000
 
-function checkRateLimit(ip: string | undefined): boolean {
+async function checkRateLimit(ip: string | undefined): Promise<boolean> {
   if (!ip) return true
+  if (limiter) {
+    const { success } = await limiter.limit(`export:${ip}`)
+    return success
+  }
   const now = Date.now()
-  const entry = rateMap.get(ip)
-  if (!entry || now - entry.ts > RATE_WINDOW_MS) {
-    rateMap.set(ip, { count: 1, ts: now })
+  const entry = fallbackRateMap.get(ip)
+  if (!entry || now - entry.ts > FALLBACK_RATE_WINDOW_MS) {
+    fallbackRateMap.set(ip, { count: 1, ts: now })
     return true
   }
-  if (entry.count >= RATE_LIMIT) return false
+  if (entry.count >= FALLBACK_RATE_LIMIT) return false
   entry.count += 1
   return true
 }
@@ -24,7 +36,7 @@ function checkRateLimit(ip: string | undefined): boolean {
 export async function GET(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for') || request.ip || 'unknown'
-    if (!checkRateLimit(ip)) {
+    if (!(await checkRateLimit(ip))) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
     const cookieStore = await cookies()
@@ -40,11 +52,16 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Get current user
+    // Get current user and role for permission-scoped export
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -187,6 +204,10 @@ function sanitizeExport(data: any) {
 // POST method for bulk export (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || (request as any).ip || 'unknown'
+    if (!(await checkRateLimit(ip))) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    }
     const cookieStore = await cookies()
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -209,7 +230,7 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, company_id')
       .eq('id', user.id)
       .single()
 
@@ -258,7 +279,11 @@ export async function POST(request: NextRequest) {
         .eq('id', userId)
         .single()
 
+      // Permission validation: same company scope for non-superadmin
       if (userProfile) {
+        if (profile.role !== 'superadmin' && profile.company_id && userProfile.company_id && userProfile.company_id !== profile.company_id) {
+          continue
+        }
         userData.profile = {
           ...userProfile,
           password: undefined,

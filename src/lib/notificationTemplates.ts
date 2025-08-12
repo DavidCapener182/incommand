@@ -143,6 +143,14 @@ export function validateTemplate(template: NotificationTemplate): TemplateValida
   const warnings: string[] = []
   const variables: TemplateVariable[] = []
   
+  // Size limits (subject <= 200 chars, body <= 5000 chars)
+  if (template.subject && template.subject.length > 200) {
+    errors.push('Subject exceeds maximum length of 200 characters')
+  }
+  if (template.body && template.body.length > 5000) {
+    errors.push('Body exceeds maximum length of 5000 characters')
+  }
+  
   // Check required fields
   if (!template.template_name?.trim()) {
     errors.push('Template name is required')
@@ -168,6 +176,11 @@ export function validateTemplate(template: NotificationTemplate): TemplateValida
   const allVariables = [...new Set([...subjectVariables, ...bodyVariables])]
   
   for (const variableName of allVariables) {
+    // Variable naming convention: lowercase letters, numbers and underscores only
+    if (!/^[a-z0-9_]+$/.test(variableName)) {
+      errors.push(`Invalid variable name '${variableName}'. Use lowercase letters, numbers, and underscores only`)
+      continue
+    }
     const commonVariable = COMMON_VARIABLES[variableName]
     
     if (commonVariable) {
@@ -189,6 +202,16 @@ export function validateTemplate(template: NotificationTemplate): TemplateValida
     if (!template.variables.includes(requiredVar.name)) {
       errors.push(`Required variable '${requiredVar.name}' is missing from template variables list`)
     }
+  }
+
+  // Security checks: prohibit dangerous patterns like script tags and url protocols in variables
+  const dangerousPattern = /(javascript:|data:|vbscript:)/i
+  if (dangerousPattern.test(template.subject) || dangerousPattern.test(template.body)) {
+    warnings.push('Potentially dangerous protocol detected in template content')
+  }
+  const scriptTagPattern = /<\s*script\b[^>]*>([\s\S]*?)<\s*\/\s*script>/i
+  if (scriptTagPattern.test(template.subject) || scriptTagPattern.test(template.body)) {
+    errors.push('Script tags are not allowed in templates')
   }
   
   return {
@@ -475,4 +498,146 @@ The Team`,
   }
   
   return suggestions[category] || suggestions.general
+}
+
+// --- Template Versioning Support ---
+
+export interface TemplateVersionHistoryEntry {
+  id: string
+  template_id: string
+  version: number
+  subject: string
+  body: string
+  variables: string[]
+  created_at: string
+  created_by?: string
+}
+
+/**
+ * Create a new template version by incrementing version and saving historical entry
+ */
+export async function createNewTemplateVersion(
+  supabase: any,
+  templateId: string,
+  updates: Partial<Pick<NotificationTemplate, 'subject' | 'body' | 'variables' | 'is_active'>>,
+  userId?: string
+): Promise<{ success: boolean; error?: string; newVersion?: number }>{
+  try {
+    const { data: existing, error: fetchError } = await supabase
+      .from('notification_templates')
+      .select('*')
+      .eq('id', templateId)
+      .single()
+    if (fetchError || !existing) {
+      return { success: false, error: fetchError?.message || 'Template not found' }
+    }
+
+    // Save current state to history table if present
+    const hasHistory = await ensureTemplateHistoryTable(supabase)
+    if (hasHistory) {
+      await supabase.from('notification_template_history').insert({
+        template_id: existing.id,
+        version: existing.version,
+        subject: existing.subject,
+        body: existing.body,
+        variables: existing.variables,
+        created_by: userId || existing.created_by || null
+      })
+    }
+
+    const newVersion = (existing.version || 1) + 1
+    const { error: updateError } = await supabase
+      .from('notification_templates')
+      .update({
+        subject: updates.subject ?? existing.subject,
+        body: updates.body ?? existing.body,
+        variables: updates.variables ?? existing.variables,
+        is_active: updates.is_active ?? existing.is_active,
+        version: newVersion,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', templateId)
+
+    if (updateError) return { success: false, error: updateError.message }
+    return { success: true, newVersion }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Roll back a template to a specific previous version
+ */
+export async function rollbackTemplateVersion(
+  supabase: any,
+  templateId: string,
+  version: number
+): Promise<{ success: boolean; error?: string }>{
+  try {
+    const hasHistory = await ensureTemplateHistoryTable(supabase)
+    if (!hasHistory) return { success: false, error: 'Template history not supported' }
+
+    const { data: entry, error } = await supabase
+      .from('notification_template_history')
+      .select('*')
+      .eq('template_id', templateId)
+      .eq('version', version)
+      .single()
+    if (error || !entry) return { success: false, error: error?.message || 'Version not found' }
+
+    const { error: updateError } = await supabase
+      .from('notification_templates')
+      .update({
+        subject: entry.subject,
+        body: entry.body,
+        variables: entry.variables,
+        version: version,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', templateId)
+    if (updateError) return { success: false, error: updateError.message }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get version history for a template
+ */
+export async function getTemplateHistory(
+  supabase: any,
+  templateId: string
+): Promise<{ success: boolean; error?: string; history?: TemplateVersionHistoryEntry[] }>{
+  try {
+    const hasHistory = await ensureTemplateHistoryTable(supabase)
+    if (!hasHistory) return { success: true, history: [] }
+    const { data, error } = await supabase
+      .from('notification_template_history')
+      .select('*')
+      .eq('template_id', templateId)
+      .order('version', { ascending: false })
+    if (error) return { success: false, error: error.message }
+    return { success: true, history: data || [] }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Ensure history table exists (no-op if not present)
+async function ensureTemplateHistoryTable(supabase: any): Promise<boolean> {
+  try {
+    // Attempt a lightweight select; if it fails due to missing table, return false
+    const { error } = await supabase
+      .from('notification_template_history')
+      .select('template_id')
+      .limit(1)
+    if (error && (error as any).code === '42P01') {
+      // table does not exist
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
 }
