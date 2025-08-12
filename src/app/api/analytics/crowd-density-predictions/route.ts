@@ -272,9 +272,9 @@ function generateCapacityWarnings(crowdFlow: any[], venueCapacity: number) {
 }
 
 function analyzeCrowdBehavior(flowPatterns: any[], venueZones: any[]) {
-  const movementPatterns = [];
-  const congestionPoints = [];
-  const recommendations = [];
+  const movementPatterns: string[] = [];
+  const congestionPoints: string[] = [];
+  const recommendations: string[] = [];
 
   // Analyze movement patterns
   if (flowPatterns.length > 0) {
