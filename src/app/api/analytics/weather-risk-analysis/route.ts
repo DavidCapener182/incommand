@@ -222,7 +222,7 @@ function analyzeWeatherRisks(
         'Increase lighting in affected areas',
         'Provide shelter or covered areas'
       ],
-      severity: probability > 60 ? 'high' : probability > 30 ? 'medium' : 'low'
+      severity: (probability > 60 ? 'high' : probability > 30 ? 'medium' : 'low') as 'low' | 'medium' | 'high' | 'critical'
     });
   }
 
@@ -246,7 +246,7 @@ function analyzeWeatherRisks(
         'Prepare evacuation procedures',
         'Monitor wind speeds continuously'
       ],
-      severity: probability > 50 ? 'high' : probability > 25 ? 'medium' : 'low'
+      severity: (probability > 50 ? 'high' : probability > 25 ? 'medium' : 'low') as 'low' | 'medium' | 'high' | 'critical'
     });
   }
 
@@ -270,7 +270,7 @@ function analyzeWeatherRisks(
         'Create shaded rest areas',
         'Monitor vulnerable attendees'
       ],
-      severity: probability > 70 ? 'critical' : probability > 40 ? 'high' : 'medium'
+      severity: (probability > 70 ? 'critical' : probability > 40 ? 'high' : 'medium') as 'low' | 'medium' | 'high' | 'critical'
     });
   }
 
@@ -294,7 +294,7 @@ function analyzeWeatherRisks(
         'Increase medical monitoring',
         'Ensure proper heating in indoor areas'
       ],
-      severity: probability > 60 ? 'high' : probability > 35 ? 'medium' : 'low'
+      severity: (probability > 60 ? 'high' : probability > 35 ? 'medium' : 'low') as 'low' | 'medium' | 'high' | 'critical'
     });
   }
 
