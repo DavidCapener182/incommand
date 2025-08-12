@@ -31,7 +31,8 @@ const SystemSettingsPage: React.FC = () => {
     email_enabled: true,
     push_enabled: true,
     sms_enabled: false,
-    quiet_hours: { enabled: false, start: '22:00', end: '08:00' }
+    quiet_hours: { enabled: false, start: '22:00', end: '08:00' },
+    default_templates: {}
   })
   const [platformConfig, setPlatformConfig] = useState({
     max_file_upload_size: 10485760,
@@ -57,7 +58,10 @@ const SystemSettingsPage: React.FC = () => {
       }))
       setFeatureFlags(flags)
       
-      setNotificationSettings(systemSettings.notification_settings)
+      setNotificationSettings({
+        ...systemSettings.notification_settings,
+        default_templates: systemSettings.notification_settings?.default_templates || {}
+      })
       setPlatformConfig(systemSettings.platform_config)
     }
   }, [systemSettings])
