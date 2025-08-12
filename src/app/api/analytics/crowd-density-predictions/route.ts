@@ -231,7 +231,12 @@ function analyzeCurrentDensity(currentOccupancy: number, venueCapacity: number) 
 }
 
 function generateCapacityWarnings(crowdFlow: any[], venueCapacity: number) {
-  const warnings = [];
+  const warnings: {
+    time: string;
+    predictedOccupancy: number;
+    severity: 'warning' | 'critical';
+    recommendations: string[];
+  }[] = [];
   const criticalThreshold = venueCapacity * 0.9; // 90% capacity
   const warningThreshold = venueCapacity * 0.75; // 75% capacity
 
