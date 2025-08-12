@@ -99,7 +99,7 @@ export default function NotificationSettingsPage() {
     path: string;
     disabled?: boolean;
   }) => {
-    const value = path.split('.').reduce((obj, key) => obj?.[key], notificationPreferences);
+    const value = path.split('.').reduce<any>((obj: any, key: string) => obj?.[key], notificationPreferences as any) as boolean;
     
     return (
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
@@ -111,7 +111,7 @@ export default function NotificationSettingsPage() {
           <input
             type="checkbox"
             className="sr-only"
-            checked={value as boolean}
+            checked={Boolean(value)}
             onChange={(e) => handleNotificationUpdate(path, e.target.checked)}
             disabled={disabled}
           />
@@ -443,7 +443,7 @@ export default function NotificationSettingsPage() {
         </div>
       </div>
 
-      <Toast messages={messages} removeToast={removeToast} />
+      <Toast messages={messages} onRemove={removeToast} />
     </div>
   );
 } 

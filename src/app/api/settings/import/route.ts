@@ -3,6 +3,111 @@ import { z } from 'zod'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+// Shared schemas (top-level so helpers can use them)
+export const dashboardLayoutSchema = z.object({
+  widgets: z.record(z.object({
+    position: z.object({ x: z.number().int(), y: z.number().int() }),
+    size: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
+    visible: z.boolean(),
+    settings: z.record(z.any()).optional()
+  })),
+  layout_version: z.number().int().min(1),
+  last_modified: z.string().datetime()
+})
+
+export const notificationPreferencesSchema = z.object({
+  email: z.object({
+    enabled: z.boolean(),
+    frequency: z.enum(['immediate','hourly','daily','weekly']),
+    categories: z.object({
+      incidents: z.boolean(),
+      system_updates: z.boolean(),
+      reports: z.boolean(),
+      social_media: z.boolean()
+    })
+  }),
+  push: z.object({
+    enabled: z.boolean(),
+    sound: z.boolean(),
+    vibration: z.boolean(),
+    categories: z.object({
+      incidents: z.boolean(),
+      system_updates: z.boolean(),
+      reports: z.boolean(),
+      social_media: z.boolean()
+    })
+  }),
+  sms: z.object({
+    enabled: z.boolean(),
+    emergency_only: z.boolean(),
+    phone_number: z.string().optional()
+  }),
+  quiet_hours: z.object({
+    enabled: z.boolean(),
+    start: z.string(),
+    end: z.string(),
+    timezone: z.string()
+  })
+})
+
+export const uiPreferencesSchema = z.object({
+  language: z.string(),
+  timezone: z.string(),
+  date_format: z.string(),
+  time_format: z.enum(['12h','24h']),
+  compact_mode: z.boolean(),
+  animations_enabled: z.boolean(),
+  auto_refresh_interval: z.number().int(),
+  sidebar_collapsed: z.boolean(),
+  color_scheme: z.enum(['default','high_contrast','colorblind_friendly'])
+})
+
+export const accessibilitySettingsSchema = z.object({
+  font_size: z.enum(['small','medium','large','extra_large']),
+  line_spacing: z.enum(['tight','normal','loose']),
+  contrast_ratio: z.enum(['normal','high','maximum']),
+  reduce_motion: z.boolean(),
+  screen_reader_optimized: z.boolean(),
+  keyboard_navigation: z.boolean(),
+  focus_indicators: z.boolean(),
+})
+
+export const privacySettingsSchema = z.object({
+  data_sharing: z.object({
+    analytics: z.boolean(),
+    crash_reports: z.boolean(),
+    usage_statistics: z.boolean(),
+  }),
+  visibility: z.object({
+    profile_public: z.boolean(),
+    activity_visible: z.boolean(),
+    location_sharing: z.boolean(),
+  }),
+  data_retention: z.object({
+    auto_delete_logs: z.boolean(),
+    retention_period_days: z.number().int()
+  }),
+})
+
+export const preferencesSchema = z.object({
+  theme: z.enum(['light','dark','auto']).optional(),
+  dashboard_layout: dashboardLayoutSchema.optional(),
+  notification_preferences: notificationPreferencesSchema.optional(),
+  ui_preferences: uiPreferencesSchema.optional(),
+  accessibility_settings: accessibilitySettingsSchema.optional(),
+  privacy_settings: privacySettingsSchema.optional(),
+}).strict()
+
+export const scheduledNotificationSchema = z.object({
+  template_id: z.string().uuid().optional(),
+  schedule_type: z.enum(['one_time','recurring','conditional']),
+  cron_expression: z.string().max(200).optional(),
+  scheduled_at: z.string().datetime().optional(),
+  status: z.enum(['pending','sent','failed','cancelled']).optional(),
+  variables: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  max_retries: z.number().int().min(0).max(10).optional(),
+}).strict()
+
 export async function POST(request: NextRequest) {
   try {
     // Enforce body size limit (~1MB)
@@ -20,110 +125,6 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json()
-    // Define strong schemas for nested structures
-    const dashboardLayoutSchema = z.object({
-      widgets: z.record(z.object({
-        position: z.object({ x: z.number().int(), y: z.number().int() }),
-        size: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
-        visible: z.boolean(),
-        settings: z.record(z.any()).optional()
-      })),
-      layout_version: z.number().int().min(1),
-      last_modified: z.string().datetime()
-    })
-
-    const notificationPreferencesSchema = z.object({
-      email: z.object({
-        enabled: z.boolean(),
-        frequency: z.enum(['immediate','hourly','daily','weekly']),
-        categories: z.object({
-          incidents: z.boolean(),
-          system_updates: z.boolean(),
-          reports: z.boolean(),
-          social_media: z.boolean()
-        })
-      }),
-      push: z.object({
-        enabled: z.boolean(),
-        sound: z.boolean(),
-        vibration: z.boolean(),
-        categories: z.object({
-          incidents: z.boolean(),
-          system_updates: z.boolean(),
-          reports: z.boolean(),
-          social_media: z.boolean()
-        })
-      }),
-      sms: z.object({
-        enabled: z.boolean(),
-        emergency_only: z.boolean(),
-        phone_number: z.string().optional()
-      }),
-      quiet_hours: z.object({
-        enabled: z.boolean(),
-        start: z.string(),
-        end: z.string(),
-        timezone: z.string()
-      })
-    })
-
-    const uiPreferencesSchema = z.object({
-      language: z.string(),
-      timezone: z.string(),
-      date_format: z.string(),
-      time_format: z.enum(['12h','24h']),
-      compact_mode: z.boolean(),
-      animations_enabled: z.boolean(),
-      auto_refresh_interval: z.number().int(),
-      sidebar_collapsed: z.boolean(),
-      color_scheme: z.enum(['default','high_contrast','colorblind_friendly'])
-    })
-
-    const accessibilitySettingsSchema = z.object({
-      font_size: z.enum(['small','medium','large','extra_large']),
-      line_spacing: z.enum(['tight','normal','loose']),
-      contrast_ratio: z.enum(['normal','high','maximum']),
-      reduce_motion: z.boolean(),
-      screen_reader_optimized: z.boolean(),
-      keyboard_navigation: z.boolean(),
-      focus_indicators: z.boolean(),
-    })
-
-    const privacySettingsSchema = z.object({
-      data_sharing: z.object({
-        analytics: z.boolean(),
-        crash_reports: z.boolean(),
-        usage_statistics: z.boolean(),
-      }),
-      visibility: z.object({
-        profile_public: z.boolean(),
-        activity_visible: z.boolean(),
-        location_sharing: z.boolean(),
-      }),
-      data_retention: z.object({
-        auto_delete_logs: z.boolean(),
-        retention_period_days: z.number().int()
-      }),
-    })
-
-    const preferencesSchema = z.object({
-      theme: z.enum(['light','dark','auto']).optional(),
-      dashboard_layout: dashboardLayoutSchema.optional(),
-      notification_preferences: notificationPreferencesSchema.optional(),
-      ui_preferences: uiPreferencesSchema.optional(),
-      accessibility_settings: accessibilitySettingsSchema.optional(),
-      privacy_settings: privacySettingsSchema.optional(),
-    }).strict()
-
-    const scheduledNotificationSchema = z.object({
-      template_id: z.string().uuid().optional(),
-      schedule_type: z.enum(['one_time','recurring','conditional']),
-      cron_expression: z.string().max(200).optional(),
-      scheduled_at: z.string().datetime().optional(),
-      status: z.enum(['pending','sent','failed','cancelled']).optional(),
-      variables: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
-      max_retries: z.number().int().min(0).max(10).optional(),
-    }).strict()
 
     const schema = z.object({
       preferences: preferencesSchema.optional(),
@@ -275,7 +276,7 @@ async function importUserPreferences(
 
     return { success: true }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -326,7 +327,7 @@ async function importDashboardLayout(
 
     return { success: true }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -378,7 +379,7 @@ async function importScheduledNotifications(
           importedCount++
         }
       } catch (error) {
-        conflicts.push(`Error importing scheduled notification: ${error.message}`)
+        conflicts.push(`Error importing scheduled notification: ${(error as Error).message}`)
       }
     }
 
@@ -387,6 +388,6 @@ async function importScheduledNotifications(
       conflicts: conflicts.length > 0 ? conflicts : undefined 
     }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }

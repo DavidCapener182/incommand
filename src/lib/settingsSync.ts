@@ -146,7 +146,7 @@ function mergeValues(localValue: any, remoteValue: any): any {
   if (typeof localValue === 'object' && localValue !== null && remoteValue !== null) {
     if (Array.isArray(localValue) && Array.isArray(remoteValue)) {
       // Merge arrays by combining unique items
-      return [...new Set([...localValue, ...remoteValue])]
+      return Array.from(new Set([...localValue, ...remoteValue]))
     } else {
       // Merge objects by combining properties
       return { ...localValue, ...remoteValue }
@@ -350,15 +350,17 @@ export function setupRealtimeSync(
         filter: `user_id=eq.${userId}`
       },
       (payload) => {
-        const event: SettingsChangeEvent = {
-          userId: payload.new?.user_id || payload.old?.user_id,
+        const newRow = (payload as any).new as any
+        const oldRow = (payload as any).old as any
+        const evt: SettingsChangeEvent = {
+          userId: newRow?.user_id || oldRow?.user_id,
           tableName: 'user_preferences',
-          recordId: payload.new?.id || payload.old?.id,
-          operation: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
+          recordId: newRow?.id || oldRow?.id,
+          operation: (payload as any).eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           timestamp: new Date().toISOString()
         }
         
-        onSettingsChange(event)
+        onSettingsChange(evt)
       }
     )
     .subscribe()
@@ -529,7 +531,8 @@ export async function getSyncStatus(userId: string): Promise<SyncStatus> {
  * Clear all pending syncs (useful for cleanup)
  */
 export function clearPendingSyncs(): void {
-  for (const [key, timeoutId] of pendingSyncs.entries()) {
+  for (const entry of pendingSyncs.entries()) {
+    const [key, timeoutId] = entry as [string, NodeJS.Timeout]
     clearTimeout(timeoutId)
   }
   pendingSyncs.clear()

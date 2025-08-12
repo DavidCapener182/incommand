@@ -25,7 +25,7 @@ interface TemplateFormData {
 }
 
 const NotificationTemplatesPage: React.FC = () => {
-  const { isAdmin } = useRole()
+  const isAdmin = useRole() === 'admin' || useRole() === 'superadmin'
   const [templates, setTemplates] = useState<NotificationTemplate[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -510,7 +510,7 @@ const NotificationTemplatesPage: React.FC = () => {
                       ))}
                       {formData.variables.length === 0 && (
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          No variables detected. Use {{variable_name}} format to add variables.
+                          No variables detected. Use {'{{variable_name}}'} format to add variables.
                         </span>
                       )}
                     </div>

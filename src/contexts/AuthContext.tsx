@@ -120,12 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setSystemSettings({
         id: 'current',
-        maintenance_mode: data.maintenance_mode || false,
-        maintenance_message: data.maintenance_message || DEFAULT_SYSTEM_SETTINGS.maintenance_message,
-        feature_flags: data.feature_flags || DEFAULT_SYSTEM_SETTINGS.feature_flags,
-        default_user_role: data.default_user_role || DEFAULT_SYSTEM_SETTINGS.default_user_role,
-        notification_settings: data.notification_settings || DEFAULT_SYSTEM_SETTINGS.notification_settings,
-        platform_config: data.platform_config || DEFAULT_SYSTEM_SETTINGS.platform_config,
+        maintenance_mode: (data as any)?.maintenance_mode || false,
+        maintenance_message: (data as any)?.maintenance_message || DEFAULT_SYSTEM_SETTINGS.maintenance_message,
+        feature_flags: (data as any)?.feature_flags || DEFAULT_SYSTEM_SETTINGS.feature_flags,
+        default_user_role: (data as any)?.default_user_role || DEFAULT_SYSTEM_SETTINGS.default_user_role,
+        notification_settings: (data as any)?.notification_settings || DEFAULT_SYSTEM_SETTINGS.notification_settings,
+        platform_config: (data as any)?.platform_config || DEFAULT_SYSTEM_SETTINGS.platform_config,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -164,12 +164,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserPreferences({
         id: 'current',
         user_id: userId,
-        theme: data.theme || DEFAULT_USER_PREFERENCES.theme,
-        dashboard_layout: data.dashboard_layout || DEFAULT_USER_PREFERENCES.dashboard_layout,
-        notification_preferences: data.notification_preferences || DEFAULT_USER_PREFERENCES.notification_preferences,
-        ui_preferences: data.ui_preferences || DEFAULT_USER_PREFERENCES.ui_preferences,
-        accessibility_settings: data.accessibility_settings || DEFAULT_USER_PREFERENCES.accessibility_settings,
-        privacy_settings: data.privacy_settings || DEFAULT_USER_PREFERENCES.privacy_settings,
+        theme: (data as any)?.theme || DEFAULT_USER_PREFERENCES.theme,
+        dashboard_layout: (data as any)?.dashboard_layout || DEFAULT_USER_PREFERENCES.dashboard_layout,
+        notification_preferences: (data as any)?.notification_preferences || DEFAULT_USER_PREFERENCES.notification_preferences,
+        ui_preferences: (data as any)?.ui_preferences || DEFAULT_USER_PREFERENCES.ui_preferences,
+        accessibility_settings: (data as any)?.accessibility_settings || DEFAULT_USER_PREFERENCES.accessibility_settings,
+        privacy_settings: (data as any)?.privacy_settings || DEFAULT_USER_PREFERENCES.privacy_settings,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })

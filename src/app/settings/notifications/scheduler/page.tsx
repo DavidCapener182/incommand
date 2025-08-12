@@ -473,8 +473,8 @@ export default function NotificationSchedulerPage() {
                     onClick={() => {
                       setEditingId(notification.id);
                       setFormData({
-                        title: notification.title,
-                        message: notification.message,
+                        title: notification.title || '',
+                        message: notification.message || '',
                         cronExpression: notification.cron_expression || '',
                         timezone: formData.timezone,
                         isActive: notification.status === 'pending'

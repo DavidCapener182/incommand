@@ -100,7 +100,8 @@ export const useUpdateSystemSettings = () => {
     auth = { systemSettings: null, refreshSettings: async () => {} };
   }
   const { systemSettings, refreshSettings } = auth;
-  const { isAdmin } = useRole()
+  const role = useRole()
+  const isAdmin = role === 'admin' || role === 'superadmin'
   
   const updateSystemSettings = useCallback(async (
     updates: Partial<Pick<SystemSettings, 'maintenance_mode' | 'maintenance_message' | 'feature_flags' | 'notification_settings' | 'platform_config'>>
@@ -252,9 +253,9 @@ export const useFeatureAvailability = (featureName: string) => {
       if (!user?.id) return false
       
       // Simple hash-based rollout check
-      const hash = user.id.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0)
-        return a & a
+      const hash = user.id.split('').reduce((a: number, b: string) => {
+        const acc = ((a << 5) - a) + b.charCodeAt(0)
+        return acc & acc
       }, 0)
       const percentage = Math.abs(hash) % 100
       
