@@ -178,14 +178,14 @@ export default function AuditLogsPage() {
   const handleExportLogs = async () => {
     try {
       const exportData = filteredLogs.map(log => ({
-        timestamp: log.timestamp,
+        timestamp: log.created_at,
         userName: log.userName,
         action: log.action,
         resource: log.resource,
         resourceId: log.resourceId,
         category: log.category,
         severity: log.severity,
-        ipAddress: log.ipAddress,
+        ipAddress: log.ip_address,
         details: JSON.stringify(log.details)
       }));
 
