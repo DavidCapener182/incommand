@@ -22,6 +22,8 @@
     "@types/react-responsive": "^8.0.8",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.10.0",
+    "@upstash/ratelimit": "^2.0.4",
+    "@upstash/redis": "^1.34.3",
     "browser-image-compression": "^2.0.2",
     "buffer": "^6.0.3",
     "chart.js": "^4.5.0",
