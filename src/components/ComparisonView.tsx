@@ -137,7 +137,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
             </div>
           </div>
           <div className="text-xs text-gray-500">
-            * Significant changes (>5%) highlighted
+            * Significant changes (&gt;5%) highlighted
           </div>
         </div>
       </div>
