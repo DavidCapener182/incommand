@@ -58,6 +58,10 @@ import {
   getChartTheme 
 } from '../../utils/chartEnhancements';
 
+// Import export functionality only
+import { ExportMenu } from '../../components/ExportMenu';
+import { exportAnalyticsData } from '../../utils/exportUtils';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -161,6 +165,12 @@ export default function AnalyticsPage() {
   const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
   const [debriefError, setDebriefError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  
+  // New analytics state
+  const [exportResult, setExportResult] = useState<any>(null);
+
+  // Ensure eventId is available
+  const safeEventId = eventId || '';
 
   // Section status mapping for sidebar indicators
   const sectionStatus: Record<string, 'loading' | 'ready' | 'error' | 'none'> = {
@@ -172,6 +182,8 @@ export default function AnalyticsPage() {
 
   // Quick actions for sidebar - will be defined after functions
   let quickActions: QuickActionItem[] = [];
+
+
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -526,6 +538,18 @@ export default function AnalyticsPage() {
       variant: 'secondary'
     }
   ];
+
+  // Handle export completion
+  const handleExportComplete = (result: any) => {
+    setExportResult(result);
+    if (result.success) {
+      // Show success notification
+      console.log('Export completed successfully:', result.filename);
+    } else {
+      // Show error notification
+      console.error('Export failed:', result.error);
+    }
+  };
 
   // --- Attendance Timeline (existing, now larger) ---
   const attendanceChartData = {
@@ -989,6 +1013,26 @@ export default function AnalyticsPage() {
         {activeSection === 'overview' && (
           <div>
       
+            {/* Export Menu */}
+            {eventId && (
+              <div className="mb-8 flex justify-end">
+                <ExportMenu
+                  data={{
+                    incidents: incidentData,
+                    attendance: attendanceData,
+                    performance: [],
+                    predictions: predictions,
+                    comparison: null,
+                    filters: null
+                  }}
+                  eventId={safeEventId}
+                  eventName={eventDetails?.event_date || 'Event'}
+                  dateRange={undefined}
+                  onExportComplete={handleExportComplete}
+                />
+              </div>
+            )}
+
             {/* Top Analytics Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
               {kpiData.map((kpi, index) => (
