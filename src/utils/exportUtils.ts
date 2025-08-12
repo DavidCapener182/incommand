@@ -124,7 +124,7 @@ export const exportToCSV = async (data: ExportData, filename: string, options: E
     return { success: true, filename: `${filename}.csv` };
   } catch (error) {
     console.error('CSV export failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 
@@ -141,7 +141,7 @@ export const exportToExcel = async (data: ExportData, filename: string, options:
     return { success: true, filename: `${filename}.xlsx` };
   } catch (error) {
     console.error('Excel export failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 
@@ -160,7 +160,7 @@ export const exportToPDF = async (elementId: string, filename: string, options: 
     return { success: true, filename: `${filename}.pdf` };
   } catch (error) {
     console.error('PDF export failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 
@@ -183,7 +183,7 @@ export const exportToJSON = async (data: ExportData, filename: string, options: 
     return { success: true, filename: `${filename}.json` };
   } catch (error) {
     console.error('JSON export failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 
@@ -209,7 +209,7 @@ export const exportAnalyticsData = async (
     }
   } catch (error) {
     console.error('Export failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 
@@ -257,7 +257,7 @@ export class ExportQueue {
         item.result = result;
       } catch (error) {
         item.status = 'failed';
-        item.result = { success: false, error: error.message };
+        item.result = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
       }
     }
   }
