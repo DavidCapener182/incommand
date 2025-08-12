@@ -3064,9 +3064,7 @@ const AdminPage = () => {
           setIsUserModalOpen(false)
           setSelectedUser(null)
         }}
-        user={selectedUser}
-        companies={companies}
-        onSubmit={selectedUser ? handleUpdateUser : handleCreateUser}
+        refreshData={fetchData}
       />
       
       <CompanyCreationModal
