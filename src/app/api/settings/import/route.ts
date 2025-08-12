@@ -234,12 +234,12 @@ async function importUserPreferences(
   conflictResolution: string
 ): Promise<{ success: boolean; error?: string; conflicts?: any[] }> {
   try {
-    // Basic sanitization
-      const parsedPreferences = preferencesSchema.safeParse(preferences)
-      if (!parsedPreferences.success) {
-        return { success: false, error: 'Invalid preferences structure' }
-      }
-      const sanitized = parsedPreferences.data
+    // Strong validation
+    const parsedPreferences = preferencesSchema.safeParse(preferences)
+    if (!parsedPreferences.success) {
+      return { success: false, error: 'Invalid preferences structure' }
+    }
+    const sanitized = parsedPreferences.data
     // Get current user preferences
     const { data: currentPreferences } = await supabase
       .from('user_preferences')
