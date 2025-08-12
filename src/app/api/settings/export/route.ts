@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { Ratelimit } from '@upstash/ratelimit'
@@ -39,18 +40,7 @@ export async function GET(request: NextRequest) {
     if (!(await checkRateLimit(ip))) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
-    const cookieStore = await cookies()
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    const supabase = createRouteHandlerClient({ cookies })
 
     // Get current user and role for permission-scoped export
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -208,18 +198,7 @@ export async function POST(request: NextRequest) {
     if (!(await checkRateLimit(ip))) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
-    const cookieStore = await cookies()
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
