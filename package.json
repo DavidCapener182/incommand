@@ -55,7 +55,8 @@
     "three": "^0.177.0",
     "typescript": "^5",
     "weather-icons-react": "^1.2.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@heroicons/react": "^2.2.0",
