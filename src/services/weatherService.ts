@@ -30,4 +30,7 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
     console.error('Error fetching weather:', error);
     throw error;
   }
-}; 
+};
+
+// Alias for backward compatibility
+export const getWeatherData = getCurrentWeather; 

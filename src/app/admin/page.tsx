@@ -275,6 +275,14 @@ const AdminPage = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
 
+  // Support system state - moved before sectionStatus
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportFilter, setSupportFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
+  const [newSupportMessage, setNewSupportMessage] = useState('');
+
   // Section status mapping for sidebar indicators
   const sectionStatus: Record<string, 'loading' | 'ready' | 'error' | 'none'> = {
     overview: loading ? 'loading' : 'ready',
@@ -423,13 +431,7 @@ const AdminPage = () => {
   // Add state for editing user/company
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   
-  // Support system state
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
-  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
-  const [supportFilter, setSupportFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved' | 'closed'>('all');
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
-  const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
-  const [newSupportMessage, setNewSupportMessage] = useState('');
+  // Support system state - already declared above
 
   useEffect(() => {
     fetchData()
