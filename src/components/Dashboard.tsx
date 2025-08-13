@@ -33,7 +33,9 @@ import what3words from '@what3words/api'
 import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import AttendanceModal from './AttendanceModal'
-import { getIncidentTypeStyle } from './IncidentTable'
+import { getIncidentTypeStyle } from '../utils/incidentStyles'
+import MultiSelectFilter from './ui/MultiSelectFilter'
+import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
 import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -465,7 +467,7 @@ export default function Dashboard() {
   const { user } = auth;
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
+  const [filters, setFilters] = useState<FilterState>({ types: [], statuses: [], priorities: [], query: '' })
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   const [initialIncidentType, setInitialIncidentType] = useState<
@@ -736,10 +738,11 @@ export default function Dashboard() {
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
     if (incidents) {
+      const filteredForStats = filterIncidents(incidents, filters)
       const isCountable = (incident: any) => 
         !['Attendance', 'Sit Rep'].includes(incident.incident_type);
 
-      const countableIncidents = incidents.filter(isCountable);
+      const countableIncidents = filteredForStats.filter(isCountable);
       
       const highPriorityIncidentTypes = [
         'Ejection',
@@ -780,7 +783,7 @@ export default function Dashboard() {
         hasOpenHighPrio,
       });
     }
-  }, [incidents]); // Re-run calculations when incidents data changes
+  }, [incidents, filters]);
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
@@ -1017,6 +1020,8 @@ export default function Dashboard() {
             </Menu>
           </div>
         </div>
+
+        
         
         {/* Stats Grid */}
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4 mb-8">
@@ -1024,8 +1029,8 @@ export default function Dashboard() {
             title="Total"
             value={incidentStats.total}
             icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={selectedFilter === null}
-            onClick={() => setSelectedFilter(null)}
+            isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
+            onClick={() => setFilters({ types: [], statuses: [], priorities: [], query: '' })}
             isFilterable={true}
             tooltip="All logs including Attendance and Sit Reps."
           />
@@ -1033,8 +1038,8 @@ export default function Dashboard() {
             title="Open"
             value={incidentStats.open}
             icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
-            isSelected={selectedFilter === 'open'}
-            onClick={() => setSelectedFilter('open')}
+            isSelected={filters.statuses.includes('open')}
+            onClick={() => setFilters(prev => ({ ...prev, statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'] }))}
             isFilterable={true}
             color="yellow"
             tooltip="Incidents that are currently open."
@@ -1043,8 +1048,8 @@ export default function Dashboard() {
             title="High Prio"
             value={incidentStats.high}
             icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={selectedFilter === 'high'}
-            onClick={() => setSelectedFilter('high')}
+            isSelected={filters.priorities.includes('urgent') || filters.priorities.includes('high')}
+            onClick={() => setFilters(prev => ({ ...prev, priorities: ['urgent','high'] }))}
             isFilterable={true}
             color="red"
             tooltip="Incidents marked as high priority."
@@ -1054,8 +1059,8 @@ export default function Dashboard() {
             title="Closed"
             value={incidentStats.closed}
             icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
-            isSelected={selectedFilter === 'closed'}
-            onClick={() => setSelectedFilter('closed')}
+            isSelected={filters.statuses.includes('closed')}
+            onClick={() => setFilters(prev => ({ ...prev, statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'] }))}
             isFilterable={true}
             color="green"
             tooltip="Incidents that have been closed."
@@ -1064,8 +1069,8 @@ export default function Dashboard() {
             title="Refusals"
             value={incidentStats.refusals}
             icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={selectedFilter === 'Refusal'}
-            onClick={() => setSelectedFilter('Refusal')}
+            isSelected={filters.types.includes('Refusal')}
+            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
             isFilterable={true}
             tooltip="Incidents where entry was refused."
           />
@@ -1073,8 +1078,8 @@ export default function Dashboard() {
             title="Ejections"
             value={incidentStats.ejections}
             icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={selectedFilter === 'Ejection'}
-            onClick={() => setSelectedFilter('Ejection')}
+            isSelected={filters.types.includes('Ejection')}
+            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Ejection') ? prev.types.filter(t => t !== 'Ejection') : ['Ejection'] }))}
             isFilterable={true}
             tooltip="Incidents where someone was ejected."
           />
@@ -1082,8 +1087,8 @@ export default function Dashboard() {
             title="Medicals"
             value={incidentStats.medicals}
             icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={selectedFilter === 'Medical'}
-            onClick={() => setSelectedFilter('Medical')}
+            isSelected={filters.types.includes('Medical')}
+            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
             isFilterable={true}
             tooltip="Medical-related incidents."
           />
@@ -1091,8 +1096,8 @@ export default function Dashboard() {
             title="Other"
             value={incidentStats.other}
             icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={selectedFilter === 'Other'}
-            onClick={() => setSelectedFilter('Other')}
+            isSelected={filters.types.length > 0 && !['Refusal','Ejection','Medical'].some(t => filters.types.includes(t))}
+            onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
             isFilterable={true}
             tooltip="All other incident types."
           />
@@ -1123,10 +1128,9 @@ export default function Dashboard() {
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
-                  // Clear filter if empty string, otherwise filter by exact incident type
-                  setSelectedFilter(type === '' ? null : type);
+                  setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
                 }} 
-                selectedType={selectedFilter}
+                selectedType={filters.types[0] || null}
               />
             </div>
           </div>
@@ -1165,10 +1169,9 @@ export default function Dashboard() {
               <TopIncidentTypesCard 
                 incidents={incidents} 
                 onTypeClick={(type: string) => {
-                  // Clear filter if empty string, otherwise filter by exact incident type
-                  setSelectedFilter(type === '' ? null : type);
+                  setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
                 }} 
-                selectedType={selectedFilter}
+                selectedType={filters.types[0] || null}
               />
             </div>
             <SocialMediaMonitoringCard eventId={currentEvent?.id} />
@@ -1179,7 +1182,8 @@ export default function Dashboard() {
         <div className="pb-24">
           <IncidentTable 
             key={refreshKey}
-            filter={typeof selectedFilter === 'string' ? selectedFilter : undefined} 
+            filters={filters}
+            onFiltersChange={setFilters}
             onDataLoaded={setIncidents}
             onToast={addToast}
             viewMode={viewMode}

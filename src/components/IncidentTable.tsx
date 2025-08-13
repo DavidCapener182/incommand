@@ -7,6 +7,8 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
+import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
+import { FilterState, filterIncidents } from '../utils/incidentFilters'
 
 interface Incident {
   id: number
@@ -20,33 +22,6 @@ interface Incident {
   is_closed: boolean
   event_id: string
   status: string
-}
-
-const getIncidentTypeStyle = (type: string) => {
-  switch(type) {
-    case 'Ejection':
-      return 'bg-red-100 text-red-800'
-    case 'Refusal':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'Code Green':
-      return 'bg-green-100 text-green-800'
-    case 'Code Purple':
-      return 'bg-purple-100 text-purple-800'
-    case 'Code White':
-      return 'bg-gray-100 text-gray-800'
-    case 'Code Black':
-      return 'bg-black text-white'
-    case 'Code Pink':
-      return 'bg-pink-100 text-pink-800'
-    case 'Attendance':
-      return 'bg-gray-100 text-gray-800'
-    case 'Aggressive Behaviour':
-      return 'bg-orange-100 text-orange-800'
-    case 'Queue Build-Up':
-      return 'bg-blue-100 text-blue-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
 }
 
 const getRowStyle = (incident: Incident) => {
@@ -68,6 +43,12 @@ const getRowStyle = (incident: Incident) => {
   if (highPriorityTypes.includes(incident.incident_type)) {
     return 'bg-red-50 hover:bg-red-100';
   }
+  const priority = (incident as any).priority as string | undefined;
+  if (!incident.is_closed && priority) {
+    const p = priority.toLowerCase();
+    if (p === 'urgent' || p === 'high') return 'bg-red-50 hover:bg-red-100';
+    if (p === 'medium') return 'bg-yellow-50 hover:bg-yellow-100';
+  }
   if (!incident.is_closed && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
     return 'bg-yellow-50 hover:bg-yellow-100';
   }
@@ -82,23 +63,24 @@ const recentToasts = new Map<string, number>(); // Track recent toasts to preven
 // Add debugging
 console.log('🔧 IncidentTable module loaded. Active subscriptions:', activeSubscriptions.size, 'Toast callbacks:', globalToastCallbacks.size);
 
-export { getIncidentTypeStyle };
 export default function IncidentTable({ 
-  filter, 
+  filters, 
   onDataLoaded, 
   onToast,
   viewMode = 'table',
   onViewModeChange,
   currentUser,
-  currentEventId: propCurrentEventId
+  currentEventId: propCurrentEventId,
+  onFiltersChange
 }: { 
-  filter?: string; 
+  filters: FilterState; 
   onDataLoaded?: (data: Incident[]) => void; 
   onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
   viewMode?: 'table' | 'board' | 'staff';
   onViewModeChange?: (mode: 'table' | 'board' | 'staff') => void;
   currentUser?: any;
   currentEventId?: string;
+  onFiltersChange?: (filters: FilterState) => void;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
   console.log('🔧 IncidentTable component rendered. ID:', componentId.current, 'onToast available:', !!onToast);
@@ -512,56 +494,7 @@ export default function IncidentTable({
   }
 
   // Filter incidents based on the filter prop and search query
-  const filteredIncidents = incidents.filter(incident => {
-    // First apply the existing filter logic
-    let matchesFilter = true;
-    if (filter) {
-        if (filter === 'high') {
-        matchesFilter = [
-          'Ejection',
-          'Code Green',
-          'Code Black',
-          'Code Pink',
-          'Aggressive Behaviour',
-          'Missing Child/Person',
-          'Hostile Act',
-          'Counter-Terror Alert',
-          'Fire Alarm',
-          'Evacuation',
-          'Medical',
-          'Suspicious Behaviour',
-          'Queue Build-Up'
-        ].includes(incident.incident_type);
-      } else if (filter === 'open') {
-        matchesFilter = !incident.is_closed && incident.status !== 'Logged' && incident.incident_type !== 'Sit Rep' && incident.incident_type !== 'Attendance';
-      } else if (filter === 'closed') {
-        matchesFilter = incident.is_closed && incident.status !== 'Logged' && incident.incident_type !== 'Sit Rep' && incident.incident_type !== 'Attendance';
-      } else if (['Refusal', 'Ejection', 'Medical'].includes(filter)) {
-        matchesFilter = incident.incident_type === filter;
-      } else if (filter === 'Other') {
-        matchesFilter = !['Refusal', 'Ejection', 'Medical', 'Attendance', 'Sit Rep'].includes(incident.incident_type);
-      } else {
-        // Handle exact incident type matches (for Top 3 Incident Types card)
-        matchesFilter = incident.incident_type === filter;
-      }
-    }
-
-    // Then apply search query filter
-    let matchesSearch = true;
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      matchesSearch = 
-        incident.incident_type.toLowerCase().includes(query) ||
-        incident.occurrence.toLowerCase().includes(query) ||
-        incident.action_taken.toLowerCase().includes(query) ||
-        incident.callsign_from.toLowerCase().includes(query) ||
-        incident.callsign_to.toLowerCase().includes(query) ||
-        incident.log_number.toLowerCase().includes(query) ||
-        (incident.is_closed ? 'closed' : 'open').includes(query);
-    }
-
-    return matchesFilter && matchesSearch;
-  });
+  const filteredIncidents: Incident[] = filterIncidents<Incident>(incidents, { ...filters, query: searchQuery });
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
@@ -706,12 +639,16 @@ export default function IncidentTable({
           </div>
         </div>
         
+        {/* Removed extra filters block since Types moved inline above */}
+
         {searchQuery && (
           <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-2">
             <span className="font-medium text-blue-700 dark:text-blue-200">
               {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} found
             </span>
-            {filter && <span className="text-blue-600 dark:text-blue-300"> (filtered by {filter})</span>}
+            {(filters && (filters.types.length + filters.statuses.length + filters.priorities.length) > 0) && (
+              <span className="text-blue-600 dark:text-blue-300"> (filters active)</span>
+            )}
           </div>
         )}
       </div>
@@ -870,7 +807,7 @@ export default function IncidentTable({
           {/* Enhanced Desktop Table Layout */}
           <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6 border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-hidden scroll-smooth" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
             {/* Enhanced Desktop Table Header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
+          <div className="sticky top-0 z-20 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
               <div className="grid items-center w-full" style={{ gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%' }}>
                 <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Log</div>
                 <div className="px-4 py-4 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Time</div>
@@ -959,8 +896,8 @@ export default function IncidentTable({
                         {incident.occurrence}
                       </span>
                     </div>
-                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                  <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)} ${getSeverityBorderClass((incident as any).priority)}`}>
                         {incident.incident_type}
                       </span>
                     </div>
@@ -980,7 +917,7 @@ export default function IncidentTable({
                         {incident.action_taken}
                       </span>
                     </div>
-                    <div className="flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 pr-4">
+                   <div className={`flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 pr-4`}>
                       {incident.incident_type === 'Attendance' ? (
                         <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
                           Logged
@@ -1039,6 +976,7 @@ export default function IncidentTable({
           incidents={incidents}
           loading={loading}
           error={error}
+          filters={filters}
           updateIncident={async (id, updates) => {
             // Find the incident and update it
             const incident = incidents.find(inc => inc.id.toString() === id);

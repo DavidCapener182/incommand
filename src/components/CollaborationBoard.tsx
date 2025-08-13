@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/Toast';
@@ -13,33 +13,8 @@ interface StaffMember {
   skill_tags: string[];
 }
 
-// Import the style function from IncidentTable
-const getIncidentTypeStyle = (type: string) => {
-  switch(type) {
-    case 'Ejection':
-      return 'bg-red-100 text-red-800'
-    case 'Refusal':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'Code Green':
-      return 'bg-green-100 text-green-800'
-    case 'Code Purple':
-      return 'bg-purple-100 text-purple-800'
-    case 'Code White':
-      return 'bg-gray-100 text-gray-800'
-    case 'Code Black':
-      return 'bg-black text-white'
-    case 'Code Pink':
-      return 'bg-pink-100 text-pink-800'
-    case 'Attendance':
-      return 'bg-gray-100 text-gray-800'
-    case 'Aggressive Behaviour':
-      return 'bg-orange-100 text-orange-800'
-    case 'Queue Build-Up':
-      return 'bg-blue-100 text-blue-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
-}
+import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
+import { FilterState, filterIncidents } from '../utils/incidentFilters'
 
 // Define the Incident interface to match IncidentTable
 interface Incident {
@@ -74,6 +49,7 @@ interface CollaborationBoardProps {
   updateIncident: (id: string, updates: Partial<Incident>) => Promise<void>;
   availableStaff?: StaffMember[];
   onStaffAssignment?: (incidentId: string, staffIds: string[]) => Promise<void>;
+  filters?: FilterState;
 }
 
 const STATUS_COLUMNS = [
@@ -92,7 +68,8 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   error,
   updateIncident,
   availableStaff = [],
-  onStaffAssignment
+  onStaffAssignment,
+  filters = { types: [], statuses: [], priorities: [], query: '' }
 }) => {
   const [draggedIncident, setDraggedIncident] = useState<string | null>(null);
   const [editingAction, setEditingAction] = useState<number | null>(null);
@@ -100,6 +77,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   const [dragOverIncident, setDragOverIncident] = useState<string | null>(null);
   const [showStaffPanel, setShowStaffPanel] = useState(false);
   const { addToast } = useToast();
+  const [columnOrder, setColumnOrder] = useState<Record<string, number[]>>({});
 
   const getIncidentsByStatus = useCallback((status: string) => {
     // Exclude attendance logs and sit reps from board view
@@ -121,24 +99,26 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
       }
     });
     
-    // Apply search filter if searchQuery is provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filteredIncidents = filteredIncidents.filter(incident =>
-        incident.incident_type.toLowerCase().includes(query) ||
-        incident.callsign_from.toLowerCase().includes(query) ||
-        incident.callsign_to.toLowerCase().includes(query) ||
-        incident.occurrence.toLowerCase().includes(query) ||
-        incident.action_taken.toLowerCase().includes(query) ||
-        incident.log_number.toLowerCase().includes(query)
-      );
-    }
-    
-    return filteredIncidents;
-  }, [incidents, searchQuery]);
+    // Apply multi-select filters and search
+    filteredIncidents = filterIncidents(filteredIncidents, { ...filters, query: searchQuery });
+
+    // Apply local order if exists (do not mutate state here)
+    const order = columnOrder[status];
+    if (!order) return filteredIncidents;
+    const orderIndex: Record<number, number> = {};
+    order.forEach((id, idx) => { orderIndex[id] = idx; });
+    return [...filteredIncidents].sort((a, b) => (orderIndex[a.id] ?? 0) - (orderIndex[b.id] ?? 0));
+  }, [incidents, searchQuery, filters, columnOrder]);
 
   const handleDragStart = (result: DropResult) => {
     setDraggedIncident(result.draggableId);
+  };
+
+  const reorderArray = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
+    const result = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+    return result;
   };
 
   const handleDragEnd = async (result: DropResult) => {
@@ -149,6 +129,14 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
     const { draggableId, destination, source } = result;
     const newStatus = destination.droppableId;
     const oldStatus = source.droppableId;
+
+    // Within-column reordering
+    if (newStatus === oldStatus && destination.index !== source.index) {
+      const currentIds = getIncidentsByStatus(newStatus).map(i => i.id);
+      const reordered = reorderArray(currentIds, source.index, destination.index);
+      setColumnOrder(prev => ({ ...prev, [newStatus]: reordered }));
+      return;
+    }
 
     // Find the incident being moved
     const incident = incidents.find(inc => inc.id.toString() === draggableId);
@@ -449,9 +437,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                               }`}
                             >
                               <div
-                                className={`bg-white rounded-lg shadow-sm border p-3 cursor-pointer hover:shadow-md transition-shadow ${
-                                  !incident.is_closed && ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Medical'].includes(incident.incident_type) ? 'border-l-4 border-l-red-500' : ''
-                                } ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
+                                className={`bg-white rounded-lg shadow-sm border p-3 cursor-pointer hover:shadow-md transition-shadow ${getSeverityBorderClass(incident.priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
                                 onClick={() => onIncidentSelect?.(incident)}
                                 style={{
                                   ...(snapshot.isDragging && {
@@ -470,7 +456,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                       <span className="w-2 h-2 rounded-full bg-red-500" />
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500">
                                     {formatTimestamp(incident.timestamp)}
                                   </span>
                                 </div>
@@ -609,8 +595,8 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
 
                                 {/* Action Buttons */}
                                 <div className="mt-2 pt-2 border-t border-gray-100">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-400">Drag to move</span>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-400">Drag to move ▮▮</span>
                                     <div className="flex gap-1">
                                       {!incident.is_closed && (
                                         <button

@@ -8,7 +8,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePresence } from '@/hooks/usePresence'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
-import { autoAssignIncident, getRequiredSkillsForIncidentType } from '../lib/incidentAssignment'
+import { QuickAddInput } from '@/components/ui/QuickAddInput'
+import { detectPriority } from '@/utils/priorityDetection'
+import { detectIncidentFromText } from '@/utils/incidentLogic'
+import { getRequiredSkillsForIncidentType } from '../lib/incidentAssignment'
 import { calculateEscalationTime } from '../lib/escalationEngine'
 import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
@@ -33,8 +36,7 @@ interface IncidentFormData {
   log_number: string
   what3words: string
   priority: string
-  dependencies: string[]
-  auto_assign: boolean
+  // dependencies and auto_assign removed per requirements
 }
 
 interface RefusalDetails {
@@ -1848,10 +1850,8 @@ export default function IncidentCreationModal({
     is_closed: false,
     status: 'open',
     log_number: '',
-    what3words: '///',
-    priority: 'medium',
-    dependencies: [],
-    auto_assign: true
+      what3words: '///',
+      priority: 'medium'
   });
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
@@ -1877,6 +1877,8 @@ export default function IncidentCreationModal({
       additionalSecurity: false
     }
   });
+  const [quickAddValue, setQuickAddValue] = useState<string>('');
+  const [isQuickAddProcessing, setIsQuickAddProcessing] = useState<boolean>(false);
   const [showRefusalActions, setShowRefusalActions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1891,11 +1893,7 @@ export default function IncidentCreationModal({
   const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
-  const [assignmentFeedback, setAssignmentFeedback] = useState<{
-    status: 'idle' | 'processing' | 'success' | 'error';
-    message: string;
-    details?: any;
-  }>({ status: 'idle', message: '' });
+  // Removed auto-assignment state
 
   // AssignmentReasoningDisplay component
   const AssignmentReasoningDisplay = ({ details }: { details: any }) => {
@@ -1997,41 +1995,7 @@ export default function IncidentCreationModal({
     );
   };
 
-  // performAutoAssignment function
-  const performAutoAssignment = async (incidentId: string, eventId: string) => {
-    setAssignmentFeedback({ status: 'processing', message: 'Processing auto-assignment...' });
-    
-    try {
-      const assignment = await autoAssignIncident(
-        incidentId, 
-        eventId, 
-        formData.incident_type, 
-        formData.priority
-      );
-      
-      if (assignment) {
-        setAssignmentFeedback({
-          status: 'success',
-          message: `Successfully assigned ${assignment.assignedStaff.length} staff member(s)`,
-          details: assignment
-        });
-        return assignment;
-      } else {
-        setAssignmentFeedback({
-          status: 'error',
-          message: 'No suitable staff found for auto-assignment'
-        });
-        return null;
-      }
-    } catch (error) {
-      console.error('Auto-assignment error:', error);
-      setAssignmentFeedback({
-        status: 'error',
-        message: 'Auto-assignment failed. Please try manual assignment.'
-      });
-      return null;
-    }
-  };
+  // Auto-assignment removed per requirements
 
   useEffect(() => {
     if (initialIncidentType) {
@@ -2078,6 +2042,62 @@ export default function IncidentCreationModal({
     };
     fetchEvents();
   }, [user]);
+  const handleQuickAdd = async (value: string) => {
+    setIsQuickAddProcessing(true);
+    setQuickAddValue(value);
+
+    // Immediate local parsing for responsiveness
+    const logic = detectIncidentFromText(value);
+    const explicitType = incidentTypes.find(t => value.toLowerCase().includes(t.toLowerCase())) || '';
+    const localType = logic.incidentType || explicitType || detectIncidentType(value);
+    const localCallsign = detectCallsign(value) || '';
+    const localPriority = logic.priority || detectPriority(value);
+    setFormData(prev => ({
+      ...prev,
+      ai_input: value,
+      occurrence: logic.occurrence || value,
+      incident_type: localType || prev.incident_type,
+      callsign_from: localCallsign || prev.callsign_from,
+      priority: localPriority || prev.priority
+    }));
+
+    if (localType === 'Attendance') {
+      const selectedEvent = events.find(e => e.id === selectedEventId);
+      const expectedAttendance = selectedEvent?.expected_attendance || 3500;
+      const result = await parseAttendanceIncident(value, expectedAttendance);
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          occurrence: result.occurrence,
+          action_taken: result.action_taken,
+          incident_type: result.incident_type,
+          callsign_from: result.callsign_from
+        }));
+      }
+    }
+
+    // Best-effort AI enrichment (non-blocking)
+    try {
+      const response = await fetch('/api/enhanced-incident-parsing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: value, incidentTypes })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFormData(prev => ({
+          ...prev,
+          occurrence: data.description || prev.occurrence,
+          incident_type: data.incidentType || prev.incident_type,
+          callsign_from: data.callsign || prev.callsign_from,
+          priority: data.priority || prev.priority
+        }));
+      }
+    } catch {}
+
+    setIsQuickAddProcessing(false);
+  };
+
 
   // Create a debounced function for processing input
   const debouncedProcessInput = useCallback(
@@ -2098,6 +2118,7 @@ export default function IncidentCreationModal({
         const incidentType = detectIncidentType(input);
         const callsign = detectCallsign(input) || '';
         const location = extractLocation(input) || '';
+        const priorityDetected = detectPriority(input);
         let processedData: IncidentParserResult | null = null;
 
         // Custom handler for showdown
@@ -2193,7 +2214,7 @@ export default function IncidentCreationModal({
               }
 
               const data = await response.json();
-              processedData = {
+               processedData = {
                 occurrence: data.occurrence || input,
                 action_taken: data.action_taken || '',
                 callsign_from: callsign,
@@ -2201,12 +2222,40 @@ export default function IncidentCreationModal({
               };
             } catch (error) {
               console.error('Error generating incident details:', error);
-              processedData = {
-                occurrence: input,
-                action_taken: '',
-                callsign_from: callsign,
-                incident_type: incidentType
-              };
+              // Fallback to enhanced parsing endpoint
+              try {
+                const resp2 = await fetch('/api/enhanced-incident-parsing', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ input, incidentTypes })
+                });
+                if (resp2.ok) {
+                  const data2 = await resp2.json();
+                  processedData = {
+                    occurrence: data2.description || input,
+                    action_taken: '',
+                    callsign_from: data2.callsign || callsign,
+                    incident_type: data2.incidentType || incidentType
+                  };
+                  if (data2.priority) {
+                    setFormData(prev => ({ ...prev, priority: data2.priority || prev.priority }));
+                  }
+                } else {
+                  processedData = {
+                    occurrence: input,
+                    action_taken: '',
+                    callsign_from: callsign,
+                    incident_type: incidentType
+                  };
+                }
+              } catch (err2) {
+                processedData = {
+                  occurrence: input,
+                  action_taken: '',
+                  callsign_from: callsign,
+                  incident_type: incidentType
+                };
+              }
               }
             }
         }
@@ -2234,13 +2283,15 @@ export default function IncidentCreationModal({
             action_taken: processedData.action_taken,
             incident_type: processedData.incident_type || incidentType,
             callsign_from: processedData.callsign_from || prev.callsign_from,
-            log_number: safeLogNumber
+            log_number: safeLogNumber,
+            priority: priorityDetected || prev.priority
           }));
         } else {
           setFormData(prev => ({ 
             ...prev,
             incident_type: incidentType,
-            log_number: safeLogNumber
+            log_number: safeLogNumber,
+            priority: priorityDetected || prev.priority
           }));
         }
       } catch (error) {
@@ -2269,6 +2320,17 @@ export default function IncidentCreationModal({
     setFormData(prev => ({ 
       ...prev, 
       occurrence: input
+    }));
+
+    // Set quick local detections immediately for responsiveness
+    const localType = detectIncidentType(input);
+    const localCallsign = detectCallsign(input) || '';
+    const localPriority = detectPriority(input);
+    setFormData(prev => ({
+      ...prev,
+      incident_type: localType || prev.incident_type,
+      callsign_from: localCallsign || prev.callsign_from,
+      priority: localPriority || prev.priority
     }));
 
     // Auto-extract w3w if not manually edited
@@ -2312,13 +2374,19 @@ export default function IncidentCreationModal({
         const response = await fetch('/api/generate-incident-description', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input, incidentTypes: incidentTypes })
+          body: JSON.stringify({ input, incidentTypes: incidentTypes, extractPriority: true })
               });
         if (response.ok) {
               const data = await response.json();
           console.debug('AI response from /api/generate-incident-description:', data);
           if (data.incidentType) aiIncidentType = data.incidentType;
           if (data.description) fixedOccurrence = data.description;
+          if (data.priority) {
+            setFormData(prev => ({ ...prev, priority: data.priority || prev.priority }));
+          } else {
+            const localPriority = detectPriority(input);
+            setFormData(prev => ({ ...prev, priority: localPriority || prev.priority }));
+          }
           // If Ejection, autofill additional fields
           if (data.incidentType === 'Ejection' && data.ejectionInfo) {
             setEjectionDetails(prev => ({
@@ -2333,9 +2401,13 @@ export default function IncidentCreationModal({
           }
         } else {
           console.debug('AI endpoint returned non-OK response:', response.status);
+          const localPriority = detectPriority(input);
+          setFormData(prev => ({ ...prev, priority: localPriority || prev.priority }));
         }
       } catch (err) {
         console.debug('Error calling AI endpoint:', err);
+        const localPriority = detectPriority(input);
+        setFormData(prev => ({ ...prev, priority: localPriority || prev.priority }));
       }
 
       // For attendance incidents, always use local detection and bypass AI
@@ -2418,16 +2490,30 @@ export default function IncidentCreationModal({
     setError(null);
 
     try {
-      if (!selectedEventId) {
-        setError('Please select an event to log this incident.');
-        setLoading(false);
-        return;
+      // Resolve effective event synchronously for this submission
+      let effectiveEventId = selectedEventId;
+      let effectiveEvent = effectiveEventId ? events.find(e => e.id === effectiveEventId) : undefined;
+      if (!effectiveEvent) {
+        const { data: currentEvent } = await supabase
+          .from('events')
+          .select('id, event_name, artist_name, expected_attendance')
+          .eq('is_current', true)
+          .single();
+        if (currentEvent?.id) {
+          effectiveEventId = currentEvent.id;
+          effectiveEvent = currentEvent;
+        } else if (events[0]?.id) {
+          effectiveEventId = events[0].id;
+          effectiveEvent = events[0];
+        } else {
+          setError('Please select an event to log this incident.');
+          setLoading(false);
+          return;
+        }
       }
-      // Get selected event (include artist_name)
-      const selectedEvent = events.find(e => e.id === selectedEventId);
-      if (!selectedEvent) throw new Error('Selected event not found');
+
       // Generate the next log number using the artist name
-      const logNumber = await generateNextLogNumber(selectedEvent.artist_name, selectedEventId);
+      const logNumber = await generateNextLogNumber(effectiveEvent.artist_name, effectiveEventId || undefined);
       if (!logNumber) {
         throw new Error('Failed to generate log number');
       }
@@ -2435,16 +2521,30 @@ export default function IncidentCreationModal({
       // Get current timestamp
       const now = new Date().toISOString();
 
+      // Ensure required fields (incident_type, occurrence) are populated
+      const sourceText = (formData.occurrence || formData.ai_input || '').trim();
+      let resolvedType = (formData.incident_type || '').trim();
+      let resolvedOccurrence = (formData.occurrence || '').trim();
+      if (!resolvedType || !resolvedOccurrence) {
+        const logic = detectIncidentFromText(sourceText);
+        if (!resolvedType || resolvedType.toLowerCase() === 'select type') {
+          resolvedType = logic.incidentType || detectIncidentType(sourceText) || 'Other';
+        }
+        if (!resolvedOccurrence) {
+          resolvedOccurrence = (logic.occurrence || sourceText || 'New incident reported.').trim();
+        }
+      }
+
       // Prepare the incident data
       const incidentData = {
         log_number: logNumber,
         callsign_from: formData.callsign_from.trim(),
         callsign_to: (formData.callsign_to || 'Event Control').trim(),
-        occurrence: formData.occurrence.trim(),
-        incident_type: formData.incident_type.trim(),
+        occurrence: resolvedOccurrence,
+        incident_type: resolvedType,
         action_taken: (formData.action_taken || '').trim(),
         is_closed: formData.is_closed,
-        event_id: selectedEvent.id,
+        event_id: effectiveEvent.id,
         status: formData.status || 'open',
         ai_input: formData.ai_input || null,
         created_at: now,
@@ -2468,7 +2568,7 @@ export default function IncidentCreationModal({
       const { data: insertedIncident, error: insertError } = await supabase
         .from('incident_logs')
         .insert([incidentData])
-        .select()
+        .select('id')
         .single();
 
       if (insertError) {
@@ -2481,11 +2581,11 @@ export default function IncidentCreationModal({
         const count = parseInt(formData.occurrence.match(/\d+/)?.[0] || '0');
         console.log('🎯 Attendance incident - extracted count:', count, 'from:', formData.occurrence);
         if (count > 0) {
-          console.log('🎯 Inserting attendance record:', { event_id: selectedEvent.id, count, timestamp: now });
+          console.log('🎯 Inserting attendance record:', { event_id: effectiveEvent.id, count, timestamp: now });
           const { error: attendanceError, data: attendanceData } = await supabase
             .from('attendance_records')
             .insert([{
-              event_id: selectedEvent.id,
+              event_id: effectiveEvent.id,
               count: count,
               timestamp: now
             }])
@@ -2504,69 +2604,12 @@ export default function IncidentCreationModal({
 
       console.log('Successfully created incident:', insertedIncident);
 
-      // Handle auto-assignment and escalation if enabled
-      if (formData.auto_assign && insertedIncident) {
-        const assignment = await performAutoAssignment(insertedIncident.id, selectedEvent.id);
+      // Auto-assignment removed per requirements
 
-        if (assignment) {
-          // Update incident with assigned staff
-          const { error: updateError } = await supabase
-            .from('incident_logs')
-            .update({
-              assigned_staff_ids: assignment.assignedStaff,
-              auto_assigned: true,
-              assignment_notes: assignment.assignmentNotes
-            })
-            .eq('id', insertedIncident.id);
+      // Removed required skills/assignment feedback updates per requirements
 
-          if (updateError) {
-            console.error('Error updating incident with assignment:', updateError);
-            setAssignmentFeedback({
-              status: 'error',
-              message: 'Incident created but auto-assignment failed to save'
-            });
-          } else {
-            // Display assignment results to users
-            addToast({
-              type: 'success',
-              title: 'Auto-Assignment Complete',
-              message: `Successfully assigned ${assignment.assignedStaff.length} staff member(s) to incident ${logNumber}`
-            });
-          }
-        } else {
-          // Display feedback when no suitable staff found
-          addToast({
-            type: 'warning',
-            title: 'Auto-Assignment Unavailable',
-            message: 'No suitable staff available for auto-assignment. Please assign manually.'
-          });
-        }
-      }
-
-      // Get required skills for incident type and display in assignment feedback
-      if (insertedIncident && formData.incident_type) {
-        try {
-          const requiredSkills = await getRequiredSkillsForIncidentType(formData.incident_type);
-          if (requiredSkills.length > 0) {
-            console.log('Required skills for incident type:', requiredSkills);
-            // Update assignment feedback with skill requirements
-            if (assignmentFeedback.status === 'success' && assignmentFeedback.details) {
-              setAssignmentFeedback(prev => ({
-                ...prev,
-                details: {
-                  ...prev.details,
-                  requiredSkills
-                }
-              }));
-            }
-          }
-        } catch (error) {
-          console.error('Error getting required skills:', error);
-        }
-      }
-
-      // Calculate escalation time if priority is set
-      if (formData.priority && insertedIncident) {
+      // Calculate escalation time only for medium/high/urgent
+      if (insertedIncident && ['medium', 'high', 'urgent'].includes((formData.priority || '').toLowerCase())) {
         try {
           const escalationTime = await calculateEscalationTime(
             formData.incident_type,
@@ -2588,20 +2631,7 @@ export default function IncidentCreationModal({
         }
       }
 
-      // Update incident with dependencies if any
-      if (formData.dependencies.length > 0 && insertedIncident) {
-        try {
-          await supabase
-            .from('incident_logs')
-            .update({
-              dependencies: formData.dependencies
-            })
-            .eq('id', insertedIncident.id);
-        } catch (dependencyError) {
-          console.error('Error setting dependencies:', dependencyError);
-          // Don't fail the incident creation if dependency setting fails
-        }
-      }
+      // Dependencies removed per requirements
 
       // Clear form and close modal
       setFormData({
@@ -2615,9 +2645,7 @@ export default function IncidentCreationModal({
         ai_input: '',
         log_number: '',
         what3words: '///',
-        priority: 'medium',
-        dependencies: [],
-        auto_assign: true
+        priority: 'medium'
       });
 
       setRefusalDetails({
@@ -2637,7 +2665,7 @@ export default function IncidentCreationModal({
       if (photoFile && insertedIncident) {
         // Upload to /[eventID]/[incidentID]/[filename]
         const ext = photoFile.name.split('.').pop();
-        const path = `${selectedEvent.id}/${insertedIncident.id}/photo.${ext}`;
+        const path = `${effectiveEvent.id}/${insertedIncident.id}/photo.${ext}`;
         const { error: uploadError } = await supabase.storage.from('incident-photos').upload(path, photoFile, { upsert: true, contentType: photoFile.type });
         if (!uploadError) {
           photoUrl = path;
@@ -2773,9 +2801,7 @@ export default function IncidentCreationModal({
       status: 'open',
       log_number: '',
       what3words: '///',
-      priority: 'medium',
-      dependencies: [],
-      auto_assign: true
+      priority: 'medium'
     });
     setRefusalDetails({
       policeRequired: false,
@@ -2809,7 +2835,6 @@ export default function IncidentCreationModal({
     setIsEditing({ occurrence: false, action_taken: false });
     setW3wManuallyEdited(false);
     setShowMoreTypes(false);
-    setAssignmentFeedback({ status: 'idle', message: '' });
   };
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
@@ -2953,7 +2978,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Event:</span>
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {events.find(e => e.id === selectedEventId)?.event_name || 'Select Event'}
+                    {events.find(e => e.id === selectedEventId)?.event_name || events.find(e => e.is_current)?.event_name || events[0]?.event_name || 'Loading...'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2978,41 +3003,9 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column */}
           <div className="space-y-6">
-            {/* Quick Input Section - Moved to top and made more prominent */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-700">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <span className="h-6 w-6 rounded-lg bg-green-500 flex items-center justify-center">
-                  <span className="text-white text-sm">⚡</span>
-                </span>
-                Quick Input
-              </h4>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Details</label>
-                  <div className="relative">
-                    <textarea
-                      value={formData.ai_input || ''}
-                      onChange={handleQuickInputChange}
-                      onFocus={() => updateFocus('quick-input')}
-                      onBlur={() => updateTyping('quick-input', false)}
-                      onKeyDown={() => updateTyping('quick-input', true)}
-                      placeholder="Enter details (e.g. location, persons involved, brief summary)..."
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 shadow-sm resize-none"
-                    />
-                    <TypingIndicator users={presenceUsers} fieldName="quick-input" position="bottom" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Occurrence Preview</label>
-                  <textarea
-                    value={formData.occurrence || ''}
-                    readOnly
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2d437a] bg-gray-50 dark:bg-[#1a2a57] text-gray-600 dark:text-gray-300 shadow-sm resize-none"
-                  />
-                </div>
-              </div>
+            {/* Quick Add (single-line) - the primary input */}
+            <div className="bg-white dark:bg-[#0f1b3d] rounded-2xl p-4 border border-green-200 dark:border-green-700">
+              <QuickAddInput onQuickAdd={async (val) => { await handleQuickAdd(val); }} isProcessing={isQuickAddProcessing} />
             </div>
 
             {/* Incident Type Section - Made more compact */}
@@ -3107,51 +3100,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
 
 
 
-                {/* Assignment Feedback Display */}
-                {assignmentFeedback.status !== 'idle' && (
-                  <div className="mt-4">
-                    {assignmentFeedback.status === 'processing' && (
-                      <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                        <span className="text-sm text-blue-700 dark:text-blue-300">{assignmentFeedback.message}</span>
-                      </div>
-                    )}
-                    {assignmentFeedback.status === 'success' && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                          <span className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
-                            <span className="text-white text-xs">✓</span>
-                          </span>
-                          <span className="text-sm text-green-700 dark:text-green-300">{assignmentFeedback.message}</span>
-                        </div>
-                        {assignmentFeedback.details && (
-                          <AssignmentReasoningDisplay details={assignmentFeedback.details} />
-                        )}
-                      </div>
-                    )}
-                    {assignmentFeedback.status === 'error' && (
-                      <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
-                        <span className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
-                          <span className="text-white text-xs">✕</span>
-                        </span>
-                        <span className="text-sm text-red-700 dark:text-red-300">{assignmentFeedback.message}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Dependencies Selector */}
-                {selectedEventId && (
-                  <div className="mb-4">
-                    <IncidentDependencySelector
-                      eventId={selectedEventId}
-                      selectedDependencies={formData.dependencies}
-                      onDependenciesChange={(dependencies) => setFormData({ ...formData, dependencies })}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-
                 {/* Escalation Timer Preview */}
                 {formData.priority && formData.incident_type && (
                   <div className="mb-4">
@@ -3170,27 +3118,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                 )}
 
-                {/* Auto-Assignment Configuration */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="auto_assign"
-                      checked={formData.auto_assign}
-                      onChange={(e) => setFormData({ ...formData, auto_assign: e.target.checked })}
-                      className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2 transition-all duration-200"
-                    />
-                    <label htmlFor="auto_assign" className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Auto-assign staff based on skills and availability
-                    </label>
-                  </div>
-                  
-                  {formData.auto_assign && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#1a2a57] p-3 rounded-lg">
-                      Staff will be automatically assigned based on incident type requirements, current availability, and skill matching.
-                    </div>
-                  )}
-                </div>
+                {/* Auto-assignment removed per requirements */}
               </div>
             </div>
 

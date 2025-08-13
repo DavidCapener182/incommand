@@ -25,7 +25,10 @@ const COLORS = [
   '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
 ];
 
-const getUserColor = (userId: string): string => {
+const getUserColor = (userId?: string): string => {
+  if (!userId || typeof userId !== 'string') {
+    return COLORS[0];
+  }
   const hash = userId.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
@@ -115,7 +118,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
       .on('presence', { event: 'sync' }, () => {
         const presenceState = channelRef.current.presenceState();
         const presenceUsers = Object.values(presenceState).flat().map((presence: any) => ({
-          id: presence.user_id,
+          id: presence.user_id || 'anon',
           name: presence.name || 'Unknown User',
           color: getUserColor(presence.user_id),
           avatar: presence.avatar,
