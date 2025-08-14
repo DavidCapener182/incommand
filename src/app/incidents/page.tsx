@@ -5,7 +5,7 @@ import Dashboard from '../../components/Dashboard'
 
 export default function IncidentsPage() {
   return (
-    <main>
+    <main className="pb-24">
       <Dashboard />
     </main>
   )

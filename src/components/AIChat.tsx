@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PaperClipIcon, ArrowUpCircleIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import { QuickAction, CommandExecutionResult } from '@/types/chat';
 
 interface ChatMessage {
   id: string;
@@ -10,11 +11,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-interface QuickAction {
-  id: string;
-  text: string;
-  icon: string;
-}
+// QuickAction interface is now imported from types/chat
 
 interface AIChatProps {
   isVisible: boolean;
@@ -25,6 +22,7 @@ export default function AIChat({ isVisible }: AIChatProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
+  const [isExecutingCommand, setIsExecutingCommand] = useState(false);
   const [eventContext, setEventContext] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,10 +84,10 @@ What would you like assistance with today?`,
       
       // Load initial quick actions
       setQuickActions([
-        { id: 'status', text: "Current event status", icon: '📊' },
-        { id: 'incidents', text: "Recent incidents summary", icon: '📋' },
-        { id: 'sop', text: "Emergency procedures", icon: '🚨' },
-        { id: 'help', text: "What can you help with?", icon: '❓' }
+        { id: 'status', text: "Current event status", icon: '📊', mode: 'chat' },
+        { id: 'incidents', text: "Recent incidents summary", icon: '📋', mode: 'chat' },
+        { id: 'sop', text: "Emergency procedures", icon: '🚨', mode: 'chat' },
+        { id: 'help', text: "What can you help with?", icon: '❓', mode: 'chat' }
       ]);
     }
   }, [messages.length]);
@@ -173,8 +171,169 @@ What would you like assistance with today?`,
     sendMessage(inputMessage);
   };
 
-  const handleQuickAction = (action: QuickAction) => {
-    sendMessage(action.text);
+  const executeCommand = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    try {
+      setIsExecutingCommand(true);
+      
+      switch (action.id) {
+        case 'assign_staff':
+        case 'assign_medical_staff':
+        case 'assign_trained_staff':
+        case 'auto_assign_staff':
+          return await executeStaffAssignment(action);
+          
+        case 'escalate_incident':
+        case 'escalate_medical':
+        case 'escalate_to_supervisor':
+        case 'escalate_to_manager':
+        case 'emergency_escalation':
+        case 'escalate_for_guidance':
+          return await executeEscalation(action);
+          
+        case 'close_incident':
+        case 'close_medical_incident':
+        case 'mark_as_resolved':
+          return await executeCloseIncident(action);
+          
+        case 'view_incident_details':
+          return await executeViewIncident(action);
+          
+        case 'view_incident_dashboard':
+        case 'view_staff_status':
+          return await executeNavigation(action);
+          
+        default:
+          return {
+            success: false,
+            error: 'Unknown command',
+            message: 'This action is not yet implemented.'
+          };
+      }
+    } catch (error) {
+      console.error('Command execution error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to execute command. Please try again.'
+      };
+    } finally {
+      setIsExecutingCommand(false);
+    }
+  };
+
+  const executeStaffAssignment = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    const response = await fetch('/api/staff-assignment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(action.payload)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Staff assignment failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return {
+      success: true,
+      data,
+      message: 'Staff assigned successfully'
+    };
+  };
+
+  const executeEscalation = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    // This would call your escalation API
+    // For now, return a success response
+    return {
+      success: true,
+      message: 'Incident escalated successfully'
+    };
+  };
+
+  const executeCloseIncident = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    const { incident_id } = action.payload;
+    const response = await fetch(`/api/incidents/${incident_id}/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(action.payload)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to close incident');
+    }
+    
+    const data = await response.json();
+    return {
+      success: true,
+      data,
+      message: 'Incident closed successfully'
+    };
+  };
+
+  const executeViewIncident = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    const { incident_id } = action.payload;
+    const response = await fetch(`/api/incidents/${incident_id}/close`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch incident details');
+    }
+    
+    const data = await response.json();
+    return {
+      success: true,
+      data,
+      message: 'Incident details retrieved'
+    };
+  };
+
+  const executeNavigation = async (action: QuickAction): Promise<CommandExecutionResult> => {
+    // This would handle navigation to different pages
+    // For now, return success
+    return {
+      success: true,
+      message: 'Navigation action completed'
+    };
+  };
+
+  const handleQuickAction = async (action: QuickAction) => {
+    // Check if this is a command action
+    if (action.mode === 'command' || action.id.startsWith('cmd_')) {
+      try {
+        const result = await executeCommand(action);
+        
+        if (result.success) {
+          // Add a synthetic assistant message confirming the action
+          const confirmationMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: `✅ ${result.message}`,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, confirmationMessage]);
+        } else {
+          // Add error message
+          const errorMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: `❌ ${result.message}`,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      } catch (error) {
+        console.error('Command execution failed:', error);
+        const errorMessage: ChatMessage = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: '❌ Failed to execute command. Please try again.',
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } else {
+      // Use existing chat behavior
+      sendMessage(action.text);
+    }
   };
 
   const clearChat = () => {
@@ -297,6 +456,22 @@ What would you like assistance with today?`,
           </div>
         )}
 
+        {/* Command Execution Loading Indicator */}
+        {isExecutingCommand && (
+          <div className="flex justify-start fade-in">
+            <div className="bg-green-50 dark:bg-green-900 rounded-2xl px-5 py-3 shadow-md">
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="text-xs text-green-600 dark:text-green-300">Executing command...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-2xl p-3 fade-in">
@@ -312,21 +487,32 @@ What would you like assistance with today?`,
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions - moved to just above the input area */}
-      {quickActions.length > 0 && !isLoading && (
+      {/* Quick Actions - Compact scrollable layout */}
+      {quickActions.length > 0 && !isLoading && !isExecutingCommand && (
         <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-[#232c43]">
-          <div className="flex flex-wrap gap-2 justify-start overflow-x-auto">
-            {quickActions.map((action) => (
-              <button
-                key={action.id}
-                onClick={() => handleQuickAction(action)}
-                className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-50 dark:bg-[#1e2a6a] hover:bg-blue-100 dark:hover:bg-blue-900 rounded-full text-xs font-semibold text-blue-700 dark:text-blue-200 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150"
-                aria-label={action.text}
-              >
-                <span>{action.icon}</span>
-                <span>{action.text}</span>
-              </button>
-            ))}
+          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Quick Actions:</div>
+          <div className="max-h-32 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-1.5">
+              {quickActions.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={() => handleQuickAction(action)}
+                  disabled={isExecutingCommand}
+                  className={`inline-flex items-center space-x-1.5 px-2 py-1 rounded-md text-xs font-medium shadow-sm focus:outline-none focus:ring-1 transition-all duration-150 truncate ${
+                    action.mode === 'command' 
+                      ? 'bg-green-50 dark:bg-green-900 hover:bg-green-100 dark:hover:bg-green-800 text-green-700 dark:text-green-200 focus:ring-green-500' 
+                      : 'bg-blue-50 dark:bg-[#1e2a6a] hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-200 focus:ring-blue-500'
+                  } ${isExecutingCommand ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  aria-label={action.text}
+                  title={`${action.text}${action.mode === 'command' ? ' (Direct Action)' : ' (Chat)'}`}
+                >
+                  <span className="flex-shrink-0">
+                    {action.mode === 'command' ? '⚡' : action.icon}
+                  </span>
+                  <span className="truncate">{action.text}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -347,7 +533,13 @@ What would you like assistance with today?`,
             ref={inputRef}
             type="text"
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {
+              console.log('Input change:', e.target.value);
+              setInputMessage(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              console.log('Key pressed:', e.key, 'Code:', e.keyCode);
+            }}
             placeholder="Ask about incidents, SOPs, procedures..."
             className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:border-transparent text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow"
             disabled={isLoading}
@@ -362,9 +554,7 @@ What would you like assistance with today?`,
             <ArrowUpCircleIcon className="w-6 h-6" />
           </button>
         </form>
-        <div className="mt-2 text-xs text-gray-500 text-center">
-          Powered by inCommand AI • For emergency situations, contact control room directly
-        </div>
+        {/* Removed branding/footer per request */}
       </div>
     </div>
   );

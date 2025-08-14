@@ -37,7 +37,7 @@ export function useSidebar(): UseSidebarReturn {
     if (isMobile) {
       return mobileOpen ? 256 : 0;
     }
-    return collapsed ? 64 : 256;
+    return collapsed ? 64 : 200;
   }, [collapsed, isMobile, mobileOpen]);
 
   // Update CSS custom property

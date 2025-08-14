@@ -37,7 +37,6 @@ import { getIncidentTypeStyle } from '../utils/incidentStyles'
 import MultiSelectFilter from './ui/MultiSelectFilter'
 import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
-import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
 import RotatingText from './RotatingText'
 import { createPortal } from 'react-dom';
@@ -838,18 +837,7 @@ export default function Dashboard() {
         {showCreateEvent && (
           <EventCreationModal isOpen={showCreateEvent} onClose={() => setShowCreateEvent(false)} onEventCreated={fetchCurrentEvent} />
         )}
-        {/* Floating AI Chat and Create New Incident Button */}
-        {hasCurrentEvent && (
-          <div className="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
-            <FloatingAIChat />
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg text-lg"
-              onClick={() => {}}
-            >
-              Create New Incident
-            </button>
-          </div>
-        )}
+        {/* Floating FABs removed; actions available in sticky bottom nav */}
         <div className="absolute bottom-2 right-4 text-xs text-blue-100 opacity-70 select-none">v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
       </div>
     );
@@ -1045,7 +1033,7 @@ export default function Dashboard() {
             tooltip="Incidents that are currently open."
           />
           <StatCard
-            title="High Prio"
+            title="High Priority"
             value={incidentStats.high}
             icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
             isSelected={filters.priorities.includes('urgent') || filters.priorities.includes('high')}

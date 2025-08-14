@@ -510,7 +510,7 @@ input:-webkit-autofill {
 
 /* Sidebar width CSS custom property */
 :root {
-  --sidebar-width: 256px; /* Default expanded width */
+  --sidebar-width: 200px; /* Default expanded width */
 }
 
 :root[data-sidebar-collapsed="true"] {

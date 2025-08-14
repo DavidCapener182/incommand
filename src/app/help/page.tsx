@@ -22,9 +22,9 @@ import {
 
 const HelpPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300 pb-24">
       <div className="max-w-6xl mx-auto bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a]">
-        <header className="mb-10 border-b border-gray-200 dark:border-[#2d437a] pb-6">
+        <header className="mb-10 border-b border-gray-200 dark:border-[#2d437a] pb-6 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-3">
             <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
             <div>
@@ -72,17 +72,17 @@ const HelpPage = () => {
             <BookOpenIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
             Glossary of Terms
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {glossaryItems.map(({ title, description, icon }, idx) => (
-              <div
-                key={idx}
-                className="bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-[#3451a1]"
-              >
+              <div key={idx} className="rounded-xl border p-4 flex flex-col shadow-sm hover:shadow-md transition bg-white dark:bg-[#2d437a] text-gray-900 dark:text-gray-100">
                 <div className="flex items-center gap-2 mb-2">
                   {getIconComponent(icon)}
                   <h3 className="text-base sm:text-lg font-semibold text-blue-700 dark:text-blue-200 mb-0">{title}</h3>
                 </div>
-                <p className="text-gray-600 dark:text-blue-100 leading-relaxed text-sm">{description}</p>
+                <p className="text-gray-600 dark:text-blue-100 leading-relaxed text-sm line-clamp-3">{description}</p>
+                <div className="mt-auto pt-3">
+                  <button className="text-blue-600 text-sm hover:underline" aria-label={`Read more about ${title}`}>Read more</button>
+                </div>
               </div>
             ))}
           </div>

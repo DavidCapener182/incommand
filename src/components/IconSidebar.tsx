@@ -132,7 +132,7 @@ export default function IconSidebar({
       className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] z-40 flex flex-col sidebar-transition ${
         isMobile 
           ? `sidebar-mobile-slide ${mobileOpen ? 'open' : ''} w-64` 
-          : `w-16 ${collapsed ? '' : 'lg:w-64'}`
+          : `w-16 ${collapsed ? '' : 'lg:w-50'}`
       } ${className}`}
     >
       {/* Header with toggle button */}

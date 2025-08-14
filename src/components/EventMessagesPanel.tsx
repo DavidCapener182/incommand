@@ -1,10 +1,13 @@
+"use client"
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { FaRobot, FaUsers, FaShieldAlt, FaExclamationCircle, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AIChat from './AIChat';
 import { useSession } from '@supabase/auth-helpers-react';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 import { VoiceMessageBubble } from '@/components/ui/VoiceMessageBubble';
+import { useSearchParams } from 'next/navigation';
 
 const mainGroups = [
   { key: 'ai', label: 'AI Chatbot', icon: <FaRobot />, pinned: true },
@@ -71,25 +74,21 @@ function getInitials(nameOrEmail: string) {
 interface EventMessagesPanelProps {
   eventId?: string | null;
   eventName?: string;
-  CHAT_LIST?: { key: string; label: string; icon: string; pinned: boolean }[];
-  selectedChat?: string;
-  setSelectedChat?: React.Dispatch<React.SetStateAction<string>>;
-  showSidebarMobile?: boolean;
-  setShowSidebarMobile?: React.Dispatch<React.SetStateAction<boolean>>;
-  isMobile?: boolean;
   AIChat?: React.ComponentType<{ isVisible: boolean }>;
+  mode?: 'list' | 'chat' | 'combined';
+  activeThreadId?: string | null;
+  onOpenThread?: (id: string) => void;
+  onBackMobile?: () => void;
 }
 
 const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   eventId,
   eventName,
-  CHAT_LIST,
-  selectedChat,
-  setSelectedChat,
-  showSidebarMobile,
-  setShowSidebarMobile,
-  isMobile,
   AIChat,
+  mode = 'combined',
+  activeThreadId,
+  onOpenThread,
+  onBackMobile,
 }) => {
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [communityGroups, setCommunityGroups] = useState<Group[]>([]);
@@ -99,6 +98,10 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   const [profiles, setProfiles] = useState<{ [userId: string]: Profile }>({});
   const session = useSession();
   const currentUserId = session?.user?.id;
+  const searchParams = useSearchParams();
+  const [mobileActive, setMobileActive] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [query, setQuery] = useState<string>('');
   
   // Voice recording functionality
   const {
@@ -121,18 +124,38 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     }
   }, [recordingState, recordingDuration]);
 
-  // Fetch current event
+  // Set or fetch current event based on provided props
   useEffect(() => {
-    async function fetchEvent() {
+    let isMounted = true;
+    async function ensureEvent() {
+      if (eventId || eventName) {
+        const composed: Event = {
+          id: eventId || 'current',
+          event_name: eventName || 'Current Event',
+        } as Event;
+        if (isMounted) setCurrentEvent(composed);
+        // If we have an id but no name, optionally fetch name by id
+        if (eventId && !eventName) {
+          const { data } = await supabase
+            .from('events')
+            .select('id, event_name')
+            .eq('id', eventId)
+            .single<Event>();
+          if (isMounted && data) setCurrentEvent(data);
+        }
+        return;
+      }
+      // Fallback: fetch the current event from Supabase
       const { data } = await supabase
         .from('events')
         .select('id, event_name')
         .eq('is_current', true)
         .single<Event>();
-      if (data) setCurrentEvent(data);
+      if (isMounted && data) setCurrentEvent(data);
     }
-    fetchEvent();
-  }, []);
+    ensureEvent();
+    return () => { isMounted = false; };
+  }, [eventId, eventName]);
 
   // Fetch community groups for the event
   useEffect(() => {
@@ -144,15 +167,21 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
         .eq('event_id', currentEvent?.id ?? '');
       if (data) {
         setCommunityGroups(data as Group[]);
-        // Set default selected group if not set
-        if (selectedGroup === 'ai' && data.length > 0) {
-          setSelectedGroup(data[0].id);
-        }
       }
     }
     fetchGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent]);
+
+  // Open thread from query string on load
+  useEffect(() => {
+    const thread = searchParams?.get('thread');
+    if (thread) {
+      setSelectedGroup(thread);
+      setMobileActive(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch messages from Supabase for selected group
   const fetchMessages = async () => {
@@ -288,134 +317,101 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
           communityGroups.find((g) => g.id === selectedGroup) || {}
   );
 
-  return (
-    <div style={{ display: 'flex', height: '100%', minHeight: '400px', borderRadius: 24, boxShadow: '0 4px 32px rgba(44,62,80,0.10)', background: '#f3f4f6', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <aside style={{ width: 220, background: '#f3f4f6', padding: 16, borderRight: '1px solid #e5e7eb', borderTopLeftRadius: 24, borderBottomLeftRadius: 24, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#6366f1' }}>●</span> {currentEvent?.event_name || ''} <span style={{ fontSize: 12, color: '#10b981', marginLeft: 8 }}>LIVE</span>
+  // LIST MODE ONLY
+  if (mode === 'list') {
+    return (
+      <div className="flex flex-col h-full min-h-0">
+        <div className="sticky top-0 z-10 bg-white border-b p-3">
+          <div className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <span className="text-blue-600">●</span>
+            <span className="truncate">{currentEvent?.event_name || 'Current Event'}</span>
+            <span className="ml-auto text-xs text-emerald-600 font-medium">LIVE</span>
+          </div>
+          <div className="mt-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search conversations"
+              placeholder="Search"
+              className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Main Groups</div>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {mainGroups.map(group => (
-              <li key={group.key} style={{ marginBottom: 8 }}>
-                <button
-                  style={{
-                    background: selectedGroup === group.key ? '#fff' : 'transparent',
-                    border: selectedGroup === group.key ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    padding: '8px 12px',
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontWeight: 'bold',
-                    color: selectedGroup === group.key ? '#6366f1' : '#111827',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setSelectedGroup(group.key)}
-                >
-                  {group.icon} {group.label}
-                  {group.pinned && <span style={{ marginLeft: 'auto', color: '#f59e42', fontSize: 12 }}>PINNED</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
-                </div>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Community Groups</div>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {communityGroups.map(group => {
-              const meta = getGroupMeta(group);
-                    return (
-                <li key={meta.key} style={{ marginBottom: 8 }}>
-                        <button
-                    style={{
-                      background: selectedGroup === group.id ? '#fff' : 'transparent',
-                      border: selectedGroup === group.id ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                      borderRadius: 12,
-                      padding: '8px 12px',
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      fontWeight: 'bold',
-                      color: selectedGroup === group.id ? '#6366f1' : '#111827',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setSelectedGroup(group.id)}
+        <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversation list">
+          <div className="px-3 py-2 text-xs font-semibold text-slate-500">Main</div>
+          <ul className="divide-y">
+            {mainGroups
+              .filter(g => g.label.toLowerCase().includes(query.toLowerCase()))
+              .map((group) => (
+                <li key={group.key}>
+                  <button
+                    role="option"
+                    aria-selected={selectedGroup === group.key}
+                    onClick={() => { setSelectedGroup(group.key); setMobileActive(true); onOpenThread && onOpenThread(group.key); }}
+                    className={`w-full flex items-center gap-2 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedGroup === group.key ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
                   >
-                    {meta.icon} {meta.label}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-        <button style={{ width: '100%', padding: 8, borderRadius: 12, background: '#e5e7eb', color: '#6b7280', border: 'none', cursor: 'not-allowed' }} disabled>
-          + Add Group
-        </button>
-        </aside>
-      {/* Main Chat Area */}
-      <main style={{ flex: 1, padding: 0, background: '#f3f4f6', display: 'flex', flexDirection: 'column', minHeight: '400px', borderTopRightRadius: 24, borderBottomRightRadius: 24 }}>
-        {selectedGroup === 'ai' ? (
-          AIChat ? <AIChat isVisible={true} /> : null
+                    <span className="text-slate-600">{group.icon}</span>
+                    <span className="truncate font-medium">{group.label}</span>
+                    {group.pinned && <span className="ml-auto text-[10px] text-amber-600">PINNED</span>}
+                  </button>
+                </li>
+              ))}
+          </ul>
+          <div className="px-3 py-2 text-xs font-semibold text-slate-500">Community</div>
+          <ul className="divide-y">
+            {communityGroups
+              .filter((g) => (g.name || '').toLowerCase().includes(query.toLowerCase()))
+              .map((group) => {
+                const meta = getGroupMeta(group);
+                const unread = 0;
+                return (
+                  <li key={meta.key}>
+                    <button
+                      role="option"
+                      aria-selected={selectedGroup === group.id}
+                      onClick={() => { setSelectedGroup(group.id); setMobileActive(true); onOpenThread && onOpenThread(group.id); }}
+                      className={`w-full flex items-center gap-2 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedGroup === group.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                    >
+                      <span className="text-slate-600">{meta.icon}</span>
+                      <span className="truncate font-medium">{meta.label}</span>
+                      {unread > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] px-2 py-0.5">{unread}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  // CHAT MODE ONLY
+  if (mode === 'chat') {
+    const threadId = activeThreadId ?? selectedGroup;
+    if (!threadId) {
+      return (
+        <div className="h-full w-full flex items-center justify-center text-sm text-slate-500">
+          Select a conversation
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col h-full min-h-0">
+        {threadId === 'ai' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto" role="log" aria-live="polite">
+            {AIChat ? <AIChat isVisible={true} /> : null}
+          </div>
         ) : (
           <>
-            {/* Rounded, colored header bar */}
-            <div style={{
-              background: 'linear-gradient(90deg, #e0e7ff 0%, #f3f4f6 100%)',
-              borderTopRightRadius: 24,
-              borderBottomLeftRadius: 0,
-              borderTopLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              boxShadow: '0 2px 8px rgba(44,62,80,0.06)',
-              padding: '20px 32px 16px 32px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              fontWeight: 700,
-              fontSize: 20,
-              color: '#3730a3',
-              marginBottom: 0
-            }}>
-              {selectedGroupMeta.icon}
-              {selectedGroupMeta.label}
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', margin: 0, border: 'none', borderRadius: 0, padding: 32, background: '#f3f4f6', boxShadow: 'none' }}>
-              {(messagesByGroup[selectedGroup] || []).map((msg) => {
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3" role="log" aria-live="polite">
+              {(messagesByGroup[threadId] || []).map((msg) => {
                 const profile = profiles[msg.sender];
                 const isCurrentUser = msg.sender === currentUserId;
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex mb-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!isCurrentUser && (
-                      <div className="flex-shrink-0 mr-2">
-                        {profile?.avatar_url ? (
-                          <img
-                            src={profile.avatar_url}
-                            alt={profile.full_name || msg.sender}
-                            className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-bold text-white">
-                            {profile?.full_name
-                              ? profile.full_name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                              : msg.sender.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className={`max-w-xs ${isCurrentUser ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-white text-gray-900 rounded-bl-none'} rounded-lg shadow px-4 py-2 flex flex-col`} style={{ alignItems: isCurrentUser ? 'flex-end' : 'flex-start' }}>
-                      <span className="text-xs font-semibold mb-1">
-                        {profile?.full_name || msg.sender}
-                      </span>
+                  <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`${isCurrentUser ? 'ml-auto rounded-2xl rounded-br-sm bg-blue-50' : 'mr-auto rounded-2xl rounded-bl-sm bg-slate-50'} max-w-[72%] px-3 py-2`}>
                       {msg.message_type === 'voice' && msg.voice_url ? (
                         <VoiceMessageBubble
                           url={msg.voice_url}
@@ -425,47 +421,20 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
                           isOwnMessage={isCurrentUser}
                         />
                       ) : (
-                        <span className="break-words">{msg.text}</span>
+                        <div className="text-slate-700">{msg.text}</div>
                       )}
-                      <span className="text-[10px] text-gray-400 mt-1 self-end">
+                      <div className="mt-1 text-xs text-slate-500">
                         {msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
-                    </div>
-                    {isCurrentUser && (
-                      <div className="flex-shrink-0 ml-2">
-                        {profile?.avatar_url ? (
-                          <img
-                            src={profile.avatar_url}
-                            alt={profile.full_name || msg.sender}
-                            className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold text-white">
-                            {profile?.full_name
-                              ? profile.full_name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                              : msg.sender.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', margin: 24, marginTop: 0 }}>
-              <button
-                type="button"
-                style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 20, marginRight: 4, cursor: 'not-allowed' }}
-                title="Attach file (coming soon)"
-                disabled
-              >
+            <div className="border-t p-3 flex items-center gap-2">
+              <button type="button" aria-label="Attach file" className="px-2 py-1 rounded-lg border text-slate-600 cursor-not-allowed" disabled>
                 📎
               </button>
-              
-              {/* Voice Recording Button */}
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
@@ -474,60 +443,328 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
                 onMouseLeave={isRecording ? cancelRecording : undefined}
                 onTouchStart={!isRecording ? startRecording : undefined}
                 onTouchEnd={isRecording ? stopRecording : undefined}
-                style={{
-                  background: isRecording ? '#ef4444' : '#6366f1',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  animation: isRecording ? 'pulse 1s infinite' : 'none'
-                }}
+                className={`rounded-full w-10 h-10 flex items-center justify-center text-white ${isRecording ? 'bg-red-500' : 'bg-blue-600'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 title={isRecording ? 'Release to stop recording' : 'Hold to record voice message'}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
               >
                 {isRecording ? <FaMicrophoneSlash /> : <FaMicrophone />}
               </button>
-              
-              {/* Recording indicator */}
               {isRecording && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: '#ef4444',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: '#ef4444',
-                    animation: 'pulse 1s infinite'
-                  }} />
-                  Recording... {Math.floor(recordingDuration / 1000)}s
-                </div>
+                <div className="text-sm font-semibold text-red-500">Recording... {Math.floor(recordingDuration / 1000)}s</div>
               )}
-              
               <input
                 type="text"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Type a message..."
-                style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 16, background: '#fff', color: '#111827', outline: 'none', boxShadow: 'none' }}
+                aria-label="Message input"
+                className="flex-1 min-w-0 rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button onClick={handleSend} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Send message">
+                Send
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // DEFAULT COMBINED MODE (existing behavior)
+  return (
+    <div className={`grid grid-cols-1 ${sidebarOpen ? 'md:grid-cols-[200px_minmax(0,1fr)]' : 'md:grid-cols-1'} h-full min-h-0 rounded-2xl border bg-white overflow-hidden shadow-sm`}>
+      {/* Sidebar */}
+      <aside id="messages-sidebar" className={`hidden md:flex ${!sidebarOpen ? 'md:hidden' : ''} flex-col border-r bg-white`} aria-label="Conversations Sidebar">
+        <div className="sticky top-0 z-10 bg-white border-b p-3">
+          <div className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <span className="text-blue-600">●</span>
+            <span className="truncate">{currentEvent?.event_name || 'Current Event'}</span>
+            <span className="ml-auto text-xs text-emerald-600 font-medium">LIVE</span>
+          </div>
+          <div className="mt-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search conversations"
+              placeholder="Search"
+              className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversation list">
+          <div className="px-3 py-2 text-xs font-semibold text-slate-500">Main</div>
+          <ul className="divide-y">
+            {mainGroups
+              .filter(g => g.label.toLowerCase().includes(query.toLowerCase()))
+              .map((group) => (
+                <li key={group.key} className="">
+                  <button
+                    role="option"
+                    aria-selected={selectedGroup === group.key}
+                    onClick={() => { setSelectedGroup(group.key); setMobileActive(true); }}
+                    className={`w-full flex items-center gap-2 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedGroup === group.key ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                  >
+                    <span className="text-slate-600">{group.icon}</span>
+                    <span className="truncate font-medium">{group.label}</span>
+                    {group.pinned && <span className="ml-auto text-[10px] text-amber-600">PINNED</span>}
+                  </button>
+                </li>
+              ))}
+          </ul>
+          <div className="px-3 py-2 text-xs font-semibold text-slate-500">Community</div>
+          <ul className="divide-y">
+            {communityGroups
+              .filter((g) => (g.name || '').toLowerCase().includes(query.toLowerCase()))
+              .map((group) => {
+                const meta = getGroupMeta(group);
+                const unread = 0;
+                return (
+                  <li key={meta.key}>
+                    <button
+                      role="option"
+                      aria-selected={selectedGroup === group.id}
+                      onClick={() => { setSelectedGroup(group.id); setMobileActive(true); }}
+                      className={`w-full flex items-center gap-2 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${selectedGroup === group.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50'}`}
+                    >
+                      <span className="text-slate-600">{meta.icon}</span>
+                      <span className="truncate font-medium">{meta.label}</span>
+                      {unread > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] px-2 py-0.5">{unread}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      </aside>
+
+      {/* Mobile: List or Chat */}
+      <div className="md:hidden flex flex-col">
+        {!mobileActive ? (
+          <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Conversation list">
+            <div className="sticky top-0 z-10 bg-white border-b p-3">
+              <div className="text-sm font-semibold text-slate-800">Messages</div>
+              <div className="mt-2">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search conversations"
+                  placeholder="Search"
+                  className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <ul className="divide-y">
+              {mainGroups
+                .filter(g => g.label.toLowerCase().includes(query.toLowerCase()))
+                .map((group) => (
+                  <li key={group.key}>
+                    <button
+                      role="option"
+                      aria-selected={selectedGroup === group.key}
+                      onClick={() => { setSelectedGroup(group.key); setMobileActive(true); }}
+                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <span className="text-slate-600">{group.icon}</span>
+                      <span className="truncate font-medium">{group.label}</span>
+                    </button>
+                  </li>
+                ))}
+              {communityGroups
+                .filter((g) => (g.name || '').toLowerCase().includes(query.toLowerCase()))
+                .map((group) => {
+                  const meta = getGroupMeta(group);
+                  return (
+                    <li key={meta.key}>
+                      <button
+                        role="option"
+                        aria-selected={selectedGroup === group.id}
+                        onClick={() => { setSelectedGroup(group.id); setMobileActive(true); }}
+                        className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <span className="text-slate-600">{meta.icon}</span>
+                        <span className="truncate font-medium">{meta.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b p-3 flex items-center gap-2">
               <button
-                onClick={handleSend}
-                style={{ padding: '8px 16px', borderRadius: 12, background: '#6366f1', color: '#fff', border: 'none', fontWeight: 'bold', fontSize: 16, boxShadow: '0 1px 4px rgba(99,102,241,0.10)' }}
+                type="button"
+                onClick={() => setMobileActive(false)}
+                className="px-3 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Back to conversations"
               >
-                ➤
+                Back
+              </button>
+              <div className="font-semibold text-slate-800 flex items-center gap-2">
+                <span className="text-slate-600">{selectedGroupMeta.icon}</span>
+                <span>{selectedGroupMeta.label}</span>
+              </div>
+            </div>
+            {selectedGroup === 'ai' ? (
+              AIChat ? <AIChat isVisible={true} /> : null
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3" role="log" aria-live="polite">
+                  {(messagesByGroup[selectedGroup] || []).map((msg) => {
+                    const profile = profiles[msg.sender];
+                    const isCurrentUser = msg.sender === currentUserId;
+                    return (
+                      <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`${isCurrentUser ? 'ml-auto rounded-2xl rounded-br-sm bg-blue-50' : 'mr-auto rounded-2xl rounded-bl-sm bg-slate-50'} max-w-[72%] px-3 py-2`}>
+                          {msg.message_type === 'voice' && msg.voice_url ? (
+                            <VoiceMessageBubble
+                              url={msg.voice_url}
+                              duration={msg.duration || 0}
+                              senderName={profile?.full_name || msg.sender}
+                              timestamp={msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                              isOwnMessage={isCurrentUser}
+                            />
+                          ) : (
+                            <div className="text-slate-700">{msg.text}</div>
+                          )}
+                          <div className="mt-1 text-xs text-slate-500">
+                            {msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t p-3 flex items-center gap-2">
+                  <button type="button" aria-label="Attach file" className="px-2 py-1 rounded-lg border text-slate-600 cursor-not-allowed" disabled>
+                    📎
+                  </button>
+                  <button
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    onMouseDown={!isRecording ? startRecording : undefined}
+                    onMouseUp={isRecording ? stopRecording : undefined}
+                    onMouseLeave={isRecording ? cancelRecording : undefined}
+                    onTouchStart={!isRecording ? startRecording : undefined}
+                    onTouchEnd={isRecording ? stopRecording : undefined}
+                    className={`rounded-full w-10 h-10 flex items-center justify-center text-white ${isRecording ? 'bg-red-500' : 'bg-blue-600'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    title={isRecording ? 'Release to stop recording' : 'Hold to record voice message'}
+                    aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                  >
+                    {isRecording ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                  </button>
+                  {isRecording && (
+                    <div className="text-sm font-semibold text-red-500">Recording... {Math.floor(recordingDuration / 1000)}s</div>
+                  )}
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={e => setInputValue(e.target.value)}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Type a message..."
+                    aria-label="Message input"
+                    className="flex-1 min-w-0 rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button onClick={handleSend} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Send message">
+                    Send
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Chat Pane */}
+      <main className="hidden md:flex flex-col bg-white min-h-0">
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b p-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-controls="messages-sidebar"
+            aria-expanded={sidebarOpen}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {sidebarOpen ? (
+              <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+            ) : (
+              <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+            )}
+          </button>
+          <div className="font-semibold text-slate-800 flex items-center gap-2">
+            <span className="text-slate-600">{selectedGroupMeta.icon}</span>
+            <span>{selectedGroupMeta.label}</span>
+          </div>
+        </div>
+        {selectedGroup === 'ai' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto p-0" role="log" aria-live="polite">
+            {AIChat ? <AIChat isVisible={true} /> : null}
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3" role="log" aria-live="polite">
+              {(messagesByGroup[selectedGroup] || []).map((msg) => {
+                const profile = profiles[msg.sender];
+                const isCurrentUser = msg.sender === currentUserId;
+                return (
+                  <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`${isCurrentUser ? 'ml-auto rounded-2xl rounded-br-sm bg-blue-50' : 'mr-auto rounded-2xl rounded-bl-sm bg-slate-50'} max-w-[72%] px-3 py-2`}>
+                      {msg.message_type === 'voice' && msg.voice_url ? (
+                        <VoiceMessageBubble
+                          url={msg.voice_url}
+                          duration={msg.duration || 0}
+                          senderName={profile?.full_name || msg.sender}
+                          timestamp={msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          isOwnMessage={isCurrentUser}
+                        />
+                      ) : (
+                        <div className="text-slate-700">{msg.text}</div>
+                      )}
+                      <div className="mt-1 text-xs text-slate-500">
+                        {msg.id ? new Date(msg.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="border-t p-3 flex items-center gap-2">
+              <button type="button" aria-label="Attach file" className="px-2 py-1 rounded-lg border text-slate-600 cursor-not-allowed" disabled>
+                📎
+              </button>
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                onMouseDown={!isRecording ? startRecording : undefined}
+                onMouseUp={isRecording ? stopRecording : undefined}
+                onMouseLeave={isRecording ? cancelRecording : undefined}
+                onTouchStart={!isRecording ? startRecording : undefined}
+                onTouchEnd={isRecording ? stopRecording : undefined}
+                className={`rounded-full w-10 h-10 flex items-center justify-center text-white ${isRecording ? 'bg-red-500' : 'bg-blue-600'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                title={isRecording ? 'Release to stop recording' : 'Hold to record voice message'}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+              >
+                {isRecording ? <FaMicrophoneSlash /> : <FaMicrophone />}
+              </button>
+              {isRecording && (
+                <div className="text-sm font-semibold text-red-500">Recording... {Math.floor(recordingDuration / 1000)}s</div>
+              )}
+              <input
+                type="text"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder="Type a message..."
+                aria-label="Message input"
+                className="flex-1 min-w-0 rounded-xl border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button onClick={handleSend} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Send message">
+                Send
               </button>
             </div>
           </>

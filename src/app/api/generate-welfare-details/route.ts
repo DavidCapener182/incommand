@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { logAIUsage } from '@/lib/supabase';
+import { chatCompletion, isOllamaAvailable } from '@/services/ollamaService';
+import { safeParseJson } from '@/lib/ai/json';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -10,12 +12,9 @@ export async function POST(request: Request) {
   try {
     const { input, location, callsign } = await request.json();
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
-        { status: 500 }
-      );
-    }
+    let aiSource: 'openai' | 'ollama' | 'none' = 'none';
+    let occurrenceText = '';
+    let actionTakenText = '';
 
     const prompt = `Generate a professional welfare incident report based on this exact input: "${input}"
 
@@ -43,40 +42,87 @@ Input: "Response 5 – intoxicated female, confused and sitting alone, safeguard
   "occurrence": "Intoxicated female identified at Response 5 location, confused and sitting alone. Safeguarding concern raised.",
   "actionTaken": "Welfare team attending. Individual assessed and safeguarding team notified. Ongoing monitoring in place."
 }`;
+    const DEFAULT_ACTION = 'Welfare team dispatched to assess and support.';
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional welfare incident report writer. Your primary task is to format welfare incidents into clear, professional reports while maintaining all key details about the person's condition and the support provided or needed. Focus on factual, respectful descriptions that prioritize the individual's dignity. Do not prefix occurrences with 'Welfare:' - just describe the situation directly."
-        },
-        {
-          role: "user",
-          content: prompt
+    // Try OpenAI primary
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content:
+                "You are a professional welfare incident report writer. Your primary task is to format welfare incidents into clear, professional reports while maintaining all key details about the person's condition and the support provided or needed. Focus on factual, respectful descriptions that prioritize the individual's dignity. Do not prefix occurrences with 'Welfare:' - just describe the situation directly."
+            },
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.3,
+          max_tokens: 120
+        });
+        const response = completion.choices[0].message.content;
+        const parsedResponse = safeParseJson(response);
+        occurrenceText = parsedResponse.occurrence || input;
+        actionTakenText = parsedResponse.actionTaken || DEFAULT_ACTION;
+        aiSource = 'openai';
+        // Note: AI usage logging requires event_id and user_id from request
+        // await logAIUsage({
+        //   event_id,
+        //   user_id,
+        //   endpoint: '/api/generate-welfare-details',
+        //   model: 'gpt-3.5-turbo',
+        //   tokens_used: completion.usage?.total_tokens || null,
+        //   cost_usd: null
+        // });
+      } catch (err) {
+        aiSource = 'none';
+      }
+    }
+
+    // Fallback to Ollama if OpenAI failed
+    if (aiSource !== 'openai') {
+      try {
+        const model = process.env.OLLAMA_MODEL_WELFARE || process.env.OLLAMA_MODEL_DEFAULT;
+        const available = await isOllamaAvailable(model);
+        if (available) {
+          const ollamaPrompt = [
+            {
+              role: 'system' as const,
+              content:
+                "You are a professional welfare incident report writer. Your primary task is to format welfare incidents into clear, professional reports while maintaining all key details about the person's condition and the support provided or needed. Focus on factual, respectful descriptions that prioritize the individual's dignity. Do not prefix occurrences with 'Welfare:' - just describe the situation directly. Output strictly a JSON object with keys 'occurrence' and 'actionTaken'."
+            },
+            { role: 'user' as const, content: prompt }
+          ];
+          const content = await chatCompletion(ollamaPrompt, {
+            model,
+            temperature: 0.3,
+            maxTokens: 120,
+            timeoutMs: 20000,
+            precheckAvailability: false
+          });
+          const parsedResponse = safeParseJson(content);
+          occurrenceText = parsedResponse.occurrence || input;
+          actionTakenText = parsedResponse.actionTaken || DEFAULT_ACTION;
+          aiSource = 'ollama';
         }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_tokens: 120
-    });
+      } catch (err) {
+        aiSource = 'none';
+      }
+    }
 
-    // Note: AI usage logging requires event_id and user_id from request
-    // await logAIUsage({
-    //   event_id,
-    //   user_id,
-    //   endpoint: '/api/generate-welfare-details',
-    //   model: 'gpt-3.5-turbo',
-    //   tokens_used: completion.usage?.total_tokens || null,
-    //   cost_usd: null
-    // });
+    console.log('generate-welfare-details source=', aiSource);
 
-    const response = completion.choices[0].message.content;
-    const parsedResponse = JSON.parse(response || '{}');
+    if (aiSource === 'none') {
+      return NextResponse.json({
+        occurrence: input,
+        action_taken: DEFAULT_ACTION
+      });
+    }
 
     return NextResponse.json({
-      occurrence: parsedResponse.occurrence || input,
-      action_taken: parsedResponse.actionTaken || 'Welfare team dispatched to assess and support.'
+      occurrence: occurrenceText || input,
+      action_taken: actionTakenText || DEFAULT_ACTION
     });
   } catch (error: any) {
     console.error('Error generating welfare details:', error);

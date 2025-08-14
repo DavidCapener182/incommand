@@ -12,6 +12,7 @@ export interface OllamaConfig {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
+  precheckAvailability?: boolean;
 }
 
 interface OllamaChatRequest {
@@ -63,7 +64,7 @@ export class OllamaInvalidResponseError extends Error {
 
 const DEFAULT_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL_DEFAULT || 'llama3.2:latest';
-const DEFAULT_TIMEOUT_MS = 10000;
+const DEFAULT_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 10000);
 
 let httpClient: AxiosInstance | null = null;
 function getHttpClient(): AxiosInstance {
@@ -75,26 +76,38 @@ function getHttpClient(): AxiosInstance {
   return httpClient;
 }
 
-// Simple availability cache
-let lastAvailabilityCheck = 0;
-let lastAvailabilityResult = false;
+// Availability cache with per-model granularity
+const availabilityCache = new Map<string, { ts: number; result: boolean }>();
 const AVAILABILITY_TTL_MS = 30_000;
 
-export async function isOllamaAvailable(): Promise<boolean> {
+export async function isOllamaAvailable(model?: string): Promise<boolean> {
+  const key = model ?? '*';
   const now = Date.now();
-  if (now - lastAvailabilityCheck < AVAILABILITY_TTL_MS) {
-    return lastAvailabilityResult;
-  }
+  const cached = availabilityCache.get(key);
+  if (cached && now - cached.ts < AVAILABILITY_TTL_MS) return cached.result;
+
   try {
     const client = getHttpClient();
     const resp = await client.get<OllamaTagsResponse>('/api/tags', { timeout: 2500 });
-    const hasModels = Array.isArray(resp.data?.models) && resp.data.models.length > 0;
-    lastAvailabilityResult = !!hasModels;
-    lastAvailabilityCheck = now;
-    return lastAvailabilityResult;
-  } catch (err: any) {
-    lastAvailabilityResult = false;
-    lastAvailabilityCheck = now;
+    const models = Array.isArray(resp.data?.models) ? resp.data.models : [];
+    const hasModels = models.length > 0;
+    const requested = model ?? '';
+    const requestedBase = requested.split(':')[0];
+    // Prefer exact match on full tag if provided; otherwise fallback to base-name match
+    const hasRequestedModel = model
+      ? models.some(m => {
+          const name = typeof m.name === 'string' ? m.name : '';
+          if (!name) return false;
+          if (requested.includes(':')) {
+            return name === requested;
+          }
+          return name.split(':')[0] === requestedBase;
+        })
+      : hasModels;
+    availabilityCache.set(key, { ts: now, result: !!hasRequestedModel });
+    return !!hasRequestedModel;
+  } catch {
+    availabilityCache.set(key, { ts: now, result: false });
     return false;
   }
 }
@@ -107,20 +120,44 @@ export async function chatCompletion(
   const temperature = config?.temperature;
   const maxTokens = config?.maxTokens;
   const timeoutMs = config?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const precheckAvailability = config?.precheckAvailability === true;
 
   try {
+    // Optional fast failure path for offline or missing model
+    if (precheckAvailability) {
+      const available = await isOllamaAvailable(model);
+      if (!available) {
+        throw new OllamaModelNotFoundError(`Ollama model not available or host offline: ${model}`);
+      }
+      // Lightweight readiness probe with num_predict: 0
+      try {
+        const client = getHttpClient();
+        const reqProbe: OllamaChatRequest = {
+          model,
+          messages: [{ role: 'user', content: 'ping' }],
+          stream: false,
+          options: { num_predict: 0 },
+        };
+        await client.post<OllamaChatResponse>('/api/chat', reqProbe, { timeout: Math.min(1500, timeoutMs) });
+      } catch {
+        // Ignore probe failures; main request may still work if server is slow to warm
+      }
+    }
     const client = getHttpClient();
+    const options: any = {};
+    if (temperature != null) options.temperature = temperature;
+    if (maxTokens != null) options.num_predict = maxTokens;
     const req: OllamaChatRequest = {
       model,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
       stream: false,
-      options: {
-        temperature,
-        num_predict: maxTokens,
-      },
+      ...(Object.keys(options).length ? { options } : {}),
     };
 
     const resp = await client.post<OllamaChatResponse>('/api/chat', req, { timeout: timeoutMs });
+    if ((resp.data as any)?.error) {
+      throw new OllamaInvalidResponseError(String((resp.data as any).error));
+    }
     const content = resp.data?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
       throw new OllamaInvalidResponseError('Ollama returned empty or invalid content');

@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import Navigation from './Navigation'
+import BottomNav from './BottomNav'
+import HelpCenterPanel from './HelpCenterModal'
 import { usePathname, useRouter } from 'next/navigation'
 import IncidentCreationModal from './IncidentCreationModal'
-import FloatingAIChat from './FloatingAIChat'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { supabase } from '../lib/supabase'
-import Dock from './Dock'
+// FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   let auth;
@@ -111,9 +112,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const pathname = usePathname() || '';
   const showNav = !['/login', '/signup'].includes(pathname);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
-  const [isAIChatOpen, setIsAIChatOpen] = React.useState(false);
+  // Removed floating AI chat state
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
@@ -133,6 +135,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     fetchCurrentEvent();
   }, []);
 
+  useEffect(() => {
+    const openHandler = () => setIsHelpCenterOpen(true);
+    window.addEventListener('openHelpCenterMessagesAI', openHandler as any);
+    return () => window.removeEventListener('openHelpCenterMessagesAI', openHandler as any);
+  }, []);
+
   // Message bubble SVG for AI Chat
   const MessageBubbleIcon = (
     <svg className="w-8 h-8" fill="none" stroke="white" viewBox="0 0 24 24">
@@ -144,33 +152,32 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     <>
       <AuthGate>
         {showNav && <Navigation />}
-        <main className="min-h-screen bg-gray-50 dark:bg-[#15192c]">{children}</main>
-        
-        {/* Docked FAB Bar at Bottom Right - Hide on incidents page */}
-        {showNav && hasCurrentEvent && !pathname.includes('/incidents') && (
-          <Dock
-            items={[
-              {
-                icon: <img src="/icon.png" alt="New Incident" className="w-8 h-8" />,
-                label: 'New Incident',
-                onClick: () => setIsIncidentModalOpen(true),
-              },
-              {
-                icon: MessageBubbleIcon,
-                label: 'Chat/Support',
-                onClick: () => setIsAIChatOpen((v) => !v),
-              },
-            ]}
-            panelHeight={68}
-            baseItemSize={56}
-            magnification={72}
-            className="bottom-2"
+        <main className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24">{children}</main>
+        {showNav && (
+          <BottomNav
+            onOpenHelpCenter={() => {
+              try {
+                setIsHelpCenterOpen(true);
+              } catch {}
+            }}
           />
         )}
-        {/* Controlled AI Chat - only render when open */}
-        {isAIChatOpen && (
-          <FloatingAIChat isOpen={true} onToggle={() => setIsAIChatOpen((v) => !v)} />
+        {isHelpCenterOpen && (
+          <>
+            {/* Click-outside overlay (no dim) */}
+            <div
+              className="fixed inset-0 z-40"
+              aria-hidden="true"
+              onClick={() => setIsHelpCenterOpen(false)}
+            />
+            {/* Floating panel */}
+            <div className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]">
+              <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
+            </div>
+          </>
         )}
+        
+        {/* FABs removed; sticky BottomNav will provide actions */}
         {/* Modals - Always available */}
         {showNav && (
           <IncidentCreationModal

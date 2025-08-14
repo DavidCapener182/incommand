@@ -7,7 +7,7 @@ export default function HomePage() {
   const isSplash = false // Replace with actual logic to determine splash screen
 
   return (
-    <main>
+    <main className="pb-24">
       <Dashboard />
       {/* {showFloatingButtons && !isSplash && (
         <div className="floating-buttons">...</div>
