@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { detectPriority } from '@/utils/priorityDetection';
 import { extractIncidentJson } from '@/utils/incidentJson';
+import { INCIDENT_EXTRACTION_SYSTEM, buildIncidentExtractionUser } from '@/prompts/incidentExtraction';
 import type { EnhancedIncidentParsingResponse } from '@/types/ai';
 
 // Local lightweight fallbacks to mirror existing modal helpers without importing the big component
@@ -50,18 +51,8 @@ export async function POST(request: Request) {
 
     if (process.env.OPENAI_API_KEY) {
       const INCIDENT_MODEL = process.env.OPENAI_INCIDENT_MODEL || 'gpt-4o-mini';
-      const system = 'You extract structured security incident data and ALWAYS return strict JSON. If something is missing, use empty string.';
-      const user = `Given these allowed incident types: ${incidentTypes.join(', ')}
-Extract the following as strict JSON with keys: incidentType, description, callsign, location, priority, confidence, actionTaken.
-- incidentType: One of the allowed incident types only. For sexual misconduct, assault, or rape, use "Sexual Misconduct". For fights, use "Fight". For medical emergencies, use "Medical".
-- description: Convert to a proper sentence with correct spelling and grammar. For "rape reported in the male toilets by R1sc" write "A rape was reported in the male toilets." Do not include callsigns in description.
-- callsign: Extract if present (e.g., A1, R2, Security 1, R1sc). Else empty
-- location: Extract ONLY the pure location name (e.g., "male toilets", "main stage", "north gate"). Remove ALL callsigns, "by", "reported in", "in the", or any other text. Just the location name.
-- priority: One of urgent|high|medium|low based on severity. Rape, sexual assault, serious violence, medical emergencies, fires are "urgent". Fights, theft, suspicious behavior are "high". Minor incidents are "medium" or "low".
-- confidence: 0-1 indicating certainty
-- actionTaken: Provide exactly 5 specific actions as a numbered list, plus "Other:" for additional notes. For serious incidents like rape: "1. Secure the area and preserve evidence. 2. Contact police immediately. 3. Provide support to victim. 4. Document all details and witnesses. 5. Coordinate with medical if needed. Other:"
-
-Incident: "${input}"`;
+      const system = INCIDENT_EXTRACTION_SYSTEM;
+      const user = buildIncidentExtractionUser(incidentTypes, input);
 
       try {
         const completion = await openai.chat.completions.create({
@@ -84,7 +75,8 @@ Incident: "${input}"`;
       }
     }
 
-    // Note: Do not attempt to initialize browser LLM on the server. Browser fallback handled client-side.
+    // WebLLM is browser-only. Do NOT attempt to initialize it on the server.
+    // The client handles fallback when OpenAI is unavailable by checking `fallback: 'browser-recommended'`.
 
     // Normalize incident type to match allowed list and internal taxonomy
     const normalizeIncidentType = (candidate: string | undefined | null, allowed: string[]): string => {
@@ -143,7 +135,7 @@ Incident: "${input}"`;
     console.log('enhanced-incident-parsing source=', aiSource, { incidentType, cleanedLocation });
 
     const successResponse: EnhancedIncidentParsingResponse = { incidentType, description, callsign, location: cleanedLocation, priority, confidence, actionTaken, ejectionInfo, aiSource };
-    // If OpenAI did not produce a result, explicitly recommend browser fallback to the client
+    // Server-side fallback signal: recommend client to use WebLLM in the browser when cloud AI is unavailable
     if (aiSource === 'none') {
       (successResponse as any).fallback = 'browser-recommended';
     }

@@ -41,7 +41,7 @@ import FloatingAIChat from './FloatingAIChat'
 import { AnimatePresence, motion } from 'framer-motion'
 import RotatingText from './RotatingText'
 import { createPortal } from 'react-dom';
-import StaffDeploymentCard from './StaffDeploymentCard'
+// import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 
 // <style>
@@ -1192,69 +1192,7 @@ export default function Dashboard() {
             currentEventId={currentEventId || undefined}
           />
           
-          {/* Staff Deployment Card - Only show when view mode is 'staff' */}
-          {currentEventId && viewMode === 'staff' && (
-            <div className="mt-8 space-y-6">
-              {/* Staff Deployment Overview */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-700 shadow-xl">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-lg bg-blue-500 flex items-center justify-center">
-                      <span className="text-white text-sm">👥</span>
-                    </span>
-                    Staff Deployment Overview
-                  </h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{staffStats.totalStaff}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">Total Staff</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{staffStats.availableStaff}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">Available</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{staffStats.assignedStaff}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">Assigned</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{urgentIncidentsCount}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">Urgent Needs</div>
-                  </div>
-                </div>
-                {urgentIncidentsCount > 0 && (
-                  <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
-                    <div className="flex items-center gap-2">
-                      <span className="text-yellow-600">⚠️</span>
-                      <span className="text-sm text-yellow-800 dark:text-yellow-200">
-                        {urgentIncidentsCount} high-priority incident{urgentIncidentsCount !== 1 ? 's' : ''} require{urgentIncidentsCount === 1 ? 's' : ''} immediate staff assignment
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Detailed Staff Deployment Card */}
-              <StaffDeploymentCard 
-                eventId={currentEventId}
-                onAssignStaff={(incidentId, staffIds) => {
-                  // Handle staff assignment - could open incident details or show notification
-                  console.log('Staff assigned:', { incidentId, staffIds });
-                  addToast({
-                    type: 'success',
-                    title: 'Staff Assignment',
-                    message: `Assigned ${staffIds.length} staff member(s) to incident`
-                  });
-                }}
-                onViewIncident={(incidentId) => {
-                  // Handle viewing incident - could open incident details modal
-                  console.log('View incident:', incidentId);
-                  // Could implement incident details modal here
-                }}
-              />
-            </div>
-          )}
+          {/* Staff Deployment Overview hidden intentionally */}
         </div>
       </div>
 

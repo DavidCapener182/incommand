@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { chatCompletion as ollamaChatCompletion, isOllamaAvailable } from '@/services/ollamaService';
 
 // TypeScript interfaces
 export interface SocialPost {
@@ -43,9 +44,24 @@ export async function analyzeSentiment(posts: string[]): Promise<SentimentScore[
   const results: SentimentScore[] = [];
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
+  // If OpenAI key is missing, try Ollama; otherwise neutral
   if (!openaiApiKey) {
-    console.warn('OpenAI API key not found, returning neutral sentiment');
-    return posts.map(() => 0);
+    try {
+      const available = await isOllamaAvailable();
+      const batchSize = 20;
+      for (let i = 0; i < posts.length; i += batchSize) {
+        const batch = posts.slice(i, i + batchSize);
+        if (available) {
+          const batchResults = await analyzeBatchWithOllama(batch);
+          results.push(...batchResults);
+        } else {
+          results.push(...batch.map(() => 0));
+        }
+      }
+      return results;
+    } catch (e) {
+      return posts.map(() => 0);
+    }
   }
 
   // Process posts in batches of 20
@@ -77,7 +93,7 @@ Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: process.env.OPENAI_SENTIMENT_MODEL || 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -98,8 +114,10 @@ Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1
       throw new Error('No content in OpenAI response');
     }
 
-    // Parse the JSON response
-    const sentimentArray = JSON.parse(content);
+    // Parse the JSON response (strip fences if present)
+    const fenced = content.match(/```json[\s\S]*?```|```[\s\S]*?```/i);
+    const candidate = fenced ? fenced[0].replace(/```json|```/gi, '').trim() : content;
+    const sentimentArray = JSON.parse(candidate);
     
     // Validate and convert to SentimentScore type
     const validScores: SentimentScore[] = sentimentArray.map((score: any) => {
@@ -111,18 +129,61 @@ Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1
     });
 
     // Log AI usage
-    await logAIUsage('sentiment_analysis', posts.length, data.usage?.total_tokens || 0);
+    await logAIUsage('sentiment_analysis', posts.length, data.usage?.total_tokens || 0, 'openai');
 
     return validScores;
 
   } catch (error) {
-    console.error('Error in sentiment analysis:', error);
-    // Return neutral sentiment for all posts in case of error
+    // OpenAI failed; attempt Ollama fallback
+    try {
+      const available = await isOllamaAvailable();
+      if (!available) {
+        throw new Error('Ollama not available');
+      }
+      const content = await analyzeBatchWithOllama(posts);
+      // Log AI usage for Ollama with 0 tokens if unknown
+      await logAIUsage('sentiment_analysis', posts.length, 0, 'ollama');
+      return content;
+    } catch (fallbackErr) {
+      console.error('Sentiment analysis failed (OpenAI, then Ollama):', error, fallbackErr);
+      // Return neutral sentiment for all posts in case of error
+      return posts.map(() => 0);
+    }
+  }
+}
+
+// Analyze a batch with Ollama using the same prompts
+async function analyzeBatchWithOllama(posts: string[]): Promise<SentimentScore[]> {
+  try {
+    const model = process.env.OLLAMA_MODEL_SENTIMENT;
+    const systemPrompt = `You are a sentiment analysis expert. Analyze each social media post and classify it as:
+ - 1 for positive sentiment (happy, satisfied, praising, etc.)
+ - 0 for neutral sentiment (factual, indifferent, etc.)
+ - -1 for negative sentiment (angry, complaining, critical, etc.)
+
+ Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1, 1]`;
+    const userPrompt = `Analyze these social media posts:\n${posts.map((post, i) => `${i + 1}. ${post}`).join('\n')}`;
+    const content = await ollamaChatCompletion([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ], { model, temperature: 0.1, maxTokens: 120 });
+
+    const fenced = content.match(/```json[\s\S]*?```|```[\s\S]*?```/i);
+    const candidate = fenced ? fenced[0].replace(/```json|```/gi, '').trim() : content;
+    const sentimentArray = JSON.parse(candidate);
+
+    const validScores: SentimentScore[] = sentimentArray.map((score: any) => {
+      const num = parseInt(score);
+      if (num === 1 || num === 0 || num === -1) return num as SentimentScore;
+      return 0;
+    });
+    return validScores;
+  } catch (e) {
     return posts.map(() => 0);
   }
 }
 
-async function logAIUsage(operation: string, postsAnalyzed: number, tokensUsed: number) {
+async function logAIUsage(operation: string, postsAnalyzed: number, tokensUsed: number, source: 'openai' | 'ollama') {
   try {
     const { error } = await supabase
       .from('ai_usage_logs')
@@ -132,6 +193,7 @@ async function logAIUsage(operation: string, postsAnalyzed: number, tokensUsed: 
         metadata: {
           posts_analyzed: postsAnalyzed,
           timestamp: new Date().toISOString(),
+          ai_source: source,
         },
       });
 

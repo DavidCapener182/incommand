@@ -2218,6 +2218,15 @@ export default function IncidentCreationModal({
   }
 
   async function parseIncidentUnified(input: string, incidentTypes: string[]): Promise<{ data: AICommonData | null; source: 'cloud' | 'browser' | null }> {
+    const toAICommon = (d: any): AICommonData => ({
+      incidentType: d.incidentType,
+      description: d.description,
+      callsign: d.callsign,
+      location: d.location,
+      priority: d.priority,
+      confidence: d.confidence,
+      actionTaken: d.actionTaken,
+    });
     try {
       const resp = await fetch('/api/enhanced-incident-parsing', {
         method: 'POST',
@@ -2227,7 +2236,7 @@ export default function IncidentCreationModal({
       if (resp.ok) {
         const d: EnhancedIncidentParsingResponse & { fallback?: 'browser-recommended' } = await resp.json();
         if (d.aiSource === 'openai') {
-          return { data: d, source: 'cloud' };
+          return { data: toAICommon(d), source: 'cloud' };
         }
         // Server suggests browser fallback when it cannot use OpenAI
         if (d.aiSource === 'none' && d.fallback === 'browser-recommended') {
@@ -2235,12 +2244,12 @@ export default function IncidentCreationModal({
             await ensureBrowserLLM();
             if (isBrowserLLMAvailable()) {
               const browser = await parseIncidentWithBrowserLLM(input, incidentTypes);
-              if (browser) return { data: browser, source: 'browser' };
+              if (browser) return { data: toAICommon(browser), source: 'browser' };
             }
           } catch {}
         }
         // Use whatever heuristics came from server if present
-        return { data: d, source: null };
+        return { data: toAICommon(d), source: null };
       }
     } catch {}
     // Network/API failure → attempt browser fallback
@@ -2248,7 +2257,7 @@ export default function IncidentCreationModal({
       await ensureBrowserLLM();
       if (isBrowserLLMAvailable()) {
         const browser = await parseIncidentWithBrowserLLM(input, incidentTypes);
-        if (browser) return { data: browser, source: 'browser' };
+        if (browser) return { data: toAICommon(browser), source: 'browser' };
       }
     } catch {}
     return { data: null, source: null };
@@ -2436,26 +2445,19 @@ export default function IncidentCreationModal({
                 callsign_from: callsign,
                 incident_type: incidentType
               };
-            } catch (error) {
+              } catch (error) {
               console.error('Error generating incident details:', error);
-              // Fallback to enhanced parsing endpoint
+              // Unified fallback using parseIncidentUnified; keep local heuristics as backup
               try {
-                const resp2 = await fetch('/api/enhanced-incident-parsing', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ input, incidentTypes })
-                });
-                if (resp2.ok) {
-                  const data2 = await resp2.json();
+                const { data, source } = await parseIncidentUnified(input, incidentTypes);
+                if (data) {
                   processedData = {
-                    occurrence: data2.description || input,
+                    occurrence: data.description || input,
                     action_taken: '',
-                    callsign_from: data2.callsign || callsign,
-                    incident_type: data2.incidentType || incidentType
-                  };
-                  if (data2.priority) {
-                    setFormData(prev => ({ ...prev, priority: data2.priority || prev.priority }));
-                  }
+                    callsign_from: detectCallsign(input) || '',
+                    incident_type: normalizeIncidentType(data.incidentType || '', incidentTypes) || incidentType,
+                  } as IncidentParserResult;
+                  if (data.priority) setFormData(prev => ({ ...prev, priority: data.priority || prev.priority }));
                 } else {
                   processedData = {
                     occurrence: input,

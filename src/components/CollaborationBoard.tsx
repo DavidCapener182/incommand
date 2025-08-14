@@ -570,13 +570,17 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                     )}
 
                                     {/* Escalation Status Indicator */}
-                                    {incident.escalate_at && (
+                                    {incident.escalate_at && (!incident.is_closed || incident.escalated) && (
                                       <div className="flex items-center gap-1 mb-1">
                                         <span className="text-xs text-gray-500">Escalation:</span>
                                         {incident.escalated ? (
-                                          <span className="text-xs bg-red-100 text-red-700 px-1 rounded">Escalated</span>
+                                          // If escalated (e.g., countdown reached supervisor), show Supervisors label
+                                          <span className="text-xs bg-blue-100 text-blue-700 px-1 rounded">Supervisors</span>
                                         ) : (
-                                          <span className="text-xs bg-yellow-100 text-yellow-700 px-1 rounded">Active</span>
+                                          // Only show Active when not closed
+                                          !incident.is_closed ? (
+                                            <span className="text-xs bg-yellow-100 text-yellow-700 px-1 rounded">Active</span>
+                                          ) : null
                                         )}
                                       </div>
                                     )}

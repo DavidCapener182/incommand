@@ -612,14 +612,7 @@ export default function IncidentTable({
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
               </button>
-              <button
-                onClick={() => onViewModeChange('staff')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  viewMode === 'staff' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <UserGroupIcon className="h-4 w-4" /> Staff
-              </button>
+              {/* Staff toggle hidden intentionally */}
             </div>
           )}
           
@@ -654,15 +647,7 @@ export default function IncidentTable({
       </div>
 
       {/* Conditional Rendering for Table/Board/Staff Views */}
-      {viewMode === 'staff' ? (
-        // Staff view - show staff deployment card
-        <div className="mt-6">
-          <div className="text-center text-gray-500 dark:text-gray-400">
-            <p>Staff deployment view is now handled by the Dashboard component.</p>
-            <p>Please use the "Staff" toggle button above to view staff deployment information.</p>
-          </div>
-        </div>
-      ) : viewMode === 'table' ? (
+      {viewMode === 'table' ? (
         <>
           {/* Enhanced Empty State */}
           {sortedIncidents.length === 0 ? (

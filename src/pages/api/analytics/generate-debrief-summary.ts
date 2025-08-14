@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
+import { chatCompletion as ollamaChatCompletion, isOllamaAvailable } from '@/services/ollamaService';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -56,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'No incident data found for this event to generate a debrief.' });
     }
 
-    // 3. Construct a detailed prompt for OpenAI
+    // 3. Construct a detailed prompt for AI
     const prompt = `
       Please provide a debrief summary for the event: "${event.event_name}" at "${event.venue_name}".
       The client event brief is: ${event.event_brief || 'No event brief provided.'}
@@ -73,26 +74,115 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       - "learningPoints": An array of strings, with each string being a key learning point or recommendation.
       The tone must be professional and analytical. Do not include any text outside of the JSON object.
     `;
+    let aiSource: 'openai' | 'ollama' | 'none' = 'none';
+    let summary = '' as string;
+    let tokensUsed = 0;
 
-    // 4. Generate the summary using OpenAI
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    });
-
-    const summary = response.choices[0]?.message?.content;
-
-    if (!summary) {
-      throw new Error('Failed to generate summary from OpenAI.');
+    // 4. Try OpenAI as primary
+    try {
+      const OPENAI_DEBRIEF_MODEL = process.env.OPENAI_DEBRIEF_MODEL || 'gpt-4o-mini';
+      const response = await openai.chat.completions.create({
+        model: OPENAI_DEBRIEF_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      });
+      summary = response.choices[0]?.message?.content || '';
+      tokensUsed = (response as any)?.usage?.total_tokens || 0;
+      if (!summary) throw new Error('No content from OpenAI');
+      try {
+        JSON.parse(summary);
+        aiSource = 'openai';
+      } catch (e) {
+        throw new Error('OpenAI returned non-JSON content');
+      }
+    } catch (openaiErr) {
+      // 5. Fallback to Ollama if available
+      try {
+        const available = await isOllamaAvailable();
+        if (available) {
+          const model = process.env.OLLAMA_MODEL_DEBRIEF;
+          const content = await ollamaChatCompletion(
+            [ { role: 'user', content: prompt } ],
+            { model }
+          );
+          // Accept fenced or plain JSON
+          const fenced = content.match(/```json[\s\S]*?```|```[\s\S]*?```/i);
+          const candidate = fenced ? fenced[0].replace(/```json|```/gi, '').trim() : content;
+          JSON.parse(candidate); // validate
+          summary = candidate;
+          aiSource = 'ollama';
+          tokensUsed = 0;
+        } else {
+          throw new Error('Ollama not available');
+        }
+      } catch (ollamaErr) {
+        console.error('AI debrief generation failed (OpenAI, then Ollama):', openaiErr, ollamaErr);
+        throw new Error('Failed to generate debrief summary');
+      }
     }
-    
+
+    // Validate parsed JSON before saving
     let summaryJson;
     try {
-        summaryJson = JSON.parse(summary);
+      summaryJson = JSON.parse(summary);
     } catch (e) {
-        console.error("OpenAI did not return valid JSON:", summary);
-        throw new Error('Failed to generate a valid summary from OpenAI.');
+      console.error('Final AI output not valid JSON:', summary);
+      throw new Error('Failed to generate a valid summary');
+    }
+
+    // Additional shape checks for required keys and types
+    const validateDebriefShape = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return false;
+      const { eventOverview, attendanceSummary, significantIncidents, learningPoints } = obj;
+      if (typeof eventOverview !== 'string') return false;
+      if (typeof attendanceSummary !== 'string') return false;
+      if (!Array.isArray(significantIncidents)) return false;
+      if (!Array.isArray(learningPoints)) return false;
+      // incidents array items validation
+      for (const item of significantIncidents) {
+        if (!item || typeof item !== 'object') return false;
+        if (typeof item.date !== 'string') return false;
+        if (typeof item.type !== 'string') return false;
+        if (typeof item.details !== 'string') return false;
+      }
+      // learningPoints must be strings
+      for (const lp of learningPoints) {
+        if (typeof lp !== 'string') return false;
+      }
+      return true;
+    };
+
+    if (!validateDebriefShape(summaryJson)) {
+      // Attempt fallback to Ollama if not already used
+      try {
+        if (aiSource !== 'ollama') {
+          const available = await isOllamaAvailable();
+          if (available) {
+            const model = process.env.OLLAMA_MODEL_DEBRIEF;
+            const content = await ollamaChatCompletion(
+              [ { role: 'user', content: prompt } ],
+              { model }
+            );
+            const fenced = content.match(/```json[\s\S]*?```|```[\s\S]*?```/i);
+            const candidate = fenced ? fenced[0].replace(/```json|```/gi, '').trim() : content;
+            const parsed = JSON.parse(candidate);
+            if (!validateDebriefShape(parsed)) {
+              throw new Error('Ollama returned invalid debrief JSON shape');
+            }
+            summary = candidate;
+            summaryJson = parsed;
+            aiSource = 'ollama';
+            tokensUsed = 0;
+          } else {
+            throw new Error('Ollama not available for fallback');
+          }
+        } else {
+          throw new Error('Invalid debrief JSON shape and no further fallback available');
+        }
+      } catch (shapeErr) {
+        console.error('Debrief JSON shape validation failed:', shapeErr);
+        return res.status(500).json({ error: 'Failed to generate a valid debrief summary structure.' });
+      }
     }
 
     // 5. Save summary to the debriefs table
@@ -115,9 +205,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.error('Failed to save debrief summary:', insertError);
             throw new Error('Failed to save debrief summary to the database.');
         }
+        // Log AI usage after saving
+        await logAIUsage('debrief_summary', tokensUsed, { event_id: eventId, ai_source: aiSource });
         return res.status(200).json({ summary: insertData.ai_summary });
     }
-    
+    // Log AI usage after saving
+    await logAIUsage('debrief_summary', tokensUsed, { event_id: eventId, ai_source: aiSource });
     return res.status(200).json({ summary: debriefData.ai_summary });
 
   } catch (error: any) {
@@ -125,3 +218,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 } 
+
+async function logAIUsage(operation: string, tokensUsed: number, metadata: Record<string, any>) {
+  try {
+    const { error } = await supabase
+      .from('ai_usage_logs')
+      .insert({
+        operation,
+        tokens_used: tokensUsed,
+        metadata: {
+          ...metadata,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    if (error) {
+      console.error('Error logging AI usage:', error);
+    }
+  } catch (e) {
+    console.error('Error logging AI usage:', e);
+  }
+}

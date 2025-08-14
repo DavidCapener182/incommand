@@ -164,6 +164,15 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 - **Deployment**: Vercel with automatic GitHub integration
 - **External APIs**: Weather, Geocoding, What3Words integration
 
+## AI Architecture
+
+- OpenAI primary (server). If unavailable, server responds with `fallback: 'browser-recommended'` and the client performs WebLLM parsing. WebLLM is not initialized on the server.
+
+Additional details:
+- OpenAI is the primary AI provider for server-side parsing. If the server cannot use OpenAI (e.g., missing key or outage), the endpoint responds with a fallback signal and minimal heuristics.
+- When this occurs, the server includes `fallback: 'browser-recommended'` in the JSON. The client then initializes WebLLM and performs parsing locally in the browser.
+- WebLLM is a browser-only runtime and is intentionally not initialized on the server.
+
 ## Setup
 
 1. **Install dependencies**
@@ -182,6 +191,15 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
    # Optional: configure the browser LLM model used by WebLLM (defaults to a small, browser-friendly model)
    NEXT_PUBLIC_WEBLLM_MODEL_ID=Llama-3.2-3B-Instruct-q4f32_1-MLC
    ```
+
+   - Optional: Local LLM (Ollama) configuration if you want server-side fallback to a local model
+     ```
+     OLLAMA_BASE_URL=http://localhost:11434
+     OLLAMA_MODEL_DEFAULT=llama3.2
+     OLLAMA_MODEL_DEBRIEF=llama3.2
+     OLLAMA_MODEL_SENTIMENT=llama3.2
+     # OLLAMA_API_KEY=  # only if using a remote Ollama server requiring auth
+     ```
 
 3. **Run the development server**
    ```sh
