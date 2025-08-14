@@ -63,14 +63,25 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
   - Actionable security recommendations
 
 ### Dashboard Cards & UI
-- **Venue Occupancy**: Live stats with progress bar and clickable modal for detailed view
+- **Venue Occupancy**: Live stats with progress bar, color-coded capacity levels, and critical state animations (pulse + red border at 100%)
 - **Weather Card**: Current weather and forecast for venue location (responsive design)
 - **What3Words Map Card**: Clickable card opening fullscreen modal map with enhanced mobile layout
 - **Current Event Card**: Integrated AI insights with cycling paragraphs and navigation controls
 - **Responsive Navigation**: Collapsible hamburger menu for mobile devices
+- **Enhanced KPI Grid**: Progressive responsive layout (2→4→6→8 columns) with reduced padding for better space utilization
+- **Real-time Timestamps**: "Last Updated" timestamp above incident table for live operations awareness
+- **Floating Action Button**: Persistent "New Incident" button with smart visibility management
 
 ### Enhanced User Experience
 - **Incident Creation Modal**: 
+  - Complete UI/UX redesign with three-column responsive layout
+  - Quick Add bar moved to full-width top section for better visibility
+  - Incident Type chips with color-coded categories and search functionality
+  - Independent scrolling for incident type list (no interference with other fields)
+  - Section headers with icons and improved visual hierarchy
+  - Styled select components with custom chevrons
+  - Enhanced textareas with light grey backgrounds
+  - Sticky footer with modern button styles (red "Log Incident", blue outline "Save as Draft")
   - Usage-based incident type sorting per device/browser
   - Improved quick actions and context-aware logic
   - Pre-filled attendance quick input
@@ -88,8 +99,30 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
 - **Build Optimization**: Resolved webpack module errors and build cache issues
 - **Performance Improvements**: Optimized API calls and reduced redundant requests
 - **Error Handling**: Enhanced error states with retry functionality
-- **Accessibility**: Improved ARIA labels and keyboard navigation
+- **Accessibility**: Improved ARIA labels, keyboard navigation, and WCAG AA contrast compliance
 - **State Management**: Proper context management for notifications and UI states
+- **Component Architecture**: Enhanced TypeScript safety and component organization
+- **Responsive Design**: Comprehensive mobile-first approach with logical stacking
+
+## Recent Major Updates (January 2025)
+
+### Dashboard & Incident Creation UI/UX Overhaul (January 2025)
+- **Dashboard Enhancements**: 
+  - Added "Last Updated" timestamp above incident table for real-time awareness
+  - Enhanced venue occupancy with critical state animations (pulse + red border at 100% capacity)
+  - Implemented progressive responsive KPI grid (2→4→6→8 columns)
+  - Reduced KPI card padding for better space utilization
+  - Fixed floating "New Incident" button visibility management
+- **Incident Creation Modal Redesign**:
+  - Complete visual overhaul with three-column responsive layout
+  - Quick Add bar moved to full-width top section
+  - Incident Type chips with color-coded categories and search functionality
+  - Independent scrolling for incident type list (no interference with other fields)
+  - Section headers with icons and improved visual hierarchy
+  - Styled select components with custom chevrons
+  - Enhanced textareas with light grey backgrounds
+  - Sticky footer with modern button styles (red "Log Incident", blue outline "Save as Draft")
+  - Full accessibility compliance with ARIA labels and keyboard navigation
 
 ## Recent Major Updates (June 2025)
 
