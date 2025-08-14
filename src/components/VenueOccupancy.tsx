@@ -176,6 +176,21 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     );
   }
 
+  // Calculate percentage and determine progress bar color
+  const percentage = expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0;
+  
+  // Color logic: green (0-70%) → amber (70-90%) → red (90%+)
+  const getProgressColor = (percent: number) => {
+    if (percent >= 90) return 'bg-red-500';
+    if (percent >= 70) return 'bg-amber-500';
+    return 'bg-green-500';
+  };
+
+  const progressColor = getProgressColor(percentage);
+  
+  // Check if at critical capacity (100%)
+  const isCriticalCapacity = percentage >= 100;
+
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-1 w-full">
@@ -192,9 +207,9 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           <div className="w-full space-y-0.5">
             <div className="flex justify-between items-center px-1">
               <span
-                className={`text-[10px] font-medium ${currentCount > expectedAttendance ? 'text-red-500' : currentCount >= expectedAttendance * 0.9 ? 'text-orange-400' : 'text-[#2A3990]'} dark:text-red-400`}
+                className={`text-[10px] font-medium ${isCriticalCapacity ? 'text-red-500 animate-pulse font-bold' : currentCount > expectedAttendance ? 'text-red-500' : currentCount >= expectedAttendance * 0.9 ? 'text-amber-500' : currentCount >= expectedAttendance * 0.7 ? 'text-amber-500' : 'text-green-500'}`}
               >
-                {Math.round((currentCount / expectedAttendance) * 100)}%
+                {Math.round(percentage)}%
               </span>
               {currentCount > expectedAttendance && (
                 <span className="text-[10px] font-medium text-red-500">
@@ -202,10 +217,10 @@ export default function VenueOccupancy({ currentEventId }: Props) {
                 </span>
               )}
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-1">
+            <div className={`w-full rounded-full h-2 ${isCriticalCapacity ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'} ${isCriticalCapacity ? 'border-2 border-red-300 dark:border-red-600' : ''}`}>
               <div 
-                className="h-1 rounded-full transition-all duration-300 bg-blue-600 dark:bg-red-500" 
-                style={{ width: `${Math.min(Math.round((currentCount / expectedAttendance) * 100), 100)}%` }}
+                className={`h-2 rounded-full transition-all duration-300 ${progressColor} ${isCriticalCapacity ? 'animate-pulse' : ''}`}
+                style={{ width: `${percentage}%` }}
               />
             </div>
           </div>

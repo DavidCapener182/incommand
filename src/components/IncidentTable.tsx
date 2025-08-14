@@ -96,7 +96,7 @@ export default function IncidentTable({
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
-  const [showBackToTop, setShowBackToTop] = useState(false)
+
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -538,7 +538,7 @@ export default function IncidentTable({
   useEffect(() => {
     const handleScroll = () => {
       if (tableContainerRef.current) {
-        if (incidents.length > 8 && tableContainerRef.current.scrollTop > 300) setShowBackToTop(true);
+
       }
     };
     const ref = tableContainerRef.current;
@@ -646,6 +646,26 @@ export default function IncidentTable({
         )}
       </div>
 
+      {/* Last Updated Timestamp */}
+      {viewMode === 'table' && sortedIncidents.length > 0 && (
+        <div className="mt-4 mb-2 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-medium">Last Updated:</span> {lastUpdated ? lastUpdated.toLocaleTimeString('en-GB', { 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              second: '2-digit',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            }) : 'Never'}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Live Updates Active</span>
+          </div>
+        </div>
+      )}
+
       {/* Conditional Rendering for Table/Board/Staff Views */}
       {viewMode === 'table' ? (
         <>
@@ -730,7 +750,7 @@ export default function IncidentTable({
                     </div>
                     <div className="basis-[24%] flex items-center justify-end">
                       {incident.incident_type === 'Attendance' ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
                           Logged
                         </span>
                       ) : (
@@ -774,19 +794,7 @@ export default function IncidentTable({
               </div>
             ))}
             
-            {/* Enhanced Back to Top Button (Mobile) */}
-            {showBackToTop && (
-              <button
-                className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in transform hover:scale-110 transition-all duration-200"
-                aria-label="Back to Top"
-                tabIndex={0}
-                onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ArrowUpIcon className="h-7 w-7" />
-              </button>
-            )}
+
           </div>
 
           {/* Enhanced Desktop Table Layout */}
@@ -904,7 +912,7 @@ export default function IncidentTable({
                     </div>
                    <div className={`flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 pr-4`}>
                       {incident.incident_type === 'Attendance' ? (
-                        <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm">
+                        <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
                           Logged
                         </span>
                       ) : (
@@ -925,19 +933,7 @@ export default function IncidentTable({
               })}
             </div>
             
-            {/* Enhanced Back to Top Button (Desktop) */}
-            {showBackToTop && (
-              <button
-                className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 animate-fade-in transform hover:scale-110 transition-all duration-200"
-                aria-label="Back to Top"
-                tabIndex={0}
-                onClick={() => { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { tableContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); } }}
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ArrowUpIcon className="h-7 w-7" />
-              </button>
-            )}
+
           </div>
           
           {isDetailsModalOpen && selectedIncidentId && (

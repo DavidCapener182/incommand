@@ -43,10 +43,21 @@ import { createPortal } from 'react-dom';
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 
+
+
 // <style>
 // {`
 //   .splash-bg {
 //     background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.08) 0%, rgba(35,64,142,1) 80%), #23408e;
+//   }
+//   
+//   @keyframes scroll {
+//     0% { transform: translateX(100%); }
+//     100% { transform: translateX(-100%); }
+//   }
+//   
+//   .animate-scroll {
+//     animation: scroll 20s linear infinite;
 //   }
 // `}
 // </style>
@@ -78,9 +89,10 @@ interface TimeCardProps {
   nextEvent: EventTiming | null;
   countdown: string;
   currentSlot?: EventTiming | null;
+  timeSinceLastIncident: string;
 }
 
-const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot }) => {
+const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
   return (
     <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
@@ -88,6 +100,10 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           <div className="hidden md:block">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Time</h2>
             <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{currentTime}</p>
+            <div className="mt-2 mb-4">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time Since Last Incident</h3>
+              <p className="text-lg font-bold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
+            </div>
             {nextEvent && (
               <div className="mt-2">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
@@ -207,7 +223,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const baseClasses = `
     relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
-    p-4 md:p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 
+    p-2 md:p-3 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 
     ${isFilterable ? 'cursor-pointer' : ''}
     ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg' : 'hover:shadow-xl'}
     ${pulse ? 'animate-pulse' : ''}
@@ -215,15 +231,17 @@ const StatCard: React.FC<StatCardProps> = ({
   `;
 
   const content = (
-    <div className="flex flex-col items-center text-center">
-      <div className={`mb-3 ${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}>
+    <div className="flex flex-row items-center justify-between w-full">
+      <div className="flex flex-col items-start">
+        <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-0.5">
+          {value}
+        </div>
+        <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          {title}
+        </div>
+      </div>
+      <div className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}>
         {icon}
-      </div>
-      <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">
-        {value}
-      </div>
-      <div className="text-sm font-medium text-gray-600 dark:text-gray-300">
-        {title}
       </div>
       {showPulse && (
         <div className="absolute top-2 right-2">
@@ -496,6 +514,7 @@ export default function Dashboard() {
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
+  const [timeSinceLastIncident, setTimeSinceLastIncident] = useState<string>('');
   const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
   const [countdown, setCountdown] = useState<string>('');
   const [nextEvent, setNextEvent] = useState<EventTiming | null>(null);
@@ -507,6 +526,7 @@ export default function Dashboard() {
   const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
   const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'board' | 'staff'>('table');
+  const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
   
   // Staff availability hook
   const { stats: staffStats } = useStaffAvailability(currentEventId || '', 50);
@@ -594,6 +614,54 @@ export default function Dashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Calculate time since last incident and update recent incidents
+  useEffect(() => {
+    if (incidents && incidents.length > 0) {
+      // Get the most recent incident
+      const mostRecentIncident = incidents[0]; // Assuming incidents are sorted by timestamp desc
+      const lastIncidentTime = new Date(mostRecentIncident.timestamp);
+      const now = new Date();
+      const timeDiff = now.getTime() - lastIncidentTime.getTime();
+      
+      // Calculate time since last incident
+      const minutes = Math.floor(timeDiff / (1000 * 60));
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      
+      let timeString = '';
+      if (days > 0) {
+        timeString = `${days}d ${hours % 24}h ${minutes % 60}m`;
+      } else if (hours > 0) {
+        timeString = `${hours}h ${minutes % 60}m`;
+      } else if (minutes > 0) {
+        timeString = `${minutes}m`;
+      } else {
+        timeString = 'Just now';
+      }
+      
+      setTimeSinceLastIncident(timeString);
+      
+      // Update recent incidents (last 3, excluding Attendance and Sit Rep)
+      const recentFiltered = incidents
+        .filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type))
+        .slice(0, 3);
+      setRecentIncidents(recentFiltered);
+      
+      // Dispatch incident summary to BottomNav
+      const summary = generateIncidentSummary();
+      window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: summary }));
+      
+      // Dispatch recent incidents for scrolling ticker
+      const recentForTicker = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type)).slice(0, 5); // Get 5 most recent
+      window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: recentForTicker }));
+    } else {
+      setTimeSinceLastIncident('No incidents');
+      setRecentIncidents([]);
+      window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: 'No incidents' }));
+      window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: [] }));
+    }
+  }, [incidents]);
 
   useEffect(() => {
     if (nextEvent) {
@@ -737,11 +805,21 @@ export default function Dashboard() {
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
     if (incidents) {
-      const filteredForStats = filterIncidents(incidents, filters)
+      // Debug: Log some incident data to understand the structure
+      console.log('🔍 DEBUG: Sample incidents data:', incidents.slice(0, 3).map(inc => ({
+        id: inc.id,
+        log_number: inc.log_number,
+        incident_type: inc.incident_type,
+        is_closed: inc.is_closed,
+        status: inc.status,
+        occurrence: inc.occurrence?.substring(0, 50) + '...'
+      })));
+      
+      // Always use unfiltered incidents for stats - StatCards should show total counts
       const isCountable = (incident: any) => 
         !['Attendance', 'Sit Rep'].includes(incident.incident_type);
 
-      const countableIncidents = filteredForStats.filter(isCountable);
+      const countableIncidents = incidents.filter(isCountable);
       
       const highPriorityIncidentTypes = [
         'Ejection',
@@ -770,6 +848,19 @@ export default function Dashboard() {
       const medicals = countableIncidents.filter(i => i.incident_type === 'Medical').length;
       const other = countableIncidents.filter(i => !['Refusal', 'Ejection', 'Medical'].includes(i.incident_type)).length;
       
+      // Debug: Log the stats calculations
+      console.log('🔍 DEBUG: Stats calculations:', {
+        total,
+        closed,
+        open,
+        closedIncidents: countableIncidents.filter(i => i.is_closed).map(inc => ({
+          id: inc.id,
+          log_number: inc.log_number,
+          is_closed: inc.is_closed,
+          status: inc.status
+        }))
+      });
+      
       setIncidentStats({
         total,
         high,
@@ -782,11 +873,39 @@ export default function Dashboard() {
         hasOpenHighPrio,
       });
     }
-  }, [incidents, filters]);
+  }, [incidents]);
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
     // No need to force refresh - real-time subscription will handle the update
+  };
+
+  // Helper function to reset to Total view (no filters)
+  const resetToTotal = () => {
+    setFilters({ types: [], statuses: [], priorities: [], query: '' });
+  };
+
+  // Generate incident summary for footer
+  const generateIncidentSummary = () => {
+    if (!incidents || incidents.length === 0) {
+      return 'No incidents';
+    }
+
+    const countableIncidents = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type));
+    const openIncidents = countableIncidents.filter(inc => !inc.is_closed).length;
+    const totalIncidents = countableIncidents.length;
+    
+    // Get most recent incident type
+    const mostRecent = countableIncidents[0];
+    const recentType = mostRecent ? mostRecent.incident_type : '';
+    
+    if (openIncidents === 0) {
+      return `${totalIncidents} total incidents • All closed`;
+    } else if (openIncidents === totalIncidents) {
+      return `${totalIncidents} open incidents • Latest: ${recentType}`;
+    } else {
+      return `${openIncidents} open / ${totalIncidents} total • Latest: ${recentType}`;
+    }
   };
 
   // Fetch attendance timeline when modal opens
@@ -863,6 +982,7 @@ export default function Dashboard() {
             nextEvent={nextEvent}
             countdown={countdown}
             currentSlot={currentSlot}
+            timeSinceLastIncident={timeSinceLastIncident}
           />
         </div>
 
@@ -876,7 +996,12 @@ export default function Dashboard() {
                   <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{currentEvent.event_name}</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
+                <div className="text-right">
+                  <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
+                  <div className="text-xs text-orange-600 dark:text-orange-300 font-medium">
+                    Last incident: {timeSinceLastIncident}
+                  </div>
+                </div>
               </div>
               <hr className="border-t border-gray-200" />
               {(currentSlot || nextSlot) ? (
@@ -936,131 +1061,52 @@ export default function Dashboard() {
               Track and manage security incidents in real-time
             </p>
           </div>
-          <div className="relative inline-flex rounded-xl shadow-lg">
-            <button 
-              type="button"
-              onClick={() => {
-                setInitialIncidentType(undefined)
-                setIsIncidentModalOpen(true)
-              }}
-              disabled={!hasCurrentEvent}
-              className={`relative inline-flex items-center px-6 py-3 text-sm font-semibold text-white rounded-l-xl ${
-                hasCurrentEvent 
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              New Incident
-            </button>
-            <Menu as="div" className="-ml-px block">
-              <Menu.Button
-                disabled={!hasCurrentEvent}
-                className={`relative inline-flex items-center px-3 py-3 rounded-r-xl ${
-                  hasCurrentEvent
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200`}
-              >
-                <span className="sr-only">Open options</span>
-                <ChevronDownIcon
-                  className="h-5 w-5 text-white"
-                  aria-hidden="true"
-                />
-              </Menu.Button>
-              <Transition
-                as={Fragment}
-                enter="transition ease-out duration-100"
-                enterFrom="transform opacity-0 scale-95"
-                enterTo="transform opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="transform opacity-100 scale-100"
-                leaveTo="transform opacity-0 scale-95"
-              >
-                <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-xl bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl ring-1 ring-black/5 dark:ring-white/10 focus:outline-none border border-gray-200/50 dark:border-[#2d437a]/50">
-                  <div className="py-1 flex flex-col max-h-60 overflow-y-auto">
-                    {incidentTypes.map(type => (
-                      <Menu.Item key={type}>
-                        {({ active }) => (
-                          <a
-                            href="#"
-                            onClick={() => {
-                              setInitialIncidentType(type)
-                              setIsIncidentModalOpen(true)
-                            }}
-                            className={`
-                              ${
-                                active
-                                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-200'
-                                  : 'text-gray-700 dark:text-gray-200'
-                              }
-                              block px-4 py-3 text-sm w-full text-left transition-colors duration-150'
-                            `}
-                          >
-                            {type}
-                          </a>
-                        )}
-                      </Menu.Item>
-                    ))}
-                  </div>
-                </Menu.Items>
-              </Transition>
-            </Menu>
-          </div>
+
         </div>
 
         
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-3 md:gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3 mb-6">
           <StatCard
-            title="Total"
-            value={incidentStats.total}
-            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
-            onClick={() => setFilters({ types: [], statuses: [], priorities: [], query: '' })}
+            title="High Priority"
+            value={incidentStats.high}
+            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+            isSelected={filters.types.some(type => ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type))}
+            onClick={() => setFilters(prev => ({ 
+              ...prev, 
+              types: ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'],
+              statuses: [],
+              priorities: []
+            }))}
             isFilterable={true}
-            tooltip="All logs including Attendance and Sit Reps."
+            color="red"
+            tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+            showPulse={incidentStats.hasOpenHighPrio}
+          />
+          <StatCard
+            title="Medicals"
+            value={incidentStats.medicals}
+            icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+            isSelected={filters.types.includes('Medical')}
+            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
+            isFilterable={true}
+            tooltip="Medical-related incidents."
           />
           <StatCard
             title="Open"
             value={incidentStats.open}
             icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
             isSelected={filters.statuses.includes('open')}
-            onClick={() => setFilters(prev => ({ ...prev, statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'] }))}
+            onClick={() => setFilters(prev => ({ 
+              ...prev, 
+              statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'],
+              types: [],
+              priorities: []
+            }))}
             isFilterable={true}
             color="yellow"
-            tooltip="Incidents that are currently open."
-          />
-          <StatCard
-            title="High Priority"
-            value={incidentStats.high}
-            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={filters.priorities.includes('urgent') || filters.priorities.includes('high')}
-            onClick={() => setFilters(prev => ({ ...prev, priorities: ['urgent','high'] }))}
-            isFilterable={true}
-            color="red"
-            tooltip="Incidents marked as high priority."
-            showPulse={incidentStats.hasOpenHighPrio}
-          />
-          <StatCard
-            title="Closed"
-            value={incidentStats.closed}
-            icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
-            isSelected={filters.statuses.includes('closed')}
-            onClick={() => setFilters(prev => ({ ...prev, statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'] }))}
-            isFilterable={true}
-            color="green"
-            tooltip="Incidents that have been closed."
-          />
-          <StatCard
-            title="Refusals"
-            value={incidentStats.refusals}
-            icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={filters.types.includes('Refusal')}
-            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
-            isFilterable={true}
-            tooltip="Incidents where entry was refused."
+            tooltip="Incidents that are currently open (is_closed = false)."
           />
           <StatCard
             title="Ejections"
@@ -1072,13 +1118,37 @@ export default function Dashboard() {
             tooltip="Incidents where someone was ejected."
           />
           <StatCard
-            title="Medicals"
-            value={incidentStats.medicals}
-            icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={filters.types.includes('Medical')}
-            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
+            title="Refusals"
+            value={incidentStats.refusals}
+            icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            isSelected={filters.types.includes('Refusal')}
+            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
             isFilterable={true}
-            tooltip="Medical-related incidents."
+            tooltip="Incidents where entry was refused."
+          />
+          <StatCard
+            title="Total"
+            value={incidentStats.total}
+            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+            isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
+            onClick={resetToTotal}
+            isFilterable={true}
+            tooltip="All incidents (excluding Attendance and Sit Reps)."
+          />
+          <StatCard
+            title="Closed"
+            value={incidentStats.closed}
+            icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+            isSelected={filters.statuses.includes('closed')}
+            onClick={() => setFilters(prev => ({ 
+              ...prev, 
+              statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'],
+              types: [],
+              priorities: []
+            }))}
+            isFilterable={true}
+            color="green"
+            tooltip="Incidents that have been closed (is_closed = true)."
           />
           <StatCard
             title="Other"
@@ -1196,6 +1266,31 @@ export default function Dashboard() {
       
       {/* Toast Notifications */}
       <Toast messages={messages} onRemove={removeToast} />
+
+      {/* Floating New Incident Button */}
+      {!isIncidentModalOpen && (
+        <div className="fixed bottom-20 right-6 z-50">
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={() => {
+                setInitialIncidentType(undefined)
+                setIsIncidentModalOpen(true)
+              }}
+              disabled={!hasCurrentEvent}
+              className={`relative inline-flex items-center px-4 py-3 text-sm font-semibold text-white rounded-full shadow-lg ${
+                hasCurrentEvent 
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5`}
+            >
+                          <PlusIcon className="h-5 w-5 mr-2" />
+            <span className="hidden sm:inline">New Incident</span>
+            <span className="sm:hidden">+</span>
+          </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
