@@ -42,9 +42,16 @@ export interface ConversationContext {
 export interface EventContext {
   eventId: string;
   eventName: string;
-  currentTime: string;
+  venueName?: string;
+  eventDate?: string;
+  eventTime?: string;
+  currentTime?: string;
   staffCount: number;
   openIncidents: number;
+  totalIncidents?: number;
+  recentIncidents?: any[];
+  attendanceData?: any[];
+  eventBrief?: string;
 }
 
 // Chat message interface

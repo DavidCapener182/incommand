@@ -64,7 +64,7 @@ function generateTopicActions(
           requiresIncident: true,
           payload: {
             incident_id: incidentId,
-            staff_type: 'medical',
+            staff_ids: [],
             assignment_type: 'auto'
           } as AssignStaffPayload
         },
@@ -119,7 +119,7 @@ function generateTopicActions(
           requiresIncident: true,
           payload: {
             incident_id: incidentId,
-            staff_type: 'trained',
+            staff_ids: [],
             assignment_type: 'auto'
           } as AssignStaffPayload
         },
@@ -154,6 +154,7 @@ function generateTopicActions(
           requiresIncident: true,
           payload: {
             incident_id: incidentId,
+            staff_ids: [],
             assignment_type: 'auto'
           } as AssignStaffPayload
         },
@@ -310,7 +311,7 @@ function generateIncidentActions(incidentId: string, topics: TopicCategory[]): Q
       category: ActionCategory.INCIDENT_MANAGEMENT,
       payload: {
         incident_id: incidentId,
-        staff_type: 'medical',
+        staff_ids: [],
         assignment_type: 'auto'
       } as AssignStaffPayload
     });

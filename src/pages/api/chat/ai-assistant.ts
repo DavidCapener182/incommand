@@ -17,6 +17,7 @@ interface ChatMessage {
 }
 
 interface EventContext {
+  eventId: string;
   eventName: string;
   venueName: string;
   eventDate: string;
@@ -26,6 +27,7 @@ interface EventContext {
   recentIncidents: any[];
   attendanceData: any[];
   eventBrief?: string;
+  staffCount: number;
 }
 
 const SYSTEM_PROMPT = `You are inCommand AI, a digital operations assistant for live event control and security management. You provide expert guidance to security, safety, and management staff during live events in the UK.
