@@ -55,12 +55,12 @@ export async function analyzeSentiment(posts: string[]): Promise<SentimentScore[
           const batchResults = await analyzeBatchWithOllama(batch);
           results.push(...batchResults);
         } else {
-          results.push(...batch.map(() => 0));
+          results.push(...batch.map(() => 0 as SentimentScore));
         }
       }
       return results;
     } catch (e) {
-      return posts.map(() => 0);
+      return posts.map(() => 0 as SentimentScore);
     }
   }
 
@@ -147,7 +147,7 @@ Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1
     } catch (fallbackErr) {
       console.error('Sentiment analysis failed (OpenAI, then Ollama):', error, fallbackErr);
       // Return neutral sentiment for all posts in case of error
-      return posts.map(() => 0);
+      return posts.map(() => 0 as SentimentScore);
     }
   }
 }
@@ -179,7 +179,7 @@ async function analyzeBatchWithOllama(posts: string[]): Promise<SentimentScore[]
     });
     return validScores;
   } catch (e) {
-    return posts.map(() => 0);
+    return posts.map(() => 0 as SentimentScore);
   }
 }
 
