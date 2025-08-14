@@ -57,8 +57,17 @@ const LOGIC_MAP: IncidentLogicMap = {
     keywords: ['artist off stage', 'main act finished']
   },
   'Sexual Misconduct': {
-    keywords: ['sexual', 'harassment', 'inappropriate touching'],
-    priority: 'high'
+    keywords: [
+      'sexual',
+      'harassment',
+      'inappropriate touching',
+      'rape',
+      'sexual assault',
+      'sexual misconduct',
+      'sexual harassment',
+      'assault'
+    ],
+    priority: 'urgent'
   },
   'Event Timing': {
     keywords: ['timing', 'delayed', 'running late', 'schedule']
@@ -131,10 +140,6 @@ const LOGIC_MAP: IncidentLogicMap = {
     keywords: ['fight', 'altercation', 'brawl'],
     priority: 'high'
   },
-  'Sexual Misconduct': {
-    keywords: ['rape', 'sexual assault', 'sexual misconduct', 'sexual harassment', 'assault'],
-    priority: 'urgent'
-  }
 };
 
 export interface IncidentDetectionResult {
