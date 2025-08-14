@@ -236,6 +236,8 @@ export default function GlobalEscalationToast() {
                     incidentId={incident.id.toString()}
                     escalationLevel={incident.escalation_level || 0}
                     escalateAt={incident.escalate_at}
+                    escalated={!!(incident.escalation_level && incident.escalation_level > 0)}
+                    incidentType={incident.incident_type}
                     priority={incident.priority}
                   />
                 </div>
