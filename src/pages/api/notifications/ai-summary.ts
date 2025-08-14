@@ -6,6 +6,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Simple in-memory cache keyed by event id and latest incident timestamp
+type CacheKey = string; // `${eventId}:${latestTs}`
+type CachedPayload = {
+  body: any;
+  createdAt: number;
+};
+const INSIGHTS_CACHE: Map<CacheKey, CachedPayload> = new Map();
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,6 +112,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
       overallStatus: openIncidents > 5 ? 'High Activity' : openIncidents > 2 ? 'Moderate Activity' : 'Low Activity'
     };
+
+    // Compute cache key based on latest incident timestamp
+    const latestTs = incidents?.[0]?.timestamp ? new Date(incidents[0].timestamp).getTime() : 0;
+    const cacheKey: CacheKey = `${currentEvent.id}:${latestTs}`;
+
+    // Serve from cache when available
+    const cached = INSIGHTS_CACHE.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached.body);
+    }
 
     let aiSummary = '';
     let urgentAlerts: string[] = [];
@@ -230,12 +248,14 @@ Keep each section concise but informative. Focus on actionable intelligence for 
           recentTrends
         };
 
-        return res.status(200).json({
+        const payload = {
           summary,
           analysis: analysisData,
           lastUpdated: new Date().toISOString(),
           incidentCount: totalIncidents
-        });
+        };
+        INSIGHTS_CACHE.set(cacheKey, { body: payload, createdAt: Date.now() });
+        return res.status(200).json(payload);
 
       } catch (error) {
         console.error('OpenAI API error:', error);
@@ -264,12 +284,14 @@ ${Object.entries(incidentTypeBreakdown).slice(0, 3).map(([type, count]) => `${ty
           recentTrends: [`${recentIncidents.length} incidents in last 2 hours`]
         };
 
-        return res.status(200).json({
+        const payload = {
           summary: fallbackSummary,
           analysis: analysisData,
           lastUpdated: new Date().toISOString(),
           incidentCount: totalIncidents
-        });
+        };
+        INSIGHTS_CACHE.set(cacheKey, { body: payload, createdAt: Date.now() });
+        return res.status(200).json(payload);
       }
     } else {
       // Fallback summary without AI
@@ -278,7 +300,7 @@ ${Object.entries(incidentTypeBreakdown).slice(0, 3).map(([type, count]) => `${ty
         : `Event monitoring: ${totalIncidents} total incidents, ${openIncidents} currently open, ${highPriorityIncidents} high-priority.`;
     }
 
-    res.status(200).json({
+    const payload = {
       summary: aiSummary,
       analysis: {
         totalIncidents,
@@ -289,7 +311,9 @@ ${Object.entries(incidentTypeBreakdown).slice(0, 3).map(([type, count]) => `${ty
       },
       lastUpdated: new Date().toISOString(),
       incidentCount: totalIncidents
-    });
+    };
+    INSIGHTS_CACHE.set(cacheKey, { body: payload, createdAt: Date.now() });
+    res.status(200).json(payload);
 
   } catch (error) {
     console.error('Error generating AI summary:', error);

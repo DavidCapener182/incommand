@@ -6,6 +6,8 @@ import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
 import { useAuth } from '../contexts/AuthContext'
 import { usePresence } from '@/hooks/usePresence'
+import { ensureBrowserLLM, isBrowserLLMAvailable, parseIncidentWithBrowserLLM, rewriteIncidentFieldsWithBrowserLLM } from '@/services/browserLLMService'
+import type { EnhancedIncidentParsingResponse } from '../types/ai'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
 import { QuickAddInput } from '@/components/ui/QuickAddInput'
@@ -36,6 +38,7 @@ interface IncidentFormData {
   log_number: string
   what3words: string
   priority: string
+  location_name?: string
   // dependencies and auto_assign removed per requirements
 }
 
@@ -502,11 +505,10 @@ const detectCallsign = (input: string): string => {
   
   // Look for common callsign patterns
   const callsignPatterns = [
-    /\b([rsa][0-9]+)\b/i,  // R1, S1, A1, etc.
+    /\b([rsa][0-9]+[a-z]*)\b/i,  // R1, S1, A1, R1sc, etc.
     /\b(response\s*[0-9]+)\b/i,  // Response 1, Response2
     /\b(security\s*[0-9]+)\b/i,  // Security 1, Security2
     /\b(admin\s*[0-9]+)\b/i,  // Admin 1, Admin2
-    /\b([rsa][0-9]+)\b/i,  // r1, s1, a1, etc.
   ];
 
   for (const pattern of callsignPatterns) {
@@ -520,6 +522,48 @@ const detectCallsign = (input: string): string => {
   }
 
   return '';
+};
+
+// Sanitize location by removing trailing callsign phrases like "by R1", "by R1sc"
+const sanitizeLocation = (raw: string | undefined | null): string => {
+  if (!raw) return '';
+  let loc = String(raw);
+  // Remove trailing "by <callsign>" or similar
+  loc = loc.replace(/\bby\s+[A-Za-z]*\d+[A-Za-z]*\b/gi, '').trim();
+  // Remove duplicate whitespace and trailing punctuation
+  loc = loc.replace(/\s+/g, ' ').replace(/[.,\s]+$/g, '').trim();
+  return loc;
+};
+
+// Clean a sentence: remove callsigns, capitalize, ensure period
+const cleanSentence = (raw: string, fallback: string): string => {
+  const base = (raw || fallback || '').trim();
+  if (!base) return '';
+  let text = base;
+  // Remove callsign phrases
+  text = text.replace(/\bby\s+[A-Za-z]*\d+[A-Za-z]*\b/gi, '').trim();
+  // Normalize spaces
+  text = text.replace(/\s+/g, ' ').trim();
+  // Capitalize first letter
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+  // Ensure ending punctuation
+  if (!/[.!?]$/.test(text)) text += '.';
+  return text;
+};
+
+// Default action recommendations by incident type
+const defaultActionsForType = (incidentType: string): string => {
+  const type = (incidentType || '').toLowerCase();
+  if (type === 'sexual misconduct' || type.includes('sexual')) {
+    return '1. Secure the area and preserve evidence. 2. Contact police immediately. 3. Provide support to the victim and ensure a safe space. 4. Identify and separate any witnesses; document statements. 5. Coordinate medical support as needed. Other:';
+  }
+  if (type === 'medical') {
+    return '1. Dispatch medical team. 2. Ensure scene safety. 3. Gather patient details and symptoms. 4. Prepare for ambulance handover if required. 5. Record timeline and treatments. Other:';
+  }
+  if (type === 'fight') {
+    return '1. Dispatch security to de-escalate. 2. Separate involved parties. 3. Check for injuries and call medical if needed. 4. Identify witnesses/CCTV. 5. Consider removals or arrests. Other:';
+  }
+  return '1. Assess scene safety. 2. Dispatch appropriate resources. 3. Document key details and witnesses. 4. Communicate updates to control. 5. Review need for escalation. Other:';
 };
 
 const parseAttendanceIncident = async (input: string, expectedAttendance: number): Promise<IncidentParserResult | null> => {
@@ -1851,7 +1895,8 @@ export default function IncidentCreationModal({
     status: 'open',
     log_number: '',
       what3words: '///',
-      priority: 'medium'
+      priority: 'medium',
+      location_name: ''
   });
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
@@ -1879,6 +1924,7 @@ export default function IncidentCreationModal({
   });
   const [quickAddValue, setQuickAddValue] = useState<string>('');
   const [isQuickAddProcessing, setIsQuickAddProcessing] = useState<boolean>(false);
+  const [quickAddAISource, setQuickAddAISource] = useState<'local' | 'cloud' | 'browser' | null>(null);
   const [showRefusalActions, setShowRefusalActions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -2020,6 +2066,8 @@ export default function IncidentCreationModal({
   const { user } = auth;
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [currentEventFallback, setCurrentEventFallback] = useState<any | null>(null);
   
   // Real-time collaboration
   const modalRef = useRef<HTMLDivElement>(null);
@@ -2029,21 +2077,185 @@ export default function IncidentCreationModal({
 
   useEffect(() => {
     if (!user) return;
+    // Quick path: resolve current event immediately so UI never blocks on "Loading..."
+    (async () => {
+      try {
+        const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        const companyId = profile?.company_id;
+        if (!companyId) return;
+        let chosen: any = null;
+        const { data: current } = await supabase
+          .from('events')
+          .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
+          .eq('company_id', companyId)
+          .eq('is_current', true)
+          .maybeSingle();
+        if (current?.id) {
+          chosen = current;
+        } else {
+          const { data: latest } = await supabase
+            .from('events')
+            .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
+            .eq('company_id', companyId)
+            .order('start_datetime', { ascending: false })
+            .limit(1);
+          if (latest && latest[0]?.id) chosen = latest[0];
+        }
+        if (chosen) {
+          setCurrentEventFallback(chosen);
+          setSelectedEventId(prev => prev || chosen.id);
+        }
+      } catch {}
+    })();
     const fetchEvents = async () => {
-      // Get company_id from profile
-      const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
-      if (!profile?.company_id) return;
-      // Fetch all events for this company
-      const { data: allEvents } = await supabase.from('events').select('id, event_name, artist_name, is_current, expected_attendance').eq('company_id', profile.company_id).order('start_datetime', { ascending: false });
-      setEvents(allEvents || []);
-      // Default to current event
-      const current = allEvents?.find((e: any) => e.is_current);
-      setSelectedEventId(current?.id || (allEvents?.[0]?.id ?? null));
+      setEventsLoading(true);
+      try {
+        // Get company_id from profile
+        const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        if (!profile?.company_id) return;
+         // Fetch all events for this company
+         const { data: allEvents } = await supabase
+           .from('events')
+           .select('id, event_name, artist_name, is_current, expected_attendance')
+           .eq('company_id', profile.company_id)
+           .order('start_datetime', { ascending: false });
+        setEvents(allEvents || []);
+        // Default to current event
+        const current = allEvents?.find((e: any) => e.is_current);
+        setSelectedEventId(prev => prev || current?.id || (allEvents?.[0]?.id ?? null));
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
     };
     fetchEvents();
   }, [user]);
+  
+  // Map AI outputs into the incident form in one place to avoid duplication
+  type AICommonData = { incidentType?: string; description?: string; callsign?: string; location?: string; priority?: string; confidence?: number; actionTaken?: string };
+  
+  const normalizeIncidentType = (candidate: string | undefined | null, allowed: string[]): string => {
+    const c = (candidate || '').trim();
+    if (!c) return '';
+    const lower = c.toLowerCase();
+    const synonymMap: Record<string, string> = {
+      'fight': 'Aggressive Behaviour',
+      'fighting': 'Aggressive Behaviour',
+      'assault': 'Aggressive Behaviour',
+      'violent incident': 'Aggressive Behaviour',
+      'suspicious behavior': 'Suspicious Behaviour',
+      'suspicious behaviour': 'Suspicious Behaviour',
+      'queue buildup': 'Queue Build-Up',
+      'queue build up': 'Queue Build-Up',
+      'lost property': 'Lost Property',
+      'tech issue': 'Technical Issue',
+      'weather': 'Weather Disruption',
+    };
+    let mapped = c;
+    if (synonymMap[lower]) mapped = synonymMap[lower];
+    if (allowed.includes(mapped)) return mapped;
+    const ci = allowed.find(a => a.toLowerCase() === mapped.toLowerCase());
+    return ci || '';
+  };
+
+  function applyAIIncidentResult(aiData: AICommonData, rawInput: string, incidentTypes: string[], prev: IncidentFormData): IncidentFormData {
+    let normalizedPriority = ['urgent', 'high', 'medium', 'low'].includes((aiData.priority || '').toLowerCase())
+      ? (aiData.priority as string).toLowerCase()
+      : (prev.priority || 'medium');
+    const lowerValue = rawInput.toLowerCase();
+    if (lowerValue.includes('rape') || lowerValue.includes('sexual assault') || lowerValue.includes('assault')) {
+      normalizedPriority = 'urgent';
+    } else if (lowerValue.includes('fight') || lowerValue.includes('violence') || lowerValue.includes('weapon')) {
+      normalizedPriority = 'high';
+    }
+
+    const cleanedOccurrence = cleanSentence(aiData.description || prev.occurrence, prev.occurrence);
+    const cleanedLocation = sanitizeLocation(aiData.location || '');
+    const candidateType = normalizeIncidentType(aiData.incidentType || '', incidentTypes);
+    const detectedFromText = detectIncidentType(rawInput);
+    const aiType = candidateType || detectedFromText || prev.incident_type;
+
+    const normalizeActions = (raw: string): string => {
+      if (!raw) return defaultActionsForType(aiType);
+      const lines = String(raw)
+        .split(/\n|\r|\.|;|,/)
+        .map(s => s.replace(/^\s*(?:\d+\.|[-*])\s*/, '').trim())
+        .filter(Boolean);
+      if (lines.length === 0) return defaultActionsForType(aiType);
+      const unique = Array.from(new Set(lines));
+      return unique.slice(0, 4).map(s => (/[.!?]$/.test(s) ? s : s + '.')).join(' ');
+    };
+
+    const recommendedActions = normalizeActions(
+      (aiData.actionTaken && (aiData.actionTaken as string).length > 3) ? (aiData.actionTaken as string) : defaultActionsForType(aiType)
+    );
+    const reporter = (aiData.callsign || prev.callsign_from || '').trim();
+    let enrichedOccurrence = cleanedOccurrence;
+    if (cleanedLocation && !enrichedOccurrence.toLowerCase().includes(cleanedLocation.toLowerCase())) {
+      enrichedOccurrence = enrichedOccurrence.replace(/\.$/, '');
+      enrichedOccurrence = `${enrichedOccurrence} at ${cleanedLocation}.`;
+    }
+    if (reporter && !new RegExp(`\\b${reporter}\\b`, 'i').test(enrichedOccurrence)) {
+      enrichedOccurrence = enrichedOccurrence.replace(/\.$/, '');
+      enrichedOccurrence = `${enrichedOccurrence} Reported by ${reporter}.`;
+    }
+
+    const isW3W = !!cleanedLocation && /^(?:\s*\/{0,3})?[a-zA-Z]+\.[a-zA-Z]+\.[a-zA-Z]+$/.test(cleanedLocation);
+    const normalizedW3W = isW3W ? (`///${cleanedLocation.replace(/^\/*/, '')}`) : prev.what3words;
+
+    return {
+      ...prev,
+      occurrence: enrichedOccurrence,
+      incident_type: aiType,
+      callsign_from: aiData.callsign || prev.callsign_from,
+      priority: normalizedPriority,
+      what3words: normalizedW3W,
+      location_name: cleanedLocation,
+      action_taken: recommendedActions
+    };
+  }
+
+  async function parseIncidentUnified(input: string, incidentTypes: string[]): Promise<{ data: AICommonData | null; source: 'cloud' | 'browser' | null }> {
+    try {
+      const resp = await fetch('/api/enhanced-incident-parsing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input, incidentTypes })
+      });
+      if (resp.ok) {
+        const d: EnhancedIncidentParsingResponse & { fallback?: 'browser-recommended' } = await resp.json();
+        if (d.aiSource === 'openai') {
+          return { data: d, source: 'cloud' };
+        }
+        // Server suggests browser fallback when it cannot use OpenAI
+        if (d.aiSource === 'none' && d.fallback === 'browser-recommended') {
+          try {
+            await ensureBrowserLLM();
+            if (isBrowserLLMAvailable()) {
+              const browser = await parseIncidentWithBrowserLLM(input, incidentTypes);
+              if (browser) return { data: browser, source: 'browser' };
+            }
+          } catch {}
+        }
+        // Use whatever heuristics came from server if present
+        return { data: d, source: null };
+      }
+    } catch {}
+    // Network/API failure → attempt browser fallback
+    try {
+      await ensureBrowserLLM();
+      if (isBrowserLLMAvailable()) {
+        const browser = await parseIncidentWithBrowserLLM(input, incidentTypes);
+        if (browser) return { data: browser, source: 'browser' };
+      }
+    } catch {}
+    return { data: null, source: null };
+  }
   const handleQuickAdd = async (value: string) => {
     setIsQuickAddProcessing(true);
+    setQuickAddAISource(null);
     setQuickAddValue(value);
 
     // Immediate local parsing for responsiveness
@@ -2051,7 +2263,16 @@ export default function IncidentCreationModal({
     const explicitType = incidentTypes.find(t => value.toLowerCase().includes(t.toLowerCase())) || '';
     const localType = logic.incidentType || explicitType || detectIncidentType(value);
     const localCallsign = detectCallsign(value) || '';
-    const localPriority = logic.priority || detectPriority(value);
+    
+    // Enhanced priority detection for serious incidents
+    let localPriority = logic.priority || detectPriority(value);
+    const lowerValue = value.toLowerCase();
+    if (lowerValue.includes('rape') || lowerValue.includes('sexual assault') || lowerValue.includes('assault')) {
+      localPriority = 'urgent';
+    } else if (lowerValue.includes('fight') || lowerValue.includes('violence') || lowerValue.includes('weapon')) {
+      localPriority = 'high';
+    }
+    
     setFormData(prev => ({
       ...prev,
       ai_input: value,
@@ -2076,26 +2297,21 @@ export default function IncidentCreationModal({
       }
     }
 
-    // Best-effort AI enrichment (non-blocking)
+    // Unified AI processing entry point
+    let applied = false;
     try {
-      const response = await fetch('/api/enhanced-incident-parsing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: value, incidentTypes })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setFormData(prev => ({
-          ...prev,
-          occurrence: data.description || prev.occurrence,
-          incident_type: data.incidentType || prev.incident_type,
-          callsign_from: data.callsign || prev.callsign_from,
-          priority: data.priority || prev.priority
-        }));
+      const { data, source } = await parseIncidentUnified(value, incidentTypes);
+      // UI state for source indicator
+      // cloud: API succeeded with OpenAI; browser: client-side WebLLM; null: heuristics/no AI
+      setQuickAddAISource(source);
+      if (data) {
+        setFormData(prev => applyAIIncidentResult(data, value, incidentTypes, prev));
+        applied = true;
       }
-    } catch {}
-
-    setIsQuickAddProcessing(false);
+    } finally {
+      setIsQuickAddProcessing(false);
+      if (!applied) setQuickAddAISource(null);
+    }
   };
 
 
@@ -2494,18 +2710,24 @@ export default function IncidentCreationModal({
       let effectiveEventId = selectedEventId;
       let effectiveEvent = effectiveEventId ? events.find(e => e.id === effectiveEventId) : undefined;
       if (!effectiveEvent) {
-        const { data: currentEvent } = await supabase
-          .from('events')
-          .select('id, event_name, artist_name, expected_attendance')
-          .eq('is_current', true)
-          .single();
-        if (currentEvent?.id) {
-          effectiveEventId = currentEvent.id;
-          effectiveEvent = currentEvent;
+        if (currentEventFallback?.id) {
+          effectiveEventId = currentEventFallback.id;
+          effectiveEvent = currentEventFallback;
         } else if (events[0]?.id) {
           effectiveEventId = events[0].id;
           effectiveEvent = events[0];
         } else {
+          const { data: currentEvent } = await supabase
+            .from('events')
+            .select('id, event_name, artist_name, expected_attendance')
+            .eq('is_current', true)
+            .single();
+          if (currentEvent?.id) {
+            effectiveEventId = currentEvent.id;
+            effectiveEvent = currentEvent;
+          }
+        }
+        if (!effectiveEvent) {
           setError('Please select an event to log this incident.');
           setLoading(false);
           return;
@@ -2565,16 +2787,31 @@ export default function IncidentCreationModal({
       }
 
       // Insert the incident
-      const { data: insertedIncident, error: insertError } = await supabase
+      let insertedIncident: { id: number } | null = null;
+      const { data: insertReturn, error: insertError } = await supabase
         .from('incident_logs')
         .insert([incidentData])
         .select('id')
-        .single();
-
+        .maybeSingle();
       if (insertError) {
         console.error('Insert error:', insertError);
-        throw insertError;
+        throw new Error((insertError as any)?.message || 'Insert failed');
       }
+      insertedIncident = insertReturn as any;
+      if (!insertedIncident?.id) {
+        // Some RLS policies disable returning representation; fetch by unique log_number as fallback
+        const { data: fetchedByLog, error: fetchByLogError } = await supabase
+          .from('incident_logs')
+          .select('id')
+          .eq('log_number', logNumber)
+          .eq('event_id', effectiveEvent.id)
+          .single();
+        if (!fetchByLogError) {
+          insertedIncident = fetchedByLog as any;
+        }
+      }
+
+      // If still no id, proceed without post-insert updates
 
       // If this is an attendance incident, also update the attendance_records table
       if (formData.incident_type === 'Attendance') {
@@ -2609,7 +2846,7 @@ export default function IncidentCreationModal({
       // Removed required skills/assignment feedback updates per requirements
 
       // Calculate escalation time only for medium/high/urgent
-      if (insertedIncident && ['medium', 'high', 'urgent'].includes((formData.priority || '').toLowerCase())) {
+      if (insertedIncident?.id && ['medium', 'high', 'urgent'].includes((formData.priority || '').toLowerCase())) {
         try {
           const escalationTime = await calculateEscalationTime(
             formData.incident_type,
@@ -2618,12 +2855,12 @@ export default function IncidentCreationModal({
 
           if (escalationTime) {
             // Update incident with escalation time
-            await supabase
-              .from('incident_logs')
-              .update({
-                escalate_at: escalationTime.toISOString()
-              })
-              .eq('id', insertedIncident.id);
+          await supabase
+            .from('incident_logs')
+            .update({
+              escalate_at: escalationTime.toISOString()
+            })
+            .eq('id', insertedIncident.id);
           }
         } catch (escalationError) {
           console.error('Error calculating escalation time:', escalationError);
@@ -2645,7 +2882,8 @@ export default function IncidentCreationModal({
         ai_input: '',
         log_number: '',
         what3words: '///',
-        priority: 'medium'
+        priority: 'medium',
+        location_name: ''
       });
 
       setRefusalDetails({
@@ -2662,7 +2900,7 @@ export default function IncidentCreationModal({
       onClose();
 
       let photoUrl = null;
-      if (photoFile && insertedIncident) {
+      if (photoFile && insertedIncident?.id) {
         // Upload to /[eventID]/[incidentID]/[filename]
         const ext = photoFile.name.split('.').pop();
         const path = `${effectiveEvent.id}/${insertedIncident.id}/photo.${ext}`;
@@ -2675,7 +2913,8 @@ export default function IncidentCreationModal({
       }
     } catch (error) {
       console.error('Error creating incident:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create incident. Please try again.');
+      const message = (error as any)?.message || (error instanceof Error ? error.message : null) || 'Failed to create incident. Please try again.';
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -2801,7 +3040,8 @@ export default function IncidentCreationModal({
       status: 'open',
       log_number: '',
       what3words: '///',
-      priority: 'medium'
+      priority: 'medium',
+      location_name: ''
     });
     setRefusalDetails({
       policeRequired: false,
@@ -2977,9 +3217,16 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Event:</span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {events.find(e => e.id === selectedEventId)?.event_name || events.find(e => e.is_current)?.event_name || events[0]?.event_name || 'Loading...'}
-                  </span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {(() => {
+                    const chosen = events.find(e => e.id === selectedEventId)
+                      || events.find(e => e.is_current)
+                      || currentEventFallback
+                      || events[0];
+                    if (chosen?.event_name) return chosen.event_name;
+                    return eventsLoading ? 'Loading...' : 'No events available';
+                  })()}
+                </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Log #:</span>
@@ -3005,7 +3252,19 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           <div className="space-y-6">
             {/* Quick Add (single-line) - the primary input */}
             <div className="bg-white dark:bg-[#0f1b3d] rounded-2xl p-4 border border-green-200 dark:border-green-700">
-              <QuickAddInput onQuickAdd={async (val) => { await handleQuickAdd(val); }} isProcessing={isQuickAddProcessing} />
+              <QuickAddInput aiSource={quickAddAISource} onQuickAdd={async (val) => { await handleQuickAdd(val); }} isProcessing={isQuickAddProcessing} onChangeValue={(txt) => {
+                // If input cleared by user, reset dependent fields so they can retype
+                if (!txt || !txt.trim()) {
+                  setFormData(prev => ({
+                    ...prev,
+                    occurrence: '',
+                    action_taken: '',
+                    incident_type: 'Select Type',
+                    callsign_from: '',
+                    what3words: ''
+                  }));
+                }
+              }} />
             </div>
 
             {/* Incident Type Section - Made more compact */}
@@ -3181,6 +3440,80 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Action Taken</label>
+                  {/* Suggested actions as clickable chips */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(formData.incident_type ? defaultActionsForType(formData.incident_type).split(/\d+\.\s+/).filter(Boolean) : [])
+                      .map((act, idx) => {
+                        const clean = act.replace(/Other:$/i, '').trim();
+                        if (!clean) return null;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={async () => {
+                              // Summarize clicked chip into plain sentence list (no numbering)
+                              const merged = (formData.action_taken ? formData.action_taken + ' ' : '') + clean;
+                              const sentences = merged
+                                .split(/\n|\.|;|,/)
+                                .map(s => s.replace(/^\s*(?:\d+\.|[-*])\s*/, '').trim())
+                                .filter(Boolean);
+                              const unique = Array.from(new Set(sentences));
+                              const summarized = unique.slice(0, 5).map(s => /[.!?]$/.test(s) ? s : s + '.').join(' ');
+                              setFormData(prev => ({ ...prev, action_taken: summarized }));
+                              // Try a rewrite pass for better fluency
+                               try { /* optional rewrite skipped for chip clicks */ } catch {}
+                            }}
+                            className="px-3 py-1 text-xs rounded-full bg-teal-100 dark:bg-teal-800 text-teal-900 dark:text-teal-100 hover:bg-teal-200 dark:hover:bg-teal-700"
+                          >
+                            {clean}
+                          </button>
+                        );
+                      })}
+                    {/* One explicit Other chip */}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, action_taken: (prev.action_taken ? prev.action_taken + ' ' : '') + 'Other:' }))}
+                      className="px-3 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
+                    >
+                      Other
+                    </button>
+                    {/* Rewrite with LLM chip */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          // Prefer local LLM rewrite helper
+                          let rewrite = null as null | { occurrence: string; actionTaken: string };
+                          if (isBrowserLLMAvailable()) {
+                            try {
+                              rewrite = await rewriteIncidentFieldsWithBrowserLLM(formData.occurrence || '', formData.action_taken || '');
+                            } catch {}
+                          }
+                          if (!rewrite) {
+                            // Fallback: use parsing endpoint to get a better description and actions shape
+                            const input = `${formData.occurrence || ''}\nActions: ${formData.action_taken || ''}`;
+                            const resp = await fetch('/api/enhanced-incident-parsing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input, incidentTypes }) });
+                            if (resp.ok) {
+                              const data = await resp.json();
+                              rewrite = { occurrence: data.description || formData.occurrence || '', actionTaken: data.actionTaken || formData.action_taken || '' };
+                            }
+                          }
+                          if (rewrite) {
+                            setFormData(prev => ({
+                              ...prev,
+                              occurrence: cleanSentence(rewrite!.occurrence, prev.occurrence),
+                              action_taken: cleanSentence(rewrite!.actionTaken, prev.action_taken)
+                            }));
+                          }
+                        } catch (e) {
+                          console.log('Rewrite failed', e);
+                        }
+                      }}
+                      className="px-3 py-1 text-xs rounded-full bg-purple-100 dark:bg-purple-800 text-purple-900 dark:text-purple-100 hover:bg-purple-200 dark:hover:bg-purple-700"
+                    >
+                      Rewrite with AI
+                    </button>
+                  </div>
                   <div className="relative">
                     <textarea
                       value={formData.action_taken || ''}

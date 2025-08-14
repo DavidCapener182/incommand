@@ -130,6 +130,10 @@ const LOGIC_MAP: IncidentLogicMap = {
   Fight: {
     keywords: ['fight', 'altercation', 'brawl'],
     priority: 'high'
+  },
+  'Sexual Misconduct': {
+    keywords: ['rape', 'sexual assault', 'sexual misconduct', 'sexual harassment', 'assault'],
+    priority: 'urgent'
   }
 };
 

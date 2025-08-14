@@ -6,6 +6,7 @@ import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContex
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
+import GlobalEscalationToast from '../components/GlobalEscalationToast'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -54,6 +55,7 @@ export default function RootLayout({
         <AuthProvider>
           <NotificationDrawerProvider>
             <MaintenanceBanner />
+            <GlobalEscalationToast />
             <LayoutWrapper>{children}</LayoutWrapper>
           </NotificationDrawerProvider>
         </AuthProvider>

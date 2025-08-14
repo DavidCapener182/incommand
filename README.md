@@ -179,6 +179,8 @@ inCommand is a comprehensive event control dashboard built with Next.js and Supa
    OPENAI_API_KEY=your_openai_api_key
    NEXT_PUBLIC_OPENWEATHER_API_KEY=your_weather_api_key
    NEXT_PUBLIC_WHAT3WORDS_API_KEY=your_what3words_api_key
+   # Optional: configure the browser LLM model used by WebLLM (defaults to a small, browser-friendly model)
+   NEXT_PUBLIC_WEBLLM_MODEL_ID=Llama-3.2-3B-Instruct-q4f32_1-MLC
    ```
 
 3. **Run the development server**

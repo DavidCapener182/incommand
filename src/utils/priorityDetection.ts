@@ -32,7 +32,11 @@ const DEFAULT_KEYWORDS: PriorityKeywords = {
     'child missing',
     'fire',
     'collapsed',
-    'bleeding heavily'
+    'bleeding heavily',
+    'rape',
+    'sexual assault',
+    'sexual misconduct',
+    'assault'
   ],
   high: [
     'ejection',

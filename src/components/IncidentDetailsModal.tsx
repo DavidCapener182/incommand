@@ -227,6 +227,30 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       if (error) throw error;
 
+      // Also append this update into the main log's action_taken so it shows on the log
+      const normalizedNote = newUpdate.trim().replace(/\s+/g, ' ');
+      const appendedAction = `Update: ${normalizedNote.replace(/\.$/, '')}.`;
+      try {
+        // Get current actions (fresh)
+        const { data: current, error: selErr } = await supabase
+          .from('incident_logs')
+          .select('action_taken')
+          .eq('id', incident.id)
+          .single();
+        if (selErr) throw selErr;
+        const prevActions = (current?.action_taken as string) || '';
+        const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
+        const { error: updErr } = await supabase
+          .from('incident_logs')
+          .update({ action_taken: updatedActions, updated_at: new Date().toISOString() })
+          .eq('id', incident.id);
+        if (updErr) throw updErr;
+        // Reflect locally
+        setIncident(prev => prev ? { ...prev, action_taken: updatedActions } : prev);
+      } catch (err) {
+        console.error('Failed to append update to action_taken:', err);
+      }
+
       setNewUpdate('');
       await fetchIncidentDetails();
     } catch (err) {
@@ -244,6 +268,8 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         .update({
           occurrence: editedIncident.occurrence,
           action_taken: editedIncident.action_taken,
+          callsign_from: editedIncident.callsign_from,
+          callsign_to: editedIncident.callsign_to,
           updated_at: new Date().toISOString()
         })
         .eq('id', incident.id);
@@ -419,6 +445,28 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                           className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                           rows={4}
                         />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Callsign From</label>
+                          <input
+                            type="text"
+                            value={editedIncident.callsign_from || ''}
+                            onChange={(e) => setEditedIncident({ ...editedIncident, callsign_from: e.target.value })}
+                            placeholder="e.g., A1, R2, PM"
+                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Callsign To</label>
+                          <input
+                            type="text"
+                            value={editedIncident.callsign_to || ''}
+                            onChange={(e) => setEditedIncident({ ...editedIncident, callsign_to: e.target.value })}
+                            placeholder="e.g., Control, Medics, Security 1"
+                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Action Taken</label>
