@@ -24,6 +24,7 @@ import {
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import SocialMediaMonitoringCard from './SocialMediaMonitoringCard'
+import What3WordsSearchCard from './What3WordsSearchCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
@@ -303,79 +304,7 @@ const w3wApiKey = process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY;
 const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
 const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
-function What3WordsMapCard({ lat, lon, venueAddress, singleCard, largeLogo }: { 
-  lat: number; 
-  lon: number; 
-  venueAddress: string; 
-  singleCard: boolean; 
-  largeLogo: boolean;
-}) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [searchedLatLon, setSearchedLatLon] = useState<{lat: number, lon: number} | null>(null);
 
-  // Modal map URL
-  const modalLat = searchedLatLon?.lat || lat;
-  const modalLon = searchedLatLon?.lon || lon;
-  const modalMapUrl = modalLat && modalLon
-    ? `https://map.what3words.com/?maptype=roadmap&zoom=17&center=${modalLat},${modalLon}&marker=${modalLat},${modalLon}`
-    : null;
-
-  return (
-    <>
-      <div
-        className="w-full h-full flex items-center justify-center cursor-pointer"
-        onClick={() => setModalOpen(true)}
-      >
-        <img 
-          src="/w3w.png" 
-          alt="What3Words" 
-          className="max-w-full max-h-full object-contain"
-          onError={(e) => {
-            console.error('Error loading w3w image:', e);
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      </div>
-      
-      {modalOpen && (
-        <Modal
-          isOpen={modalOpen}
-          onRequestClose={() => { setModalOpen(false); setSearchedLatLon(null); }}
-          contentLabel="What3Words Map"
-          className="bg-transparent p-0 w-full h-full flex items-center justify-center"
-          overlayClassName="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-          ariaHideApp={false}
-        >
-          <div className="relative w-11/12 h-5/6">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="absolute top-0 right-0 -mt-9 -mr-10 z-10 bg-gray-800 text-white rounded-full p-2 shadow-lg hover:bg-gray-700 transition-colors"
-              aria-label="Close map"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-            <div className="bg-transparent rounded-lg overflow-hidden w-full h-full">
-              {modalMapUrl ? (
-                <iframe
-                  src={modalMapUrl}
-                  className="w-full h-full border-none rounded-lg"
-                  title="What3Words Map"
-                  allow="geolocation"
-                ></iframe>
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <p>Loading map...</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
 
 // Top 3 Incident Types Card
 interface TopIncidentTypesCardProps {
@@ -653,7 +582,7 @@ export default function Dashboard() {
       window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: summary }));
       
       // Dispatch recent incidents for scrolling ticker
-      const recentForTicker = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type)).slice(0, 5); // Get 5 most recent
+      const recentForTicker = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type)).slice(0, 5).reverse(); // Get 5 most recent and reverse for logical order (oldest first)
       window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: recentForTicker }));
     } else {
       setTimeSinceLastIncident('No incidents');
@@ -1174,7 +1103,7 @@ export default function Dashboard() {
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
             <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              <What3WordsMapCard 
+              <What3WordsSearchCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
                 venueAddress={currentEvent?.venue_address || ''} 
@@ -1215,7 +1144,7 @@ export default function Dashboard() {
               />
             )}
             <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 cursor-pointer">
-              <What3WordsMapCard 
+              <What3WordsSearchCard 
                 lat={coordinates.lat} 
                 lon={coordinates.lon} 
                 venueAddress={currentEvent?.venue_address || ''} 

@@ -3214,44 +3214,44 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         {/* Header */}
         <header className="px-6 pt-5 pb-3 border-b">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">🚨</span>
-              </div>
-              <div>
+            </div>
+            <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">New Incident</h3>
                 <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Event:</span>
                     <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                      {(() => {
-                        const chosen = events.find(e => e.id === selectedEventId)
-                          || events.find(e => e.is_current)
-                          || currentEventFallback
-                          || events[0];
-                        if (chosen?.event_name) return chosen.event_name;
-                        return eventsLoading ? 'Loading...' : 'No events available';
-                      })()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  {(() => {
+                    const chosen = events.find(e => e.id === selectedEventId)
+                      || events.find(e => e.is_current)
+                      || currentEventFallback
+                      || events[0];
+                    if (chosen?.event_name) return chosen.event_name;
+                    return eventsLoading ? 'Loading...' : 'No events available';
+                  })()}
+                </span>
+                </div>
+                <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Log #:</span>
                     <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                      {nextLogNumber}
-                    </span>
-                  </div>
+                    {nextLogNumber}
+                  </span>
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <svg className="h-4 w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            onClick={onClose}
+              className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+              <svg className="h-4 w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         </header>
 
                 {/* Quick Add Bar - Full Width */}
@@ -3278,7 +3278,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
             </div>
           </div>
-        </div>
+            </div>
 
         {/* Content scroll area */}
         <div className="px-6 pb-24 overflow-auto h-[calc(85vh-120px)]">
@@ -3322,22 +3322,22 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       };
                       
                       return (
-                        <button
-                          key={type}
+                  <button
+                    key={type}
                           onClick={() => handleIncidentTypeSelect(type)}
                           className={`w-full text-left px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
-                            formData.incident_type === type
+                      formData.incident_type === type
                               ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 text-blue-900 border-blue-300'
                               : getTypeColor(type)
-                          }`}
+                    }`}
                           aria-pressed={formData.incident_type === type}
-                        >
-                          {type}
-                        </button>
+                  >
+                    {type}
+                  </button>
                       );
                     })}
-                </div>
               </div>
+            </div>
             </section>
 
             {/* Middle Column - Callsign, Configuration, Detailed Info */}
@@ -3353,35 +3353,35 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <h3 id="callsign-title" className="text-sm font-semibold text-gray-900">Callsign Information</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                <div>
                     <label htmlFor="callsign-from" className="block text-sm font-medium text-gray-700 mb-1">From</label>
-                    <div className="relative">
-                      <input
-                        id="callsign-from"
-                        type="text"
-                        value={formData.callsign_from || ''}
-                        onChange={(e) => setFormData({ ...formData, callsign_from: e.target.value })}
-                        onFocus={() => updateFocus('callsign-from')}
-                        onBlur={() => updateTyping('callsign-from', false)}
-                        onKeyDown={() => updateTyping('callsign-from', true)}
-                        placeholder="Enter callsign..."
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="callsign-to" className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                  <div className="relative">
                     <input
-                      id="callsign-to"
+                        id="callsign-from"
                       type="text"
-                      value={formData.callsign_to || 'Event Control'}
-                      onChange={(e) => setFormData({ ...formData, callsign_to: e.target.value })}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={formData.callsign_from || ''}
+                      onChange={(e) => setFormData({ ...formData, callsign_from: e.target.value })}
+                      onFocus={() => updateFocus('callsign-from')}
+                      onBlur={() => updateTyping('callsign-from', false)}
+                      onKeyDown={() => updateTyping('callsign-from', true)}
+                      placeholder="Enter callsign..."
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                    <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
                   </div>
                 </div>
+                <div>
+                    <label htmlFor="callsign-to" className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                  <input
+                      id="callsign-to"
+                    type="text"
+                    value={formData.callsign_to || 'Event Control'}
+                    onChange={(e) => setFormData({ ...formData, callsign_to: e.target.value })}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
+            </div>
 
               {/* Incident Configuration Card */}
               <div className={`bg-white rounded-lg shadow-sm border p-4 ${
@@ -3399,24 +3399,24 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 <div>
                   <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
                   <div className="relative">
-                    <select
+                  <select
                       id="priority"
-                      value={formData.priority}
-                      onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
+                </div>
                     </div>
                   </div>
-                </div>
               </div>
 
               {/* Detailed Information Card */}
@@ -3426,47 +3426,47 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                  </div>
+              </div>
                   <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900">Detailed Information</h3>
-                </div>
-                <div className="space-y-4">
-                  <div>
+            </div>
+              <div className="space-y-4">
+                <div>
                     <label htmlFor="incident-type" className="block text-sm font-medium text-gray-700 mb-1">Incident Type</label>
                     <div className="relative">
-                      <select
+                  <select
                         id="incident-type"
-                        value={formData.incident_type || ''}
-                        onChange={(e) => setFormData({ ...formData, incident_type: e.target.value })}
+                    value={formData.incident_type || ''}
+                    onChange={(e) => setFormData({ ...formData, incident_type: e.target.value })}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                      >
-                        <option value="">Select Type</option>
-                        {incidentTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
+                  >
+                    <option value="">Select Type</option>
+                    {incidentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
                     </div>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <label htmlFor="occurrence" className="block text-sm font-medium text-gray-700 mb-1">Occurrence Description</label>
-                    <textarea
+                  <textarea
                       id="occurrence"
-                      value={formData.occurrence || ''}
-                      onChange={(e) => setFormData({ ...formData, occurrence: e.target.value })}
-                      placeholder="Provide detailed description of the incident..."
-                      rows={4}
+                    value={formData.occurrence || ''}
+                    onChange={(e) => setFormData({ ...formData, occurrence: e.target.value })}
+                    placeholder="Provide detailed description of the incident..."
+                    rows={4}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
-                    />
+                  />
                     <p className="text-xs text-gray-500 mt-1">Describe what happened in detail</p>
-                  </div>
                 </div>
               </div>
+            </div>
             </section>
 
             {/* Right Column - Location & Actions, Additional Options */}
@@ -3482,8 +3482,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                   <h3 id="location-actions-title" className="text-sm font-semibold text-gray-900">Location & Actions</h3>
                 </div>
-                <div className="space-y-4">
-                  <div>
+              <div className="space-y-4">
+                <div>
                     <label htmlFor="w3w" className="block text-sm font-medium text-gray-700 mb-1">
                       What3Words Location
                       <span className="ml-1 text-gray-400" title="Three-word address for precise location">ⓘ</span>
@@ -3492,9 +3492,9 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="text-gray-400">///</span>
                       </div>
-                      <input
+                  <input
                         id="w3w"
-                        type="text"
+                    type="text"
                         value={formData.what3words?.replace('///', '') || ''}
                         onChange={(e) => handleW3WChange(`///${e.target.value}`)}
                         onBlur={handleW3WBlur}
@@ -3503,70 +3503,70 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Enter a valid what3words address</p>
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <div className="flex items-center justify-between mb-2">
                       <label htmlFor="action-taken" className="block text-sm font-medium text-gray-700">Actions Taken</label>
                       <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, action_taken: (prev.action_taken ? prev.action_taken + ' ' : '') + 'Other:' }))}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, action_taken: (prev.action_taken ? prev.action_taken + ' ' : '') + 'Other:' }))}
                           className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-blue-500 transition-colors"
-                        >
-                          Other
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
+                    >
+                      Other
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          let rewrite = null as null | { occurrence: string; actionTaken: string };
+                          if (isBrowserLLMAvailable()) {
                             try {
-                              let rewrite = null as null | { occurrence: string; actionTaken: string };
-                              if (isBrowserLLMAvailable()) {
-                                try {
-                                  rewrite = await rewriteIncidentFieldsWithBrowserLLM(formData.occurrence || '', formData.action_taken || '');
-                                } catch {}
-                              }
-                              if (!rewrite) {
-                                const input = `${formData.occurrence || ''}\nActions: ${formData.action_taken || ''}`;
-                                const resp = await fetch('/api/enhanced-incident-parsing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input, incidentTypes }) });
-                                if (resp.ok) {
-                                  const data = await resp.json();
-                                  rewrite = { occurrence: data.description || formData.occurrence || '', actionTaken: data.actionTaken || formData.action_taken || '' };
-                                }
-                              }
-                              if (rewrite) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  occurrence: cleanSentence(rewrite!.occurrence, prev.occurrence),
-                                  action_taken: cleanSentence(rewrite!.actionTaken, prev.action_taken)
-                                }));
-                              }
-                            } catch (e) {
-                              console.log('Rewrite failed', e);
+                              rewrite = await rewriteIncidentFieldsWithBrowserLLM(formData.occurrence || '', formData.action_taken || '');
+                            } catch {}
+                          }
+                          if (!rewrite) {
+                            const input = `${formData.occurrence || ''}\nActions: ${formData.action_taken || ''}`;
+                            const resp = await fetch('/api/enhanced-incident-parsing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input, incidentTypes }) });
+                            if (resp.ok) {
+                              const data = await resp.json();
+                              rewrite = { occurrence: data.description || formData.occurrence || '', actionTaken: data.actionTaken || formData.action_taken || '' };
                             }
-                          }}
+                          }
+                          if (rewrite) {
+                            setFormData(prev => ({
+                              ...prev,
+                              occurrence: cleanSentence(rewrite!.occurrence, prev.occurrence),
+                              action_taken: cleanSentence(rewrite!.actionTaken, prev.action_taken)
+                            }));
+                          }
+                        } catch (e) {
+                          console.log('Rewrite failed', e);
+                        }
+                      }}
                           className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-blue-500 transition-colors"
-                        >
-                          Rewrite with AI
-                        </button>
+                    >
+                      Rewrite with AI
+                    </button>
                       </div>
-                    </div>
-                    <div className="relative">
-                      <textarea
+                  </div>
+                  <div className="relative">
+                    <textarea
                         id="action-taken"
-                        value={formData.action_taken || ''}
-                        onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
-                        onFocus={() => updateFocus('action-taken')}
-                        onBlur={() => updateTyping('action-taken', false)}
-                        onKeyDown={() => updateTyping('action-taken', true)}
-                        placeholder="Describe actions taken in response to the incident..."
-                        rows={3}
+                      value={formData.action_taken || ''}
+                      onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
+                      onFocus={() => updateFocus('action-taken')}
+                      onBlur={() => updateTyping('action-taken', false)}
+                      onKeyDown={() => updateTyping('action-taken', true)}
+                      placeholder="Describe actions taken in response to the incident..."
+                      rows={3}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
-                      />
-                      <TypingIndicator users={presenceUsers} fieldName="action-taken" position="bottom" />
-                    </div>
+                    />
+                    <TypingIndicator users={presenceUsers} fieldName="action-taken" position="bottom" />
                   </div>
                 </div>
               </div>
+            </div>
 
               {/* Additional Options Card */}
               <div className="bg-white rounded-lg shadow-sm border p-4" role="region" aria-labelledby="additional-options-title">
@@ -3578,20 +3578,20 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                   <h3 id="additional-options-title" className="text-sm font-semibold text-gray-900">Additional Options</h3>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="closed"
-                      checked={formData.is_closed || false}
-                      onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="closed"
+                    checked={formData.is_closed || false}
+                    onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                    />
+                  />
                     <label htmlFor="closed" className="text-sm font-medium text-gray-700">
-                      Mark as Closed
-                    </label>
-                  </div>
-                  <div>
+                    Mark as Closed
+                  </label>
+                </div>
+                <div>
                     <label htmlFor="photo-upload" className="block text-sm font-medium text-gray-700 mb-2">Attach Photo (optional, max 5MB)</label>
                     <input
                       id="photo-upload"
@@ -3610,13 +3610,13 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                         ) : (
                           <>
                             <svg className="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <p className="text-sm">Click to upload or drag and drop</p>
-                            <p className="text-xs mt-1">PNG, JPG, GIF up to 5MB</p>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-sm">Click to upload or drag and drop</p>
+                      <p className="text-xs mt-1">PNG, JPG, GIF up to 5MB</p>
                           </>
                         )}
-                      </div>
+                    </div>
                     </label>
                     {photoError && (
                       <p className="text-xs text-red-600 mt-1">{photoError}</p>
@@ -3633,14 +3633,14 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           <div className="flex items-center justify-between">
             <div className="text-xs text-gray-500">Auto-saved</div>
             <div className="flex gap-3">
-              <button
-                onClick={onClose}
+          <button
+            onClick={onClose}
                 className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 focus:ring-2 focus:ring-gray-500 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
                 className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 rounded-lg transition-colors"
               >
                 Save as Draft
@@ -3652,9 +3652,9 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Log Incident
-              </button>
-            </div>
+            Log Incident
+          </button>
+        </div>
           </div>
         </footer>
       </div>
