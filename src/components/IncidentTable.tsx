@@ -616,19 +616,20 @@ export default function IncidentTable({
             </div>
           )}
           
-          {/* Enhanced Last updated and live status - Right side */}
+          {/* Last Updated Timestamp - Right side */}
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-xl px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-lg" title="Live Updates" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-200">Live</span>
-                {lastUpdated && (
-                  <span className="text-xs text-green-600 dark:text-green-300">
-                    {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </span>
-                )}
+            {lastUpdated && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Last Updated:</span> {lastUpdated.toLocaleTimeString('en-GB', { 
+                  hour: '2-digit', 
+                  minute: '2-digit', 
+                  second: '2-digit',
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                })}
               </div>
-            </div>
+            )}
           </div>
         </div>
         
@@ -646,25 +647,7 @@ export default function IncidentTable({
         )}
       </div>
 
-      {/* Last Updated Timestamp */}
-      {viewMode === 'table' && sortedIncidents.length > 0 && (
-        <div className="mt-4 mb-2 flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium">Last Updated:</span> {lastUpdated ? lastUpdated.toLocaleTimeString('en-GB', { 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            }) : 'Never'}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Live Updates Active</span>
-          </div>
-        </div>
-      )}
+
 
       {/* Conditional Rendering for Table/Board/Staff Views */}
       {viewMode === 'table' ? (
