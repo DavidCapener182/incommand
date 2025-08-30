@@ -160,6 +160,7 @@ What would you like assistance with today?`,
     response: string;
     quickActions?: QuickAction[];
     metadata?: any;
+    context?: any;
   }> => {
     // Check if this is a search query
     if (content.toLowerCase().includes('search') || content.toLowerCase().includes('find') || content.toLowerCase().includes('look for')) {
@@ -179,7 +180,9 @@ What would you like assistance with today?`,
   };
 
   // Handle search queries with NLP
-  const handleSearchQuery = async (query: string) => {
+  const handleSearchQuery = async (
+    query: string
+  ): Promise<{ response: string; quickActions?: QuickAction[]; metadata?: any }> => {
     try {
       // Process natural language search
       const searchAnalysis = aiService === 'ollama' 
@@ -224,9 +227,9 @@ ${filteredIncidents.length > 5 ? `... and ${filteredIncidents.length - 5} more i
 • "Find incidents from today"
 • "Search for security issues"`,
       quickActions: [
-        { id: 'search_medical', text: "Medical incidents", icon: '🏥', mode: 'chat' },
-        { id: 'search_security', text: "Security incidents", icon: '🛡️', mode: 'chat' },
-        { id: 'search_today', text: "Today's incidents", icon: '📅', mode: 'chat' }
+        { id: 'search_medical', text: "Medical incidents", icon: '🏥', mode: 'chat' as const },
+        { id: 'search_security', text: "Security incidents", icon: '🛡️', mode: 'chat' as const },
+        { id: 'search_today', text: "Today's incidents", icon: '📅', mode: 'chat' as const }
       ]
     };
   };
@@ -319,10 +322,10 @@ ${filteredIncidents.length > 5 ? `... and ${filteredIncidents.length - 5} more i
 **AI Insights:**
 • **Sentiment:** ${sentiment?.sentiment || 'neutral'} (${Math.round((sentiment?.confidence || 0) * 100)}% confidence)
 • **Urgency Level:** ${Math.round((nlpAnalysis.urgency || 0) * 100)}%
-• **Key Entities:** ${nlpAnalysis.entities.slice(0, 3).map(e => e.text).join(', ')}
+• **Key Entities:** ${nlpAnalysis.entities.slice(0, 3).map((entity: { text: string }) => entity.text).join(', ')}
 
 **Recommended Actions:**
-${incidentCategory.suggestedActions.map(action => `• ${action}`).join('\n')}
+${incidentCategory.suggestedActions.map((action: string) => `• ${action}`).join('\n')}
 
 **Routing Decision:**
 • **Target Role:** ${routingDecision.targetRole}

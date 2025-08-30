@@ -315,7 +315,7 @@ export async function enhancedChatCompletion(
     const temperature = finalConfig.temperature;
     const maxTokens = finalConfig.maxTokens;
     const timeoutMs = finalConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    const precheckAvailability = finalConfig.precheckAvailability === true;
+    const precheckAvailability = (finalConfig as any).precheckAvailability === true;
 
     try {
       // Optional fast failure path for offline or missing model

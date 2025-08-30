@@ -113,6 +113,12 @@ export default function RiskScoreIndicator({
 
   const currentSize = sizeClasses[size];
 
+  const weatherScore = (riskScore as any).weatherScore ?? 0;
+  const crowdScore = (riskScore as any).crowdScore ?? 0;
+  const timeScore = (riskScore as any).timeScore ?? 0;
+  const locationScore = (riskScore as any).locationScore ?? 0;
+  const eventPhaseScore = (riskScore as any).eventPhaseScore ?? 0;
+
   return (
     <div className={`bg-white rounded-lg shadow-sm border ${getRiskBorderColor(riskScore.overallScore)} ${currentSize.container} ${className}`}>
       {/* Header */}
@@ -161,19 +167,19 @@ export default function RiskScoreIndicator({
           
           <div className="grid grid-cols-2 gap-3">
             <div className="text-center">
-              <div className="text-sm font-semibold text-blue-600">{riskScore.weatherScore.toFixed(1)}%</div>
+              <div className="text-sm font-semibold text-blue-600">{weatherScore.toFixed(1)}%</div>
               <div className="text-xs text-gray-500">Weather</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-semibold text-purple-600">{riskScore.crowdScore.toFixed(1)}%</div>
+              <div className="text-sm font-semibold text-purple-600">{crowdScore.toFixed(1)}%</div>
               <div className="text-xs text-gray-500">Crowd</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-semibold text-orange-600">{riskScore.timeScore.toFixed(1)}%</div>
+              <div className="text-sm font-semibold text-orange-600">{timeScore.toFixed(1)}%</div>
               <div className="text-xs text-gray-500">Time</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-semibold text-red-600">{riskScore.locationScore.toFixed(1)}%</div>
+              <div className="text-sm font-semibold text-red-600">{locationScore.toFixed(1)}%</div>
               <div className="text-xs text-gray-500">Location</div>
             </div>
           </div>
@@ -188,8 +194,8 @@ export default function RiskScoreIndicator({
                     <div className="flex items-center space-x-2">
                       <div className={`w-2 h-2 rounded-full ${
                         factor.factorType === 'weather' ? 'bg-blue-500' :
-                        factor.factorType === 'crowd' ? 'bg-purple-500' :
-                        factor.factorType === 'time' ? 'bg-orange-500' :
+                        factor.factorType === 'crowd_density' ? 'bg-purple-500' :
+                        factor.factorType === 'time_of_day' ? 'bg-orange-500' :
                         'bg-red-500'
                       }`}></div>
                       <span className="text-xs font-medium capitalize">{factor.factorType}</span>
@@ -207,8 +213,8 @@ export default function RiskScoreIndicator({
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-blue-900">Event Phase Risk</span>
-              <span className={`text-xs font-semibold ${getRiskColor(riskScore.eventPhaseScore)}`}>
-                {riskScore.eventPhaseScore.toFixed(1)}%
+              <span className={`text-xs font-semibold ${getRiskColor(eventPhaseScore)}`}>
+                {eventPhaseScore.toFixed(1)}%
               </span>
             </div>
             <div className="text-xs text-blue-700 mt-1">
@@ -240,7 +246,7 @@ export default function RiskScoreIndicator({
       {/* Footer */}
       <div className="border-t border-gray-200 pt-3 mt-4">
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Valid until: {riskScore.validUntil.toLocaleTimeString()}</span>
+          <span>Valid until: {riskScore.lastUpdated.toLocaleTimeString()}</span>
           <span>Auto-refresh: 5min</span>
         </div>
       </div>

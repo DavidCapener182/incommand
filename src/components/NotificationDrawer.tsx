@@ -92,7 +92,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
           self: true,
         },
       },
-    });
+    }) as any;
 
     // Track presence
     channel
@@ -147,7 +147,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
         // Add update action
         const updateAction: RecentAction = {
           id: `update-${Date.now()}`,
-          type: 'update',
+          type: 'incident',
           title: `${payload.incident_type} Incident Updated`,
           description: payload.update_message || 'Incident status changed',
           timestamp: new Date().toISOString(),

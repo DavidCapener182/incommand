@@ -182,6 +182,16 @@ export class RiskScoringEngine {
     }
   }
 
+  async getWeatherRiskFactors(): Promise<RiskFactor[]> {
+    try {
+      const weatherRisk = await this.calculateWeatherRisk();
+      return [weatherRisk];
+    } catch (error) {
+      logger.error('Error getting weather risk factors', { error, eventId: this.eventId });
+      return [];
+    }
+  }
+
   async getLocationSpecificRiskScores(): Promise<LocationRiskScore[]> {
     try {
       const { data: incidents, error } = await supabase
