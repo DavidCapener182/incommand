@@ -7,6 +7,7 @@ export interface CrowdFlowPrediction {
   location: string;
   currentDensity: number;
   predictedDensity: number;
+  predictedCount: number;
   confidence: number;
   factors: CrowdFactor[];
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -28,6 +29,7 @@ export interface OccupancyForecast {
   capacityUtilization: number;
   riskPeriods: RiskPeriod[];
   confidence: number;
+  capacityWarnings?: any[];
 }
 
 export interface RiskPeriod {
@@ -46,6 +48,8 @@ export interface DensityZone {
   densityPercentage: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   lastUpdated: Date;
+  predictedPeak: number;
+  recommendations: string[];
 }
 
 export class CrowdFlowPredictionEngine {
@@ -110,7 +114,7 @@ export class CrowdFlowPredictionEngine {
       }
 
       // Store predictions
-      await this.storeCrowdPredictions(predictions);
+      await this.saveCrowdPredictions(predictions);
       
       this.predictions = predictions;
       return predictions;
@@ -152,7 +156,8 @@ export class CrowdFlowPredictionEngine {
         averageOccupancy: Math.round(averageOccupancy),
         capacityUtilization: Math.round(capacityUtilization),
         riskPeriods,
-        confidence: this.calculateForecastConfidence()
+        confidence: this.calculateForecastConfidence(),
+        capacityWarnings: []
       };
 
       this.forecasts = [forecast];
@@ -177,7 +182,9 @@ export class CrowdFlowPredictionEngine {
           maxCapacity: 200,
           densityPercentage: 75,
           riskLevel: 'medium',
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          predictedPeak: 180,
+          recommendations: ['Increase monitoring', 'Optimize entry flow']
         },
         {
           zoneId: 'main-bar',
@@ -186,7 +193,9 @@ export class CrowdFlowPredictionEngine {
           maxCapacity: 150,
           densityPercentage: 120,
           riskLevel: 'critical',
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          predictedPeak: 190,
+          recommendations: ['Deploy additional staff', 'Redirect patrons']
         },
         {
           zoneId: 'dance-floor',
@@ -195,7 +204,9 @@ export class CrowdFlowPredictionEngine {
           maxCapacity: 300,
           densityPercentage: 67,
           riskLevel: 'low',
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          predictedPeak: 220,
+          recommendations: ['Monitor crowd flow']
         },
         {
           zoneId: 'seating-area',
@@ -204,7 +215,9 @@ export class CrowdFlowPredictionEngine {
           maxCapacity: 120,
           densityPercentage: 67,
           riskLevel: 'low',
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          predictedPeak: 100,
+          recommendations: ['Maintain current staffing']
         },
         {
           zoneId: 'exit-area',
@@ -213,7 +226,9 @@ export class CrowdFlowPredictionEngine {
           maxCapacity: 100,
           densityPercentage: 30,
           riskLevel: 'low',
-          lastUpdated: new Date()
+          lastUpdated: new Date(),
+          predictedPeak: 60,
+          recommendations: ['Ensure clear pathways']
         }
       ];
 
@@ -385,6 +400,7 @@ export class CrowdFlowPredictionEngine {
         location: 'Overall Venue',
         currentDensity: currentAttendance,
         predictedDensity: Math.round(predictedDensity),
+        predictedCount: Math.round(predictedDensity),
         confidence,
         factors,
         riskLevel,
@@ -515,7 +531,7 @@ export class CrowdFlowPredictionEngine {
     return riskPeriods;
   }
 
-  private async storeCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
+  private async saveCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
     try {
       const predictionData = predictions.map(prediction => ({
         event_id: this.eventId,
@@ -547,8 +563,7 @@ export class CrowdFlowPredictionEngine {
   }
 
   async storeCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
-    // This method is already implemented above
-    return this.storeCrowdPredictions(predictions);
+    return this.saveCrowdPredictions(predictions);
   }
 
   async getPredictions(): Promise<CrowdFlowPrediction[]> {
@@ -561,6 +576,31 @@ export class CrowdFlowPredictionEngine {
 
   async getDensityZones(): Promise<DensityZone[]> {
     return this.densityZones;
+  }
+
+  async getCurrentOccupancy(): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('current_attendance')
+        .eq('id', this.eventId)
+        .single();
+
+      if (error) throw error;
+      return data?.current_attendance || 0;
+    } catch (error) {
+      logger.error('Error getting current occupancy', { error, eventId: this.eventId });
+      return 0;
+    }
+  }
+
+  async getVenueZoneAnalysis(): Promise<DensityZone[]> {
+    try {
+      return await this.monitorDensityZones();
+    } catch (error) {
+      logger.error('Error getting venue zone analysis', { error, eventId: this.eventId });
+      return [];
+    }
   }
 
   async getLatestPrediction(): Promise<CrowdFlowPrediction | null> {

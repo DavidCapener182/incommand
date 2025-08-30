@@ -35,7 +35,7 @@ export interface CrowdDensityPredictionsResponse {
     zone: string;
     currentOccupancy: number;
     predictedPeak: number;
-    riskLevel: 'low' | 'medium' | 'high';
+    riskLevel: 'low' | 'medium' | 'high' | 'critical';
     recommendations: string[];
   }[];
   crowdBehavior: {
