@@ -101,7 +101,7 @@ function CompanyFooter() {
       <span>
         v0.1.0{companyName && ` Build for ${companyName}`}
       </span>
-      <span className="absolute left-1/2 transform -translate-x-1/2">
+      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
         support@incommandapp.com
       </span>
     </footer>

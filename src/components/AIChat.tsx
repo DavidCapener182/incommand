@@ -41,7 +41,9 @@ export default function AIChat({ isVisible }: AIChatProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   // Load chat history from localStorage
   useEffect(() => {
@@ -65,12 +67,12 @@ export default function AIChat({ isVisible }: AIChatProps) {
     }
   }, [messages]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive, unless user scrolled up
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (isAtBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, isAtBottom]);
 
   // Focus input when chat becomes visible
   useEffect(() => {
@@ -145,6 +147,13 @@ What would you like assistance with today?`,
       ]);
     }
   }, [messages.length]);
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAtBottom(atBottom);
+  };
 
   // Enhanced message processing with AI analysis
   const processMessageWithAI = async (content: string): Promise<{
@@ -717,7 +726,11 @@ ${routingDecision.autoAssign ? '✅ **Staff will be automatically assigned**' : 
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0"
+      >
         {messages.map((message, idx) => (
           <div
             key={message.id}
@@ -875,7 +888,7 @@ ${routingDecision.autoAssign ? '✅ **Staff will be automatically assigned**' : 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Ask about incidents, SOPs, procedures, or search for data..."
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:border-transparent text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:border-transparent text-base md:text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow"
             disabled={isLoading}
             aria-label="Type your message"
           />
