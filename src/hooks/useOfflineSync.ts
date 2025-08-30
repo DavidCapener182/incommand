@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useCallback } from 'react';
 import { offlineSyncManager, SyncProgress } from '../lib/offlineSync';
 
@@ -22,6 +24,25 @@ export interface OfflineSyncActions {
 }
 
 export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
+  // Return no-op implementations during server-side rendering
+  if (typeof window === 'undefined' || !offlineSyncManager) {
+    const defaultState: OfflineSyncState = {
+      isOnline: true,
+      isSyncInProgress: false,
+      syncProgress: { total: 0, completed: 0, failed: 0, inProgress: false },
+      queueStatus: { pending: 0, processing: 0, completed: 0, failed: 0 }
+    };
+    const noop = async () => {};
+    const defaultActions: OfflineSyncActions = {
+      triggerManualSync: noop,
+      clearCompletedOperations: noop,
+      clearFailedOperations: noop,
+      queueOperation: async () => 0,
+      queuePhotoUpload: async () => ''
+    };
+    return [defaultState, defaultActions];
+  }
+
   const [state, setState] = useState<OfflineSyncState>({
     isOnline: navigator.onLine,
     isSyncInProgress: false,
@@ -49,7 +70,7 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
 
   // Update sync progress
   const updateSyncProgress = useCallback(() => {
-    const progress = offlineSyncManager.getSyncProgress();
+    const progress = offlineSyncManager!.getSyncProgress();
     setState(prev => ({
       ...prev,
       syncProgress: progress,
@@ -59,7 +80,7 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
 
   // Update queue status
   const updateQueueStatus = useCallback(async () => {
-    const queueStatus = await offlineSyncManager.getQueueStatus();
+    const queueStatus = await offlineSyncManager!.getQueueStatus();
     setState(prev => ({
       ...prev,
       queueStatus
@@ -77,7 +98,7 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
 
     // Poll for updates when sync is in progress
     const interval = setInterval(() => {
-      if (offlineSyncManager.isSyncInProgress()) {
+      if (offlineSyncManager!.isSyncInProgress()) {
         updateSyncProgress();
         updateQueueStatus();
       }
@@ -93,7 +114,7 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
   // Actions
   const triggerManualSync = useCallback(async () => {
     try {
-      await offlineSyncManager.triggerManualSync();
+      await offlineSyncManager!.triggerManualSync();
       updateSyncProgress();
       updateQueueStatus();
     } catch (error) {
@@ -103,23 +124,23 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
   }, [updateSyncProgress, updateQueueStatus]);
 
   const clearCompletedOperations = useCallback(async () => {
-    await offlineSyncManager.clearCompletedOperations();
+    await offlineSyncManager!.clearCompletedOperations();
     updateQueueStatus();
   }, [updateQueueStatus]);
 
   const clearFailedOperations = useCallback(async () => {
-    await offlineSyncManager.clearFailedOperations();
+    await offlineSyncManager!.clearFailedOperations();
     updateQueueStatus();
   }, [updateQueueStatus]);
 
   const queueOperation = useCallback(async (operation: any) => {
-    const id = await offlineSyncManager.queueOperation(operation);
+    const id = await offlineSyncManager!.queueOperation(operation);
     updateQueueStatus();
     return id;
   }, [updateQueueStatus]);
 
   const queuePhotoUpload = useCallback(async (file: File, metadata: any) => {
-    const photoId = await offlineSyncManager.queuePhotoUpload(file, metadata);
+    const photoId = await offlineSyncManager!.queuePhotoUpload(file, metadata);
     updateQueueStatus();
     return photoId;
   }, [updateQueueStatus]);

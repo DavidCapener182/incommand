@@ -1,6 +1,8 @@
 import Dexie from 'dexie';
 import { supabase } from './supabase';
 
+const isBrowser = typeof window !== 'undefined';
+
 export interface OfflineOperation {
   id?: number;
   type: 'incident_create' | 'incident_update' | 'photo_upload' | 'notification_send';
@@ -35,9 +37,9 @@ class OfflineDatabase extends Dexie {
 
 class OfflineSyncManager {
   private static instance: OfflineSyncManager;
-  private db: OfflineDatabase;
+  private db: OfflineDatabase | null = null;
   private syncInProgress: boolean = false;
-  private onlineStatus: boolean = navigator.onLine;
+  private onlineStatus: boolean = isBrowser ? navigator.onLine : true;
   private syncProgress: SyncProgress = {
     total: 0,
     completed: 0,
@@ -46,13 +48,15 @@ class OfflineSyncManager {
   };
 
   private constructor() {
-    this.db = new OfflineDatabase();
-    this.setupOnlineStatusListener();
-    this.setupBackgroundSync();
+    if (isBrowser) {
+      this.db = new OfflineDatabase();
+      this.setupOnlineStatusListener();
+      this.setupBackgroundSync();
+    }
   }
 
   static getInstance(): OfflineSyncManager {
-    if (!OfflineSyncManager.instance) {
+    if (!OfflineSyncManager.instance && isBrowser) {
       OfflineSyncManager.instance = new OfflineSyncManager();
     }
     return OfflineSyncManager.instance;
@@ -67,7 +71,7 @@ class OfflineSyncManager {
       status: 'pending'
     };
 
-    const id = await this.db.offlineQueue.add(offlineOperation);
+    const id = await this.db!.offlineQueue.add(offlineOperation);
     console.log('Operation queued for offline sync:', { id, type: operation.type });
     
     // Trigger sync if online
@@ -82,7 +86,7 @@ class OfflineSyncManager {
   async queuePhotoUpload(file: File, metadata: any): Promise<string> {
     const photoId = `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    await this.db.offlinePhotos.add({
+    await this.db!.offlinePhotos.add({
       id: photoId,
       file,
       metadata: {
@@ -113,7 +117,7 @@ class OfflineSyncManager {
 
     try {
       // Get all pending operations
-      const pendingOperations = await this.db.offlineQueue
+      const pendingOperations = await this.db!.offlineQueue
         .where('status')
         .equals('pending')
         .toArray();
@@ -154,7 +158,7 @@ class OfflineSyncManager {
   // Process a single offline operation
   private async processOperation(operation: OfflineOperation): Promise<void> {
     // Mark as processing
-    await this.db.offlineQueue.update(operation.id!, { status: 'processing' });
+    await this.db!.offlineQueue.update(operation.id!, { status: 'processing' });
 
     switch (operation.type) {
       case 'incident_create':
@@ -174,7 +178,7 @@ class OfflineSyncManager {
     }
 
     // Mark as completed
-    await this.db.offlineQueue.update(operation.id!, { status: 'completed' });
+    await this.db!.offlineQueue.update(operation.id!, { status: 'completed' });
   }
 
   // Process incident creation
@@ -209,7 +213,7 @@ class OfflineSyncManager {
     const { photoId, metadata } = operation.data;
     
     // Get the photo from IndexedDB
-    const photoData = await this.db.offlinePhotos.get(photoId);
+    const photoData = await this.db!.offlinePhotos.get(photoId);
     if (!photoData) {
       throw new Error(`Photo not found: ${photoId}`);
     }
@@ -257,7 +261,7 @@ class OfflineSyncManager {
     }
 
     // Remove photo from IndexedDB
-    await this.db.offlinePhotos.delete(photoId);
+    await this.db!.offlinePhotos.delete(photoId);
   }
 
   // Process notification send
@@ -283,14 +287,14 @@ class OfflineSyncManager {
     
     if (newRetryCount >= operation.maxRetries) {
       // Mark as failed after max retries
-      await this.db.offlineQueue.update(operation.id!, {
+      await this.db!.offlineQueue.update(operation.id!, {
         status: 'failed',
         error: error.message,
         retryCount: newRetryCount
       });
     } else {
       // Reset to pending for retry
-      await this.db.offlineQueue.update(operation.id!, {
+      await this.db!.offlineQueue.update(operation.id!, {
         status: 'pending',
         retryCount: newRetryCount
       });
@@ -309,8 +313,8 @@ class OfflineSyncManager {
     completed: number;
     failed: number;
   }> {
-    const operations = await this.db.offlineQueue.toArray();
-    
+    const operations = await this.db!.offlineQueue.toArray();
+
     return {
       pending: operations.filter(op => op.status === 'pending').length,
       processing: operations.filter(op => op.status === 'processing').length,
@@ -321,7 +325,7 @@ class OfflineSyncManager {
 
   // Clear completed operations
   async clearCompletedOperations(): Promise<void> {
-    await this.db.offlineQueue
+    await this.db!.offlineQueue
       .where('status')
       .equals('completed')
       .delete();
@@ -329,7 +333,7 @@ class OfflineSyncManager {
 
   // Clear failed operations
   async clearFailedOperations(): Promise<void> {
-    await this.db.offlineQueue
+    await this.db!.offlineQueue
       .where('status')
       .equals('failed')
       .delete();
@@ -371,12 +375,12 @@ class OfflineSyncManager {
 
   // Get offline photos
   async getOfflinePhotos(): Promise<{ id: string; file: File; metadata: any }[]> {
-    return await this.db.offlinePhotos.toArray();
+    return await this.db!.offlinePhotos.toArray();
   }
 
   // Remove offline photo
   async removeOfflinePhoto(photoId: string): Promise<void> {
-    await this.db.offlinePhotos.delete(photoId);
+    await this.db!.offlinePhotos.delete(photoId);
   }
 
   // Check if device is online
@@ -390,5 +394,5 @@ class OfflineSyncManager {
   }
 }
 
-// Export singleton instance
-export const offlineSyncManager = OfflineSyncManager.getInstance();
+// Export singleton instance (browser only)
+export const offlineSyncManager = isBrowser ? OfflineSyncManager.getInstance() : null;
