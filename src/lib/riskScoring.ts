@@ -34,6 +34,7 @@ export interface LocationRiskScore {
   lastIncident?: Date;
   incidentCount: number;
   averageSeverity: number;
+  incidentTypes: string[];
 }
 
 export interface IncidentTypeRisk {
@@ -44,6 +45,8 @@ export interface IncidentTypeRisk {
   averageSeverity: number;
   lastOccurrence?: Date;
   trend: 'increasing' | 'decreasing' | 'stable';
+  probability: number;
+  contributingFactors: string[];
 }
 
 export interface RiskThresholds {
@@ -73,10 +76,27 @@ export interface RiskThresholds {
   };
 }
 
+export interface RiskWeights {
+  weather: number;
+  crowd: number;
+  time: number;
+  location: number;
+  eventPhase: number;
+}
+
+export const DEFAULT_RISK_WEIGHTS: RiskWeights = {
+  weather: 0.2,
+  crowd: 0.3,
+  time: 0.2,
+  location: 0.15,
+  eventPhase: 0.15
+};
+
 export class RiskScoringEngine {
   private eventId: string;
   private thresholds: RiskThresholds;
   private riskScores: Map<string, RiskScore> = new Map();
+  private riskWeights: RiskWeights = { ...DEFAULT_RISK_WEIGHTS };
 
   constructor(eventId: string) {
     this.eventId = eventId;
@@ -537,7 +557,8 @@ export class RiskScoringEngine {
       factors,
       lastIncident,
       incidentCount,
-      averageSeverity
+      averageSeverity,
+      incidentTypes: incidents.map(i => i.type || i.incident_type || '')
     };
   }
 
@@ -564,8 +585,10 @@ export class RiskScoringEngine {
     const riskLevel = this.determineRiskLevel(riskScore);
 
     // Determine trend (simplified - in real implementation, this would analyze historical data)
-    const trend: 'increasing' | 'decreasing' | 'stable' = 
+    const trend: 'increasing' | 'decreasing' | 'stable' =
       frequency > 5 ? 'increasing' : frequency > 2 ? 'stable' : 'decreasing';
+
+    const probability = Math.min(1, frequency / 10);
 
     return {
       incidentType,
@@ -574,7 +597,9 @@ export class RiskScoringEngine {
       frequency,
       averageSeverity,
       lastOccurrence,
-      trend
+      trend,
+      probability,
+      contributingFactors: []
     };
   }
 
@@ -706,5 +731,61 @@ export class RiskScoringEngine {
 
   getCurrentThresholds(): RiskThresholds {
     return this.thresholds;
+  }
+
+  async getCurrentRiskWeights(): Promise<RiskWeights> {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('risk_weights')
+        .eq('id', this.eventId)
+        .single();
+
+      if (error) throw error;
+
+      const weights = (data?.risk_weights as RiskWeights) || null;
+      if (weights) {
+        this.riskWeights = weights;
+      }
+
+      return this.riskWeights;
+    } catch (error) {
+      logger.error('Error fetching risk weights', { error, eventId: this.eventId });
+      return this.riskWeights;
+    }
+  }
+
+  async setRiskWeights(weights: RiskWeights): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ risk_weights: weights })
+        .eq('id', this.eventId);
+
+      if (error) throw error;
+
+      this.riskWeights = weights;
+      return true;
+    } catch (error) {
+      logger.error('Error setting risk weights', { error, eventId: this.eventId });
+      return false;
+    }
+  }
+
+  async resetRiskWeights(): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ risk_weights: null })
+        .eq('id', this.eventId);
+
+      if (error) throw error;
+
+      this.riskWeights = { ...DEFAULT_RISK_WEIGHTS };
+      return true;
+    } catch (error) {
+      logger.error('Error resetting risk weights', { error, eventId: this.eventId });
+      return false;
+    }
   }
 }

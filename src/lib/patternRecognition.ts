@@ -550,4 +550,25 @@ export class PatternRecognitionEngine {
       await this.storePatterns(this.patterns);
     }
   }
+
+  async analyzeCrowdFlowPatterns(): Promise<IncidentPattern[]> {
+    // For now, reuse existing incident pattern analysis
+    return this.analyzeIncidentPatterns();
+  }
+
+  async getHistoricalCrowdFlow(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('event_id', this.eventId)
+        .order('timestamp', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      logger.error('Error fetching historical crowd flow', { error, eventId: this.eventId });
+      return [];
+    }
+  }
 }
