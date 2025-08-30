@@ -3,10 +3,10 @@ import { Redis } from '@upstash/redis'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from './logger'
 
-// Initialize Redis client
+// Initialize Redis client with fallback for development
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  url: process.env.UPSTASH_REDIS_REST_URL || 'http://localhost:6379',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || 'dev-token',
 })
 
 // Create different rate limiters for different endpoints
@@ -80,6 +80,22 @@ export async function rateLimit(
   type: keyof typeof rateLimiters = 'general'
 ): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> {
   try {
+    // Check if Redis is properly configured
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      logger.warn('Redis not configured, skipping rate limiting', {
+        component: 'RateLimit',
+        action: 'rateLimit',
+        type
+      })
+      // Return success to allow requests when Redis is not configured
+      return {
+        success: true,
+        limit: 100,
+        remaining: 99,
+        reset: Date.now() + 60000
+      }
+    }
+
     const identifier = getClientIdentifier(req)
     const limiter = rateLimiters[type]
     

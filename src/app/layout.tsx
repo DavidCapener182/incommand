@@ -7,6 +7,8 @@ import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import GlobalEscalationToast from '../components/GlobalEscalationToast'
+import { ErrorBoundary } from '../components/ErrorBoundary'
+import '../lib/globalErrorHandler'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -52,13 +54,15 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.supabase.co" />
       </head>
       <body className={inter.className + " bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
-        <AuthProvider>
-          <NotificationDrawerProvider>
-            <MaintenanceBanner />
-            <GlobalEscalationToast />
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </NotificationDrawerProvider>
-        </AuthProvider>
+        <ErrorBoundary componentName="RootLayout">
+          <AuthProvider>
+            <NotificationDrawerProvider>
+              <MaintenanceBanner />
+              <GlobalEscalationToast />
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </NotificationDrawerProvider>
+          </AuthProvider>
+        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

@@ -143,7 +143,7 @@ class ErrorHandler {
 
       localStorage.setItem('errorLogs', JSON.stringify(storedErrors));
     } catch (error) {
-      console.error('Failed to store error locally:', error);
+      logger.error('Failed to store error locally', error, { component: 'ErrorHandler', action: 'storeErrorLocally' });
     }
   }
 
@@ -230,10 +230,10 @@ class ErrorHandler {
       });
 
       if (!response.ok) {
-        console.error('Failed to log error to external service');
+        logger.error('Failed to log error to external service', null, { component: 'ErrorHandler', action: 'logToExternalService', status: response.status });
       }
     } catch (error) {
-      console.error('Error logging to external service:', error);
+      logger.error('Error logging to external service', error, { component: 'ErrorHandler', action: 'logToExternalService' });
     }
   }
 
@@ -255,7 +255,7 @@ class ErrorHandler {
         errorLog.resolution = 'synced';
       }
     } catch (error) {
-      console.error('Failed to sync error log:', error);
+      logger.error('Failed to sync error log', error, { component: 'ErrorHandler', action: 'syncErrorLog' });
     }
   }
 
@@ -288,7 +288,7 @@ class ErrorHandler {
       const unresolvedErrors = storedErrors.filter((error: any) => !error.resolved);
       localStorage.setItem('errorLogs', JSON.stringify(unresolvedErrors));
     } catch (error) {
-      console.error('Failed to clear resolved errors from storage:', error);
+      logger.error('Failed to clear resolved errors from storage', error, { component: 'ErrorHandler', action: 'clearResolvedErrors' });
     }
   }
 
