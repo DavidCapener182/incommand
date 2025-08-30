@@ -302,7 +302,7 @@ export const enhancedChatCompletion = async (
 
   const operation = async (): Promise<string> => {
     try {
-      const response = await engineInstance.chat.completions.create({
+      const response = await engineInstance!.chat.completions.create({
         messages,
         temperature: finalConfig.temperature,
         max_tokens: finalConfig.maxTokens

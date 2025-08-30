@@ -14,7 +14,7 @@ export interface IncidentPattern {
 }
 
 export interface PatternFactor {
-  type: 'time' | 'location' | 'weather' | 'crowd' | 'staff' | 'event_type';
+  type: 'time' | 'location' | 'weather' | 'crowd' | 'staff' | 'event_type' | 'correlation';
   value: string | number;
   weight: number;
   correlation: number;
@@ -52,6 +52,25 @@ export interface CorrelationPattern {
   description: string;
 }
 
+export interface WeatherPattern {
+  pattern: string;
+  frequency: number;
+  riskScore: number;
+}
+
+export interface HistoricalWeatherIncident {
+  weatherCondition: string;
+  incidentCount: number;
+  incidentTypes: string[];
+  averageRiskScore: number;
+}
+
+export interface CurrentWeatherConditions {
+  current: string;
+  forecast: string;
+  change: string;
+}
+
 export class PatternRecognitionEngine {
   private eventId: string;
   private patterns: IncidentPattern[] = [];
@@ -62,6 +81,70 @@ export class PatternRecognitionEngine {
 
   constructor(eventId: string) {
     this.eventId = eventId;
+  }
+
+  async analyzeWeatherPatterns(): Promise<WeatherPattern[]> {
+    try {
+      const incidents = await this.getHistoricalWeatherIncidents();
+
+      return incidents.map(incident => ({
+        pattern: incident.weatherCondition,
+        frequency: incident.incidentCount,
+        riskScore: incident.averageRiskScore
+      }));
+    } catch (error) {
+      logger.error('Error analyzing weather patterns', { error, eventId: this.eventId });
+      return [];
+    }
+  }
+
+  async getHistoricalWeatherIncidents(): Promise<HistoricalWeatherIncident[]> {
+    try {
+      const { data, error } = await supabase
+        .from('incident_logs')
+        .select('incident_type, weather_condition, risk_score')
+        .eq('event_id', this.eventId);
+
+      if (error || !data) return [];
+
+      const grouped: Record<string, any[]> = {};
+
+      (data as any[]).forEach(incident => {
+        const condition = incident.weather_condition || 'Unknown';
+        if (!grouped[condition]) {
+          grouped[condition] = [];
+        }
+        grouped[condition].push(incident);
+      });
+
+      return Object.entries(grouped).map(([condition, incidents]) => ({
+        weatherCondition: condition,
+        incidentCount: incidents.length,
+        incidentTypes: [...new Set(incidents.map(i => i.incident_type))],
+        averageRiskScore:
+          incidents.reduce((sum, i) => sum + (i.risk_score ?? 0), 0) / incidents.length
+      }));
+    } catch (error) {
+      logger.error('Error fetching historical weather incidents', { error, eventId: this.eventId });
+      return [];
+    }
+  }
+
+  async getCurrentWeatherConditions(): Promise<CurrentWeatherConditions> {
+    try {
+      return {
+        current: 'Unknown',
+        forecast: 'Unknown',
+        change: 'No significant change'
+      };
+    } catch (error) {
+      logger.error('Error fetching current weather conditions', { error, eventId: this.eventId });
+      return {
+        current: 'Unknown',
+        forecast: 'Unknown',
+        change: 'No significant change'
+      };
+    }
   }
 
   async analyzeIncidentPatterns(): Promise<IncidentPattern[]> {

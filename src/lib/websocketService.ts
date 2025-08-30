@@ -86,7 +86,7 @@ class WebSocketService {
 
     // Handle connection status
     channel.subscribe((status) => {
-      logger.info(`WebSocket channel ${channelName} status:`, status);
+      logger.info('WebSocket channel status', { channelName, status });
       
       if (status === 'SUBSCRIBED') {
         this.reconnectAttempts.set(channelName, 0);

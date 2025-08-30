@@ -632,7 +632,7 @@ export default function StaffCommandCentre() {
           self: true,
         },
       },
-    });
+    }) as any;
 
     // Track staff locations
     channel

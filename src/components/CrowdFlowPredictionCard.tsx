@@ -131,11 +131,11 @@ export default function CrowdFlowPredictionCard({
       )}
 
       {/* Capacity Warnings */}
-      {forecast.capacityWarnings.length > 0 && (
+      {(forecast.capacityWarnings?.length ?? 0) > 0 && (
         <div className="mb-4">
           <div className="text-sm font-medium text-red-700 mb-2">⚠️ Capacity Warnings</div>
           <div className="space-y-2">
-            {forecast.capacityWarnings.slice(0, 2).map((warning, index) => (
+            {forecast.capacityWarnings!.slice(0, 2).map((warning, index) => (
               <div key={index} className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
                 {warning}
               </div>
@@ -181,7 +181,7 @@ export default function CrowdFlowPredictionCard({
       </div>
 
       {/* Quick Actions */}
-      {forecast.capacityWarnings.length > 0 && (
+      {(forecast.capacityWarnings?.length ?? 0) > 0 && (
         <div className="border-t border-gray-200 pt-3">
           <div className="text-sm font-medium text-gray-700 mb-2">Recommended Actions</div>
           <div className="space-y-1">
