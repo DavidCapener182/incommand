@@ -5,11 +5,12 @@ import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
 import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
 import { FilterState, filterIncidents } from '../utils/incidentFilters'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Incident {
   id: number
@@ -102,6 +103,14 @@ export default function IncidentTable({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [manualStatusChanges, setManualStatusChanges] = useState<Set<number>>(new Set())
+
+  // Mobile gesture support
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [pullToRefreshDistance, setPullToRefreshDistance] = useState(0)
+  const [swipedIncidentId, setSwipedIncidentId] = useState<number | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
 
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
@@ -489,6 +498,78 @@ export default function IncidentTable({
     setSelectedIncidentId(null)
   }
 
+  // Mobile gesture handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent, incidentId?: number) => {
+    const touch = e.touches[0]
+    setTouchStart({ x: touch.clientX, y: touch.clientY })
+    setTouchEnd(null)
+    
+    if (incidentId) {
+      setSwipedIncidentId(incidentId)
+    }
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStart) return
+    
+    const touch = e.touches[0]
+    const distanceX = touch.clientX - touchStart.x
+    const distanceY = touch.clientY - touchStart.y
+    
+    // Pull-to-refresh logic
+    if (touchStart.y < 100 && distanceY > 0) {
+      const pullDistance = Math.min(distanceY * 0.5, 100)
+      setPullToRefreshDistance(pullDistance)
+    }
+    
+    // Swipe logic for incident cards
+    if (swipedIncidentId && Math.abs(distanceX) > Math.abs(distanceY)) {
+      const swipeDistance = Math.max(-100, Math.min(100, distanceX))
+      setSwipeOffset(swipeDistance)
+    }
+  }, [touchStart, swipedIncidentId])
+
+  const handleTouchEnd = useCallback(async (e: React.TouchEvent) => {
+    if (!touchStart) return
+    
+    const touch = e.changedTouches[0]
+    const distanceX = touch.clientX - touchStart.x
+    const distanceY = touch.clientY - touchStart.y
+    
+    // Pull-to-refresh trigger
+    if (touchStart.y < 100 && distanceY > 80) {
+      setIsRefreshing(true)
+      await fetchIncidents()
+      setTimeout(() => setIsRefreshing(false), 1000)
+    }
+    
+    // Swipe actions for incident cards
+    if (swipedIncidentId && Math.abs(distanceX) > 50) {
+      const incident = incidents.find(inc => inc.id === swipedIncidentId)
+      if (incident) {
+        if (distanceX > 50) {
+          // Swipe right - open incident details
+          handleIncidentClick(incident)
+        } else if (distanceX < -50) {
+          // Swipe left - toggle status
+          await toggleIncidentStatus(incident, e as any)
+        }
+      }
+    }
+    
+    // Reset states
+    setTouchStart(null)
+    setTouchEnd(null)
+    setPullToRefreshDistance(0)
+    setSwipedIncidentId(null)
+    setSwipeOffset(0)
+  }, [touchStart, swipedIncidentId, incidents, fetchIncidents])
+
+  // Enhanced touch targets for mobile
+  const getTouchTargetClass = (baseClass: string) => {
+    return `${baseClass} touch-target min-h-[44px] min-w-[44px] flex items-center justify-center`
+  }
+
   // Filter incidents based on the filter prop and search query
   const filteredIncidents: Incident[] = filterIncidents<Incident>(incidents, { ...filters, query: searchQuery });
 
@@ -574,17 +655,19 @@ export default function IncidentTable({
               placeholder="Search incidents by type, callsign, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-12 pr-12 py-4 border-2 border-gray-200 dark:border-[#2d437a] rounded-2xl leading-5 bg-white dark:bg-[#182447] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100 shadow-lg hover:shadow-xl transition-all duration-200"
+              className="block w-full pl-12 pr-12 py-4 border-2 border-gray-200 dark:border-[#2d437a] rounded-2xl leading-5 bg-white dark:bg-[#182447] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100 shadow-lg hover:shadow-xl transition-all duration-200 touch-target"
             />
             {searchQuery && (
               <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-200"
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-200 touch-target"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                 >
                   <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-                </button>
+                </motion.button>
               </div>
             )}
           </div>
@@ -592,22 +675,26 @@ export default function IncidentTable({
           {/* View Toggle - Center */}
           {onViewModeChange && (
             <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
-              <button
+              <motion.button
                 onClick={() => onViewModeChange('table')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
                   viewMode === 'table' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <TableCellsIcon className="h-4 w-4" /> Table
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={() => onViewModeChange('board')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
                   viewMode === 'board' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
-              </button>
+              </motion.button>
               {/* Staff toggle hidden intentionally */}
             </div>
           )}
@@ -657,8 +744,39 @@ export default function IncidentTable({
             </div>
           ) : (
         <>
-          {/* Enhanced Mobile Card Layout */}
-          <div ref={tableContainerRef} className="md:hidden mt-6 space-y-4 px-2 border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-hidden scroll-smooth" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+          {/* Enhanced Mobile Card Layout with Pull-to-Refresh */}
+          <div 
+            ref={tableContainerRef} 
+            className="md:hidden mt-6 space-y-4 px-2 border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-hidden scroll-smooth relative" 
+            style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Pull-to-Refresh Indicator */}
+            <AnimatePresence>
+              {pullToRefreshDistance > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center py-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-700"
+                  style={{ transform: `translateY(${pullToRefreshDistance}px)` }}
+                >
+                  <motion.div
+                    animate={{ rotate: isRefreshing ? 360 : 0 }}
+                    transition={{ duration: isRefreshing ? 1 : 0, repeat: isRefreshing ? Infinity : 0 }}
+                    className="flex items-center gap-2 text-blue-600 dark:text-blue-400"
+                  >
+                    <ArrowPathIcon className="h-5 w-5" />
+                    <span className="text-sm font-medium">
+                      {isRefreshing ? 'Refreshing...' : 'Pull to refresh'}
+                    </span>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Enhanced Mobile Table Header */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] flex items-center px-4 py-3 text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
               <div className="basis-[28%]">Log #</div>
@@ -668,7 +786,7 @@ export default function IncidentTable({
             </div>
             
             {sortedIncidents.map((incident) => (
-              <div
+              <motion.div
                 key={incident.id}
                 className={`bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${getRowStyle(incident)} ${
                   isHighPriorityAndOpen(incident) 
@@ -679,8 +797,12 @@ export default function IncidentTable({
                   ...(isHighPriorityAndOpen(incident) && {
                     boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                     animation: 'pulse-glow 3s ease-in-out infinite'
-                  })
+                  }),
+                  transform: swipedIncidentId === incident.id ? `translateX(${swipeOffset}px)` : 'translateX(0)'
                 }}
+                onTouchStart={(e) => handleTouchStart(e, incident.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 onClick={(e) => {
                   // Only expand/collapse if not clicking on a button
                   if (!(e.target as HTMLElement).closest('button')) {
@@ -705,6 +827,8 @@ export default function IncidentTable({
                     }
                   }
                 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -733,16 +857,18 @@ export default function IncidentTable({
                           Logged
                         </span>
                       ) : (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer shadow-sm transition-all duration-200 ${
+                        <motion.span
+                          className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer shadow-sm transition-all duration-200 touch-target ${
                             incident.is_closed 
                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
                               : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
                           }`}
                           onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                         >
                           {incident.is_closed ? 'Closed' : 'Open'}
-                        </span>
+                        </motion.span>
                       )}
                     </div>
                   </div>
@@ -770,7 +896,7 @@ export default function IncidentTable({
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
             
 
@@ -895,16 +1021,18 @@ export default function IncidentTable({
                           Logged
                         </span>
                       ) : (
-                        <button
+                        <motion.button
                           onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                          className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 ${
+                          className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 touch-target ${
                             incident.is_closed 
                               ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
                               : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
                           }`}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                         >
                           {incident.is_closed ? 'Closed' : 'Open'}
-                        </button>
+                        </motion.button>
                       )}
                     </div>
                   </div>

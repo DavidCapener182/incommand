@@ -3,7 +3,7 @@
 // npm install react-chartjs-2 chart.js
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -150,11 +150,21 @@ function getChartTextColor() {
 
 export default function AnalyticsPage() {
   const [activeSection, setActiveSection] = useState('overview');
+  
+  // Debug function to log section changes
+  const handleSectionChange = (sectionId: string) => {
+    console.log('Section change requested:', sectionId);
+    setActiveSection(sectionId);
+  };
+  
+  // Debug: log current active section
+  console.log('Current active section:', activeSection);
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [incidentData, setIncidentData] = useState<IncidentRecord[]>([]);
   const [eventDetails, setEventDetails] = useState<EventRecord | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [noCurrentEvent, setNoCurrentEvent] = useState(false);
   const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [predictions, setPredictions] = useState<{ likelyType: string | null; likelyLocation: string | null; likelyHour: string | null }>({ likelyType: null, likelyLocation: null, likelyHour: null });
   const [debrief, setDebrief] = useState<DebriefData>({});
@@ -189,18 +199,64 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
-      // Get current event
-      const { data: event } = await supabase
-        .from('events')
-        .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance')
-        .eq('is_current', true)
-        .single();
-      if (!event) {
-        setLoading(false);
-        return;
-      }
-      setEventDetails(event as EventRecord);
-      setEventId(event.id);
+      setNoCurrentEvent(false);
+      
+      try {
+        // Test database connection first
+        console.log('Testing database connection...');
+        const { data: testData, error: testError } = await supabase
+          .from('events')
+          .select('count')
+          .limit(1);
+        
+        console.log('Database connection test:', { testData, testError });
+        
+        // Get current event - try without company_id filter first
+        console.log('Fetching current event...');
+        let { data: event, error } = await supabase
+          .from('events')
+          .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
+          .eq('is_current', true)
+          .single();
+        
+        console.log('Event query result:', { event, error });
+        
+        // If that fails, try to get any event
+        if (error || !event) {
+          console.log('Trying to get any event...');
+          const { data: anyEvent, error: anyEventError } = await supabase
+            .from('events')
+            .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
+            .limit(1)
+            .single();
+          
+          console.log('Any event query result:', { anyEvent, anyEventError });
+          
+          if (anyEvent) {
+            event = anyEvent;
+            error = null;
+          }
+        }
+        
+        if (error || !event) {
+          console.error('No current event found:', error);
+          
+          // Let's check if there are any events at all in the database
+          console.log('Checking for any events in database...');
+          const { data: allEvents, error: allEventsError } = await supabase
+            .from('events')
+            .select('id, event_date, is_current')
+            .limit(5);
+          
+          console.log('All events in database:', { allEvents, allEventsError });
+          
+          setNoCurrentEvent(true);
+          setLoading(false);
+          return;
+        }
+        
+        setEventDetails(event as EventRecord);
+        setEventId(event.id);
 
       // Fetch data for the current event
       const { data: records } = await supabase
@@ -265,9 +321,14 @@ export default function AnalyticsPage() {
       }
       
       setLoading(false);
-    };
-    fetchAnalytics();
-  }, []);
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      setNoCurrentEvent(true);
+      setLoading(false);
+    }
+  };
+  fetchAnalytics();
+}, []);
 
   // Real-time subscriptions for attendance_records and incident_logs
   useEffect(() => {
@@ -985,12 +1046,80 @@ export default function AnalyticsPage() {
     )
   }
 
+  if (noCurrentEvent) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-900 dark:via-blue-950/40 dark:to-indigo-950/30 transition-colors duration-300">
+        <IconSidebar
+          navigation={navigation}
+          activeItem={activeSection}
+          onItemClick={setActiveSection}
+          title="Analytics"
+        />
+        
+        <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
+                </div>
+                <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
+              </div>
+            </div>
+            
+            {/* No Current Event Message */}
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center max-w-md mx-auto">
+                <div className="mb-6">
+                  <div className="mx-auto w-24 h-24 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mb-4">
+                    <ExclamationTriangleIcon className="w-12 h-12 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No Active Event Found</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    There is currently no active event set up in the system. Analytics data will be available once an event is marked as current.
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">What you can do:</h3>
+                    <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                      <li>• Check if an event exists in the Events section</li>
+                      <li>• Mark an existing event as current</li>
+                      <li>• Create a new event and set it as current</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={() => window.location.href = '/events'}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+                    >
+                      Go to Events
+                    </button>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+                    >
+                      Refresh Page
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-900 dark:via-blue-950/40 dark:to-indigo-950/30 transition-colors duration-300">
       <IconSidebar
         navigation={navigation}
         activeItem={activeSection}
-        onItemClick={setActiveSection}
+        onItemClick={handleSectionChange}
         title="Analytics"
         sectionStatus={sectionStatus}
         quickActions={quickActions}
@@ -1000,13 +1129,17 @@ export default function AnalyticsPage() {
       <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
-                          <div>
-                <div className="flex items-center gap-3">
-                  <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
-                </div>
-                <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
               </div>
+              <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
+              {/* Debug: Show current active section */}
+              <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Current section: <span className="font-semibold">{activeSection}</span>
+              </div>
+            </div>
           </div>
 
         {/* Dashboard Overview - Show all content */}

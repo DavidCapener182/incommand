@@ -1,621 +1,710 @@
 import { supabase } from './supabase';
-import { PatternRecognitionEngine, IncidentPattern, RiskFactor } from './patternRecognition';
-import { getWeatherData } from '../services/weatherService';
+import { logger } from './logger';
 
 export interface RiskScore {
   overallScore: number;
-  weatherScore: number;
-  crowdScore: number;
-  timeScore: number;
-  locationScore: number;
-  eventPhaseScore: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
   contributingFactors: RiskFactor[];
-  validUntil: Date;
+  lastUpdated: Date;
   confidence: number;
+}
+
+export interface RiskFactor {
+  factorType: 'crowd_density' | 'weather' | 'incident_frequency' | 'staff_levels' | 'time_of_day' | 'location' | 'event_type';
+  factorValue: FactorValue;
+  weight: number;
+  impact: 'positive' | 'negative' | 'neutral';
+  description: string;
+}
+
+export interface FactorValue {
+  condition?: string;
+  densityRange?: string;
+  timeSlot?: string;
+  location?: string;
+  value?: number;
+  threshold?: number;
 }
 
 export interface LocationRiskScore {
   location: string;
   riskScore: number;
-  incidentTypes: string[];
-  contributingFactors: string[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  factors: RiskFactor[];
   lastIncident?: Date;
+  incidentCount: number;
+  averageSeverity: number;
 }
 
 export interface IncidentTypeRisk {
   incidentType: string;
   riskScore: number;
-  probability: number;
-  contributingFactors: string[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  frequency: number;
+  averageSeverity: number;
+  lastOccurrence?: Date;
+  trend: 'increasing' | 'decreasing' | 'stable';
 }
 
-export interface RiskWeights {
-  weather: number;
-  crowd: number;
-  time: number;
-  location: number;
-  eventPhase: number;
+export interface RiskThresholds {
+  crowdDensity: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  incidentFrequency: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  responseTime: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  staffLevels: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
 }
-
-export const DEFAULT_RISK_WEIGHTS: RiskWeights = {
-  weather: 0.25,
-  crowd: 0.30,
-  time: 0.20,
-  location: 0.15,
-  eventPhase: 0.10
-};
 
 export class RiskScoringEngine {
   private eventId: string;
-  private patternEngine: PatternRecognitionEngine;
-  private customWeights: RiskWeights | null;
+  private thresholds: RiskThresholds;
+  private riskScores: Map<string, RiskScore> = new Map();
 
-  constructor(eventId: string, customWeights?: RiskWeights) {
+  constructor(eventId: string) {
     this.eventId = eventId;
-    this.patternEngine = new PatternRecognitionEngine(eventId);
-    this.customWeights = customWeights || null;
+    this.thresholds = {
+      crowdDensity: {
+        low: 50,
+        medium: 70,
+        high: 85,
+        critical: 95
+      },
+      incidentFrequency: {
+        low: 2,
+        medium: 5,
+        high: 10,
+        critical: 15
+      },
+      responseTime: {
+        low: 2,
+        medium: 5,
+        high: 10,
+        critical: 15
+      },
+      staffLevels: {
+        low: 0.1,
+        medium: 0.05,
+        high: 0.02,
+        critical: 0.01
+      }
+    };
   }
 
   async calculateOverallRiskScore(): Promise<RiskScore> {
     try {
-      // Get current conditions
-      const currentTime = new Date();
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-      const riskFactors = await this.patternEngine.identifyRiskFactors();
-      
-      // Calculate individual risk scores
-      const weatherScore = await this.getWeatherRiskScore();
-      const crowdScore = await this.getCrowdDensityRiskScore();
-      const timeScore = this.getTimeBasedRiskScore(currentTime, patterns);
-      const locationScore = await this.getLocationRiskScore();
-      const eventPhaseScore = await this.getEventPhaseRiskScore(currentTime);
+      logger.info('Calculating overall risk score', { eventId: this.eventId });
 
-      // Get weights (custom or default)
-      const weights = await this.getRiskWeights();
+      const factors: RiskFactor[] = [];
 
-      const overallScore = (
-        weatherScore * weights.weather +
-        crowdScore * weights.crowd +
-        timeScore * weights.time +
-        locationScore * weights.location +
-        eventPhaseScore * weights.eventPhase
-      );
+      // Crowd density risk
+      const crowdDensityRisk = await this.calculateCrowdDensityRisk();
+      factors.push(crowdDensityRisk);
 
-      // Calculate confidence based on data availability
-      const confidence = this.calculateConfidence(patterns, riskFactors);
+      // Weather risk
+      const weatherRisk = await this.calculateWeatherRisk();
+      factors.push(weatherRisk);
+
+      // Incident frequency risk
+      const incidentFrequencyRisk = await this.calculateIncidentFrequencyRisk();
+      factors.push(incidentFrequencyRisk);
+
+      // Staff levels risk
+      const staffLevelsRisk = await this.calculateStaffLevelsRisk();
+      factors.push(staffLevelsRisk);
+
+      // Time of day risk
+      const timeOfDayRisk = this.calculateTimeOfDayRisk();
+      factors.push(timeOfDayRisk);
+
+      // Event type risk
+      const eventTypeRisk = await this.calculateEventTypeRisk();
+      factors.push(eventTypeRisk);
+
+      // Calculate overall score
+      const overallScore = this.calculateWeightedScore(factors);
+      const riskLevel = this.determineRiskLevel(overallScore);
+      const confidence = this.calculateConfidence(factors);
 
       const riskScore: RiskScore = {
-        overallScore: Math.min(overallScore * 100, 100), // Convert to 0-100 scale
-        weatherScore: weatherScore * 100,
-        crowdScore: crowdScore * 100,
-        timeScore: timeScore * 100,
-        locationScore: locationScore * 100,
-        eventPhaseScore: eventPhaseScore * 100,
-        contributingFactors: riskFactors.slice(0, 5), // Top 5 factors
-        validUntil: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+        overallScore,
+        riskLevel,
+        contributingFactors: factors,
+        lastUpdated: new Date(),
         confidence
       };
 
-      // Store the risk score
+      // Store risk score
       await this.storeRiskScore(riskScore);
 
       return riskScore;
+
     } catch (error) {
-      console.error('Error calculating overall risk score:', error);
-      return this.getDefaultRiskScore();
-    }
-  }
-
-  async getWeatherRiskScore(): Promise<number> {
-    try {
-      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
-      if (!weatherData) {
-        return 0;
-      }
-
-      const currentWeather = weatherData;
-      let weatherScore = 0;
-
-      // Temperature risk
-      if (currentWeather.temperature > 30) {
-        weatherScore += 0.4; // High temperature increases medical incidents
-      } else if (currentWeather.temperature < 5) {
-        weatherScore += 0.3; // Low temperature affects crowd behavior
-      }
-
-      // Precipitation risk
-      if (currentWeather.rain && currentWeather.rain > 0) {
-        weatherScore += 0.5; // Rain increases slip/fall incidents
-      }
-
-      // Wind risk
-      if (currentWeather.windSpeed > 20) {
-        weatherScore += 0.3; // High winds increase technical issues
-      }
-
-      // Humidity risk
-      if (currentWeather.humidity > 80) {
-        weatherScore += 0.2; // High humidity affects comfort
-      }
-
-      // Apply historical correlations
-      const weatherCorrelations = await this.patternEngine.analyzeWeatherCorrelations();
-      const matchingCorrelation = weatherCorrelations.find(c => 
-        c.weatherCondition === currentWeather.description?.toLowerCase()
-      );
-
-      if (matchingCorrelation) {
-        weatherScore *= matchingCorrelation.confidence;
-      }
-
-      return Math.min(weatherScore, 1);
-    } catch (error) {
-      console.error('Error calculating weather risk score:', error);
-      return 0.3;
-    }
-  }
-
-  async getCrowdDensityRiskScore(): Promise<number> {
-    try {
-      // Get current crowd density
-      const { data: currentEvent } = await supabase
-        .from('events')
-        .select('current_attendance, max_capacity')
-        .eq('id', this.eventId)
-        .single();
-
-      if (!currentEvent) return 0.3;
-
-      const currentDensity = (currentEvent.current_attendance || 0) / (currentEvent.max_capacity || 1);
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-
-      // Use pattern recognition to analyze crowd density risk
-      return this.patternEngine.crowdDensityRiskAnalysis(currentDensity * 100, patterns);
-    } catch (error) {
-      console.error('Error calculating crowd density risk score:', error);
-      return 0.3;
-    }
-  }
-
-  getTimeBasedRiskScore(currentTime: Date, patterns: IncidentPattern[]): number {
-    return this.patternEngine.calculateTimeBasedRisk(currentTime, patterns);
-  }
-
-  async getLocationRiskScore(): Promise<number> {
-    try {
-      const hotspots = await this.patternEngine.detectLocationHotspots();
-      
-      if (hotspots.length === 0) return 0.3;
-
-      // Calculate average risk score across all locations
-      const totalRisk = hotspots.reduce((sum, hotspot) => sum + hotspot.riskScore, 0);
-      const avgRisk = totalRisk / hotspots.length;
-
-      return Math.min(avgRisk / 100, 1);
-    } catch (error) {
-      console.error('Error calculating location risk score:', error);
-      return 0.3;
-    }
-  }
-
-  async getEventPhaseRiskScore(currentTime: Date): Promise<number> {
-    try {
-      const { data: event } = await supabase
-        .from('events')
-        .select('start_time, end_time, doors_open_time')
-        .eq('id', this.eventId)
-        .single();
-
-      if (!event) return 0.3;
-
-      const startTime = new Date(event.start_time);
-      const endTime = new Date(event.end_time);
-      const doorsOpenTime = event.doors_open_time ? new Date(event.doors_open_time) : null;
-
-      // Determine event phase
-      const phase = this.getEventPhase(currentTime, startTime, endTime, doorsOpenTime);
-      
-      // Risk scores for different phases
-      const phaseRisks = {
-        'pre-event': 0.2,
-        'doors-open': 0.4,
-        'main-event': 0.6,
-        'peak': 0.8,
-        'winding-down': 0.5,
-        'post-event': 0.3
-      };
-
-      return phaseRisks[phase as keyof typeof phaseRisks] || 0.3;
-    } catch (error) {
-      console.error('Error calculating event phase risk score:', error);
-      return 0.3;
+      logger.error('Error calculating overall risk score', { error, eventId: this.eventId });
+      throw error;
     }
   }
 
   async getLocationSpecificRiskScores(): Promise<LocationRiskScore[]> {
     try {
-      const hotspots = await this.patternEngine.detectLocationHotspots();
-      
-      return hotspots.map(hotspot => ({
-        location: hotspot.location,
-        riskScore: hotspot.riskScore,
-        incidentTypes: hotspot.incidentTypes,
-        contributingFactors: this.getContributingFactors(hotspot),
-        lastIncident: hotspot.lastIncident
-      }));
+      const { data: incidents, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', this.eventId)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+
+      if (!incidents || incidents.length === 0) {
+        return [];
+      }
+
+      // Group incidents by location
+      const locationGroups = new Map<string, any[]>();
+      incidents.forEach(incident => {
+        const location = incident.location || 'Unknown';
+        if (!locationGroups.has(location)) {
+          locationGroups.set(location, []);
+        }
+        locationGroups.get(location)!.push(incident);
+      });
+
+      const locationRisks: LocationRiskScore[] = [];
+
+      for (const [location, locationIncidents] of locationGroups) {
+        const riskScore = this.calculateLocationRiskScore(location, locationIncidents);
+        locationRisks.push(riskScore);
+      }
+
+      return locationRisks;
+
     } catch (error) {
-      console.error('Error getting location-specific risk scores:', error);
+      logger.error('Error getting location-specific risk scores', { error, eventId: this.eventId });
       return [];
     }
   }
 
   async getIncidentTypeRiskScores(): Promise<IncidentTypeRisk[]> {
     try {
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-      const riskFactors = await this.patternEngine.identifyRiskFactors();
-      
-      // Get all incident types from patterns
-      const allIncidentTypes = Array.from(new Set(patterns.flatMap(p => p.incidentTypes)));
-      
-      const incidentTypeRisks: IncidentTypeRisk[] = [];
+      const { data: incidents, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', this.eventId)
+        .order('timestamp', { ascending: false });
 
-      for (const incidentType of allIncidentTypes) {
-        const typePatterns = patterns.filter(p => p.incidentTypes.includes(incidentType));
-        const riskScore = this.calculateIncidentTypeRisk(incidentType, typePatterns, riskFactors);
-        const probability = this.calculateIncidentProbability(incidentType, typePatterns);
-        const contributingFactors = this.getIncidentTypeContributingFactors(incidentType, riskFactors);
+      if (error) throw error;
 
-        incidentTypeRisks.push({
-          incidentType,
-          riskScore,
-          probability,
-          contributingFactors
-        });
+      if (!incidents || incidents.length === 0) {
+        return [];
       }
 
-      return incidentTypeRisks.sort((a, b) => b.riskScore - a.riskScore);
+      // Group incidents by type
+      const typeGroups = new Map<string, any[]>();
+      incidents.forEach(incident => {
+        const incidentType = incident.incident_type;
+        if (!typeGroups.has(incidentType)) {
+          typeGroups.set(incidentType, []);
+        }
+        typeGroups.get(incidentType)!.push(incident);
+      });
+
+      const typeRisks: IncidentTypeRisk[] = [];
+
+      for (const [incidentType, typeIncidents] of typeGroups) {
+        const riskScore = this.calculateIncidentTypeRiskScore(incidentType, typeIncidents);
+        typeRisks.push(riskScore);
+      }
+
+      return typeRisks;
+
     } catch (error) {
-      console.error('Error getting incident type risk scores:', error);
+      logger.error('Error getting incident type risk scores', { error, eventId: this.eventId });
       return [];
     }
   }
 
-  async updateRiskScores(): Promise<void> {
+  private async calculateCrowdDensityRisk(): Promise<RiskFactor> {
     try {
-      // Clear expired risk scores
-      await this.clearExpiredRiskScores();
+      const { data: event } = await supabase
+        .from('events')
+        .select('current_attendance, max_capacity')
+        .eq('id', this.eventId)
+        .single();
 
-      // Calculate new risk scores
-      const overallRisk = await this.calculateOverallRiskScore();
-      const locationRisks = await this.getLocationSpecificRiskScores();
-      const incidentTypeRisks = await this.getIncidentTypeRiskScores();
+      if (!event) {
+        return this.createDefaultRiskFactor('crowd_density', 'No event data available');
+      }
 
-      // Store all risk scores
-      await this.storeRiskScores(overallRisk, locationRisks, incidentTypeRisks);
+      const currentAttendance = event.current_attendance || 0;
+      const maxCapacity = event.max_capacity || 1000;
+      const densityPercentage = (currentAttendance / maxCapacity) * 100;
+
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+      let weight: number;
+
+      if (densityPercentage >= this.thresholds.crowdDensity.critical) {
+        riskLevel = 'critical';
+        weight = 0.4;
+      } else if (densityPercentage >= this.thresholds.crowdDensity.high) {
+        riskLevel = 'high';
+        weight = 0.3;
+      } else if (densityPercentage >= this.thresholds.crowdDensity.medium) {
+        riskLevel = 'medium';
+        weight = 0.2;
+      } else {
+        riskLevel = 'low';
+        weight = 0.1;
+      }
+
+      return {
+        factorType: 'crowd_density',
+        factorValue: {
+          densityRange: `${densityPercentage.toFixed(1)}%`,
+          value: densityPercentage,
+          threshold: this.thresholds.crowdDensity[riskLevel]
+        },
+        weight,
+        impact: 'negative',
+        description: `Current crowd density is ${densityPercentage.toFixed(1)}% of capacity`
+      };
+
     } catch (error) {
-      console.error('Error updating risk scores:', error);
+      logger.error('Error calculating crowd density risk', { error });
+      return this.createDefaultRiskFactor('crowd_density', 'Error calculating crowd density');
     }
+  }
+
+  private async calculateWeatherRisk(): Promise<RiskFactor> {
+    try {
+      // Simulate weather data - in a real implementation, this would fetch from a weather API
+      const weatherConditions = {
+        temperature: 22,
+        humidity: 65,
+        precipitation: 0,
+        windSpeed: 15,
+        condition: 'Partly Cloudy'
+      };
+
+      let riskScore = 0;
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
+      let weight = 0.15;
+
+      // Temperature risk
+      if (weatherConditions.temperature > 30 || weatherConditions.temperature < 5) {
+        riskScore += 0.3;
+        riskLevel = 'medium';
+      }
+
+      // Precipitation risk
+      if (weatherConditions.precipitation > 0) {
+        riskScore += 0.4;
+        riskLevel = 'high';
+      }
+
+      // Wind risk
+      if (weatherConditions.windSpeed > 25) {
+        riskScore += 0.2;
+        if (riskLevel === 'low') riskLevel = 'medium';
+      }
+
+      return {
+        factorType: 'weather',
+        factorValue: {
+          condition: weatherConditions.condition,
+          value: riskScore
+        },
+        weight,
+        impact: 'negative',
+        description: `Weather conditions: ${weatherConditions.condition}, ${weatherConditions.temperature}°C`
+      };
+
+    } catch (error) {
+      logger.error('Error calculating weather risk', { error });
+      return this.createDefaultRiskFactor('weather', 'Error calculating weather risk');
+    }
+  }
+
+  private async calculateIncidentFrequencyRisk(): Promise<RiskFactor> {
+    try {
+      const { data: incidents, error } = await supabase
+        .from('incident_logs')
+        .select('*')
+        .eq('event_id', this.eventId)
+        .gte('timestamp', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()); // Last 2 hours
+
+      if (error) throw error;
+
+      const incidentCount = incidents?.length || 0;
+      const hoursElapsed = 2;
+      const incidentsPerHour = incidentCount / hoursElapsed;
+
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+      let weight: number;
+
+      if (incidentsPerHour >= this.thresholds.incidentFrequency.critical) {
+        riskLevel = 'critical';
+        weight = 0.35;
+      } else if (incidentsPerHour >= this.thresholds.incidentFrequency.high) {
+        riskLevel = 'high';
+        weight = 0.25;
+      } else if (incidentsPerHour >= this.thresholds.incidentFrequency.medium) {
+        riskLevel = 'medium';
+        weight = 0.15;
+      } else {
+        riskLevel = 'low';
+        weight = 0.1;
+      }
+
+      return {
+        factorType: 'incident_frequency',
+        factorValue: {
+          value: incidentsPerHour,
+          threshold: this.thresholds.incidentFrequency[riskLevel]
+        },
+        weight,
+        impact: 'negative',
+        description: `${incidentCount} incidents in the last ${hoursElapsed} hours (${incidentsPerHour.toFixed(1)} per hour)`
+      };
+
+    } catch (error) {
+      logger.error('Error calculating incident frequency risk', { error });
+      return this.createDefaultRiskFactor('incident_frequency', 'Error calculating incident frequency');
+    }
+  }
+
+  private async calculateStaffLevelsRisk(): Promise<RiskFactor> {
+    try {
+      // Simulate staff level data - in a real implementation, this would come from staff management system
+      const totalStaff = 25;
+      const currentAttendance = 800;
+      const staffToAttendeeRatio = totalStaff / currentAttendance;
+
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+      let weight: number;
+
+      if (staffToAttendeeRatio <= this.thresholds.staffLevels.critical) {
+        riskLevel = 'critical';
+        weight = 0.3;
+      } else if (staffToAttendeeRatio <= this.thresholds.staffLevels.high) {
+        riskLevel = 'high';
+        weight = 0.25;
+      } else if (staffToAttendeeRatio <= this.thresholds.staffLevels.medium) {
+        riskLevel = 'medium';
+        weight = 0.2;
+      } else {
+        riskLevel = 'low';
+        weight = 0.15;
+      }
+
+      return {
+        factorType: 'staff_levels',
+        factorValue: {
+          value: staffToAttendeeRatio,
+          threshold: this.thresholds.staffLevels[riskLevel]
+        },
+        weight,
+        impact: 'negative',
+        description: `Staff ratio: 1 staff per ${(1 / staffToAttendeeRatio).toFixed(0)} attendees`
+      };
+
+    } catch (error) {
+      logger.error('Error calculating staff levels risk', { error });
+      return this.createDefaultRiskFactor('staff_levels', 'Error calculating staff levels');
+    }
+  }
+
+  private calculateTimeOfDayRisk(): RiskFactor {
+    const currentHour = new Date().getHours();
+    let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
+    let weight = 0.1;
+
+    // Higher risk during evening hours when alcohol consumption and crowd fatigue increase
+    if (currentHour >= 22 || currentHour <= 2) {
+      riskLevel = 'high';
+      weight = 0.2;
+    } else if (currentHour >= 20 || currentHour <= 4) {
+      riskLevel = 'medium';
+      weight = 0.15;
+    }
+
+    return {
+      factorType: 'time_of_day',
+      factorValue: {
+        timeSlot: `${currentHour}:00`,
+        value: currentHour
+      },
+      weight,
+      impact: 'negative',
+      description: `Current time: ${currentHour}:00`
+    };
+  }
+
+  private async calculateEventTypeRisk(): Promise<RiskFactor> {
+    try {
+      const { data: event } = await supabase
+        .from('events')
+        .select('event_type')
+        .eq('id', this.eventId)
+        .single();
+
+      if (!event?.event_type) {
+        return this.createDefaultRiskFactor('event_type', 'Unknown event type');
+      }
+
+      // Different event types have different inherent risk levels
+      const eventTypeRisks: { [key: string]: { riskLevel: 'low' | 'medium' | 'high' | 'critical'; weight: number } } = {
+        'concert': { riskLevel: 'high', weight: 0.25 },
+        'sports': { riskLevel: 'medium', weight: 0.2 },
+        'festival': { riskLevel: 'high', weight: 0.3 },
+        'conference': { riskLevel: 'low', weight: 0.1 },
+        'exhibition': { riskLevel: 'low', weight: 0.1 },
+        'party': { riskLevel: 'high', weight: 0.25 },
+        'wedding': { riskLevel: 'low', weight: 0.1 }
+      };
+
+      const eventRisk = eventTypeRisks[event.event_type] || { riskLevel: 'medium', weight: 0.15 };
+
+      return {
+        factorType: 'event_type',
+        factorValue: {
+          condition: event.event_type
+        },
+        weight: eventRisk.weight,
+        impact: 'negative',
+        description: `Event type: ${event.event_type}`
+      };
+
+    } catch (error) {
+      logger.error('Error calculating event type risk', { error });
+      return this.createDefaultRiskFactor('event_type', 'Error calculating event type risk');
+    }
+  }
+
+  private calculateLocationRiskScore(location: string, incidents: any[]): LocationRiskScore {
+    const incidentCount = incidents.length;
+    const lastIncident = incidents.length > 0 ? new Date(incidents[0].timestamp) : undefined;
+    
+    // Calculate average severity
+    const severityScores = incidents.map(incident => {
+      switch (incident.priority?.toLowerCase()) {
+        case 'high': return 3;
+        case 'medium': return 2;
+        case 'low': return 1;
+        default: return 1;
+      }
+    });
+    
+    const averageSeverity = severityScores.length > 0 
+      ? severityScores.reduce((sum, score) => sum + score, 0) / severityScores.length 
+      : 0;
+
+    // Calculate risk score based on incident count and severity
+    const riskScore = Math.min(100, (incidentCount * averageSeverity * 10));
+    const riskLevel = this.determineRiskLevel(riskScore);
+
+    // Generate risk factors
+    const factors: RiskFactor[] = [
+      {
+        factorType: 'location',
+        factorValue: { location },
+        weight: 0.3,
+        impact: 'negative',
+        description: `${incidentCount} incidents at this location`
+      }
+    ];
+
+    return {
+      location,
+      riskScore,
+      riskLevel,
+      factors,
+      lastIncident,
+      incidentCount,
+      averageSeverity
+    };
+  }
+
+  private calculateIncidentTypeRiskScore(incidentType: string, incidents: any[]): IncidentTypeRisk {
+    const frequency = incidents.length;
+    const lastOccurrence = incidents.length > 0 ? new Date(incidents[0].timestamp) : undefined;
+    
+    // Calculate average severity
+    const severityScores = incidents.map(incident => {
+      switch (incident.priority?.toLowerCase()) {
+        case 'high': return 3;
+        case 'medium': return 2;
+        case 'low': return 1;
+        default: return 1;
+      }
+    });
+    
+    const averageSeverity = severityScores.length > 0 
+      ? severityScores.reduce((sum, score) => sum + score, 0) / severityScores.length 
+      : 0;
+
+    // Calculate risk score
+    const riskScore = Math.min(100, (frequency * averageSeverity * 8));
+    const riskLevel = this.determineRiskLevel(riskScore);
+
+    // Determine trend (simplified - in real implementation, this would analyze historical data)
+    const trend: 'increasing' | 'decreasing' | 'stable' = 
+      frequency > 5 ? 'increasing' : frequency > 2 ? 'stable' : 'decreasing';
+
+    return {
+      incidentType,
+      riskScore,
+      riskLevel,
+      frequency,
+      averageSeverity,
+      lastOccurrence,
+      trend
+    };
+  }
+
+  private calculateWeightedScore(factors: RiskFactor[]): number {
+    let totalScore = 0;
+    let totalWeight = 0;
+
+    factors.forEach(factor => {
+      const factorScore = this.calculateFactorScore(factor);
+      totalScore += factorScore * factor.weight;
+      totalWeight += factor.weight;
+    });
+
+    return totalWeight > 0 ? totalScore / totalWeight : 0;
+  }
+
+  private calculateFactorScore(factor: RiskFactor): number {
+    const factorValue = factor.factorValue.value || 0;
+    
+    switch (factor.factorType) {
+      case 'crowd_density':
+        return Math.min(100, factorValue);
+      case 'weather':
+        return Math.min(100, factorValue * 100);
+      case 'incident_frequency':
+        return Math.min(100, factorValue * 10);
+      case 'staff_levels':
+        return Math.min(100, (1 - factorValue) * 100);
+      case 'time_of_day':
+        return factorValue >= 22 || factorValue <= 2 ? 80 : factorValue >= 20 || factorValue <= 4 ? 50 : 20;
+      case 'event_type':
+        return 50; // Default score for event type
+      default:
+        return 50;
+    }
+  }
+
+  private determineRiskLevel(score: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (score >= 80) return 'critical';
+    if (score >= 60) return 'high';
+    if (score >= 40) return 'medium';
+    return 'low';
+  }
+
+  private calculateConfidence(factors: RiskFactor[]): number {
+    // Calculate confidence based on data availability and quality
+    let confidence = 0.8;
+    
+    factors.forEach(factor => {
+      if (factor.factorValue.value === undefined || factor.factorValue.value === null) {
+        confidence -= 0.1;
+      }
+    });
+
+    return Math.max(0.3, Math.min(1, confidence));
+  }
+
+  private createDefaultRiskFactor(
+    factorType: RiskFactor['factorType'], 
+    description: string
+  ): RiskFactor {
+    return {
+      factorType,
+      factorValue: {},
+      weight: 0.1,
+      impact: 'neutral',
+      description
+    };
   }
 
   private async storeRiskScore(riskScore: RiskScore): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('risk_scores')
-        .insert({
-          event_id: this.eventId,
-          risk_score: riskScore.overallScore,
-          contributing_factors: riskScore.contributingFactors,
-          valid_until: riskScore.validUntil.toISOString()
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error storing risk score:', error);
-    }
-  }
-
-  private async storeRiskScores(
-    overallRisk: RiskScore,
-    locationRisks: LocationRiskScore[],
-    incidentTypeRisks: IncidentTypeRisk[]
-  ): Promise<void> {
-    try {
-      const riskScoreData = [
-        // Overall risk score
-        {
-          event_id: this.eventId,
-          risk_score: overallRisk.overallScore,
-          contributing_factors: overallRisk.contributingFactors,
-          valid_until: overallRisk.validUntil.toISOString()
-        },
-        // Location-specific risk scores
-        ...locationRisks.map(location => ({
-          event_id: this.eventId,
-          location: location.location,
-          risk_score: location.riskScore,
-          contributing_factors: {
-            incidentTypes: location.incidentTypes,
-            factors: location.contributingFactors
-          },
-          valid_until: new Date(Date.now() + 15 * 60 * 1000).toISOString()
-        })),
-        // Incident type risk scores
-        ...incidentTypeRisks.map(incident => ({
-          event_id: this.eventId,
-          incident_type: incident.incidentType,
-          risk_score: incident.riskScore * 100,
-          contributing_factors: {
-            probability: incident.probability,
-            factors: incident.contributingFactors
-          },
-          valid_until: new Date(Date.now() + 15 * 60 * 1000).toISOString()
-        }))
-      ];
+      const riskData = {
+        event_id: this.eventId,
+        overall_score: riskScore.overallScore,
+        risk_level: riskScore.riskLevel,
+        contributing_factors: riskScore.contributingFactors,
+        confidence: riskScore.confidence,
+        last_updated: riskScore.lastUpdated.toISOString()
+      };
 
       const { error } = await supabase
         .from('risk_scores')
-        .insert(riskScoreData);
+        .upsert(riskData, { onConflict: 'event_id' });
 
       if (error) throw error;
+
+      logger.info('Stored risk score', { 
+        eventId: this.eventId, 
+        score: riskScore.overallScore,
+        level: riskScore.riskLevel
+      });
+
     } catch (error) {
-      console.error('Error storing risk scores:', error);
+      logger.error('Error storing risk score', { error, eventId: this.eventId });
+      throw error;
     }
   }
 
-  private async clearExpiredRiskScores(): Promise<void> {
+  async getRiskHistory(): Promise<RiskScore[]> {
     try {
-      const { error } = await supabase
+      const { data: riskHistory, error } = await supabase
         .from('risk_scores')
-        .delete()
-        .lt('valid_until', new Date().toISOString());
+        .select('*')
+        .eq('event_id', this.eventId)
+        .order('last_updated', { ascending: false })
+        .limit(10);
 
       if (error) throw error;
-    } catch (error) {
-      console.error('Error clearing expired risk scores:', error);
-    }
-  }
 
-  private getEventPhase(
-    currentTime: Date,
-    startTime: Date,
-    endTime: Date,
-    doorsOpenTime: Date | null
-  ): string {
-    const timeDiff = currentTime.getTime() - startTime.getTime();
-    const eventDuration = endTime.getTime() - startTime.getTime();
-    const progress = timeDiff / eventDuration;
-
-    if (doorsOpenTime && currentTime < doorsOpenTime) {
-      return 'pre-event';
-    } else if (doorsOpenTime && currentTime >= doorsOpenTime && currentTime < startTime) {
-      return 'doors-open';
-    } else if (progress < 0.2) {
-      return 'main-event';
-    } else if (progress < 0.8) {
-      return 'peak';
-    } else if (progress < 1) {
-      return 'winding-down';
-    } else {
-      return 'post-event';
-    }
-  }
-
-  private calculateConfidence(patterns: IncidentPattern[], riskFactors: RiskFactor[]): number {
-    const patternConfidence = Math.min(patterns.length / 50, 1); // More patterns = higher confidence
-    const factorConfidence = Math.min(riskFactors.length / 10, 1); // More factors = higher confidence
-    
-    return (patternConfidence + factorConfidence) / 2;
-  }
-
-  private getContributingFactors(hotspot: any): string[] {
-    const factors: string[] = [];
-    
-    if (hotspot.incidentCount > 5) factors.push('High incident frequency');
-    if (hotspot.incidentTypes.includes('medical')) factors.push('Medical incident hotspot');
-    if (hotspot.incidentTypes.includes('security')) factors.push('Security incident hotspot');
-    if (hotspot.riskScore > 70) factors.push('Critical risk level');
-    
-    return factors;
-  }
-
-  private calculateIncidentTypeRisk(
-    incidentType: string,
-    patterns: IncidentPattern[],
-    riskFactors: RiskFactor[]
-  ): number {
-    if (patterns.length === 0) return 0.3;
-
-    const typePatterns = patterns.filter(p => p.incidentTypes.includes(incidentType));
-    const avgIncidentCount = typePatterns.reduce((sum, p) => sum + p.incidentCount, 0) / typePatterns.length;
-    
-    // Normalize based on incident type severity
-    const severityWeights = {
-      'medical': 1.5,
-      'security': 1.3,
-      'technical': 1.0,
-      'lost_property': 0.7,
-      'welfare': 1.2
-    };
-
-    const weight = severityWeights[incidentType as keyof typeof severityWeights] || 1.0;
-    return Math.min((avgIncidentCount * weight) / 10, 1);
-  }
-
-  private calculateIncidentProbability(incidentType: string, patterns: IncidentPattern[]): number {
-    if (patterns.length === 0) return 0.1;
-
-    const typePatterns = patterns.filter(p => p.incidentTypes.includes(incidentType));
-    const totalPatterns = patterns.length;
-    
-    return typePatterns.length / totalPatterns;
-  }
-
-  private getIncidentTypeContributingFactors(incidentType: string, riskFactors: RiskFactor[]): string[] {
-    const factors: string[] = [];
-    
-    // Check weather factors
-    const weatherFactors = riskFactors.filter(f => f.factorType === 'weather');
-    weatherFactors.forEach(factor => {
-      if (factor.factorValue.affectedTypes?.includes(incidentType)) {
-        factors.push(`${factor.factorValue.condition} conditions`);
-      }
-    });
-
-    // Check crowd factors
-    const crowdFactors = riskFactors.filter(f => f.factorType === 'crowd');
-    crowdFactors.forEach(factor => {
-      if (factor.weight > 0.5) {
-        factors.push(`High crowd density (${factor.factorValue.densityRange})`);
-      }
-    });
-
-    return factors;
-  }
-
-  private getDefaultRiskScore(): RiskScore {
-    return {
-      overallScore: 30,
-      weatherScore: 30,
-      crowdScore: 30,
-      timeScore: 30,
-      locationScore: 30,
-      eventPhaseScore: 30,
-      contributingFactors: [],
-      validUntil: new Date(Date.now() + 15 * 60 * 1000),
-      confidence: 0.3
-    };
-  }
-
-  /**
-   * Get risk weights for the event, either from custom configuration or database
-   */
-  private async getRiskWeights(): Promise<RiskWeights> {
-    // If custom weights were provided in constructor, use them
-    if (this.customWeights) {
-      return this.customWeights;
-    }
-
-    try {
-      // Try to get weights from database
-      const { data: eventData, error } = await supabase
-        .from('events')
-        .select('risk_weights')
-        .eq('id', this.eventId)
-        .single();
-
-      if (error || !eventData?.risk_weights) {
-        return DEFAULT_RISK_WEIGHTS;
-      }
-
-      const storedWeights = eventData.risk_weights as RiskWeights;
-      
-      // Validate the stored weights
-      if (this.validateRiskWeights(storedWeights)) {
-        return storedWeights;
-      } else {
-        console.warn('Invalid risk weights found in database, using defaults');
-        return DEFAULT_RISK_WEIGHTS;
-      }
-    } catch (error) {
-      console.error('Error fetching risk weights:', error);
-      return DEFAULT_RISK_WEIGHTS;
-    }
-  }
-
-  /**
-   * Validate that risk weights sum to 1.0 and are within valid ranges
-   */
-  private validateRiskWeights(weights: RiskWeights): boolean {
-    const sum = weights.weather + weights.crowd + weights.time + weights.location + weights.eventPhase;
-    
-    // Check if weights sum to 1.0 (with small tolerance for floating point errors)
-    if (Math.abs(sum - 1.0) > 0.01) {
-      return false;
-    }
-
-    // Check if all weights are between 0 and 1
-    const allWeights = [weights.weather, weights.crowd, weights.time, weights.location, weights.eventPhase];
-    return allWeights.every(weight => weight >= 0 && weight <= 1);
-  }
-
-  /**
-   * Set custom risk weights for the event
-   */
-  async setRiskWeights(weights: RiskWeights): Promise<boolean> {
-    try {
-      // Validate the weights
-      if (!this.validateRiskWeights(weights)) {
-        throw new Error('Invalid risk weights: must sum to 1.0 and be between 0 and 1');
-      }
-
-      // Store in database
-      const { error } = await supabase
-        .from('events')
-        .update({ risk_weights: weights })
-        .eq('id', this.eventId);
-
-      if (error) {
-        throw error;
-      }
-
-      // Update local custom weights
-      this.customWeights = weights;
-
-      return true;
-    } catch (error) {
-      console.error('Error setting risk weights:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Reset risk weights to defaults
-   */
-  async resetRiskWeights(): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('events')
-        .update({ risk_weights: null })
-        .eq('id', this.eventId);
-
-      if (error) {
-        throw error;
-      }
-
-      // Clear local custom weights
-      this.customWeights = null;
-
-      return true;
-    } catch (error) {
-      console.error('Error resetting risk weights:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get current risk weights (for display purposes)
-   */
-  async getCurrentRiskWeights(): Promise<RiskWeights> {
-    return await this.getRiskWeights();
-  }
-
-  /**
-   * Get weather risk factors for analysis
-   */
-  async getWeatherRiskFactors(): Promise<any[]> {
-    try {
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-      const weatherCorrelations = await this.patternEngine.analyzeWeatherCorrelations();
-      
-      return weatherCorrelations.map(correlation => ({
-        condition: correlation.weatherCondition,
-        incidentRate: correlation.incidentRate,
-        affectedTypes: correlation.affectedIncidentTypes,
-        confidence: correlation.confidence
+      return (riskHistory || []).map(record => ({
+        overallScore: record.overall_score,
+        riskLevel: record.risk_level,
+        contributingFactors: record.contributing_factors || [],
+        lastUpdated: new Date(record.last_updated),
+        confidence: record.confidence
       }));
+
     } catch (error) {
-      console.error('Error getting weather risk factors:', error);
+      logger.error('Error getting risk history', { error, eventId: this.eventId });
       return [];
     }
+  }
+
+  async updateThresholds(newThresholds: Partial<RiskThresholds>): Promise<void> {
+    this.thresholds = { ...this.thresholds, ...newThresholds };
+    logger.info('Updated risk thresholds', { eventId: this.eventId, thresholds: this.thresholds });
+  }
+
+  getCurrentThresholds(): RiskThresholds {
+    return this.thresholds;
   }
 }

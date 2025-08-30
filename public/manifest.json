@@ -7,9 +7,9 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "theme_color": "#2A3990",
   "orientation": "portrait-primary",
-  "categories": ["business", "productivity", "utilities"],
+  "categories": ["business", "productivity", "utilities", "security"],
   "lang": "en",
   "dir": "ltr",
   "icons": [
@@ -29,6 +29,42 @@
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -57,10 +93,34 @@
       ]
     },
     {
-      "name": "Staff",
+      "name": "Staff Management",
       "short_name": "Staff",
       "description": "Manage staff and assignments",
       "url": "/staff",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "description": "View event analytics",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Manage app settings",
+      "url": "/settings",
       "icons": [
         {
           "src": "/icon.png",
@@ -90,5 +150,42 @@
   },
   "launch_handler": {
     "client_mode": "navigate-existing"
-  }
+  },
+  "handle_links": "preferred",
+  "capture_links": "existing-client-navigate",
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+incommand",
+      "url": "/?action=%s"
+    }
+  ],
+  "scope_extensions": [
+    {
+      "origin": "https://incommand.app"
+    }
+  ],
+  "iarc_rating_id": "",
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "permissions": [
+    "notifications",
+    "geolocation"
+  ]
 } 

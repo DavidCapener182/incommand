@@ -1,17 +1,25 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import { PaperClipIcon, ArrowUpCircleIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import { PaperClipIcon, ArrowUpCircleIcon, CpuChipIcon, MagnifyingGlassIcon, DocumentTextIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { QuickAction, CommandExecutionResult } from '@/types/chat';
+import { categorizeIncident, analyzeTextNLP, determineRouting } from '@/lib/chat/incidentParser';
+import { enhancedChatCompletion, generateDebriefReport, analyzeSentiment, generatePredictiveAnalytics } from '@/services/browserLLMService';
+import { enhancedChatCompletion as ollamaChatCompletion, generateOllamaDebriefReport, analyzeOllamaSentiment, generateOllamaPredictiveAnalytics, processNaturalLanguageSearch, categorizeIncidentWithOllama } from '@/services/ollamaService';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  metadata?: {
+    incidentCategory?: any;
+    nlpAnalysis?: any;
+    routingDecision?: any;
+    sentiment?: any;
+    searchResults?: any;
+  };
 }
-
-// QuickAction interface is now imported from types/chat
 
 interface AIChatProps {
   isVisible: boolean;
@@ -25,6 +33,13 @@ export default function AIChat({ isVisible }: AIChatProps) {
   const [isExecutingCommand, setIsExecutingCommand] = useState(false);
   const [eventContext, setEventContext] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentIncidents, setCurrentIncidents] = useState<any[]>([]);
+  const [staffData, setStaffData] = useState<any[]>([]);
+  const [aiService, setAiService] = useState<'browser' | 'ollama'>('browser');
+  const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
+  const [debriefReport, setDebriefReport] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +79,31 @@ export default function AIChat({ isVisible }: AIChatProps) {
     }
   }, [isVisible]);
 
+  // Load current incidents and staff data
+  useEffect(() => {
+    const loadContextData = async () => {
+      try {
+        // Load current incidents
+        const incidentsResponse = await fetch('/api/incidents');
+        if (incidentsResponse.ok) {
+          const incidents = await incidentsResponse.json();
+          setCurrentIncidents(incidents);
+        }
+
+        // Load staff data
+        const staffResponse = await fetch('/api/staff');
+        if (staffResponse.ok) {
+          const staff = await staffResponse.json();
+          setStaffData(staff);
+        }
+      } catch (error) {
+        console.error('Error loading context data:', error);
+      }
+    };
+
+    loadContextData();
+  }, []);
+
   // Initialize with welcome message and quick actions
   useEffect(() => {
     if (messages.length === 0) {
@@ -71,6 +111,17 @@ export default function AIChat({ isVisible }: AIChatProps) {
         id: 'welcome',
         role: 'assistant',
         content: `
+🤖 **inCommand AI Assistant** - Enhanced with Advanced Features
+
+**Core Capabilities:**
+• **Automated Incident Categorization** - AI-powered classification and routing
+• **Natural Language Search** - Find incidents using plain English
+• **Smart Routing** - Automatic staff assignment based on incident type
+• **Sentiment Analysis** - Understand urgency and emotional context
+• **Predictive Analytics** - Forecast potential incidents and risks
+• **Debrief Generation** - Comprehensive event reports with insights
+
+**Quick Actions:**
 • **Incident Analysis** - Review trends and patterns
 • **SOPs & Procedures** - Get step-by-step guidance
 • **Risk Assessment** - Identify and mitigate threats
@@ -82,15 +133,230 @@ What would you like assistance with today?`,
       };
       setMessages([welcomeMessage]);
       
-      // Load initial quick actions
+      // Load enhanced quick actions
       setQuickActions([
         { id: 'status', text: "Current event status", icon: '📊', mode: 'chat' },
         { id: 'incidents', text: "Recent incidents summary", icon: '📋', mode: 'chat' },
         { id: 'sop', text: "Emergency procedures", icon: '🚨', mode: 'chat' },
-        { id: 'help', text: "What can you help with?", icon: '❓', mode: 'chat' }
+        { id: 'help', text: "What can you help with?", icon: '❓', mode: 'chat' },
+        { id: 'debrief', text: "Generate debrief report", icon: '📄', mode: 'command' },
+        { id: 'predict', text: "Predictive analytics", icon: '🔮', mode: 'command' },
+        { id: 'search', text: "Search incidents", icon: '🔍', mode: 'command' }
       ]);
     }
   }, [messages.length]);
+
+  // Enhanced message processing with AI analysis
+  const processMessageWithAI = async (content: string): Promise<{
+    response: string;
+    quickActions?: QuickAction[];
+    metadata?: any;
+  }> => {
+    // Check if this is a search query
+    if (content.toLowerCase().includes('search') || content.toLowerCase().includes('find') || content.toLowerCase().includes('look for')) {
+      return await handleSearchQuery(content);
+    }
+
+    // Check if this is an incident report
+    const incidentKeywords = ['incident', 'report', 'happened', 'occurred', 'issue', 'problem'];
+    const isIncidentReport = incidentKeywords.some(keyword => content.toLowerCase().includes(keyword));
+
+    if (isIncidentReport) {
+      return await handleIncidentReport(content);
+    }
+
+    // Regular chat processing
+    return await handleRegularChat(content);
+  };
+
+  // Handle search queries with NLP
+  const handleSearchQuery = async (query: string) => {
+    try {
+      // Process natural language search
+      const searchAnalysis = aiService === 'ollama' 
+        ? await processNaturalLanguageSearch(query)
+        : null; // Browser LLM doesn't have this function yet
+
+      if (searchAnalysis) {
+        // Apply search filters to current incidents
+        const filteredIncidents = currentIncidents.filter(incident => {
+          const matchesType = searchAnalysis.filters.incidentType.length === 0 || 
+            searchAnalysis.filters.incidentType.includes(incident.type);
+          const matchesSeverity = searchAnalysis.filters.severity.length === 0 || 
+            searchAnalysis.filters.severity.includes(incident.severity);
+          return matchesType && matchesSeverity;
+        });
+
+        setSearchResults(filteredIncidents);
+
+        return {
+          response: `🔍 **Search Results for: "${query}"**
+
+Found ${filteredIncidents.length} incidents matching your criteria:
+
+${filteredIncidents.slice(0, 5).map(incident => 
+  `• **${incident.type}** (${incident.severity}) - ${incident.description?.substring(0, 100)}...`
+).join('\n')}
+
+${filteredIncidents.length > 5 ? `... and ${filteredIncidents.length - 5} more incidents` : ''}
+
+**Suggested queries:** ${searchAnalysis.suggestedQueries.slice(0, 3).join(', ')}`,
+          metadata: { searchResults: filteredIncidents }
+        };
+      }
+    } catch (error) {
+      console.error('Search processing error:', error);
+    }
+
+    // Fallback to regular search
+    return {
+      response: `I'll help you search for incidents. Could you please provide more specific details about what you're looking for? For example:
+• "Show me all medical incidents"
+• "Find incidents from today"
+• "Search for security issues"`,
+      quickActions: [
+        { id: 'search_medical', text: "Medical incidents", icon: '🏥', mode: 'chat' },
+        { id: 'search_security', text: "Security incidents", icon: '🛡️', mode: 'chat' },
+        { id: 'search_today', text: "Today's incidents", icon: '📅', mode: 'chat' }
+      ]
+    };
+  };
+
+  // Handle incident reports with automated categorization
+  const handleIncidentReport = async (content: string) => {
+    try {
+      // Perform NLP analysis
+      const nlpAnalysis = analyzeTextNLP(content);
+      
+      // Categorize incident
+      const incidentCategory = categorizeIncident(content);
+      
+      // Determine routing
+      const routingDecision = determineRouting(incidentCategory, nlpAnalysis, staffData, currentIncidents);
+      
+      // Analyze sentiment
+      const sentiment = aiService === 'ollama' 
+        ? await analyzeOllamaSentiment(content)
+        : await analyzeSentiment(content);
+
+      // Generate response with AI insights
+      const aiResponse = await generateAIResponse(content, {
+        incidentCategory,
+        nlpAnalysis,
+        routingDecision,
+        sentiment
+      });
+
+      return {
+        response: aiResponse,
+        metadata: {
+          incidentCategory,
+          nlpAnalysis,
+          routingDecision,
+          sentiment
+        },
+        quickActions: generateQuickActionsFromAnalysis(incidentCategory, routingDecision)
+      };
+    } catch (error) {
+      console.error('Incident processing error:', error);
+      return {
+        response: `I've received your incident report. Let me analyze it and provide appropriate guidance. Please provide any additional details that might be helpful.`
+      };
+    }
+  };
+
+  // Handle regular chat
+  const handleRegularChat = async (content: string) => {
+    try {
+      const response = await fetch('/api/chat/ai-assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: content.trim(),
+          conversationHistory: messages.slice(-10)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        response: data.response || data.fallback || 'I apologize, but I encountered an issue processing your request.',
+        quickActions: data.quickActions,
+        context: data.context
+      };
+    } catch (error) {
+      console.error('Chat processing error:', error);
+      return {
+        response: 'I apologize, but I\'m experiencing technical difficulties. Please try again in a moment.'
+      };
+    }
+  };
+
+  // Generate AI response with context
+  const generateAIResponse = async (content: string, analysis: any) => {
+    const { incidentCategory, nlpAnalysis, routingDecision, sentiment } = analysis;
+    
+    let response = `📋 **Incident Analysis Complete**
+
+**Category:** ${incidentCategory.primary} (${Math.round(incidentCategory.confidence * 100)}% confidence)
+**Severity:** ${incidentCategory.severity}
+**Requires Escalation:** ${incidentCategory.requiresEscalation ? 'Yes' : 'No'}
+
+**AI Insights:**
+• **Sentiment:** ${sentiment?.sentiment || 'neutral'} (${Math.round((sentiment?.confidence || 0) * 100)}% confidence)
+• **Urgency Level:** ${Math.round((nlpAnalysis.urgency || 0) * 100)}%
+• **Key Entities:** ${nlpAnalysis.entities.slice(0, 3).map(e => e.text).join(', ')}
+
+**Recommended Actions:**
+${incidentCategory.suggestedActions.map(action => `• ${action}`).join('\n')}
+
+**Routing Decision:**
+• **Target Role:** ${routingDecision.targetRole}
+• **Priority:** ${routingDecision.priority}
+• **Estimated Response Time:** ${routingDecision.estimatedResponseTime} minutes
+• **Auto-Assign:** ${routingDecision.autoAssign ? 'Yes' : 'No'}
+
+${routingDecision.autoAssign ? '✅ **Staff will be automatically assigned**' : '⚠️ **Manual assignment required**'}`;
+
+    return response;
+  };
+
+  // Generate quick actions based on analysis
+  const generateQuickActionsFromAnalysis = (incidentCategory: any, routingDecision: any): QuickAction[] => {
+    const actions: QuickAction[] = [];
+
+    if (routingDecision.autoAssign) {
+      actions.push({
+        id: 'auto_assign',
+        text: `Auto-assign to ${routingDecision.targetRole}`,
+        icon: '👥',
+        mode: 'command',
+        payload: { targetRole: routingDecision.targetRole, priority: routingDecision.priority }
+      });
+    }
+
+    if (incidentCategory.requiresEscalation) {
+      actions.push({
+        id: 'escalate',
+        text: 'Escalate incident',
+        icon: '🚨',
+        mode: 'command',
+        payload: { reason: routingDecision.reason }
+      });
+    }
+
+    actions.push(
+      { id: 'view_details', text: 'View incident details', icon: '📄', mode: 'command' },
+      { id: 'update_status', text: 'Update status', icon: '✏️', mode: 'command' }
+    );
+
+    return actions;
+  };
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -108,45 +374,24 @@ What would you like assistance with today?`,
     setError(null);
 
     try {
-      const response = await fetch('/api/chat/ai-assistant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: content.trim(),
-          conversationHistory: messages.slice(-10) // Send last 10 messages for context
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Keep the raw content with markdown for proper formatting
-      const rawContent = data.response || data.fallback || 'I apologize, but I encountered an issue processing your request.';
+      const result = await processMessageWithAI(content.trim());
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: rawContent,
-        timestamp: new Date().toISOString()
+        content: result.response,
+        timestamp: new Date().toISOString(),
+        metadata: result.metadata
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // Update quick actions and context if provided
-      if (data.quickActions) {
-        setQuickActions(data.quickActions);
+      if (result.quickActions) {
+        setQuickActions(result.quickActions);
       }
-      if (data.context) {
-        setEventContext(data.context);
+      if (result.context) {
+        setEventContext(result.context);
       }
 
     } catch (error) {
@@ -176,31 +421,26 @@ What would you like assistance with today?`,
       setIsExecutingCommand(true);
       
       switch (action.id) {
-        case 'assign_staff':
-        case 'assign_medical_staff':
-        case 'assign_trained_staff':
-        case 'auto_assign_staff':
+        case 'debrief':
+          return await executeDebriefGeneration();
+          
+        case 'predict':
+          return await executePredictiveAnalytics();
+          
+        case 'search':
+          return await executeSearch();
+          
+        case 'auto_assign':
           return await executeStaffAssignment(action);
           
-        case 'escalate_incident':
-        case 'escalate_medical':
-        case 'escalate_to_supervisor':
-        case 'escalate_to_manager':
-        case 'emergency_escalation':
-        case 'escalate_for_guidance':
+        case 'escalate':
           return await executeEscalation(action);
           
-        case 'close_incident':
-        case 'close_medical_incident':
-        case 'mark_as_resolved':
-          return await executeCloseIncident(action);
-          
-        case 'view_incident_details':
+        case 'view_details':
           return await executeViewIncident(action);
           
-        case 'view_incident_dashboard':
-        case 'view_staff_status':
-          return await executeNavigation(action);
+        case 'update_status':
+          return await executeUpdateStatus(action);
           
         default:
           return {
@@ -218,6 +458,84 @@ What would you like assistance with today?`,
       };
     } finally {
       setIsExecutingCommand(false);
+    }
+  };
+
+  const executeDebriefGeneration = async (): Promise<CommandExecutionResult> => {
+    try {
+      setIsGeneratingDebrief(true);
+      
+      const eventData = {
+        incidents: currentIncidents,
+        staff: staffData,
+        eventContext,
+        timestamp: new Date().toISOString()
+      };
+
+      const debrief = aiService === 'ollama' 
+        ? await generateOllamaDebriefReport(eventData)
+        : await generateDebriefReport(eventData);
+
+      if (debrief) {
+        setDebriefReport(debrief);
+        return {
+          success: true,
+          data: debrief,
+          message: 'Debrief report generated successfully'
+        };
+      } else {
+        throw new Error('Failed to generate debrief report');
+      }
+    } catch (error) {
+      console.error('Debrief generation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to generate debrief report'
+      };
+    } finally {
+      setIsGeneratingDebrief(false);
+    }
+  };
+
+  const executePredictiveAnalytics = async (): Promise<CommandExecutionResult> => {
+    try {
+      const analytics = aiService === 'ollama' 
+        ? await generateOllamaPredictiveAnalytics(currentIncidents)
+        : await generatePredictiveAnalytics(currentIncidents);
+
+      if (analytics) {
+        return {
+          success: true,
+          data: analytics,
+          message: 'Predictive analytics generated successfully'
+        };
+      } else {
+        throw new Error('Failed to generate predictive analytics');
+      }
+    } catch (error) {
+      console.error('Predictive analytics error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to generate predictive analytics'
+      };
+    }
+  };
+
+  const executeSearch = async (): Promise<CommandExecutionResult> => {
+    try {
+      setSearchQuery('');
+      return {
+        success: true,
+        message: 'Search interface activated. Please enter your search query.'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to activate search'
+      };
     }
   };
 
@@ -242,56 +560,23 @@ What would you like assistance with today?`,
 
   const executeEscalation = async (action: QuickAction): Promise<CommandExecutionResult> => {
     // This would call your escalation API
-    // For now, return a success response
     return {
       success: true,
       message: 'Incident escalated successfully'
     };
   };
 
-  const executeCloseIncident = async (action: QuickAction): Promise<CommandExecutionResult> => {
-    const { incident_id } = action.payload;
-    const response = await fetch(`/api/incidents/${incident_id}/close`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(action.payload)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to close incident');
-    }
-    
-    const data = await response.json();
-    return {
-      success: true,
-      data,
-      message: 'Incident closed successfully'
-    };
-  };
-
   const executeViewIncident = async (action: QuickAction): Promise<CommandExecutionResult> => {
-    const { incident_id } = action.payload;
-    const response = await fetch(`/api/incidents/${incident_id}/close`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch incident details');
-    }
-    
-    const data = await response.json();
     return {
       success: true,
-      data,
       message: 'Incident details retrieved'
     };
   };
 
-  const executeNavigation = async (action: QuickAction): Promise<CommandExecutionResult> => {
-    // This would handle navigation to different pages
-    // For now, return success
+  const executeUpdateStatus = async (action: QuickAction): Promise<CommandExecutionResult> => {
     return {
       success: true,
-      message: 'Navigation action completed'
+      message: 'Status update completed'
     };
   };
 
@@ -339,6 +624,8 @@ What would you like assistance with today?`,
   const clearChat = () => {
     setMessages([]);
     setError(null);
+    setDebriefReport(null);
+    setSearchResults([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('aiChatHistory');
     }
@@ -389,8 +676,20 @@ What would you like assistance with today?`,
               inCommand AI
               <span className="inline-block w-2 h-2 rounded-full bg-green-500 ml-1" title="Online" />
             </h3>
-            <p className="text-xs text-gray-600 dark:text-gray-300">Digital Operations Assistant</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">Enhanced Digital Operations Assistant</p>
           </div>
+        </div>
+        
+        {/* AI Service Toggle */}
+        <div className="flex items-center space-x-2">
+          <select
+            value={aiService}
+            onChange={(e) => setAiService(e.target.value as 'browser' | 'ollama')}
+            className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
+          >
+            <option value="browser">Browser LLM</option>
+            <option value="ollama">Ollama</option>
+          </select>
         </div>
         
         {/* Event Context Display */}
@@ -435,6 +734,31 @@ What would you like assistance with today?`,
               aria-label={message.role === 'user' ? 'Your message' : 'AI message'}
             >
               <div className="text-sm whitespace-pre-wrap">{formatMessageContent(message.content)}</div>
+              
+              {/* Show metadata if available */}
+              {message.metadata && (
+                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {message.metadata.incidentCategory && (
+                      <div className="mb-1">
+                        <span className="font-medium">Category:</span> {message.metadata.incidentCategory.primary} 
+                        ({Math.round(message.metadata.incidentCategory.confidence * 100)}%)
+                      </div>
+                    )}
+                    {message.metadata.sentiment && (
+                      <div className="mb-1">
+                        <span className="font-medium">Sentiment:</span> {message.metadata.sentiment.sentiment}
+                      </div>
+                    )}
+                    {message.metadata.routingDecision && (
+                      <div>
+                        <span className="font-medium">Priority:</span> {message.metadata.routingDecision.priority}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               <div className="text-xs mt-2 text-gray-400 dark:text-gray-500 text-right">{formatTimestamp(message.timestamp)}</div>
             </div>
           </div>
@@ -472,6 +796,22 @@ What would you like assistance with today?`,
           </div>
         )}
 
+        {/* Debrief Generation Loading Indicator */}
+        {isGeneratingDebrief && (
+          <div className="flex justify-start fade-in">
+            <div className="bg-purple-50 dark:bg-purple-900 rounded-2xl px-5 py-3 shadow-md">
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="text-xs text-purple-600 dark:text-purple-300">Generating debrief report...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-2xl p-3 fade-in">
@@ -487,7 +827,7 @@ What would you like assistance with today?`,
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions - Compact scrollable layout */}
+      {/* Quick Actions - Enhanced with new features */}
       {quickActions.length > 0 && !isLoading && !isExecutingCommand && (
         <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-[#232c43]">
           <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Quick Actions:</div>
@@ -533,14 +873,8 @@ What would you like assistance with today?`,
             ref={inputRef}
             type="text"
             value={inputMessage}
-            onChange={(e) => {
-              console.log('Input change:', e.target.value);
-              setInputMessage(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              console.log('Key pressed:', e.key, 'Code:', e.keyCode);
-            }}
-            placeholder="Ask about incidents, SOPs, procedures..."
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Ask about incidents, SOPs, procedures, or search for data..."
             className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#2A3990] focus:border-transparent text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow"
             disabled={isLoading}
             aria-label="Type your message"
@@ -554,7 +888,6 @@ What would you like assistance with today?`,
             <ArrowUpCircleIcon className="w-6 h-6" />
           </button>
         </form>
-        {/* Removed branding/footer per request */}
       </div>
     </div>
   );

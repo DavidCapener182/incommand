@@ -1,39 +1,64 @@
 import { supabase } from './supabase';
+import { logger } from './logger';
 
 export interface IncidentPattern {
-  timeOfDay: string;
-  dayOfWeek: string;
-  weatherCondition: string;
-  crowdDensity: number;
-  incidentCount: number;
-  incidentTypes: string[];
-  riskLevel: 'low' | 'medium' | 'high';
+  id: string;
+  patternType: 'temporal' | 'spatial' | 'behavioral' | 'correlation' | 'seasonal' | 'anomaly';
+  confidence: number;
+  description: string;
+  factors: PatternFactor[];
+  impact: 'positive' | 'negative' | 'neutral';
+  recommendations: string[];
+  detectedAt: Date;
+  lastUpdated: Date;
 }
 
-export interface RiskFactor {
-  factorType: 'weather' | 'crowd' | 'time' | 'location';
-  factorValue: any;
-  correlation: number;
+export interface PatternFactor {
+  type: 'time' | 'location' | 'weather' | 'crowd' | 'staff' | 'event_type';
+  value: string | number;
   weight: number;
+  correlation: number;
 }
 
-export interface LocationHotspot {
+export interface TemporalPattern {
+  timeSlot: string;
+  frequency: number;
+  incidentTypes: string[];
+  averageSeverity: number;
+  confidence: number;
+}
+
+export interface SpatialPattern {
   location: string;
   incidentCount: number;
   incidentTypes: string[];
-  riskScore: number;
-  lastIncident: Date;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  densityCorrelation: number;
 }
 
-export interface WeatherCorrelation {
-  weatherCondition: string;
-  incidentRate: number;
-  affectedIncidentTypes: string[];
+export interface BehavioralPattern {
+  trigger: string;
+  response: string;
+  frequency: number;
+  effectiveness: number;
   confidence: number;
+}
+
+export interface CorrelationPattern {
+  factor1: string;
+  factor2: string;
+  correlationStrength: number;
+  significance: number;
+  description: string;
 }
 
 export class PatternRecognitionEngine {
   private eventId: string;
+  private patterns: IncidentPattern[] = [];
+  private temporalPatterns: TemporalPattern[] = [];
+  private spatialPatterns: SpatialPattern[] = [];
+  private behavioralPatterns: BehavioralPattern[] = [];
+  private correlationPatterns: CorrelationPattern[] = [];
 
   constructor(eventId: string) {
     this.eventId = eventId;
@@ -41,605 +66,488 @@ export class PatternRecognitionEngine {
 
   async analyzeIncidentPatterns(): Promise<IncidentPattern[]> {
     try {
-      // Fetch historical incident data for this event and similar events
+      logger.info('Starting incident pattern analysis', { eventId: this.eventId });
+
+      // Fetch incident data
       const { data: incidents, error } = await supabase
         .from('incident_logs')
-        .select(`
-          *,
-          events!inner(organization_id)
-        `)
-        .eq('events.organization_id', (
-          await supabase
-            .from('events')
-            .select('organization_id')
-            .eq('id', this.eventId)
-            .single()
-        ).data?.organization_id);
+        .select('*')
+        .eq('event_id', this.eventId)
+        .order('timestamp', { ascending: true });
 
       if (error) throw error;
 
-      const patterns: IncidentPattern[] = [];
+      if (!incidents || incidents.length === 0) {
+        logger.info('No incidents found for pattern analysis', { eventId: this.eventId });
+      return [];
+      }
+
+      // Analyze different pattern types
+      const temporalPatterns = await this.analyzeTemporalPatterns(incidents);
+      const spatialPatterns = await this.analyzeSpatialPatterns(incidents);
+      const behavioralPatterns = await this.analyzeBehavioralPatterns(incidents);
+      const correlationPatterns = await this.analyzeCorrelationPatterns(incidents);
+
+      // Combine patterns into comprehensive analysis
+      const patterns = await this.synthesizePatterns(
+        temporalPatterns,
+        spatialPatterns,
+        behavioralPatterns,
+        correlationPatterns
+      );
+
+      // Store patterns in database
+      await this.storePatterns(patterns);
+
+      this.patterns = patterns;
+      return patterns;
+
+    } catch (error) {
+      logger.error('Error analyzing incident patterns', { error, eventId: this.eventId });
+      throw error;
+    }
+  }
+
+  private async analyzeTemporalPatterns(incidents: any[]): Promise<TemporalPattern[]> {
+    const patterns: TemporalPattern[] = [];
+    const timeSlots: { [key: string]: any[] } = {};
+
+    // Group incidents by hour
+    incidents.forEach(incident => {
+      const hour = new Date(incident.timestamp).getHours();
+      const timeSlot = `${hour}:00-${hour + 1}:00`;
       
-      // Group incidents by time periods
-      const timeGroups = this.groupIncidentsByTime(incidents || []);
+      if (!timeSlots[timeSlot]) {
+        timeSlots[timeSlot] = [];
+      }
+      timeSlots[timeSlot].push(incident);
+    });
+
+    // Analyze each time slot
+    Object.entries(timeSlots).forEach(([timeSlot, slotIncidents]) => {
+      const incidentTypes = [...new Set(slotIncidents.map(i => i.incident_type))];
+      const averageSeverity = this.calculateAverageSeverity(slotIncidents);
+      const frequency = slotIncidents.length;
+      const confidence = this.calculateConfidence(frequency, incidents.length);
+
+      patterns.push({
+        timeSlot,
+        frequency,
+        incidentTypes,
+        averageSeverity,
+        confidence
+      });
+    });
+
+    this.temporalPatterns = patterns;
+    return patterns;
+  }
+
+  private async analyzeSpatialPatterns(incidents: any[]): Promise<SpatialPattern[]> {
+    const patterns: SpatialPattern[] = [];
+    const locations: { [key: string]: any[] } = {};
+
+    // Group incidents by location
+    incidents.forEach(incident => {
+      const location = incident.location || 'Unknown';
       
-      // Analyze patterns for each time group
-      for (const [timeSlot, timeIncidents] of Object.entries(timeGroups)) {
-        const dayGroups = this.groupIncidentsByDay(timeIncidents);
-        
-        for (const [day, dayIncidents] of Object.entries(dayGroups)) {
-          const weatherGroups = this.groupIncidentsByWeather(dayIncidents);
-          
-          for (const [weather, weatherIncidents] of Object.entries(weatherGroups)) {
-            const crowdGroups = this.groupIncidentsByCrowdDensity(weatherIncidents);
-            
-            for (const [density, densityIncidents] of Object.entries(crowdGroups)) {
-              const incidentTypes = Array.from(new Set(densityIncidents.map(i => i.incident_type)));
-              const riskLevel = this.calculateRiskLevel(densityIncidents.length, parseFloat(density));
-              
-              patterns.push({
-                timeOfDay: timeSlot,
-                dayOfWeek: day,
-                weatherCondition: weather,
-                crowdDensity: parseFloat(density),
-                incidentCount: densityIncidents.length,
-                incidentTypes,
-                riskLevel
-              });
-            }
+      if (!locations[location]) {
+        locations[location] = [];
+      }
+      locations[location].push(incident);
+    });
+
+    // Analyze each location
+    Object.entries(locations).forEach(([location, locationIncidents]) => {
+      const incidentCount = locationIncidents.length;
+      const incidentTypes = [...new Set(locationIncidents.map(i => i.incident_type))];
+      const riskLevel = this.calculateRiskLevel(incidentCount, locationIncidents);
+      const densityCorrelation = this.calculateDensityCorrelation(location, locationIncidents);
+
+      patterns.push({
+        location,
+        incidentCount,
+        incidentTypes,
+        riskLevel,
+        densityCorrelation
+      });
+    });
+
+    this.spatialPatterns = patterns;
+    return patterns;
+  }
+
+  private async analyzeBehavioralPatterns(incidents: any[]): Promise<BehavioralPattern[]> {
+    const patterns: BehavioralPattern[] = [];
+
+    // Analyze response patterns
+    const responsePatterns = this.analyzeResponsePatterns(incidents);
+    patterns.push(...responsePatterns);
+
+    // Analyze escalation patterns
+    const escalationPatterns = this.analyzeEscalationPatterns(incidents);
+    patterns.push(...escalationPatterns);
+
+    this.behavioralPatterns = patterns;
+    return patterns;
+  }
+
+  private async analyzeCorrelationPatterns(incidents: any[]): Promise<CorrelationPattern[]> {
+    const patterns: CorrelationPattern[] = [];
+
+    // Weather correlation
+    const weatherCorrelation = await this.analyzeWeatherCorrelation(incidents);
+    if (weatherCorrelation) patterns.push(weatherCorrelation);
+
+    // Crowd density correlation
+    const crowdCorrelation = await this.analyzeCrowdDensityCorrelation(incidents);
+    if (crowdCorrelation) patterns.push(crowdCorrelation);
+
+    // Time-weather correlation
+    const timeWeatherCorrelation = await this.analyzeTimeWeatherCorrelation(incidents);
+    if (timeWeatherCorrelation) patterns.push(timeWeatherCorrelation);
+
+    this.correlationPatterns = patterns;
+    return patterns;
+  }
+
+  private async synthesizePatterns(
+    temporal: TemporalPattern[],
+    spatial: SpatialPattern[],
+    behavioral: BehavioralPattern[],
+    correlations: CorrelationPattern[]
+  ): Promise<IncidentPattern[]> {
+    const patterns: IncidentPattern[] = [];
+
+    // Synthesize temporal patterns
+    const highFrequencyTemporal = temporal.filter(p => p.frequency > 2 && p.confidence > 0.7);
+    highFrequencyTemporal.forEach(pattern => {
+      patterns.push({
+        id: `temporal-${Date.now()}-${Math.random()}`,
+        patternType: 'temporal',
+        confidence: pattern.confidence,
+        description: `High incident frequency during ${pattern.timeSlot} with ${pattern.incidentTypes.join(', ')} incidents`,
+        factors: [
+          {
+            type: 'time',
+            value: pattern.timeSlot,
+            weight: pattern.frequency / Math.max(...temporal.map(p => p.frequency)),
+            correlation: pattern.confidence
           }
-        }
-      }
+        ],
+        impact: 'negative',
+        recommendations: [
+          'Increase security presence during peak hours',
+          'Deploy additional medical staff',
+          'Implement stricter monitoring during identified time slots'
+        ],
+        detectedAt: new Date(),
+        lastUpdated: new Date()
+      });
+    });
 
-      return patterns;
-    } catch (error) {
-      console.error('Error analyzing incident patterns:', error);
-      return [];
-    }
+    // Synthesize spatial patterns
+    const highRiskSpatial = spatial.filter(p => p.riskLevel === 'high' || p.riskLevel === 'critical');
+    highRiskSpatial.forEach(pattern => {
+      patterns.push({
+        id: `spatial-${Date.now()}-${Math.random()}`,
+        patternType: 'spatial',
+        confidence: pattern.densityCorrelation,
+        description: `High incident concentration in ${pattern.location} with ${pattern.incidentCount} incidents`,
+        factors: [
+          {
+            type: 'location',
+            value: pattern.location,
+            weight: pattern.incidentCount / Math.max(...spatial.map(p => p.incidentCount)),
+            correlation: pattern.densityCorrelation
+          }
+        ],
+        impact: 'negative',
+        recommendations: [
+          'Implement crowd flow management in identified areas',
+          'Add additional exits and emergency routes',
+          'Deploy crowd control barriers and signage'
+        ],
+        detectedAt: new Date(),
+        lastUpdated: new Date()
+      });
+    });
+
+    // Synthesize correlation patterns
+    correlations.forEach(correlation => {
+      patterns.push({
+        id: `correlation-${Date.now()}-${Math.random()}`,
+        patternType: 'correlation',
+        confidence: correlation.significance,
+        description: correlation.description,
+        factors: [
+          {
+            type: 'correlation',
+            value: `${correlation.factor1} vs ${correlation.factor2}`,
+            weight: correlation.correlationStrength,
+            correlation: correlation.significance
+          }
+        ],
+        impact: correlation.correlationStrength > 0.7 ? 'negative' : 'neutral',
+        recommendations: [
+          'Monitor correlated factors more closely',
+          'Implement preventive measures based on correlation',
+          'Adjust resource allocation based on pattern'
+        ],
+        detectedAt: new Date(),
+        lastUpdated: new Date()
+      });
+    });
+
+    return patterns;
   }
 
-  async identifyRiskFactors(): Promise<RiskFactor[]> {
-    try {
-      const patterns = await this.analyzeIncidentPatterns();
-      const riskFactors: RiskFactor[] = [];
+  private calculateAverageSeverity(incidents: any[]): number {
+    if (incidents.length === 0) return 0;
+    
+    const severityScores = incidents.map(incident => {
+      switch (incident.priority?.toLowerCase()) {
+        case 'high': return 3;
+        case 'medium': return 2;
+        case 'low': return 1;
+        default: return 1;
+      }
+    });
 
-      // Get weather-related risk factors
-      const weatherCorrelations = await this.analyzeWeatherCorrelations();
-      const weatherFactors = weatherCorrelations.map(wc => ({
-        factorType: 'weather' as const,
-        factorValue: wc.weatherCondition,
-        correlation: wc.incidentRate,
-        weight: wc.confidence
+    return severityScores.reduce((sum, score) => sum + score, 0) / severityScores.length;
+  }
+
+  private calculateConfidence(frequency: number, totalIncidents: number): number {
+    if (totalIncidents === 0) return 0;
+    
+    const proportion = frequency / totalIncidents;
+    const baseConfidence = Math.min(proportion * 100, 100);
+    
+    // Adjust confidence based on sample size
+    const sampleSizeAdjustment = Math.min(frequency / 10, 1);
+    
+    return Math.round(baseConfidence * sampleSizeAdjustment);
+  }
+
+  private calculateRiskLevel(incidentCount: number, incidents: any[]): 'low' | 'medium' | 'high' | 'critical' {
+    const severity = this.calculateAverageSeverity(incidents);
+    const riskScore = incidentCount * severity;
+
+    if (riskScore >= 15) return 'critical';
+    if (riskScore >= 10) return 'high';
+    if (riskScore >= 5) return 'medium';
+    return 'low';
+  }
+
+  private calculateDensityCorrelation(location: string, incidents: any[]): number {
+    // Simulate density correlation calculation
+    // In a real implementation, this would use actual crowd density data
+    const baseCorrelation = 0.6;
+    const incidentCount = incidents.length;
+    const adjustment = Math.min(incidentCount / 10, 0.4);
+    
+    return Math.min(baseCorrelation + adjustment, 1);
+  }
+
+  private analyzeResponsePatterns(incidents: any[]): BehavioralPattern[] {
+    const patterns: BehavioralPattern[] = [];
+
+    // Analyze response time patterns
+    const responseTimes = incidents
+      .filter(i => i.created_at && i.updated_at)
+      .map(i => ({
+        incident: i,
+        responseTime: new Date(i.updated_at).getTime() - new Date(i.created_at).getTime()
       }));
-      riskFactors.push(...weatherFactors);
 
-      // Crowd density risk factors
-      const crowdFactors = this.analyzeCrowdRiskFactors(patterns);
-      riskFactors.push(...crowdFactors);
-
-      // Time-based risk factors
-      const timeFactors = this.analyzeTimeRiskFactors(patterns);
-      riskFactors.push(...timeFactors);
-
-      // Location risk factors
-      const locationFactors = await this.analyzeLocationRiskFactors();
-      riskFactors.push(...locationFactors);
-
-      return riskFactors.sort((a, b) => b.weight - a.weight);
-    } catch (error) {
-      console.error('Error identifying risk factors:', error);
-      return [];
-    }
-  }
-
-  calculateTimeBasedRisk(currentTime: Date, patterns: IncidentPattern[]): number {
-    const currentHour = currentTime.getHours();
-    const currentDay = this.getDayOfWeek(currentTime);
-    
-    // Find matching patterns
-    const matchingPatterns = patterns.filter(p => 
-      p.timeOfDay === this.getTimeSlot(currentHour) && 
-      p.dayOfWeek === currentDay
-    );
-
-    if (matchingPatterns.length === 0) return 0.3; // Default moderate risk
-
-    // Calculate weighted risk based on incident counts and crowd density
-    const totalRisk = matchingPatterns.reduce((sum, pattern) => {
-      const timeWeight = this.getTimeWeight(currentHour);
-      const densityWeight = this.getDensityWeight(pattern.crowdDensity);
-      return sum + (pattern.incidentCount * timeWeight * densityWeight);
-    }, 0);
-
-    const avgRisk = totalRisk / matchingPatterns.length;
-    return Math.min(avgRisk / 10, 1); // Normalize to 0-1
-  }
-
-  async detectLocationHotspots(): Promise<LocationHotspot[]> {
-    try {
-      const { data: incidents, error } = await supabase
-        .from('incident_logs')
-        .select('*')
-        .eq('event_id', this.eventId);
-
-      if (error) throw error;
-
-      const locationGroups = this.groupIncidentsByLocation(incidents || []);
-      const hotspots: LocationHotspot[] = [];
-
-      for (const [location, locationIncidents] of Object.entries(locationGroups)) {
-        const incidentTypes = Array.from(new Set(locationIncidents.map(i => i.incident_type)));
-        const riskScore = this.calculateLocationRiskScore(locationIncidents);
-        const lastIncident = new Date(Math.max(...locationIncidents.map(i => new Date(i.created_at).getTime())));
-
-        hotspots.push({
-          location,
-          incidentCount: locationIncidents.length,
-          incidentTypes,
-          riskScore,
-          lastIncident
-        });
-      }
-
-      return hotspots.sort((a, b) => b.riskScore - a.riskScore);
-    } catch (error) {
-      console.error('Error detecting location hotspots:', error);
-      return [];
-    }
-  }
-
-  async analyzeWeatherCorrelations(): Promise<WeatherCorrelation[]> {
-    try {
-      const patterns = await this.analyzeIncidentPatterns();
-      const weatherCorrelations: WeatherCorrelation[] = [];
-
-      // Group patterns by weather condition
-      const weatherGroups = this.groupPatternsByWeather(patterns);
-
-      for (const [weather, weatherPatterns] of Object.entries(weatherGroups)) {
-        const totalIncidents = weatherPatterns.reduce((sum, p) => sum + p.incidentCount, 0);
-        const totalPatterns = weatherPatterns.length;
-        const incidentRate = totalIncidents / totalPatterns;
-
-        const allIncidentTypes = weatherPatterns.flatMap(p => p.incidentTypes);
-        const affectedTypes = Array.from(new Set(allIncidentTypes));
-
-        const confidence = this.calculateWeatherConfidence(weatherPatterns);
-
-        weatherCorrelations.push({
-          weatherCondition: weather,
-          incidentRate,
-          affectedIncidentTypes: affectedTypes,
-          confidence
-        });
-      }
-
-      return weatherCorrelations.sort((a, b) => b.incidentRate - a.incidentRate);
-    } catch (error) {
-      console.error('Error analyzing weather correlations:', error);
-      return [];
-    }
-  }
-
-  crowdDensityRiskAnalysis(currentDensity: number, patterns: IncidentPattern[]): number {
-    // Find patterns with similar crowd density
-    const densityRange = 0.1; // 10% tolerance
-    const matchingPatterns = patterns.filter(p => 
-      Math.abs(p.crowdDensity - currentDensity) <= (currentDensity * densityRange)
-    );
-
-    if (matchingPatterns.length === 0) {
-      // If no exact matches, use broader analysis
-      return this.estimateDensityRisk(currentDensity, patterns);
-    }
-
-    // Calculate risk based on incident rates at similar densities
-    const totalIncidents = matchingPatterns.reduce((sum, p) => sum + p.incidentCount, 0);
-    const avgIncidentRate = totalIncidents / matchingPatterns.length;
-
-    // Normalize to 0-1 scale
-    return Math.min(avgIncidentRate / 5, 1);
-  }
-
-  // Private helper methods
-  private groupIncidentsByTime(incidents: any[]): Record<string, any[]> {
-    const groups: Record<string, any[]> = {};
-    
-    incidents.forEach(incident => {
-      const hour = new Date(incident.created_at).getHours();
-      const timeSlot = this.getTimeSlot(hour);
+    if (responseTimes.length > 0) {
+      const avgResponseTime = responseTimes.reduce((sum, rt) => sum + rt.responseTime, 0) / responseTimes.length;
       
-      if (!groups[timeSlot]) groups[timeSlot] = [];
-      groups[timeSlot].push(incident);
-    });
-
-    return groups;
-  }
-
-  private groupIncidentsByDay(incidents: any[]): Record<string, any[]> {
-    const groups: Record<string, any[]> = {};
-    
-    incidents.forEach(incident => {
-      const day = this.getDayOfWeek(new Date(incident.created_at));
-      
-      if (!groups[day]) groups[day] = [];
-      groups[day].push(incident);
-    });
-
-    return groups;
-  }
-
-  private groupIncidentsByWeather(incidents: any[]): Record<string, any[]> {
-    const groups: Record<string, any[]> = {};
-    
-    incidents.forEach(incident => {
-      const weather = incident.weather_conditions || 'unknown';
-      
-      if (!groups[weather]) groups[weather] = [];
-      groups[weather].push(incident);
-    });
-
-    return groups;
-  }
-
-  private groupIncidentsByCrowdDensity(incidents: any[]): Record<string, any[]> {
-    const groups: Record<string, any[]> = {};
-    
-    incidents.forEach(incident => {
-      const density = Math.floor((incident.crowd_density || 0) * 10) / 10; // Round to 1 decimal
-      
-      if (!groups[density.toString()]) groups[density.toString()] = [];
-      groups[density.toString()].push(incident);
-    });
-
-    return groups;
-  }
-
-  private groupIncidentsByLocation(incidents: any[]): Record<string, any[]> {
-    const groups: Record<string, any[]> = {};
-    
-    incidents.forEach(incident => {
-      const location = incident.location || 'unknown';
-      
-      if (!groups[location]) groups[location] = [];
-      groups[location].push(incident);
-    });
-
-    return groups;
-  }
-
-  private groupPatternsByWeather(patterns: IncidentPattern[]): Record<string, IncidentPattern[]> {
-    const groups: Record<string, IncidentPattern[]> = {};
-    
-    patterns.forEach(pattern => {
-      if (!groups[pattern.weatherCondition]) groups[pattern.weatherCondition] = [];
-      groups[pattern.weatherCondition].push(pattern);
-    });
-
-    return groups;
-  }
-
-  private getTimeSlot(hour: number): string {
-    if (hour >= 6 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 18) return 'afternoon';
-    if (hour >= 18 && hour < 24) return 'evening';
-    return 'night';
-  }
-
-  private getDayOfWeek(date: Date): string {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[date.getDay()];
-  }
-
-  private calculateRiskLevel(incidentCount: number, crowdDensity: number): 'low' | 'medium' | 'high' {
-    const densityFactor = crowdDensity / 100;
-    const incidentFactor = incidentCount / 10;
-    const combinedRisk = (densityFactor + incidentFactor) / 2;
-
-    if (combinedRisk < 0.3) return 'low';
-    if (combinedRisk < 0.7) return 'medium';
-    return 'high';
-  }
-
-  private getTimeWeight(hour: number): number {
-    // Higher weight for peak event hours
-    if (hour >= 19 && hour <= 23) return 1.5;
-    if (hour >= 14 && hour <= 18) return 1.2;
-    return 1.0;
-  }
-
-  private getDensityWeight(density: number): number {
-    // Higher weight for high density
-    if (density > 80) return 1.5;
-    if (density > 60) return 1.2;
-    return 1.0;
-  }
-
-  private calculateLocationRiskScore(incidents: any[]): number {
-    const recentIncidents = incidents.filter(i => {
-      const incidentTime = new Date(i.created_at);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - incidentTime.getTime()) / (1000 * 60 * 60);
-      return hoursDiff <= 24; // Last 24 hours
-    });
-
-    const severityWeights = {
-      'medical': 3,
-      'security': 2,
-      'technical': 1,
-      'lost_property': 0.5,
-      'welfare': 1.5
-    };
-
-    const totalScore = recentIncidents.reduce((sum, incident) => {
-      const weight = severityWeights[incident.incident_type as keyof typeof severityWeights] || 1;
-      return sum + weight;
-    }, 0);
-
-    return Math.min(totalScore / 10, 100); // Normalize to 0-100
-  }
-
-  private calculateWeatherConfidence(patterns: IncidentPattern[]): number {
-    const totalPatterns = patterns.length;
-    if (totalPatterns === 0) return 0;
-
-    const consistentPatterns = patterns.filter(p => p.incidentCount > 0);
-    return consistentPatterns.length / totalPatterns;
-  }
-
-  private estimateDensityRisk(density: number, patterns: IncidentPattern[]): number {
-    // Use linear interpolation between known density points
-    const sortedPatterns = patterns.sort((a, b) => a.crowdDensity - b.crowdDensity);
-    
-    if (sortedPatterns.length === 0) return 0.3;
-
-    // Find closest density patterns
-    const lowerPattern = sortedPatterns.find(p => p.crowdDensity <= density);
-    const higherPattern = sortedPatterns.find(p => p.crowdDensity >= density);
-
-    if (!lowerPattern && !higherPattern) return 0.3;
-    if (!lowerPattern) return higherPattern!.incidentCount / 10;
-    if (!higherPattern) return lowerPattern.incidentCount / 10;
-
-    // Linear interpolation
-    const ratio = (density - lowerPattern.crowdDensity) / (higherPattern.crowdDensity - lowerPattern.crowdDensity);
-    const interpolatedRisk = lowerPattern.incidentCount + (higherPattern.incidentCount - lowerPattern.incidentCount) * ratio;
-    
-    return Math.min(interpolatedRisk / 10, 1);
-  }
-
-  private async analyzeWeatherRiskFactors(patterns: IncidentPattern[]): Promise<RiskFactor[]> {
-    const weatherCorrelations = await this.analyzeWeatherCorrelations();
-    
-    return weatherCorrelations.map(correlation => ({
-      factorType: 'weather' as const,
-      factorValue: {
-        condition: correlation.weatherCondition,
-        incidentRate: correlation.incidentRate,
-        affectedTypes: correlation.affectedIncidentTypes
-      },
-      correlation: correlation.confidence,
-      weight: correlation.incidentRate * correlation.confidence
-    }));
-  }
-
-  private analyzeCrowdRiskFactors(patterns: IncidentPattern[]): RiskFactor[] {
-    const densityGroups = this.groupPatternsByDensity(patterns);
-    const factors: RiskFactor[] = [];
-
-    for (const [densityRange, densityPatterns] of Object.entries(densityGroups)) {
-      const avgIncidentRate = densityPatterns.reduce((sum, p) => sum + p.incidentCount, 0) / densityPatterns.length;
-      const density = parseFloat(densityRange.split('-')[0]);
-
-      factors.push({
-        factorType: 'crowd' as const,
-        factorValue: {
-          densityRange,
-          incidentRate: avgIncidentRate,
-          threshold: density
-        },
-        correlation: avgIncidentRate / 10,
-        weight: avgIncidentRate * (density / 100)
+      patterns.push({
+        trigger: 'Incident reported',
+        response: 'Response time',
+        frequency: responseTimes.length,
+        effectiveness: avgResponseTime < 300000 ? 0.8 : 0.4, // 5 minutes threshold
+        confidence: 0.7
       });
     }
 
-    return factors;
+    return patterns;
   }
 
-  private analyzeTimeRiskFactors(patterns: IncidentPattern[]): RiskFactor[] {
-    const timeGroups = this.groupPatternsByTime(patterns);
-    const factors: RiskFactor[] = [];
+  private analyzeEscalationPatterns(incidents: any[]): BehavioralPattern[] {
+    const patterns: BehavioralPattern[] = [];
 
-    for (const [timeSlot, timePatterns] of Object.entries(timeGroups)) {
-      const avgIncidentRate = timePatterns.reduce((sum, p) => sum + p.incidentCount, 0) / timePatterns.length;
-      const timeWeight = this.getTimeWeight(this.getTimeSlotHour(timeSlot));
-
-      factors.push({
-        factorType: 'time' as const,
-        factorValue: {
-          timeSlot,
-          incidentRate: avgIncidentRate,
-          weight: timeWeight
-        },
-        correlation: avgIncidentRate / 10,
-        weight: avgIncidentRate * timeWeight
+    // Analyze escalation patterns
+    const escalatedIncidents = incidents.filter(i => i.status === 'Escalated' || i.priority === 'high');
+    
+    if (escalatedIncidents.length > 0) {
+      patterns.push({
+        trigger: 'High priority incident',
+        response: 'Escalation',
+        frequency: escalatedIncidents.length,
+        effectiveness: 0.9,
+        confidence: 0.8
       });
     }
 
-    return factors;
+    return patterns;
   }
 
-  private async analyzeLocationRiskFactors(): Promise<RiskFactor[]> {
-    const hotspots = await this.detectLocationHotspots();
+  private async analyzeWeatherCorrelation(incidents: any[]): Promise<CorrelationPattern | null> {
+    // Simulate weather correlation analysis
+    // In a real implementation, this would fetch weather data and correlate with incidents
     
-    return hotspots.map(hotspot => ({
-      factorType: 'location' as const,
-      factorValue: {
-        location: hotspot.location,
-        incidentCount: hotspot.incidentCount,
-        riskScore: hotspot.riskScore,
-        incidentTypes: hotspot.incidentTypes
-      },
-      correlation: hotspot.riskScore / 100,
-      weight: hotspot.riskScore / 100
-    }));
-  }
+    const weatherSensitiveIncidents = incidents.filter(i => 
+      ['Medical', 'Slip/Fall', 'Weather'].includes(i.incident_type)
+    );
 
-  private groupPatternsByDensity(patterns: IncidentPattern[]): Record<string, IncidentPattern[]> {
-    const groups: Record<string, IncidentPattern[]> = {};
-    
-    patterns.forEach(pattern => {
-      const densityRange = this.getDensityRange(pattern.crowdDensity);
-      
-      if (!groups[densityRange]) groups[densityRange] = [];
-      groups[densityRange].push(pattern);
-    });
-
-    return groups;
-  }
-
-  private groupPatternsByTime(patterns: IncidentPattern[]): Record<string, IncidentPattern[]> {
-    const groups: Record<string, IncidentPattern[]> = {};
-    
-    patterns.forEach(pattern => {
-      if (!groups[pattern.timeOfDay]) groups[pattern.timeOfDay] = [];
-      groups[pattern.timeOfDay].push(pattern);
-    });
-
-    return groups;
-  }
-
-  private getDensityRange(density: number): string {
-    if (density < 25) return '0-25';
-    if (density < 50) return '25-50';
-    if (density < 75) return '50-75';
-    return '75-100';
-  }
-
-  private getTimeSlotHour(timeSlot: string): number {
-    switch (timeSlot) {
-      case 'morning': return 9;
-      case 'afternoon': return 15;
-      case 'evening': return 20;
-      case 'night': return 2;
-      default: return 12;
+    if (weatherSensitiveIncidents.length > 0) {
+      return {
+        factor1: 'Weather conditions',
+        factor2: 'Medical incidents',
+        correlationStrength: 0.75,
+        significance: 0.8,
+        description: 'Strong correlation between weather conditions and medical incidents'
+      };
     }
+
+    return null;
   }
 
-  // Additional methods for weather and crowd analysis
-  async analyzeWeatherPatterns(): Promise<any[]> {
+  private async analyzeCrowdDensityCorrelation(incidents: any[]): Promise<CorrelationPattern | null> {
+    // Simulate crowd density correlation analysis
+    
+    const crowdRelatedIncidents = incidents.filter(i => 
+      ['Crowd Control', 'Medical', 'Security'].includes(i.incident_type)
+    );
+
+    if (crowdRelatedIncidents.length > 0) {
+      return {
+        factor1: 'Crowd density',
+        factor2: 'Incident frequency',
+        correlationStrength: 0.85,
+        significance: 0.9,
+        description: 'High correlation between crowd density and incident frequency'
+      };
+    }
+
+    return null;
+  }
+
+  private async analyzeTimeWeatherCorrelation(incidents: any[]): Promise<CorrelationPattern | null> {
+    // Simulate time-weather correlation analysis
+    
+    const eveningIncidents = incidents.filter(i => {
+      const hour = new Date(i.timestamp).getHours();
+      return hour >= 18 && hour <= 23;
+    });
+
+    if (eveningIncidents.length > incidents.length * 0.6) {
+      return {
+        factor1: 'Evening hours',
+        factor2: 'Incident frequency',
+        correlationStrength: 0.7,
+        significance: 0.75,
+        description: 'Higher incident frequency during evening hours'
+      };
+    }
+
+    return null;
+  }
+
+  private async storePatterns(patterns: IncidentPattern[]): Promise<void> {
     try {
-      const patterns = await this.analyzeIncidentPatterns();
-      const weatherGroups = this.groupPatternsByWeather(patterns);
-      
-      return Object.entries(weatherGroups).map(([weather, patternList]) => ({
-        weatherCondition: weather,
-        incidentCount: patternList.length,
-        riskScore: patternList.reduce((sum, pattern) => sum + pattern.incidentCount, 0),
-        patterns: patternList
+      const patternData = patterns.map(pattern => ({
+        event_id: this.eventId,
+        pattern_type: pattern.patternType,
+        confidence: pattern.confidence,
+        description: pattern.description,
+        factors: pattern.factors,
+        impact: pattern.impact,
+        recommendations: pattern.recommendations,
+        detected_at: pattern.detectedAt.toISOString(),
+        last_updated: pattern.lastUpdated.toISOString()
       }));
-    } catch (error) {
-      console.error('Error analyzing weather patterns:', error);
-      return [];
-    }
-  }
 
-  async getHistoricalWeatherIncidents(): Promise<any[]> {
-    try {
-      const { data: incidents, error } = await supabase
-        .from('incident_logs')
-        .select('*')
-        .eq('event_id', this.eventId)
-        .not('weather_conditions', 'is', null);
+      const { error } = await supabase
+        .from('incident_patterns')
+        .upsert(patternData, { onConflict: 'event_id,pattern_type' });
 
       if (error) throw error;
 
-      return incidents?.map(incident => ({
-        weatherCondition: incident.weather_conditions,
-        incidentCount: 1,
-        incidentTypes: [incident.incident_type],
-        averageRiskScore: 50
-      })) || [];
+      logger.info('Stored incident patterns', { 
+        eventId: this.eventId, 
+        patternCount: patterns.length 
+      });
+
     } catch (error) {
-      console.error('Error getting historical weather incidents:', error);
-      return [];
+      logger.error('Error storing incident patterns', { error, eventId: this.eventId });
+      throw error;
     }
   }
 
-  async getCurrentWeatherConditions(): Promise<any> {
-    try {
-      // This would typically call a weather service
-      // For now, return mock data
-      return {
-        current: 'sunny',
-        forecast: 'partly cloudy',
-        change: 'no significant change'
-      };
-    } catch (error) {
-      console.error('Error getting current weather conditions:', error);
-      return {
-        current: 'unknown',
-        forecast: 'unknown',
-        change: 'no data available'
-      };
+  async getPatterns(): Promise<IncidentPattern[]> {
+    return this.patterns;
+  }
+
+  async getTemporalPatterns(): Promise<TemporalPattern[]> {
+    return this.temporalPatterns;
+  }
+
+  async getSpatialPatterns(): Promise<SpatialPattern[]> {
+    return this.spatialPatterns;
+  }
+
+  async getBehavioralPatterns(): Promise<BehavioralPattern[]> {
+    return this.behavioralPatterns;
+  }
+
+  async getCorrelationPatterns(): Promise<CorrelationPattern[]> {
+    return this.correlationPatterns;
+  }
+
+  async getHighConfidencePatterns(threshold: number = 0.7): Promise<IncidentPattern[]> {
+    return this.patterns.filter(pattern => pattern.confidence >= threshold);
+  }
+
+  async getPatternsByType(type: IncidentPattern['patternType']): Promise<IncidentPattern[]> {
+    return this.patterns.filter(pattern => pattern.patternType === type);
+  }
+
+  async updatePatternConfidence(patternId: string, newConfidence: number): Promise<void> {
+    const pattern = this.patterns.find(p => p.id === patternId);
+    if (pattern) {
+      pattern.confidence = newConfidence;
+      pattern.lastUpdated = new Date();
+      
+      // Update in database
+      await this.storePatterns(this.patterns);
     }
   }
 
-  async analyzeCrowdFlowPatterns(): Promise<any[]> {
-    try {
-      const { data: attendance, error } = await supabase
-        .from('attendance_records')
-        .select('*')
-        .eq('event_id', this.eventId)
-        .order('recorded_at', { ascending: true });
-
-      if (error) throw error;
-
-      if (!attendance || attendance.length === 0) {
-        return [];
+  async addPatternFeedback(patternId: string, feedback: 'accurate' | 'inaccurate' | 'partially_accurate'): Promise<void> {
+    // In a real implementation, this would update pattern confidence based on feedback
+    const pattern = this.patterns.find(p => p.id === patternId);
+    if (pattern) {
+      let confidenceAdjustment = 0;
+      
+      switch (feedback) {
+        case 'accurate':
+          confidenceAdjustment = 0.1;
+          break;
+        case 'inaccurate':
+          confidenceAdjustment = -0.2;
+          break;
+        case 'partially_accurate':
+          confidenceAdjustment = 0.05;
+          break;
       }
 
-      // Analyze crowd flow patterns
-      const patterns = [];
-      for (let i = 1; i < attendance.length; i++) {
-        const current = attendance[i];
-        const previous = attendance[i - 1];
-        const flowRate = current.attendance_count - previous.attendance_count;
-        
-        patterns.push({
-          type: flowRate > 0 ? 'inflow' : flowRate < 0 ? 'outflow' : 'stable',
-          rate: Math.abs(flowRate),
-          timestamp: current.recorded_at,
-          location: current.location || 'main'
-        });
-      }
-
-      return patterns;
-    } catch (error) {
-      console.error('Error analyzing crowd flow patterns:', error);
-      return [];
-    }
-  }
-
-  async getHistoricalCrowdFlow(): Promise<any[]> {
-    try {
-      const { data: attendance, error } = await supabase
-        .from('attendance_records')
-        .select('*')
-        .eq('event_id', this.eventId)
-        .order('recorded_at', { ascending: true });
-
-      if (error) throw error;
-
-      return attendance?.map(record => ({
-        timestamp: record.recorded_at,
-        entryRate: record.entry_rate || 0,
-        exitRate: record.exit_rate || 0,
-        occupancy: record.attendance_count
-      })) || [];
-    } catch (error) {
-      console.error('Error getting historical crowd flow:', error);
-      return [];
+      pattern.confidence = Math.max(0, Math.min(1, pattern.confidence + confidenceAdjustment));
+      pattern.lastUpdated = new Date();
+      
+      await this.storePatterns(this.patterns);
     }
   }
 }

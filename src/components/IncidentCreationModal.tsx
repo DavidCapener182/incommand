@@ -18,6 +18,9 @@ import { calculateEscalationTime } from '../lib/escalationEngine'
 import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
 import EscalationTimer from './EscalationTimer'
+import { useOfflineSync } from '@/hooks/useOfflineSync'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface Props {
   isOpen: boolean
@@ -1942,6 +1945,269 @@ export default function IncidentCreationModal({
   const [typeSearchQuery, setTypeSearchQuery] = useState('');
   // Removed auto-assignment state
 
+  // Voice-to-text functionality
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [recognition, setRecognition] = useState<any>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [recognitionTimeout, setRecognitionTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Offline sync functionality
+  const [offlineState, offlineActions] = useOfflineSync();
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [offlineIncidents, setOfflineIncidents] = useState<any[]>([]);
+
+  // Mobile gesture support
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Voice recognition setup
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      // Configure recognition settings to prevent aborted errors
+      recognition.continuous = false; // Changed to false to prevent conflicts
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+      
+      // Add a flag to track if we're manually stopping
+      let isManuallyStopping = false;
+      
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+        isManuallyStopping = false;
+        console.log('Voice recognition started');
+        
+        // Set a timeout to automatically stop after 30 seconds
+        const timeout = setTimeout(() => {
+          if (isListening) {
+            console.log('Auto-stopping voice recognition after timeout');
+            isManuallyStopping = true;
+            recognition.stop();
+          }
+        }, 30000);
+        
+        setRecognitionTimeout(timeout);
+      };
+      
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        setTranscript(finalTranscript + interimTranscript);
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        
+        // Don't show error if we manually stopped
+        if (isManuallyStopping) {
+          return;
+        }
+        
+        // Handle specific error types
+        let errorMessage = 'Voice recognition error';
+        switch (event.error) {
+          case 'aborted':
+            errorMessage = 'Voice recognition was interrupted. Please try again.';
+            break;
+          case 'audio-capture':
+            errorMessage = 'No microphone found. Please check your microphone permissions.';
+            break;
+          case 'bad-grammar':
+            errorMessage = 'Speech recognition grammar error. Please try again.';
+            break;
+          case 'language-not-supported':
+            errorMessage = 'Language not supported. Please use English.';
+            break;
+          case 'network':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+          case 'no-speech':
+            errorMessage = 'No speech detected. Please speak clearly.';
+            break;
+          case 'not-allowed':
+            errorMessage = 'Microphone access denied. Please allow microphone permissions.';
+            break;
+          case 'service-not-allowed':
+            errorMessage = 'Voice recognition service not allowed. Please check browser settings.';
+            break;
+          default:
+            errorMessage = `Voice recognition error: ${event.error}`;
+        }
+        
+        setVoiceError(errorMessage);
+        setIsListening(false);
+        
+        // Auto-clear error after 5 seconds
+        setTimeout(() => {
+          setVoiceError(null);
+        }, 5000);
+      };
+      
+      recognition.onend = () => {
+        console.log('Voice recognition ended');
+        setIsListening(false);
+        
+        // Clear the timeout
+        if (recognitionTimeout) {
+          clearTimeout(recognitionTimeout);
+          setRecognitionTimeout(null);
+        }
+        
+        // Only process transcript if it's not empty and no error occurred
+        if (transcript.trim() && !voiceError && !isManuallyStopping) {
+          handleQuickAdd(transcript);
+          setTranscript('');
+        }
+      };
+      
+      // Store the manual stopping flag in the recognition object
+      recognition.isManuallyStopping = false;
+      
+      setRecognition(recognition);
+    } else {
+      setVoiceError('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+    }
+
+    // Cleanup function
+    return () => {
+      if (recognition) {
+        try {
+          recognition.isManuallyStopping = true;
+          recognition.stop();
+        } catch (error) {
+          console.log('Error stopping recognition during cleanup:', error);
+        }
+      }
+      
+      // Clear any pending timeout
+      if (recognitionTimeout) {
+        clearTimeout(recognitionTimeout);
+      }
+    };
+  }, [transcript, voiceError]);
+
+  // Offline mode detection and local storage
+  useEffect(() => {
+    const checkOfflineMode = () => {
+      const isOffline = !navigator.onLine || offlineState.queueStatus.pending > 0;
+      setIsOfflineMode(isOffline);
+      
+      // Load offline incidents from localStorage
+      if (isOffline) {
+        const stored = localStorage.getItem('offline_incidents');
+        if (stored) {
+          try {
+            setOfflineIncidents(JSON.parse(stored));
+          } catch (error) {
+            console.error('Error parsing offline incidents:', error);
+          }
+        }
+      }
+    };
+
+    checkOfflineMode();
+    window.addEventListener('online', checkOfflineMode);
+    window.addEventListener('offline', checkOfflineMode);
+
+    return () => {
+      window.removeEventListener('online', checkOfflineMode);
+      window.removeEventListener('offline', checkOfflineMode);
+    };
+  }, [offlineState.queueStatus.pending]);
+
+  // Save offline incidents to localStorage
+  const saveOfflineIncident = useCallback((incident: any) => {
+    const updated = [...offlineIncidents, { ...incident, id: Date.now(), isOffline: true }];
+    setOfflineIncidents(updated);
+    localStorage.setItem('offline_incidents', JSON.stringify(updated));
+  }, [offlineIncidents]);
+
+  // Voice control functions
+  const startListening = useCallback(() => {
+    if (!recognition) {
+      setVoiceError('Voice recognition not available. Please refresh the page and try again.');
+      return;
+    }
+    
+    if (isListening) {
+      return; // Already listening
+    }
+    
+    try {
+      // Clear any previous errors
+      setVoiceError(null);
+      setTranscript('');
+      
+      // Set manual stopping flag to false
+      recognition.isManuallyStopping = false;
+      
+      // Request microphone permission first
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          // Add a small delay to ensure proper initialization
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (error) {
+              console.error('Error starting recognition after permission:', error);
+              setVoiceError('Failed to start voice recognition. Please try again.');
+            }
+          }, 100);
+        })
+        .catch((error) => {
+          console.error('Microphone permission error:', error);
+          setVoiceError('Microphone access denied. Please allow microphone permissions in your browser settings.');
+        });
+    } catch (error) {
+      console.error('Error starting voice recognition:', error);
+      setVoiceError('Failed to start voice recognition. Please try again.');
+    }
+  }, [recognition, isListening]);
+
+  const stopListening = useCallback(() => {
+    if (recognition && isListening) {
+      try {
+        // Set manual stopping flag to prevent error messages
+        recognition.isManuallyStopping = true;
+        recognition.stop();
+        
+        // Clear the timeout
+        if (recognitionTimeout) {
+          clearTimeout(recognitionTimeout);
+          setRecognitionTimeout(null);
+        }
+      } catch (error) {
+        console.error('Error stopping voice recognition:', error);
+        setIsListening(false);
+      }
+    }
+  }, [recognition, isListening, recognitionTimeout]);
+
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopListening]);
+
   // AssignmentReasoningDisplay component
   const AssignmentReasoningDisplay = ({ details }: { details: any }) => {
     if (!details) return null;
@@ -2737,6 +3003,56 @@ export default function IncidentCreationModal({
         }
       }
 
+      // Check if we're in offline mode
+      if (isOfflineMode || !navigator.onLine) {
+        // Save to offline storage
+        const offlineIncident = {
+          ...formData,
+          event_id: effectiveEvent.id,
+          created_at: new Date().toISOString(),
+          is_offline: true,
+          sync_status: 'pending'
+        };
+        
+        saveOfflineIncident(offlineIncident);
+        
+        // Queue for sync when online
+        await offlineActions.queueOperation({
+          type: 'incident_create',
+          data: offlineIncident,
+          maxRetries: 5,
+          priority: 'high'
+        });
+
+        addToast({
+          type: 'info',
+          title: 'Incident Saved Offline',
+          message: 'Your incident has been saved locally and will sync when you\'re back online.',
+          duration: 5000
+        });
+
+        // Clear form and close modal
+        setFormData({
+          callsign_from: '',
+          callsign_to: 'Event Control',
+          occurrence: '',
+          incident_type: '',
+          action_taken: '',
+          is_closed: false,
+          status: 'open',
+          ai_input: '',
+          log_number: '',
+          what3words: '///',
+          priority: 'medium',
+          location_name: ''
+        });
+
+        await onIncidentCreated();
+        onClose();
+        setLoading(false);
+        return;
+      }
+
       // Generate the next log number using the artist name
       const logNumber = await generateNextLogNumber(effectiveEvent.artist_name, effectiveEventId || undefined);
       if (!logNumber) {
@@ -3277,8 +3593,167 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             <div aria-live="polite" className="sr-only">
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
             </div>
+            
+            {/* Voice-to-Text Button */}
+            <motion.button
+              type="button"
+              onClick={toggleListening}
+              disabled={!recognition}
+              className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 touch-target-large ${
+                isListening 
+                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/50 animate-pulse' 
+                  : voiceError
+                  ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/50'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md hover:shadow-lg'
+              } ${!recognition ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
+              whileHover={{ scale: recognition ? 1.1 : 1 }}
+              whileTap={{ scale: 0.95 }}
+              title={
+                recognition 
+                  ? (isListening 
+                      ? 'Stop recording' 
+                      : voiceError 
+                        ? 'Voice recognition error - click to try again' 
+                        : 'Start voice recording')
+                  : 'Voice recognition not available'
+              }
+            >
+              <MicrophoneIcon className="h-5 w-5" />
+            </motion.button>
           </div>
-            </div>
+
+          {/* Voice Transcript Display */}
+          <AnimatePresence>
+            {transcript && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <MicrophoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Voice Input:</span>
+                  </div>
+                  {isListening && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-blue-800 dark:text-blue-200">{transcript}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Voice Error Display */}
+          <AnimatePresence>
+            {voiceError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Voice Recognition Error</h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">{voiceError}</p>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setVoiceError(null)}
+                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                      >
+                        Dismiss
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVoiceError(null);
+                          startListening();
+                        }}
+                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                      >
+                        Try Again
+                      </button>
+                      {voiceError.includes('permission') && (
+                        <button
+                          onClick={() => {
+                            // Open browser settings help
+                            window.open('https://support.google.com/chrome/answer/2693767?hl=en', '_blank');
+                          }}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                        >
+                          Fix Permissions
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Offline Status Indicator */}
+          <AnimatePresence>
+            {isOfflineMode && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
+              >
+                <div className="flex items-center gap-3">
+                  <WifiIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Offline Mode</h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      You're currently offline. Incidents will be saved locally and synced when you're back online.
+                    </p>
+                  </div>
+                  <motion.button
+                    type="button"
+                    onClick={() => offlineActions.triggerManualSync()}
+                    disabled={offlineState.isSyncInProgress}
+                    className="p-2 bg-yellow-100 dark:bg-yellow-800 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors duration-200 touch-target"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <ArrowPathIcon className={`h-4 w-4 text-yellow-600 dark:text-yellow-400 ${offlineState.isSyncInProgress ? 'animate-spin' : ''}`} />
+                  </motion.button>
+                </div>
+                
+                {/* Sync Progress */}
+                {offlineState.isSyncInProgress && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-yellow-600 dark:text-yellow-400 mb-1">
+                      <span>Syncing...</span>
+                      <span>{offlineState.syncProgress.completed}/{offlineState.syncProgress.total}</span>
+                    </div>
+                    <div className="w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-2">
+                      <motion.div
+                        className="bg-yellow-500 h-2 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ 
+                          width: offlineState.syncProgress.total > 0 
+                            ? `${(offlineState.syncProgress.completed / offlineState.syncProgress.total) * 100}%` 
+                            : 0 
+                        }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Content scroll area */}
         <div className="px-6 pb-24 overflow-auto h-[calc(85vh-120px)]">

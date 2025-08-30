@@ -45,23 +45,52 @@ import { createPortal } from 'react-dom';
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
 
+// Skeleton Loading Components
+const StatCardSkeleton = () => (
+  <div className="relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-2 md:p-3 animate-pulse">
+    <div className="flex flex-row items-center justify-between w-full">
+      <div className="flex flex-col items-start">
+        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+      </div>
+      <div className="h-6 w-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
+    </div>
+  </div>
+);
 
-// <style>
-// {`
-//   .splash-bg {
-//     background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.08) 0%, rgba(35,64,142,1) 80%), #23408e;
-//   }
-//   
-//   @keyframes scroll {
-//     0% { transform: translateX(100%); }
-//     100% { transform: translateX(-100%); }
-//   }
-//   
-//   .animate-scroll {
-//     animation: scroll 20s linear infinite;
-//   }
-// `}
-// </style>
+const TimeCardSkeleton = () => (
+  <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 animate-pulse">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="md:block relative">
+        <div className="hidden md:block">
+          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-40 mb-2"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-28"></div>
+        </div>
+      </div>
+      <div>
+        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex justify-between items-center p-2">
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-12"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const CardSkeleton = () => (
+  <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center animate-pulse">
+    <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
+    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
+    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+  </div>
+);
 
 interface StatCardProps {
   title: string
@@ -74,6 +103,7 @@ interface StatCardProps {
   className?: string
   tooltip?: string
   showPulse?: boolean
+  index?: number
 }
 
 interface EventTiming {
@@ -95,21 +125,50 @@ interface TimeCardProps {
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
   return (
-    <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02]"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
         <div className="md:block relative">
           <div className="hidden md:block">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Current Time</h2>
-            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">{currentTime}</p>
-            <div className="mt-2 mb-4">
+            <motion.h2 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+            >
+              Current Time
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+              className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+            >
+              {currentTime}
+            </motion.p>
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-2 mb-4"
+            >
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time Since Last Incident</h3>
               <p className="text-lg font-bold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
-            </div>
+            </motion.div>
             {nextEvent && (
-              <div className="mt-2">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-2"
+              >
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
                 <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
-              </div>
+              </motion.div>
             )}
           </div>
           {/* Mobile: show current time and happening now */}
@@ -137,15 +196,18 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           </div>
           <div className="space-y-2 mt-2">
             {eventTimings.map((timing, index) => (
-              <div 
-                key={index} 
-                className={`flex justify-between items-center p-2 rounded ${
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 + index * 0.1 }}
+                className={`flex justify-between items-center p-2 rounded transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
                         timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
                       } `}
               >
                 <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500 dark:text-gray-100'}`}>{timing.title}</span>
                 <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900 dark:text-gray-100'}`}>{timing.time}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
           {eventTimings.length === 0 && !nextEvent && (
@@ -156,15 +218,20 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       
       {/* Desktop: Happening Now positioned in bottom left corner */}
       {currentSlot && (
-        <div className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
+          className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200"
+        >
           <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
             {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
           </span>
           <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
           <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -178,7 +245,8 @@ const StatCard: React.FC<StatCardProps> = ({
   isFilterable = false,
   className,
   tooltip,
-  showPulse
+  showPulse,
+  index = 0
 }) => {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -224,9 +292,9 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const baseClasses = `
     relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
-    p-2 md:p-3 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 
+    p-2 md:p-3 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-105
     ${isFilterable ? 'cursor-pointer' : ''}
-    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg' : 'hover:shadow-xl'}
+    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-105' : 'hover:shadow-xl'}
     ${pulse ? 'animate-pulse' : ''}
     ${className || ''}
   `;
@@ -234,16 +302,26 @@ const StatCard: React.FC<StatCardProps> = ({
   const content = (
     <div className="flex flex-row items-center justify-between w-full">
       <div className="flex flex-col items-start">
-        <div className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-0.5">
+        <motion.div 
+          key={value}
+          initial={{ scale: 1.1, opacity: 0.8 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-0.5"
+        >
           {value}
-        </div>
+        </motion.div>
         <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
           {title}
         </div>
       </div>
-      <div className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}>
+      <motion.div 
+        whileHover={{ rotate: 5, scale: 1.1 }}
+        transition={{ duration: 0.2 }}
+        className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}
+      >
         {icon}
-      </div>
+      </motion.div>
       {showPulse && (
         <div className="absolute top-2 right-2">
           <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
@@ -255,8 +333,20 @@ const StatCard: React.FC<StatCardProps> = ({
 
   if (isFilterable) {
     return (
-      <div 
+      <motion.div 
         ref={cardRef}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+          duration: 0.5, 
+          delay: index * 0.1,
+          ease: "easeOut"
+        }}
+        whileHover={{ 
+          y: -4,
+          transition: { duration: 0.2 }
+        }}
+        whileTap={{ scale: 0.95 }}
         className={baseClasses}
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
@@ -264,7 +354,10 @@ const StatCard: React.FC<StatCardProps> = ({
       >
         {content}
         {tooltip && showTooltip && isDesktop && createPortal(
-          <div 
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
             className="fixed z-[99999] px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap"
             style={{
               top: tooltipPosition.top,
@@ -275,17 +368,30 @@ const StatCard: React.FC<StatCardProps> = ({
           >
             {tooltip}
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </div>,
+          </motion.div>,
           document.body
         )}
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className={baseClasses}>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        duration: 0.5, 
+        delay: index * 0.1,
+        ease: "easeOut"
+      }}
+      whileHover={{ 
+        y: -4,
+        transition: { duration: 0.2 }
+      }}
+      className={baseClasses}
+    >
       {content}
-    </div>
+    </motion.div>
   );
 };
 
@@ -496,17 +602,39 @@ export default function Dashboard() {
   }, []);
 
   const fetchCurrentEvent = async () => {
-    if (!companyId) return;
+    console.log('Fetching current event...');
     setIsRefreshing(true);
     setLoadingCurrentEvent(true);
     setCurrentEvent(null);
+    
     try {
-      const { data } = await supabase
+      // First try to fetch without company_id filter (like Navigation component does)
+      console.log('Trying to fetch current event without company_id filter...');
+      let { data, error } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
-        .eq('company_id', companyId)
         .single();
+      
+      console.log('Event fetch result (no company_id filter):', { data, error });
+      
+      // If that fails and we have a company_id, try with company_id filter
+      if ((error || !data) && companyId) {
+        console.log('Trying with company_id filter:', companyId);
+        const { data: companyData, error: companyError } = await supabase
+          .from('events')
+          .select('*, event_name, venue_name, event_type, event_description, support_acts')
+          .eq('is_current', true)
+          .eq('company_id', companyId)
+          .single();
+        
+        console.log('Event fetch result (with company_id filter):', { companyData, companyError });
+        
+        if (companyData) {
+          data = companyData;
+          error = null;
+        }
+      }
 
       if (data) {
         data.venue_name = data.venue_name
@@ -533,8 +661,52 @@ export default function Dashboard() {
           setCurrentEventId(null);
         }
       } else {
-        setHasCurrentEvent(false);
-        setCurrentEventId(null);
+        console.log('No event found with company_id filter, trying without company_id for superadmin...');
+        
+        // For superadmin users, try fetching without company_id filter
+        if (userRole === 'superadmin') {
+          try {
+            const { data: superadminData, error: superadminError } = await supabase
+              .from('events')
+              .select('*, event_name, venue_name, event_type, event_description, support_acts')
+              .eq('is_current', true)
+              .single();
+            
+            console.log('Superadmin event fetch result:', { superadminData, superadminError });
+            
+            if (superadminData) {
+              superadminData.venue_name = superadminData.venue_name
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+              setCurrentEvent(superadminData);
+              setHasCurrentEvent(true);
+              setCurrentEventId(superadminData.id);
+              if (superadminData.venue_address) {
+                try {
+                  const coords = await geocodeAddress(superadminData.venue_address);
+                  setCoordinates(coords);
+                } catch (error) {
+                  logger.error('Error geocoding address', error, { 
+                    component: 'Dashboard', 
+                    action: 'geocodeAddress',
+                    venueAddress: superadminData.venue_address 
+                  });
+                }
+              }
+            } else {
+              setHasCurrentEvent(false);
+              setCurrentEventId(null);
+            }
+          } catch (superadminErr) {
+            console.error('Superadmin event fetch failed:', superadminErr);
+            setHasCurrentEvent(false);
+            setCurrentEventId(null);
+          }
+        } else {
+          setHasCurrentEvent(false);
+          setCurrentEventId(null);
+        }
       }
     } catch (err) {
       logger.error('Unexpected error in fetchCurrentEvent', err, { 
@@ -628,14 +800,34 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchEventTimings = async () => {
-      if (!companyId) return;
       setIsRefreshing(true);
-      const { data: event } = await supabase
+      
+      // First try without company_id filter
+      let { data: event, error } = await supabase
         .from('events')
         .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
         .eq('is_current', true)
-        .eq('company_id', companyId)
         .single();
+      
+      console.log('Event timings fetch result (no company_id filter):', { event, error });
+      
+      // If that fails and we have a company_id, try with company_id filter
+      if ((error || !event) && companyId) {
+        console.log('Trying event timings with company_id filter:', companyId);
+        const { data: companyEvent, error: companyError } = await supabase
+          .from('events')
+          .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
+          .eq('is_current', true)
+          .eq('company_id', companyId)
+          .single();
+        
+        console.log('Event timings fetch result (with company_id filter):', { companyEvent, companyError });
+        
+        if (companyEvent) {
+          event = companyEvent;
+          error = null;
+        }
+      }
       if (event) {
         const now = new Date();
         const currentTimeNumber = now.getHours() * 60 + now.getMinutes();
@@ -707,25 +899,31 @@ export default function Dashboard() {
       }
       setIsRefreshing(false);
     };
-    if (companyId) {
-      fetchEventTimings();
-      const refreshTimer = setInterval(fetchEventTimings, 60000);
-      return () => clearInterval(refreshTimer);
-    }
-  }, [companyId]);
+    fetchEventTimings();
+    const refreshTimer = setInterval(fetchEventTimings, 60000);
+    return () => clearInterval(refreshTimer);
+  }, []);
 
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!user) return;
+      console.log('Fetching company ID for user:', user.id);
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .single();
+      
+      console.log('Profile fetch result:', { profile, profileError });
+      
       if (profileError || !profile?.company_id) {
+        console.error('Profile error or missing company_id:', { profileError, profile });
         setError('Could not determine your company. Please check your profile.');
         return;
       }
+      
+      console.log('Setting company ID:', profile.company_id);
       setCompanyId(profile.company_id);
       const { data: profileFull } = await supabase
         .from('profiles')
@@ -738,10 +936,8 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (companyId) {
-      fetchCurrentEvent();
-      }
-  }, [companyId]);
+    fetchCurrentEvent();
+  }, []);
 
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
@@ -920,15 +1116,19 @@ export default function Dashboard() {
             error={error}
             onEventCreated={fetchCurrentEvent}
           />
-          <TimeCard
-            companyId={companyId}
-            currentTime={currentTime}
-            eventTimings={eventTimings}
-            nextEvent={nextEvent}
-            countdown={countdown}
-            currentSlot={currentSlot}
-            timeSinceLastIncident={timeSinceLastIncident}
-          />
+          {loadingCurrentEvent ? (
+            <TimeCardSkeleton />
+          ) : (
+            <TimeCard
+              companyId={companyId}
+              currentTime={currentTime}
+              eventTimings={eventTimings}
+              nextEvent={nextEvent}
+              countdown={countdown}
+              currentSlot={currentSlot}
+              timeSinceLastIncident={timeSinceLastIncident}
+            />
+          )}
         </div>
 
         {/* Mobile view */}
@@ -1013,97 +1213,114 @@ export default function Dashboard() {
         
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3 mb-6">
-          <StatCard
-            title="High Priority"
-            value={incidentStats.high}
-            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={filters.types.some(type => ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type))}
-            onClick={() => setFilters(prev => ({ 
-              ...prev, 
-              types: ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'],
-              statuses: [],
-              priorities: []
-            }))}
-            isFilterable={true}
-            color="red"
-            tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
-            showPulse={incidentStats.hasOpenHighPrio}
-          />
-          <StatCard
-            title="Medicals"
-            value={incidentStats.medicals}
-            icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-            isSelected={filters.types.includes('Medical')}
-            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
-            isFilterable={true}
-            tooltip="Medical-related incidents."
-          />
-          <StatCard
-            title="Open"
-            value={incidentStats.open}
-            icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
-            isSelected={filters.statuses.includes('open')}
-            onClick={() => setFilters(prev => ({ 
-              ...prev, 
-              statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'],
-              types: [],
-              priorities: []
-            }))}
-            isFilterable={true}
-            color="yellow"
-            tooltip="Incidents that are currently open (is_closed = false)."
-          />
-          <StatCard
-            title="Ejections"
-            value={incidentStats.ejections}
-            icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={filters.types.includes('Ejection')}
-            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Ejection') ? prev.types.filter(t => t !== 'Ejection') : ['Ejection'] }))}
-            isFilterable={true}
-            tooltip="Incidents where someone was ejected."
-          />
-          <StatCard
-            title="Refusals"
-            value={incidentStats.refusals}
-            icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={filters.types.includes('Refusal')}
-            onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
-            isFilterable={true}
-            tooltip="Incidents where entry was refused."
-          />
-          <StatCard
-            title="Total"
-            value={incidentStats.total}
-            icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
-            onClick={resetToTotal}
-            isFilterable={true}
-            tooltip="All incidents (excluding Attendance and Sit Reps)."
-          />
-          <StatCard
-            title="Closed"
-            value={incidentStats.closed}
-            icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
-            isSelected={filters.statuses.includes('closed')}
-            onClick={() => setFilters(prev => ({ 
-              ...prev, 
-              statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'],
-              types: [],
-              priorities: []
-            }))}
-            isFilterable={true}
-            color="green"
-            tooltip="Incidents that have been closed (is_closed = true)."
-          />
-          <StatCard
-            title="Other"
-            value={incidentStats.other}
-            icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-            isSelected={filters.types.length > 0 && !['Refusal','Ejection','Medical'].some(t => filters.types.includes(t))}
-            onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
-            isFilterable={true}
-            tooltip="All other incident types."
-          />
+          {loadingCurrentEvent ? (
+            // Show skeleton loading states
+            Array.from({ length: 8 }).map((_, index) => (
+              <StatCardSkeleton key={index} />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="High Priority"
+                value={incidentStats.high}
+                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                isSelected={filters.types.some(type => ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type))}
+                onClick={() => setFilters(prev => ({ 
+                  ...prev, 
+                  types: ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'],
+                  statuses: [],
+                  priorities: []
+                }))}
+                isFilterable={true}
+                color="red"
+                tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+                showPulse={incidentStats.hasOpenHighPrio}
+                index={0}
+              />
+              <StatCard
+                title="Medicals"
+                value={incidentStats.medicals}
+                icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                isSelected={filters.types.includes('Medical')}
+                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
+                isFilterable={true}
+                tooltip="Medical-related incidents."
+                index={1}
+              />
+              <StatCard
+                title="Open"
+                value={incidentStats.open}
+                icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+                isSelected={filters.statuses.includes('open')}
+                onClick={() => setFilters(prev => ({ 
+                  ...prev, 
+                  statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'],
+                  types: [],
+                  priorities: []
+                }))}
+                isFilterable={true}
+                color="yellow"
+                tooltip="Incidents that are currently open (is_closed = false)."
+                index={2}
+              />
+              <StatCard
+                title="Ejections"
+                value={incidentStats.ejections}
+                icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={filters.types.includes('Ejection')}
+                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Ejection') ? prev.types.filter(t => t !== 'Ejection') : ['Ejection'] }))}
+                isFilterable={true}
+                tooltip="Incidents where someone was ejected."
+                index={3}
+              />
+              <StatCard
+                title="Refusals"
+                value={incidentStats.refusals}
+                icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={filters.types.includes('Refusal')}
+                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
+                isFilterable={true}
+                tooltip="Incidents where entry was refused."
+                index={4}
+              />
+              <StatCard
+                title="Total"
+                value={incidentStats.total}
+                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
+                onClick={resetToTotal}
+                isFilterable={true}
+                tooltip="All incidents (excluding Attendance and Sit Reps)."
+                index={5}
+              />
+              <StatCard
+                title="Closed"
+                value={incidentStats.closed}
+                icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+                isSelected={filters.statuses.includes('closed')}
+                onClick={() => setFilters(prev => ({ 
+                  ...prev, 
+                  statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'],
+                  types: [],
+                  priorities: []
+                }))}
+                isFilterable={true}
+                color="green"
+                tooltip="Incidents that have been closed (is_closed = true)."
+                index={6}
+              />
+              <StatCard
+                title="Other"
+                value={incidentStats.other}
+                icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                isSelected={filters.types.length > 0 && !['Refusal','Ejection','Medical'].some(t => filters.types.includes(t))}
+                onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
+                isFilterable={true}
+                tooltip="All other incident types."
+                index={7}
+              />
+            </>
+          )}
         </div>
 
 
@@ -1112,72 +1329,155 @@ export default function Dashboard() {
         <div>
           {/* Mobile: Venue Occupancy full width */}
           <div className="block md:hidden mb-4">
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
-              <VenueOccupancy currentEventId={currentEventId} />
-            </div>
+            {loadingCurrentEvent ? (
+              <CardSkeleton />
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                whileHover={{ y: -4 }}
+                className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" 
+                onClick={() => setIsOccupancyModalOpen(true)}
+              >
+                <VenueOccupancy currentEventId={currentEventId} />
+              </motion.div>
+            )}
           </div>
           {/* Mobile: W3W and Top 3 side by side */}
           <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              <What3WordsSearchCard 
-                lat={coordinates.lat} 
-                lon={coordinates.lon} 
-                venueAddress={currentEvent?.venue_address || ''} 
-                singleCard
-                largeLogo={false}
-              />
-            </div>
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              <TopIncidentTypesCard 
-                incidents={incidents} 
-                onTypeClick={(type: string) => {
-                  setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
-                }} 
-                selectedType={filters.types[0] || null}
-              />
-            </div>
+            {loadingCurrentEvent ? (
+              <>
+                <CardSkeleton />
+                <CardSkeleton />
+              </>
+            ) : (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  whileHover={{ y: -4 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                >
+                  <What3WordsSearchCard 
+                    lat={coordinates.lat} 
+                    lon={coordinates.lon} 
+                    venueAddress={currentEvent?.venue_address || ''} 
+                    singleCard
+                    largeLogo={false}
+                  />
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  whileHover={{ y: -4 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                >
+                  <TopIncidentTypesCard 
+                    incidents={incidents} 
+                    onTypeClick={(type: string) => {
+                      setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
+                    }} 
+                    selectedType={filters.types[0] || null}
+                  />
+                </motion.div>
+              </>
+            )}
           </div>
           {/* Mobile: Social Media Monitoring Card */}
           <div className="block md:hidden mb-8">
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              <SocialMediaMonitoringCard eventId={currentEvent?.id} />
-            </div>
+            {loadingCurrentEvent ? (
+              <CardSkeleton />
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                whileHover={{ y: -4 }}
+                className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+              >
+                <SocialMediaMonitoringCard eventId={currentEvent?.id} />
+              </motion.div>
+            )}
           </div>
           {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in a single row */}
           <div className="hidden md:grid grid-cols-5 gap-4 mb-8">
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 text-gray-900 dark:text-gray-100" onClick={() => setIsOccupancyModalOpen(true)}>
-              <VenueOccupancy currentEventId={currentEventId} />
-            </div>
-            {/* WeatherCard: render only the WeatherCard, no extra card container */}
-            {currentEvent?.venue_address && (
-              <WeatherCard 
-                lat={coordinates?.lat} 
-                lon={coordinates?.lon}
-                locationName={currentEvent.venue_address}
-                eventDate={currentEvent.event_date ?? ''} 
-                startTime={currentEvent.main_act_start_time ?? ''}
-                curfewTime={currentEvent.curfew_time ?? ''}
-              />
+            {loadingCurrentEvent ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <CardSkeleton key={index} />
+              ))
+            ) : (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  whileHover={{ y: -4 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 text-gray-900 dark:text-gray-100" 
+                  onClick={() => setIsOccupancyModalOpen(true)}
+                >
+                  <VenueOccupancy currentEventId={currentEventId} />
+                </motion.div>
+                {/* WeatherCard: render only the WeatherCard, no extra card container */}
+                {currentEvent?.venue_address && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                    whileHover={{ y: -4 }}
+                  >
+                    <WeatherCard 
+                      lat={coordinates?.lat} 
+                      lon={coordinates?.lon}
+                      locationName={currentEvent.venue_address}
+                      eventDate={currentEvent.event_date ?? ''} 
+                      startTime={currentEvent.main_act_start_time ?? ''}
+                      curfewTime={currentEvent.curfew_time ?? ''}
+                    />
+                  </motion.div>
+                )}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  whileHover={{ y: -4 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 cursor-pointer"
+                >
+                  <What3WordsSearchCard 
+                    lat={coordinates.lat} 
+                    lon={coordinates.lon} 
+                    venueAddress={currentEvent?.venue_address || ''} 
+                    singleCard={true}
+                    largeLogo={false}
+                  />
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  whileHover={{ y: -4 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1"
+                >
+                  <TopIncidentTypesCard 
+                    incidents={incidents} 
+                    onTypeClick={(type: string) => {
+                      setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
+                    }} 
+                    selectedType={filters.types[0] || null}
+                  />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  whileHover={{ y: -4 }}
+                >
+                  <SocialMediaMonitoringCard eventId={currentEvent?.id} />
+                </motion.div>
+              </>
             )}
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 cursor-pointer">
-              <What3WordsSearchCard 
-                lat={coordinates.lat} 
-                lon={coordinates.lon} 
-                venueAddress={currentEvent?.venue_address || ''} 
-                singleCard={true}
-                largeLogo={false}
-              />
-            </div>
-            <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1">
-              <TopIncidentTypesCard 
-                incidents={incidents} 
-                onTypeClick={(type: string) => {
-                  setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
-                }} 
-                selectedType={filters.types[0] || null}
-              />
-            </div>
-            <SocialMediaMonitoringCard eventId={currentEvent?.id} />
           </div>
         </div>
 

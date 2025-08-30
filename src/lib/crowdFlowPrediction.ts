@@ -1,125 +1,82 @@
 import { supabase } from './supabase';
-import { PatternRecognitionEngine } from './patternRecognition';
-import { getWeatherData } from '../services/weatherService';
+import { logger } from './logger';
 
 export interface CrowdFlowPrediction {
+  id: string;
   timestamp: Date;
-  predictedCount: number;
+  location: string;
+  currentDensity: number;
+  predictedDensity: number;
   confidence: number;
-  factors: {
-    weather: number;
-    eventSchedule: number;
-    historicalPattern: number;
-    currentTrend: number;
-  };
+  factors: CrowdFactor[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  recommendations: string[];
 }
 
-export interface EntryPattern {
-  timeSlot: string;
-  averageEntryRate: number;
-  peakEntryRate: number;
-  weatherImpact: number;
-  eventTypeImpact: number;
+export interface CrowdFactor {
+  type: 'entry_rate' | 'exit_rate' | 'weather' | 'event_phase' | 'capacity' | 'staffing';
+  value: number;
+  weight: number;
+  trend: 'increasing' | 'decreasing' | 'stable';
 }
 
 export interface OccupancyForecast {
-  timeIntervals: CrowdFlowPrediction[];
-  peakTime: Date;
+  timeHorizon: string;
+  peakTime: Date | null;
   peakOccupancy: number;
-  capacityWarnings: string[];
+  averageOccupancy: number;
+  capacityUtilization: number;
+  riskPeriods: RiskPeriod[];
   confidence: number;
 }
 
-export interface CrowdMovementPattern {
-  fromLocation: string;
-  toLocation: string;
-  movementRate: number;
-  timeOfDay: string;
-  eventPhase: string;
+export interface RiskPeriod {
+  startTime: Date;
+  endTime: Date;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  reason: string;
+  recommendations: string[];
+}
+
+export interface DensityZone {
+  zoneId: string;
+  name: string;
+  currentOccupancy: number;
+  maxCapacity: number;
+  densityPercentage: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  lastUpdated: Date;
 }
 
 export class CrowdFlowPredictionEngine {
   private eventId: string;
-  private patternEngine: PatternRecognitionEngine;
+  private predictions: CrowdFlowPrediction[] = [];
+  private forecasts: OccupancyForecast[] = [];
+  private densityZones: DensityZone[] = [];
 
   constructor(eventId: string) {
     this.eventId = eventId;
-    this.patternEngine = new PatternRecognitionEngine(eventId);
   }
 
   async predictCrowdFlow(): Promise<CrowdFlowPrediction[]> {
     try {
-      const predictions: CrowdFlowPrediction[] = [];
-      const currentTime = new Date();
-      
-      // Generate predictions for next 4 hours in 30-minute intervals
-      for (let i = 1; i <= 8; i++) {
-        const predictionTime = new Date(currentTime.getTime() + i * 30 * 60 * 1000);
-        const prediction = await this.calculatePrediction(predictionTime);
-        predictions.push(prediction);
-      }
+      logger.info('Starting crowd flow prediction', { eventId: this.eventId });
 
-      return predictions;
-    } catch (error) {
-      console.error('Error predicting crowd flow:', error);
-      return [];
-    }
-  }
-
-  async analyzeEntryPatterns(): Promise<EntryPattern[]> {
-    try {
-      const { data: attendanceHistory } = await supabase
+      // Fetch attendance data
+      const { data: attendanceRecords, error } = await supabase
         .from('attendance_records')
-        .select('attendance_count, recorded_at, weather_conditions')
+        .select('*')
         .eq('event_id', this.eventId)
-        .gte('recorded_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
-        .order('recorded_at', { ascending: true });
+        .order('timestamp', { ascending: true });
 
-      if (!attendanceHistory || attendanceHistory.length === 0) {
-        return this.getDefaultEntryPatterns();
+      if (error) throw error;
+
+      if (!attendanceRecords || attendanceRecords.length === 0) {
+        logger.info('No attendance data found for crowd flow prediction', { eventId: this.eventId });
+        return [];
       }
 
-      const entryPatterns: EntryPattern[] = [];
-      const timeSlots = ['morning', 'afternoon', 'evening', 'night'];
-
-      for (const timeSlot of timeSlots) {
-        const slotRecords = attendanceHistory.filter(record => {
-          const hour = new Date(record.recorded_at).getHours();
-          return this.getTimeSlot(hour) === timeSlot;
-        });
-
-        if (slotRecords.length === 0) continue;
-
-        // Calculate entry rates
-        const entryRates = this.calculateEntryRates(slotRecords);
-        const averageEntryRate = entryRates.reduce((sum, rate) => sum + rate, 0) / entryRates.length;
-        const peakEntryRate = Math.max(...entryRates);
-
-        // Analyze weather impact
-        const weatherImpact = this.calculateWeatherImpact(slotRecords);
-
-        // Analyze event type impact
-        const eventTypeImpact = await this.calculateEventTypeImpact();
-
-        entryPatterns.push({
-          timeSlot,
-          averageEntryRate,
-          peakEntryRate,
-          weatherImpact,
-          eventTypeImpact
-        });
-      }
-
-      return entryPatterns;
-    } catch (error) {
-      console.error('Error analyzing entry patterns:', error);
-      return this.getDefaultEntryPatterns();
-    }
-  }
-
-  async calculateOccupancyForecast(): Promise<OccupancyForecast> {
-    try {
-      const predictions = await this.predictCrowdFlow();
+      // Get event details for capacity information
       const { data: event } = await supabase
         .from('events')
         .select('max_capacity, current_attendance')
@@ -131,569 +88,492 @@ export class CrowdFlowPredictionEngine {
       }
 
       const maxCapacity = event.max_capacity || 1000;
-      const currentAttendance = event.current_attendance || 0;
+      const predictions: CrowdFlowPrediction[] = [];
 
-      // Find peak time and occupancy
-      const peakPrediction = predictions.reduce((max, pred) => 
-        pred.predictedCount > max.predictedCount ? pred : max
+      // Analyze entry and exit patterns
+      const entryExitPatterns = this.analyzeEntryExitPatterns(attendanceRecords);
+      
+      // Predict density for different time periods
+      const timeSlots = this.generateTimeSlots();
+      
+      for (const timeSlot of timeSlots) {
+        const prediction = await this.predictDensityForTimeSlot(
+          timeSlot,
+          attendanceRecords,
+          entryExitPatterns,
+          maxCapacity
+        );
+        
+        if (prediction) {
+          predictions.push(prediction);
+        }
+      }
+
+      // Store predictions
+      await this.storeCrowdPredictions(predictions);
+      
+      this.predictions = predictions;
+      return predictions;
+
+    } catch (error) {
+      logger.error('Error predicting crowd flow', { error, eventId: this.eventId });
+      throw error;
+    }
+  }
+
+  async calculateOccupancyForecast(): Promise<OccupancyForecast | null> {
+    try {
+      if (this.predictions.length === 0) {
+        await this.predictCrowdFlow();
+      }
+
+      const currentTime = new Date();
+      const timeHorizon = 'Next 4 Hours';
+      
+      // Find peak occupancy
+      const peakPrediction = this.predictions.reduce((peak, current) => 
+        current.predictedDensity > peak.predictedDensity ? current : peak
       );
 
-      // Generate capacity warnings
-      const capacityWarnings: string[] = [];
-      const highOccupancyThreshold = maxCapacity * 0.85;
-      const criticalOccupancyThreshold = maxCapacity * 0.95;
+      const averageOccupancy = this.predictions.reduce((sum, pred) => 
+        sum + pred.predictedDensity, 0
+      ) / this.predictions.length;
 
-      for (const prediction of predictions) {
-        if (prediction.predictedCount >= criticalOccupancyThreshold) {
-          capacityWarnings.push(`Critical occupancy predicted at ${prediction.timestamp.toLocaleTimeString()}: ${Math.round(prediction.predictedCount / maxCapacity * 100)}%`);
-        } else if (prediction.predictedCount >= highOccupancyThreshold) {
-          capacityWarnings.push(`High occupancy predicted at ${prediction.timestamp.toLocaleTimeString()}: ${Math.round(prediction.predictedCount / maxCapacity * 100)}%`);
+      const maxCapacity = 1000; // This should come from event data
+      const capacityUtilization = (peakPrediction.predictedDensity / maxCapacity) * 100;
+
+      // Identify risk periods
+      const riskPeriods = this.identifyRiskPeriods(this.predictions);
+
+      const forecast: OccupancyForecast = {
+        timeHorizon,
+        peakTime: peakPrediction.timestamp,
+        peakOccupancy: peakPrediction.predictedDensity,
+        averageOccupancy: Math.round(averageOccupancy),
+        capacityUtilization: Math.round(capacityUtilization),
+        riskPeriods,
+        confidence: this.calculateForecastConfidence()
+      };
+
+      this.forecasts = [forecast];
+      return forecast;
+
+    } catch (error) {
+      logger.error('Error calculating occupancy forecast', { error, eventId: this.eventId });
+      return null;
+    }
+  }
+
+  async monitorDensityZones(): Promise<DensityZone[]> {
+    try {
+      // Simulate density zone monitoring
+      // In a real implementation, this would use IoT sensors or manual counts
+      
+      const zones: DensityZone[] = [
+        {
+          zoneId: 'main-entrance',
+          name: 'Main Entrance',
+          currentOccupancy: 150,
+          maxCapacity: 200,
+          densityPercentage: 75,
+          riskLevel: 'medium',
+          lastUpdated: new Date()
+        },
+        {
+          zoneId: 'main-bar',
+          name: 'Main Bar Area',
+          currentOccupancy: 180,
+          maxCapacity: 150,
+          densityPercentage: 120,
+          riskLevel: 'critical',
+          lastUpdated: new Date()
+        },
+        {
+          zoneId: 'dance-floor',
+          name: 'Dance Floor',
+          currentOccupancy: 200,
+          maxCapacity: 300,
+          densityPercentage: 67,
+          riskLevel: 'low',
+          lastUpdated: new Date()
+        },
+        {
+          zoneId: 'seating-area',
+          name: 'Seating Area',
+          currentOccupancy: 80,
+          maxCapacity: 120,
+          densityPercentage: 67,
+          riskLevel: 'low',
+          lastUpdated: new Date()
+        },
+        {
+          zoneId: 'exit-area',
+          name: 'Exit Area',
+          currentOccupancy: 30,
+          maxCapacity: 100,
+          densityPercentage: 30,
+          riskLevel: 'low',
+          lastUpdated: new Date()
+        }
+      ];
+
+      this.densityZones = zones;
+      return zones;
+
+    } catch (error) {
+      logger.error('Error monitoring density zones', { error, eventId: this.eventId });
+      return [];
+    }
+  }
+
+  async getHighRiskZones(): Promise<DensityZone[]> {
+    const zones = await this.monitorDensityZones();
+    return zones.filter(zone => 
+      zone.riskLevel === 'high' || zone.riskLevel === 'critical'
+    );
+  }
+
+  async getDensityTrends(): Promise<{ zone: string; trend: 'increasing' | 'decreasing' | 'stable' }[]> {
+    const zones = await this.monitorDensityZones();
+    
+    return zones.map(zone => {
+      let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
+      
+      if (zone.densityPercentage > 90) {
+        trend = 'increasing';
+      } else if (zone.densityPercentage < 30) {
+        trend = 'decreasing';
+      }
+      
+      return { zone: zone.name, trend };
+    });
+  }
+
+  private analyzeEntryExitPatterns(attendanceRecords: any[]): any {
+    const patterns = {
+      entryRate: 0,
+      exitRate: 0,
+      peakEntryTime: null as Date | null,
+      peakExitTime: null as Date | null
+    };
+
+    if (attendanceRecords.length < 2) return patterns;
+
+    // Calculate entry and exit rates
+    let totalEntry = 0;
+    let totalExit = 0;
+    let maxEntryRate = 0;
+    let maxExitRate = 0;
+
+    for (let i = 1; i < attendanceRecords.length; i++) {
+      const current = attendanceRecords[i];
+      const previous = attendanceRecords[i - 1];
+      
+      const timeDiff = new Date(current.timestamp).getTime() - new Date(previous.timestamp).getTime();
+      const minutesDiff = timeDiff / (1000 * 60);
+      
+      const attendanceChange = current.count - previous.count;
+      
+      if (attendanceChange > 0) {
+        const entryRate = attendanceChange / minutesDiff;
+        totalEntry += attendanceChange;
+        
+        if (entryRate > maxEntryRate) {
+          maxEntryRate = entryRate;
+          patterns.peakEntryTime = new Date(current.timestamp);
+        }
+      } else if (attendanceChange < 0) {
+        const exitRate = Math.abs(attendanceChange) / minutesDiff;
+        totalExit += Math.abs(attendanceChange);
+        
+        if (exitRate > maxExitRate) {
+          maxExitRate = exitRate;
+          patterns.peakExitTime = new Date(current.timestamp);
         }
       }
+    }
 
-      // Calculate overall confidence
-      const confidence = predictions.reduce((sum, pred) => sum + pred.confidence, 0) / predictions.length;
+    patterns.entryRate = maxEntryRate;
+    patterns.exitRate = maxExitRate;
+
+    return patterns;
+  }
+
+  private generateTimeSlots(): Date[] {
+    const slots: Date[] = [];
+    const now = new Date();
+    
+    // Generate time slots for the next 4 hours, every 30 minutes
+    for (let i = 0; i < 8; i++) {
+      const slot = new Date(now.getTime() + (i * 30 * 60 * 1000));
+      slots.push(slot);
+    }
+    
+    return slots;
+  }
+
+  private async predictDensityForTimeSlot(
+    timeSlot: Date,
+    attendanceRecords: any[],
+    entryExitPatterns: any,
+    maxCapacity: number
+  ): Promise<CrowdFlowPrediction | null> {
+    try {
+      // Get current attendance
+      const currentAttendance = attendanceRecords.length > 0 
+        ? attendanceRecords[attendanceRecords.length - 1].count 
+        : 0;
+
+      // Calculate time difference from now
+      const timeDiff = timeSlot.getTime() - new Date().getTime();
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+      // Predict density based on patterns
+      let predictedDensity = currentAttendance;
+      
+      if (hoursDiff > 0) {
+        // Predict future density
+        const entryContribution = entryExitPatterns.entryRate * hoursDiff * 0.7; // Reduce rate over time
+        const exitContribution = entryExitPatterns.exitRate * hoursDiff * 0.3;
+        
+        predictedDensity = Math.max(0, Math.min(maxCapacity, 
+          currentAttendance + entryContribution - exitContribution
+        ));
+      }
+
+      // Calculate factors
+      const factors: CrowdFactor[] = [
+        {
+          type: 'entry_rate',
+          value: entryExitPatterns.entryRate,
+          weight: 0.4,
+          trend: entryExitPatterns.entryRate > 10 ? 'increasing' : 'stable'
+        },
+        {
+          type: 'exit_rate',
+          value: entryExitPatterns.exitRate,
+          weight: 0.3,
+          trend: entryExitPatterns.exitRate > 5 ? 'increasing' : 'stable'
+        },
+        {
+          type: 'capacity',
+          value: maxCapacity,
+          weight: 0.2,
+          trend: 'stable'
+        },
+        {
+          type: 'event_phase',
+          value: this.getEventPhase(timeSlot),
+          weight: 0.1,
+          trend: 'stable'
+        }
+      ];
+
+      // Calculate risk level
+      const densityPercentage = (predictedDensity / maxCapacity) * 100;
+      const riskLevel = this.calculateRiskLevel(densityPercentage);
+
+      // Generate recommendations
+      const recommendations = this.generateRecommendations(riskLevel, densityPercentage);
+
+      // Calculate confidence
+      const confidence = this.calculatePredictionConfidence(attendanceRecords.length, hoursDiff);
 
       return {
-        timeIntervals: predictions,
-        peakTime: peakPrediction.timestamp,
-        peakOccupancy: peakPrediction.predictedCount,
-        capacityWarnings,
-        confidence
+        id: `crowd-${timeSlot.getTime()}`,
+        timestamp: timeSlot,
+        location: 'Overall Venue',
+        currentDensity: currentAttendance,
+        predictedDensity: Math.round(predictedDensity),
+        confidence,
+        factors,
+        riskLevel,
+        recommendations
       };
+
     } catch (error) {
-      console.error('Error calculating occupancy forecast:', error);
-      return this.getDefaultOccupancyForecast();
+      logger.error('Error predicting density for time slot', { error, timeSlot });
+      return null;
     }
   }
 
-  async identifyPeakTimes(): Promise<Date[]> {
-    try {
-      const predictions = await this.predictCrowdFlow();
-      const peakTimes: Date[] = [];
+  private getEventPhase(timeSlot: Date): number {
+    // Simulate event phase (0-100%)
+    const hour = timeSlot.getHours();
+    
+    if (hour < 18) return 25; // Early
+    if (hour < 20) return 50; // Building
+    if (hour < 22) return 75; // Peak
+    if (hour < 24) return 90; // Late peak
+    return 100; // Ending
+  }
+
+  private calculateRiskLevel(densityPercentage: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (densityPercentage >= 95) return 'critical';
+    if (densityPercentage >= 85) return 'high';
+    if (densityPercentage >= 70) return 'medium';
+    return 'low';
+  }
+
+  private generateRecommendations(
+    riskLevel: 'low' | 'medium' | 'high' | 'critical',
+    densityPercentage: number
+  ): string[] {
+    const recommendations: string[] = [];
+
+    switch (riskLevel) {
+      case 'critical':
+        recommendations.push(
+          'Immediately activate emergency crowd control measures',
+          'Deploy maximum security and medical staff',
+          'Consider temporary venue closure',
+          'Implement one-way flow systems',
+          'Monitor all exits and emergency routes'
+        );
+        break;
+      case 'high':
+        recommendations.push(
+          'Increase security presence',
+          'Deploy additional medical staff',
+          'Implement crowd flow management',
+          'Monitor high-density areas closely',
+          'Prepare for potential incidents'
+        );
+        break;
+      case 'medium':
+        recommendations.push(
+          'Maintain current staffing levels',
+          'Monitor crowd flow',
+          'Prepare for potential increases',
+          'Ensure adequate signage'
+        );
+        break;
+      case 'low':
+        recommendations.push(
+          'Continue normal operations',
+          'Monitor for changes in patterns',
+          'Maintain standard safety protocols'
+        );
+        break;
+    }
+
+    return recommendations;
+  }
+
+  private calculatePredictionConfidence(attendanceRecordsCount: number, hoursAhead: number): number {
+    let baseConfidence = 0.8;
+    
+    // Reduce confidence based on data availability
+    if (attendanceRecordsCount < 10) {
+      baseConfidence -= 0.2;
+    } else if (attendanceRecordsCount < 20) {
+      baseConfidence -= 0.1;
+    }
+    
+    // Reduce confidence based on prediction distance
+    if (hoursAhead > 2) {
+      baseConfidence -= 0.1;
+    }
+    if (hoursAhead > 4) {
+      baseConfidence -= 0.2;
+    }
+    
+    return Math.max(0.3, Math.min(1, baseConfidence));
+  }
+
+  private calculateForecastConfidence(): number {
+    if (this.predictions.length === 0) return 0.5;
+    
+    const avgConfidence = this.predictions.reduce((sum, pred) => 
+      sum + pred.confidence, 0
+    ) / this.predictions.length;
+    
+    return Math.round(avgConfidence * 100);
+  }
+
+  private identifyRiskPeriods(predictions: CrowdFlowPrediction[]): RiskPeriod[] {
+    const riskPeriods: RiskPeriod[] = [];
+    
+    for (let i = 0; i < predictions.length - 1; i++) {
+      const current = predictions[i];
+      const next = predictions[i + 1];
       
-      // Find local maxima in predictions
-      for (let i = 1; i < predictions.length - 1; i++) {
-        const current = predictions[i].predictedCount;
-        const previous = predictions[i - 1].predictedCount;
-        const next = predictions[i + 1].predictedCount;
-
-        if (current > previous && current > next) {
-          peakTimes.push(predictions[i].timestamp);
-        }
+      if (current.riskLevel === 'high' || current.riskLevel === 'critical') {
+        const startTime = current.timestamp;
+        const endTime = next.timestamp;
+        
+        riskPeriods.push({
+          startTime,
+          endTime,
+          riskLevel: current.riskLevel,
+          reason: `Predicted density: ${current.predictedDensity} (${Math.round((current.predictedDensity / 1000) * 100)}% capacity)`,
+          recommendations: current.recommendations
+        });
       }
-
-      return peakTimes;
-    } catch (error) {
-      console.error('Error identifying peak times:', error);
-      return [];
     }
+    
+    return riskPeriods;
   }
 
-  async detectCrowdMovementPatterns(): Promise<CrowdMovementPattern[]> {
-    try {
-      const { data: incidents } = await supabase
-        .from('incident_logs')
-        .select('location, created_at')
-        .eq('event_id', this.eventId)
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
-        .order('created_at', { ascending: true });
-
-      if (!incidents || incidents.length === 0) {
-        return [];
-      }
-
-      const movementPatterns: CrowdMovementPattern[] = [];
-      const locations = Array.from(new Set(incidents.map(i => i.location)));
-
-      // Analyze movement between locations
-      for (let i = 0; i < locations.length; i++) {
-        for (let j = i + 1; j < locations.length; j++) {
-          const fromLocation = locations[i];
-          const toLocation = locations[j];
-
-          const pattern = this.analyzeLocationMovement(incidents, fromLocation, toLocation);
-          if (pattern) {
-            movementPatterns.push(pattern);
-          }
-        }
-      }
-
-      return movementPatterns;
-    } catch (error) {
-      console.error('Error detecting crowd movement patterns:', error);
-      return [];
-    }
-  }
-
-  async weatherImpactOnCrowd(): Promise<{ impact: number; factors: string[] }> {
-    try {
-      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
-      if (!weatherData) {
-        return { impact: 0, factors: [] };
-      }
-
-      const currentWeather = weatherData;
-      let impact = 0;
-      const factors: string[] = [];
-
-      // Temperature impact
-      if (currentWeather.temperature > 30) {
-        impact -= 0.2; // High temperature reduces crowd duration
-        factors.push('High temperature may cause early departures');
-      } else if (currentWeather.temperature < 5) {
-        impact -= 0.15; // Low temperature affects comfort
-        factors.push('Low temperature may affect crowd comfort');
-      }
-
-      // Precipitation impact
-      if (currentWeather.rain && currentWeather.rain > 0) {
-        impact -= 0.3; // Rain significantly affects crowd behavior
-        factors.push('Rain may delay entry and cause early departures');
-      }
-
-      // Wind impact
-      if (currentWeather.windSpeed > 20) {
-        impact -= 0.1; // High winds affect outdoor activities
-        factors.push('High winds may affect outdoor activities');
-      }
-
-      // Humidity impact
-      if (currentWeather.humidity > 80) {
-        impact -= 0.1; // High humidity affects comfort
-        factors.push('High humidity may affect crowd comfort');
-      }
-
-      return { impact, factors };
-    } catch (error) {
-      console.error('Error calculating weather impact on crowd:', error);
-      return { impact: 0, factors: [] };
-    }
-  }
-
-  async storeCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
+  private async storeCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
     try {
       const predictionData = predictions.map(prediction => ({
         event_id: this.eventId,
-        predicted_time: prediction.timestamp.toISOString(),
-        predicted_count: prediction.predictedCount,
-        confidence_score: prediction.confidence,
-        factors: prediction.factors
+        timestamp: prediction.timestamp.toISOString(),
+        location: prediction.location,
+        current_density: prediction.currentDensity,
+        predicted_density: prediction.predictedDensity,
+        confidence: prediction.confidence,
+        factors: prediction.factors,
+        risk_level: prediction.riskLevel,
+        recommendations: prediction.recommendations
       }));
 
       const { error } = await supabase
         .from('crowd_predictions')
-        .insert(predictionData);
+        .upsert(predictionData, { onConflict: 'event_id,timestamp,location' });
 
       if (error) throw error;
-    } catch (error) {
-      console.error('Error storing crowd predictions:', error);
-    }
-  }
 
-  // Private helper methods
-  private async calculatePrediction(timestamp: Date): Promise<CrowdFlowPrediction> {
-    try {
-      const currentAttendance = await this.getCurrentAttendance();
-      const basePrediction = await this.getBasePrediction(timestamp);
-      const weatherImpact = await this.getWeatherImpact(timestamp);
-      const eventScheduleImpact = await this.getEventScheduleImpact(timestamp);
-      const historicalPatternImpact = await this.getHistoricalPatternImpact(timestamp);
-      const currentTrendImpact = await this.getCurrentTrendImpact();
-
-      // Combine all factors
-      const predictedCount = Math.max(0, Math.min(
-        currentAttendance + basePrediction + weatherImpact + eventScheduleImpact + historicalPatternImpact + currentTrendImpact,
-        10000 // Reasonable maximum
-      ));
-
-      // Calculate confidence based on data availability
-      const confidence = this.calculatePredictionConfidence(timestamp);
-
-      return {
-        timestamp,
-        predictedCount: Math.round(predictedCount),
-        confidence,
-        factors: {
-          weather: weatherImpact,
-          eventSchedule: eventScheduleImpact,
-          historicalPattern: historicalPatternImpact,
-          currentTrend: currentTrendImpact
-        }
-      };
-    } catch (error) {
-      console.error('Error calculating prediction:', error);
-      return this.getDefaultPrediction(timestamp);
-    }
-  }
-
-  private async getCurrentAttendance(): Promise<number> {
-    try {
-      const { data: event } = await supabase
-        .from('events')
-        .select('current_attendance')
-        .eq('id', this.eventId)
-        .single();
-
-      return event?.current_attendance || 0;
-    } catch (error) {
-      console.error('Error getting current attendance:', error);
-      return 0;
-    }
-  }
-
-  private async getBasePrediction(timestamp: Date): Promise<number> {
-    try {
-      // Simple linear growth model
-      const timeFromNow = (timestamp.getTime() - Date.now()) / (1000 * 60 * 60); // hours
-      const baseGrowthRate = 50; // people per hour
-      
-      return timeFromNow * baseGrowthRate;
-    } catch (error) {
-      console.error('Error getting base prediction:', error);
-      return 0;
-    }
-  }
-
-  private async getWeatherImpact(timestamp: Date): Promise<number> {
-    try {
-      const weatherData = await getWeatherData(51.5074, -0.1278); // Default to London coordinates
-      if (!weatherData) return 0;
-
-      // For now, use current weather data since we don't have hourly forecast
-      // In a real implementation, you'd want to get hourly forecast data
-      let impact = 0;
-
-      // Temperature impact
-      if (weatherData.temperature > 30) {
-        impact -= 20; // High temperature reduces attendance
-      } else if (weatherData.temperature < 5) {
-        impact -= 15; // Low temperature affects attendance
-      }
-
-      // Precipitation impact
-      if (weatherData.rain && weatherData.rain > 0) {
-        impact -= 30; // Rain significantly reduces attendance
-      }
-
-      // Wind impact
-      if (weatherData.windSpeed > 20) {
-        impact -= 10; // High winds affect attendance
-      }
-
-      return impact;
-    } catch (error) {
-      console.error('Error getting weather impact:', error);
-      return 0;
-    }
-  }
-
-  private async getEventScheduleImpact(timestamp: Date): Promise<number> {
-    try {
-      const { data: event } = await supabase
-        .from('events')
-        .select('start_time, end_time, doors_open_time')
-        .eq('id', this.eventId)
-        .single();
-
-      if (!event) return 0;
-
-      const startTime = new Date(event.start_time);
-      const endTime = new Date(event.end_time);
-      const doorsOpenTime = event.doors_open_time ? new Date(event.doors_open_time) : null;
-
-      const timeDiff = timestamp.getTime() - startTime.getTime();
-      const eventDuration = endTime.getTime() - startTime.getTime();
-      const progress = timeDiff / eventDuration;
-
-      // Peak attendance typically occurs 30-60 minutes after start
-      if (progress >= 0.1 && progress <= 0.3) {
-        return 100; // Peak attendance period
-      } else if (progress >= 0.8) {
-        return -50; // Event winding down
-      }
-
-      return 0;
-    } catch (error) {
-      console.error('Error getting event schedule impact:', error);
-      return 0;
-    }
-  }
-
-  private async getHistoricalPatternImpact(timestamp: Date): Promise<number> {
-    try {
-      const patterns = await this.patternEngine.analyzeIncidentPatterns();
-      const hour = timestamp.getHours();
-      const timeSlot = this.getTimeSlot(hour);
-
-      const matchingPatterns = patterns.filter(p => p.timeOfDay === timeSlot);
-      
-      if (matchingPatterns.length === 0) return 0;
-
-      // Use historical patterns to adjust prediction
-      const avgIncidentCount = matchingPatterns.reduce((sum, p) => sum + p.incidentCount, 0) / matchingPatterns.length;
-      
-      // Higher incident rates might indicate higher attendance
-      return avgIncidentCount * 10;
-    } catch (error) {
-      console.error('Error getting historical pattern impact:', error);
-      return 0;
-    }
-  }
-
-  private async getCurrentTrendImpact(): Promise<number> {
-    try {
-      const { data: recentAttendance } = await supabase
-        .from('attendance_records')
-        .select('attendance_count, recorded_at')
-        .eq('event_id', this.eventId)
-        .gte('recorded_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // Last 2 hours
-        .order('recorded_at', { ascending: true });
-
-      if (!recentAttendance || recentAttendance.length < 2) return 0;
-
-      // Calculate trend
-      const firstCount = recentAttendance[0].attendance_count;
-      const lastCount = recentAttendance[recentAttendance.length - 1].attendance_count;
-      const timeDiff = (recentAttendance[recentAttendance.length - 1].recorded_at - recentAttendance[0].recorded_at) / (1000 * 60 * 60); // hours
-
-      const trendRate = (lastCount - firstCount) / timeDiff;
-      
-      // Project trend forward 1 hour
-      return trendRate;
-    } catch (error) {
-      console.error('Error getting current trend impact:', error);
-      return 0;
-    }
-  }
-
-  private calculatePredictionConfidence(timestamp: Date): number {
-    try {
-      const timeFromNow = (timestamp.getTime() - Date.now()) / (1000 * 60 * 60); // hours
-      
-      // Confidence decreases with time
-      if (timeFromNow <= 1) return 0.9;
-      if (timeFromNow <= 2) return 0.8;
-      if (timeFromNow <= 3) return 0.7;
-      return 0.6;
-    } catch (error) {
-      console.error('Error calculating prediction confidence:', error);
-      return 0.5;
-    }
-  }
-
-  private calculateEntryRates(records: any[]): number[] {
-    const rates: number[] = [];
-    
-    for (let i = 1; i < records.length; i++) {
-      const timeDiff = (new Date(records[i].recorded_at).getTime() - new Date(records[i-1].recorded_at).getTime()) / (1000 * 60); // minutes
-      const attendanceDiff = records[i].attendance_count - records[i-1].attendance_count;
-      const rate = attendanceDiff / timeDiff; // people per minute
-      rates.push(rate);
-    }
-
-    return rates;
-  }
-
-  private calculateWeatherImpact(records: any[]): number {
-    const weatherConditions = records.map(r => r.weather_conditions).filter(Boolean);
-    
-    if (weatherConditions.length === 0) return 0;
-
-    // Calculate average impact based on weather conditions
-    const impacts = weatherConditions.map(condition => {
-      switch (condition.toLowerCase()) {
-        case 'rain': return -0.3;
-        case 'snow': return -0.4;
-        case 'storm': return -0.5;
-        case 'sunny': return 0.1;
-        default: return 0;
-      }
-    });
-
-    return impacts.reduce((sum: number, impact) => sum + impact, 0) / impacts.length;
-  }
-
-  private async calculateEventTypeImpact(): Promise<number> {
-    try {
-      const { data: event } = await supabase
-        .from('events')
-        .select('event_type')
-        .eq('id', this.eventId)
-        .single();
-
-      if (!event?.event_type) return 0;
-
-      // Different event types have different entry patterns
-      const eventTypeImpacts = {
-        'concert': 0.2,
-        'sports': 0.1,
-        'conference': -0.1,
-        'festival': 0.3,
-        'exhibition': 0.0
-      };
-
-      return eventTypeImpacts[event.event_type as keyof typeof eventTypeImpacts] || 0;
-    } catch (error) {
-      console.error('Error calculating event type impact:', error);
-      return 0;
-    }
-  }
-
-  private analyzeLocationMovement(incidents: any[], fromLocation: string, toLocation: string): CrowdMovementPattern | null {
-    const fromIncidents = incidents.filter(i => i.location === fromLocation);
-    const toIncidents = incidents.filter(i => i.location === toLocation);
-
-    if (fromIncidents.length === 0 || toIncidents.length === 0) return null;
-
-    // Calculate movement rate based on incident timing
-    const movementRate = this.calculateMovementRate(fromIncidents, toIncidents);
-    
-    if (movementRate === 0) return null;
-
-    return {
-      fromLocation,
-      toLocation,
-      movementRate,
-      timeOfDay: this.getTimeSlot(new Date(fromIncidents[0].created_at).getHours()),
-      eventPhase: this.getEventPhase(new Date(fromIncidents[0].created_at))
-    };
-  }
-
-  private calculateMovementRate(fromIncidents: any[], toIncidents: any[]): number {
-    // Simple heuristic: if incidents in destination location follow incidents in source location
-    // within a reasonable time window, assume movement occurred
-    let movementCount = 0;
-    const timeWindow = 30 * 60 * 1000; // 30 minutes
-
-    for (const fromIncident of fromIncidents) {
-      const fromTime = new Date(fromIncident.created_at).getTime();
-      
-      for (const toIncident of toIncidents) {
-        const toTime = new Date(toIncident.created_at).getTime();
-        
-        if (toTime > fromTime && toTime - fromTime <= timeWindow) {
-          movementCount++;
-          break;
-        }
-      }
-    }
-
-    return movementCount / fromIncidents.length;
-  }
-
-  private getTimeSlot(hour: number): string {
-    if (hour >= 6 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 18) return 'afternoon';
-    if (hour >= 18 && hour < 24) return 'evening';
-    return 'night';
-  }
-
-  private getEventPhase(timestamp: Date): string {
-    // Simplified event phase detection
-    const hour = timestamp.getHours();
-    
-    if (hour < 12) return 'early';
-    if (hour < 18) return 'peak';
-    return 'late';
-  }
-
-  private getDefaultEntryPatterns(): EntryPattern[] {
-    return [
-      { timeSlot: 'morning', averageEntryRate: 20, peakEntryRate: 40, weatherImpact: 0, eventTypeImpact: 0 },
-      { timeSlot: 'afternoon', averageEntryRate: 30, peakEntryRate: 60, weatherImpact: 0, eventTypeImpact: 0 },
-      { timeSlot: 'evening', averageEntryRate: 25, peakEntryRate: 50, weatherImpact: 0, eventTypeImpact: 0 },
-      { timeSlot: 'night', averageEntryRate: 10, peakEntryRate: 20, weatherImpact: 0, eventTypeImpact: 0 }
-    ];
-  }
-
-  private getDefaultOccupancyForecast(): OccupancyForecast {
-    return {
-      timeIntervals: [],
-      peakTime: new Date(),
-      peakOccupancy: 0,
-      capacityWarnings: [],
-      confidence: 0.5
-    };
-  }
-
-  private getDefaultPrediction(timestamp: Date): CrowdFlowPrediction {
-    return {
-      timestamp,
-      predictedCount: 0,
-      confidence: 0.5,
-      factors: {
-        weather: 0,
-        eventSchedule: 0,
-        historicalPattern: 0,
-        currentTrend: 0
-      }
-    };
-  }
-
-  // Additional methods for API endpoints
-  async getCurrentOccupancy(): Promise<number> {
-    try {
-      const { data: latestRecord } = await supabase
-        .from('attendance_records')
-        .select('attendance_count')
-        .eq('event_id', this.eventId)
-        .order('recorded_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      return latestRecord?.attendance_count || 0;
-    } catch (error) {
-      console.error('Error getting current occupancy:', error);
-      return 0;
-    }
-  }
-
-  async getVenueZoneAnalysis(): Promise<any[]> {
-    try {
-      // Mock venue zones - in a real implementation, this would be based on venue layout
-      const zones: Array<{
-        name: string;
-        currentOccupancy: number;
-        predictedPeak: number;
-        riskLevel: 'low' | 'medium' | 'high';
-        recommendations: string[];
-      }> = [
-        { name: 'Main Arena', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
-        { name: 'Food Court', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
-        { name: 'Parking Area', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] },
-        { name: 'Entry Gates', currentOccupancy: 0, predictedPeak: 0, riskLevel: 'low', recommendations: [] }
-      ];
-
-      // Get current occupancy for each zone
-      const currentOccupancy = await this.getCurrentOccupancy();
-      const predictions = await this.predictCrowdFlow();
-
-      // Update zones with real data
-      zones.forEach(zone => {
-        zone.currentOccupancy = Math.floor(currentOccupancy / zones.length);
-        zone.predictedPeak = predictions.length > 0 ? 
-          Math.floor(Math.max(...predictions.map(p => p.predictedCount)) / zones.length) : 0;
-        
-        // Calculate risk level based on occupancy
-        const occupancyRate = zone.currentOccupancy / 100; // Assuming 100 is max per zone
-        if (occupancyRate > 0.8) zone.riskLevel = 'high';
-        else if (occupancyRate > 0.5) zone.riskLevel = 'medium';
-        else zone.riskLevel = 'low';
-
-        // Add recommendations based on risk level
-        if (zone.riskLevel === 'high') {
-          zone.recommendations.push('Increase security presence');
-          zone.recommendations.push('Monitor crowd flow closely');
-        } else if (zone.riskLevel === 'medium') {
-          zone.recommendations.push('Regular monitoring');
-        }
+      logger.info('Stored crowd predictions', { 
+        eventId: this.eventId, 
+        predictionCount: predictions.length 
       });
 
-      return zones;
     } catch (error) {
-      console.error('Error getting venue zone analysis:', error);
-      return [];
+      logger.error('Error storing crowd predictions', { error, eventId: this.eventId });
+      throw error;
     }
+  }
+
+  async storeCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
+    // This method is already implemented above
+    return this.storeCrowdPredictions(predictions);
+  }
+
+  async getPredictions(): Promise<CrowdFlowPrediction[]> {
+    return this.predictions;
+  }
+
+  async getForecasts(): Promise<OccupancyForecast[]> {
+    return this.forecasts;
+  }
+
+  async getDensityZones(): Promise<DensityZone[]> {
+    return this.densityZones;
+  }
+
+  async getLatestPrediction(): Promise<CrowdFlowPrediction | null> {
+    if (this.predictions.length === 0) return null;
+    
+    return this.predictions.reduce((latest, current) => 
+      current.timestamp > latest.timestamp ? current : latest
+    );
+  }
+
+  async getRiskAlerts(): Promise<CrowdFlowPrediction[]> {
+    return this.predictions.filter(prediction => 
+      prediction.riskLevel === 'high' || prediction.riskLevel === 'critical'
+    );
   }
 }

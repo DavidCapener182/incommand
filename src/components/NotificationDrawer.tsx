@@ -1,8 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RecentAction } from '../pages/api/notifications/recent-actions';
 import AIChat from './AIChat';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BellIcon, ChatBubbleLeftRightIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 
 interface NotificationDrawerProps {
@@ -42,6 +46,14 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     subscribed: boolean;
   } | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+
+  // Real-time functionality
+  const { user } = useAuth();
+  const [realTimeChannel, setRealTimeChannel] = useState<any>(null);
+  const [liveIncidents, setLiveIncidents] = useState<any[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   
 
 
@@ -66,6 +78,107 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       localStorage.setItem('readNotifications', JSON.stringify(Array.from(readNotifications)));
     }
   }, [readNotifications]);
+
+  // Initialize real-time connections
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel('notifications', {
+      config: {
+        presence: {
+          key: user.id,
+        },
+        broadcast: {
+          self: true,
+        },
+      },
+    });
+
+    // Track presence
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = channel.presenceState();
+        const presenceUsers = Object.values(presenceState).flat().map((presence: any) => ({
+          id: presence.user_id || 'anon',
+          name: presence.name || 'Unknown User',
+          avatar: presence.avatar,
+          lastSeen: new Date()
+        }));
+        setOnlineUsers(presenceUsers);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string; newPresences: any[] }) => {
+        console.log('User joined notifications channel:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string; leftPresences: any[] }) => {
+        console.log('User left notifications channel:', key, leftPresences);
+      })
+      .on('broadcast', { event: 'new-incident' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
+        if (user_id === user.id) return;
+        
+        // Add new incident to live incidents
+        setLiveIncidents(prev => [payload, ...prev.slice(0, 9)]); // Keep last 10
+        
+        // Update actions with new incident
+        const newAction: RecentAction = {
+          id: `live-${Date.now()}`,
+          type: 'incident',
+          title: `New ${payload.incident_type} Incident`,
+          description: payload.description || 'New incident reported',
+          timestamp: new Date().toISOString(),
+          priority: payload.severity || 'medium',
+          icon: '🚨',
+          userName: payload.reported_by,
+          link: `/incidents/${payload.id}`
+        };
+        
+        setActions(prev => [newAction, ...prev]);
+        setLastSyncTime(new Date());
+      })
+      .on('broadcast', { event: 'incident-update' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
+        if (user_id === user.id) return;
+        
+        // Update live incidents
+        setLiveIncidents(prev => 
+          prev.map(incident => 
+            incident.id === payload.id ? { ...incident, ...payload } : incident
+          )
+        );
+        
+        // Add update action
+        const updateAction: RecentAction = {
+          id: `update-${Date.now()}`,
+          type: 'update',
+          title: `${payload.incident_type} Incident Updated`,
+          description: payload.update_message || 'Incident status changed',
+          timestamp: new Date().toISOString(),
+          priority: payload.severity || 'medium',
+          icon: '🔄',
+          userName: payload.updated_by,
+          link: `/incidents/${payload.id}`
+        };
+        
+        setActions(prev => [updateAction, ...prev]);
+        setLastSyncTime(new Date());
+      })
+      .subscribe(async (status: string) => {
+        setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            user_id: user.id,
+            name: user.user_metadata?.full_name || user.email || 'Unknown User',
+            avatar: user.user_metadata?.avatar_url,
+            lastSeen: new Date()
+          });
+        }
+      });
+
+    setRealTimeChannel(channel);
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user]);
 
   // Track last viewed timestamp for filtering notifications
   const getLastViewedTimestamp = () => {
@@ -392,6 +505,13 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                 {unreadCount}
               </span>
             )}
+            {/* Real-time status indicator */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+              <span className="text-xs opacity-75">
+                {isConnected ? `${onlineUsers.length} online` : 'Offline'}
+              </span>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             {/* Clear All Button */}
@@ -565,6 +685,50 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                   >
                     Try again
                   </button>
+                </div>
+              )}
+
+              {/* Live Incidents Section */}
+              {liveIncidents.length > 0 && (
+                <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-200">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                    <h3 className="text-sm font-semibold text-red-800">Live Incidents</h3>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-2 h-2 bg-red-500 rounded-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {liveIncidents.slice(0, 3).map((incident, index) => (
+                      <motion.div
+                        key={incident.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-white p-3 rounded-lg border border-red-200 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {incident.incident_type}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {incident.description}
+                            </p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            incident.severity === 'high' ? 'bg-red-100 text-red-800' :
+                            incident.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {incident.severity}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               )}
 

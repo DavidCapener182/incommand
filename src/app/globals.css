@@ -232,6 +232,137 @@ input:-webkit-autofill {
   }
 }
 
+/* Enhanced mobile navigation animations */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Enhanced card hover effects */
+.card-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Mobile-optimized card hover */
+@media (max-width: 768px) {
+  .card-hover-lift:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 
+      0 10px 25px -5px rgba(0, 0, 0, 0.2),
+      0 0 0 1px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Enhanced button interactions */
+.button-interactive {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.button-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.button-interactive:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced skeleton loading animations */
+@keyframes skeletonPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+/* Dark mode skeleton */
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+}
+
+/* Enhanced mobile touch targets */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .touch-target-large {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Enhanced scroll behavior */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced focus states for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.focus-ring-dark {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900;
+}
+
 /* Card hover glow effect with performance optimization */
 .card-glow {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

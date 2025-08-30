@@ -13,6 +13,7 @@ import NotificationDrawer from './NotificationDrawer'
 import './ProfileCard.css'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
 
@@ -111,12 +112,27 @@ export default function Navigation() {
     if (user) {
       setProfileLoading(true);
       (async () => {
-        const { data } = await supabase
+        console.log('Fetching profile for user:', user.id);
+        const { data, error } = await supabase
           .from('profiles')
           .select('full_name, email, company, avatar_url')
           .eq('id', user.id)
           .single();
-        setProfile(data);
+        
+        console.log('Profile fetch result:', { data, error });
+        
+        if (error) {
+          console.error('Profile fetch failed, using user metadata as fallback');
+          // Fallback to user metadata if profile fetch fails
+          setProfile({
+            full_name: user.user_metadata?.full_name || user.email,
+            email: user.email,
+            company: user.user_metadata?.company || 'Unknown',
+            avatar_url: user.user_metadata?.avatar_url
+          });
+        } else {
+          setProfile(data);
+        }
         setProfileLoading(false);
       })();
     } else {
@@ -129,12 +145,24 @@ export default function Navigation() {
     if (profileDropdownOpen && user) {
       setProfileLoading(true);
       (async () => {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('full_name, email, company, avatar_url')
           .eq('id', user.id)
           .single();
-        setProfile(data);
+        
+        if (error) {
+          console.error('Profile fetch failed on dropdown open, using user metadata as fallback');
+          // Fallback to user metadata if profile fetch fails
+          setProfile({
+            full_name: user.user_metadata?.full_name || user.email,
+            email: user.email,
+            company: user.user_metadata?.company || 'Unknown',
+            avatar_url: user.user_metadata?.avatar_url
+          });
+        } else {
+          setProfile(data);
+        }
         setProfileLoading(false);
       })();
     }
@@ -401,31 +429,52 @@ export default function Navigation() {
       </nav>
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div ref={mobileMenuRef} className="xl:hidden fixed top-0 right-0 w-64 h-full bg-[#2A3990] shadow-lg z-50 animate-slide-in flex flex-col p-6">
-          <button
+        <motion.div 
+          ref={mobileMenuRef} 
+          className="xl:hidden fixed top-0 right-0 w-80 h-full bg-[#2A3990] shadow-2xl z-50 flex flex-col p-6"
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <motion.button
             onClick={() => setMobileMenuOpen(false)}
-            className="self-end p-2 mb-4 text-white"
+            className="self-end p-2 mb-4 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
             aria-label="Close menu"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </motion.button>
           
-          <Link href="/incidents" className={`${isActive('/incidents')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Incidents</Link>
-
-          <button
-            onClick={() => {
-              if (!hasCurrentEvent) {
-                setShowNoEventModal(true);
-                return;
-              }
-              setReportsOpen((open) => !open);
-            }}
-            className={`w-full text-left py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
           >
-            Reports
-          </button>
+            <Link href="/incidents" className={`${isActive('/incidents')} block py-3 px-4 rounded-xl text-lg font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200`}>Incidents</Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <button
+              onClick={() => {
+                if (!hasCurrentEvent) {
+                  setShowNoEventModal(true);
+                  return;
+                }
+                setReportsOpen((open) => !open);
+              }}
+              className={`w-full text-left py-3 px-4 rounded-xl text-lg font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+            >
+              Reports
+            </button>
+          </motion.div>
           {reportsOpen && hasCurrentEvent && (
             <div className="pl-8">
               <Link href="/analytics" className="block py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
@@ -507,7 +556,7 @@ export default function Navigation() {
               Sign Out
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* No Event Selected Modal */}

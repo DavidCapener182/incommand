@@ -29,6 +29,116 @@ export enum ActionCategory {
   HELP = 'help'
 }
 
+// Enhanced incident categorization interfaces
+export interface IncidentCategory {
+  primary: string;
+  secondary?: string;
+  confidence: number;
+  tags: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  requiresEscalation: boolean;
+  suggestedActions: string[];
+}
+
+// NLP analysis interfaces
+export interface NLPAnalysis {
+  entities: Array<{
+    text: string;
+    type: 'person' | 'location' | 'time' | 'action' | 'object';
+    confidence: number;
+  }>;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  urgency: number; // 0-1 scale
+  keywords: string[];
+  intent: string;
+}
+
+// Smart routing interfaces
+export interface RoutingDecision {
+  targetRole: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  reason: string;
+  estimatedResponseTime: number; // minutes
+  autoAssign: boolean;
+}
+
+// Debrief report interfaces
+export interface DebriefReport {
+  executiveSummary: string;
+  keyIncidents: Array<{
+    id: string;
+    type: string;
+    severity: string;
+    resolution: string;
+    lessonsLearned: string;
+  }>;
+  performanceMetrics: {
+    responseTime: number;
+    resolutionRate: number;
+    escalationRate: number;
+    customerSatisfaction: number;
+  };
+  recommendations: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+  riskAssessment: {
+    overallRisk: 'low' | 'medium' | 'high';
+    riskFactors: string[];
+    mitigationStrategies: string[];
+  };
+}
+
+// Predictive analytics interfaces
+export interface PredictiveAnalytics {
+  predictedIncidents: Array<{
+    type: string;
+    probability: number;
+    likelyTime: string;
+    likelyLocation: string;
+    recommendedPrevention: string;
+  }>;
+  riskHotspots: string[];
+  peakTimes: string[];
+  staffingRecommendations: {
+    roles: string[];
+    quantities: number[];
+    timing: string;
+  };
+}
+
+// Natural language search interfaces
+export interface SearchAnalysis {
+  searchTerms: string[];
+  filters: {
+    incidentType: string[];
+    severity: string[];
+    timeRange: string;
+    location: string[];
+  };
+  intent: string;
+  suggestedQueries: string[];
+}
+
+// Enhanced chat message with metadata
+export interface EnhancedChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  metadata?: {
+    incidentCategory?: IncidentCategory;
+    nlpAnalysis?: NLPAnalysis;
+    routingDecision?: RoutingDecision;
+    sentiment?: {
+      sentiment: 'positive' | 'negative' | 'neutral';
+      confidence: number;
+      emotions: string[];
+      urgency: number;
+      keyPhrases: string[];
+    };
+    searchResults?: any[];
+  };
+}
+
 // Conversation context for generating follow-up actions
 export interface ConversationContext {
   userMessage: string;
@@ -94,4 +204,30 @@ export interface TopicDetectionResult {
   topics: TopicCategory[];
   confidence: number;
   incidentId?: string;
+}
+
+// AI Service configuration interfaces
+export interface AIServiceConfig {
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  retryAttempts: number;
+  timeoutMs: number;
+  enableFallback: boolean;
+  enableSentimentAnalysis: boolean;
+  enablePredictiveAnalytics: boolean;
+}
+
+// Message processing result
+export interface MessageProcessingResult {
+  response: string;
+  quickActions?: QuickAction[];
+  metadata?: {
+    incidentCategory?: IncidentCategory;
+    nlpAnalysis?: NLPAnalysis;
+    routingDecision?: RoutingDecision;
+    sentiment?: any;
+    searchResults?: any[];
+  };
+  context?: any;
 }

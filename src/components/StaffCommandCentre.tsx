@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon, MapPinIcon, SignalIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -484,6 +486,14 @@ export default function StaffCommandCentre() {
   const [previousNames, setPreviousNames] = useState<Record<string, string[]>>({});
   const [allPreviousNames, setAllPreviousNames] = useState<string[]>([]);
 
+  // Real-time staff location tracking
+  const { user } = useAuth();
+  const [staffLocations, setStaffLocations] = useState<Record<string, any>>({});
+  const [locationChannel, setLocationChannel] = useState<any>(null);
+  const [isLocationConnected, setIsLocationConnected] = useState(false);
+  const [activeStaffCount, setActiveStaffCount] = useState(0);
+  const locationUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+
   // Fetch current event on mount
   useEffect(() => {
     const fetchCurrentEvent = async () => {
@@ -608,6 +618,120 @@ export default function StaffCommandCentre() {
     };
     fetchAllNames();
   }, []);
+
+  // Initialize real-time staff location tracking
+  useEffect(() => {
+    if (!user || !eventId) return;
+
+    const channel = supabase.channel(`staff-locations-${eventId}`, {
+      config: {
+        presence: {
+          key: user.id,
+        },
+        broadcast: {
+          self: true,
+        },
+      },
+    });
+
+    // Track staff locations
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = channel.presenceState();
+        const locations: Record<string, any> = {};
+        let activeCount = 0;
+
+        Object.values(presenceState).flat().forEach((presence: any) => {
+          if (presence.location) {
+            locations[presence.user_id] = {
+              ...presence,
+              lastUpdate: new Date()
+            };
+            activeCount++;
+          }
+        });
+
+        setStaffLocations(locations);
+        setActiveStaffCount(activeCount);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string; newPresences: any[] }) => {
+        console.log('Staff member joined location tracking:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string; leftPresences: any[] }) => {
+        console.log('Staff member left location tracking:', key, leftPresences);
+      })
+      .on('broadcast', { event: 'location-update' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
+        if (user_id === user.id) return;
+        
+        setStaffLocations(prev => ({
+          ...prev,
+          [user_id]: {
+            ...payload,
+            lastUpdate: new Date()
+          }
+        }));
+      })
+      .subscribe(async (status: string) => {
+        setIsLocationConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            user_id: user.id,
+            name: user.user_metadata?.full_name || user.email || 'Unknown User',
+            location: null,
+            lastUpdate: new Date()
+          });
+        }
+      });
+
+    setLocationChannel(channel);
+
+    // Start location updates if geolocation is available
+    if ('geolocation' in navigator) {
+      locationUpdateInterval.current = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const location = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: position.timestamp
+            };
+
+            // Update local presence
+            channel.track({
+              user_id: user.id,
+              name: user.user_metadata?.full_name || user.email || 'Unknown User',
+              location,
+              lastUpdate: new Date()
+            });
+
+            // Broadcast location update
+            channel.send({
+              type: 'broadcast',
+              event: 'location-update',
+              payload: location
+            });
+          },
+          (error) => {
+            console.log('Location error:', error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000
+          }
+        );
+      }, 30000); // Update every 30 seconds
+    }
+
+    return () => {
+      if (locationUpdateInterval.current) {
+        clearInterval(locationUpdateInterval.current);
+      }
+      channel.unsubscribe();
+    };
+  }, [user, eventId]);
 
   const handleAssign = (posId: string) => {
     if (currentName.trim()) {
@@ -745,6 +869,54 @@ export default function StaffCommandCentre() {
                   </div>
                 </div>
 
+                {/* Live Staff Locations */}
+                {Object.keys(staffLocations).length > 0 && (
+                  <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <MapPinIcon className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Staff Locations</h3>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-2 h-2 bg-green-500 rounded-full"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {Object.entries(staffLocations).map(([userId, locationData]: [string, any]) => (
+                        <motion.div
+                          key={userId}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {locationData.name}
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                {locationData.location ? 
+                                  `${locationData.location.latitude.toFixed(4)}, ${locationData.location.longitude.toFixed(4)}` :
+                                  'Location unavailable'
+                                }
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <SignalIcon className="w-4 h-4 text-green-500" />
+                              <span className="text-xs text-gray-500">
+                                {locationData.location ? 
+                                  `${Math.round(locationData.location.accuracy)}m` :
+                                  'N/A'
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {groups.map((group) => (
                     <div key={group.group} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
@@ -819,7 +991,16 @@ export default function StaffCommandCentre() {
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Staff Command Centre</h1>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Staff Command Centre</h1>
+              {/* Real-time status indicator */}
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isLocationConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {isLocationConnected ? `${activeStaffCount} active` : 'Offline'}
+                </span>
+              </div>
+            </div>
             <div className="flex items-center space-x-4">
               {navItems.map((item) => (
                 <button

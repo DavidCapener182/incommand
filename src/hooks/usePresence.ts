@@ -10,6 +10,8 @@ export interface UserPresence {
   cursor?: { x: number; y: number };
   typing?: { field: string; timestamp: number };
   focused?: string;
+  location?: { latitude: number; longitude: number; accuracy: number; timestamp: number };
+  lastSeen?: Date;
 }
 
 interface UsePresenceReturn {
@@ -17,6 +19,7 @@ interface UsePresenceReturn {
   updateCursor: (x: number, y: number) => void;
   updateTyping: (field: string, isTyping: boolean) => void;
   updateFocus: (field: string) => void;
+  updateLocation: (location: { latitude: number; longitude: number; accuracy: number; timestamp: number }) => void;
   isConnected: boolean;
 }
 
@@ -91,6 +94,16 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
     });
   }, [user]);
 
+  const updateLocation = useCallback((location: { latitude: number; longitude: number; accuracy: number; timestamp: number }) => {
+    if (!channelRef.current || !user) return;
+
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'location',
+      payload: location
+    });
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -124,7 +137,9 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           avatar: presence.avatar,
           cursor: presence.cursor,
           typing: presence.typing,
-          focused: presence.focused
+          focused: presence.focused,
+          location: presence.location,
+          lastSeen: presence.lastSeen ? new Date(presence.lastSeen) : new Date()
         }));
         setUsers(presenceUsers);
       })
@@ -178,6 +193,17 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
           )
         );
       })
+      .on('broadcast', { event: 'location' }, ({ payload, user_id }: { payload: any; user_id: string }) => {
+        if (user_id === user.id) return;
+        
+        setUsers(prev => 
+          prev.map(u => 
+            u.id === user_id 
+              ? { ...u, location: payload, lastSeen: new Date() }
+              : u
+          )
+        );
+      })
       .subscribe(async (status: string) => {
         setIsConnected(status === 'SUBSCRIBED');
         
@@ -202,6 +228,7 @@ export const usePresence = (channelName: string): UsePresenceReturn => {
     updateCursor,
     updateTyping,
     updateFocus,
+    updateLocation,
     isConnected
   };
 };
