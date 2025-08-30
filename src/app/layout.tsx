@@ -8,7 +8,7 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import GlobalEscalationToast from '../components/GlobalEscalationToast'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import '../lib/globalErrorHandler'
+import '../lib/globalErrorHandler' // Re-enabled after fixing webpack issue
 
 const inter = Inter({ subsets: ['latin'] })
 

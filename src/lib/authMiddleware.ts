@@ -194,5 +194,4 @@ export function withAuth(
   };
 }
 
-// Export authentication utilities
-export { authenticateRequest, requireRole, requireCompanyAccess };
+// All functions are already exported above

@@ -11,6 +11,7 @@ import {
   validateAssignmentRules,
   type StaffMember 
 } from '../../../lib/incidentAssignment';
+import { geocodeAddress } from '../../../utils/geocoding';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,12 +128,32 @@ async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
         );
       }
 
+      // Convert location string to coordinates if provided
+      let coordinates: { latitude: number; longitude: number } | undefined;
+      if (location) {
+        try {
+          const coords = await geocodeAddress(location);
+          coordinates = {
+            latitude: coords.lat,
+            longitude: coords.lon
+          };
+        } catch (error) {
+          logger.warn('Failed to geocode location for auto-assignment', {
+            component: 'StaffAssignment',
+            action: 'auto-assignment',
+            location,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          // Continue without coordinates if geocoding fails
+        }
+      }
+
       const assignment = await autoAssignIncident(
         incidentId,
         eventId,
         incidentType,
         priority,
-        location,
+        coordinates,
         requiredSkills
       );
 

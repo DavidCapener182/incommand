@@ -1,9 +1,15 @@
-import DOMPurify from 'dompurify'
 import { logger } from './logger'
 
-// Configure DOMPurify for different use cases
-const createPurifier = (config: DOMPurify.Config = {}) => {
-  return DOMPurify.createDOMPurify(window, config)
+// Server-side sanitization (simplified for Node.js environment)
+const createPurifier = (config: any = {}) => {
+  return (input: string) => {
+    // Basic server-side sanitization
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+=/gi, '')
+  }
 }
 
 // Default sanitization config (strict)
@@ -62,32 +68,15 @@ export function sanitize(
   level: SanitizeLevel = SanitizeLevel.STRICT
 ): string {
   try {
-    let config: DOMPurify.Config
-    
-    switch (level) {
-      case SanitizeLevel.STRICT:
-        config = defaultConfig
-        break
-      case SanitizeLevel.RICH_TEXT:
-        config = richTextConfig
-        break
-      case SanitizeLevel.ADMIN:
-        config = adminConfig
-        break
-      default:
-        config = defaultConfig
-    }
-    
-    const purifier = createPurifier(config)
-    const sanitized = purifier.sanitize(input)
+    const purifier = createPurifier()
+    const sanitized = purifier(input)
     
     logger.debug('Content sanitized', {
       component: 'Sanitize',
       action: 'sanitize',
       level,
       originalLength: input.length,
-      sanitizedLength: sanitized.length,
-      removedTags: purifier.removed.length > 0 ? purifier.removed : undefined
+      sanitizedLength: sanitized.length
     })
     
     return sanitized
@@ -109,18 +98,21 @@ export function sanitizeAttribute(
   attributeName: string
 ): string {
   try {
-    const purifier = createPurifier({
-      ALLOWED_TAGS: [],
-      ALLOWED_ATTR: [attributeName],
-      ALLOW_DATA_ATTR: false,
-      KEEP_CONTENT: false,
-      RETURN_DOM: false,
+    // Basic attribute sanitization for server-side
+    const sanitized = input
+      .replace(/[<>]/g, '') // Remove angle brackets
+      .replace(/javascript:/gi, '') // Remove javascript protocol
+      .replace(/on\w+=/gi, '') // Remove event handlers
+    
+    logger.debug('Attribute sanitized', {
+      component: 'Sanitize',
+      action: 'sanitizeAttribute',
+      attributeName,
+      originalLength: input.length,
+      sanitizedLength: sanitized.length
     })
     
-    const sanitized = purifier.sanitize(`<div ${attributeName}="${input}"></div>`)
-    const match = sanitized.match(new RegExp(`${attributeName}="([^"]*)"`))
-    
-    return match ? match[1] : ''
+    return sanitized
   } catch (error) {
     logger.error('Attribute sanitization error', error, {
       component: 'Sanitize',
@@ -184,7 +176,7 @@ export function sanitizeObject<T extends Record<string, any>>(
     
     for (const field of stringFields) {
       if (typeof sanitized[field] === 'string') {
-        sanitized[field] = sanitize(sanitized[field] as string, level)
+        (sanitized as any)[field] = sanitize(sanitized[field] as string, level)
       }
     }
     
@@ -212,8 +204,10 @@ export function sanitizeObject<T extends Record<string, any>>(
 export function sanitizeFormData(formData: FormData): FormData {
   try {
     const sanitized = new FormData()
+    let fieldCount = 0
     
     for (const [key, value] of formData.entries()) {
+      fieldCount++
       if (typeof value === 'string') {
         sanitized.append(key, sanitize(value))
       } else {
@@ -224,7 +218,7 @@ export function sanitizeFormData(formData: FormData): FormData {
     logger.debug('Form data sanitized', {
       component: 'Sanitize',
       action: 'sanitizeFormData',
-      fieldCount: formData.entries().length
+      fieldCount
     })
     
     return sanitized
@@ -299,5 +293,4 @@ export function sanitizeFileName(fileName: string): string {
   }
 }
 
-// Export sanitization levels for use in components
-export { SanitizeLevel }
+// SanitizeLevel enum is already exported above
