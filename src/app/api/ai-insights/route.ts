@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { withRateLimit } from '@/lib/rateLimit';
+import { validateRequest, schemas } from '@/lib/validation';
+import { sanitize } from '@/lib/sanitize';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// Input validation schema for AI insights
+const aiInsightsInputSchema = schemas.ai.aiInsights.extend({
+  incidents: schemas.common.nonNegativeInt.array().optional(),
+  attendance: schemas.common.nonNegativeInt.array().optional(),
+});
 
 function getHourKey(date: Date): string {
   // Returns a string like '2024-07-25T14:00:00Z' for the hour
@@ -50,8 +61,26 @@ function isWithinWindow(
   return now >= start && now <= end;
 }
 
-export async function POST(req: NextRequest) {
+async function handleAIInsights(req: NextRequest) {
   try {
+    // Parse and validate request body
+    const body = await req.json();
+    const validation = validateRequest(aiInsightsInputSchema, body, 'ai-insights');
+    
+    if (!validation.success) {
+      logger.warn('AI insights validation failed', {
+        component: 'AIInsightsAPI',
+        action: 'POST',
+        errors: validation.errors
+      });
+      return NextResponse.json({ 
+        error: 'Invalid request data', 
+        details: validation.errors 
+      }, { status: 400 });
+    }
+
+    const { eventId, incidents = [], attendance = [] } = validation.data;
+
     // Create server-side supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,19 +93,31 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const { incidents, attendance, event } = await req.json();
-    const eventId = event;
-    if (!eventId) return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
-
     // Get event timings
     const timings = await getEventTimings(eventId);
-    if (!timings) return NextResponse.json({ error: 'Event timings not found' }, { status: 400 });
+    if (!timings) {
+      logger.warn('Event timings not found', {
+        component: 'AIInsightsAPI',
+        action: 'POST',
+        eventId
+      });
+      return NextResponse.json({ error: 'Event timings not found' }, { status: 400 });
+    }
 
     const now = new Date();
     const hourKey = getHourKey(now);
 
     // Check if within allowed window
     if (!isWithinWindow(now, timings.event_date, timings.security_call_time, timings.curfew_time)) {
+      logger.warn('AI insights requested outside event window', {
+        component: 'AIInsightsAPI',
+        action: 'POST',
+        eventId,
+        currentTime: now.toISOString(),
+        eventDate: timings.event_date,
+        securityCall: timings.security_call_time,
+        curfew: timings.curfew_time
+      });
       return NextResponse.json({ error: 'AI Insights only available during event window.' }, { status: 403 });
     }
 
@@ -87,21 +128,37 @@ export async function POST(req: NextRequest) {
       .eq('event_id', eventId)
       .eq('hour', hourKey)
       .single();
+    
     if (cached && cached.insights) {
+      logger.debug('Returning cached AI insights', {
+        component: 'AIInsightsAPI',
+        action: 'POST',
+        eventId,
+        hourKey
+      });
       return NextResponse.json({ insights: cached.insights, cached: true });
     }
 
+    // Sanitize input data before sending to AI
+    const sanitizedIncidents = incidents.map((incident: any) => 
+      typeof incident === 'string' ? sanitize(incident) : incident
+    );
+    const sanitizedAttendance = attendance.map((record: any) => 
+      typeof record === 'string' ? sanitize(record) : record
+    );
+
     // Prepare prompts for multiple insights
     const prompts = [
-      `Summarize the most important incidents for this event: ${JSON.stringify(incidents)}`,
-      `What trends or patterns can you identify from these incidents: ${JSON.stringify(incidents)}`,
-      `Based on the attendance data, what can you infer about crowd flow and surges? ${JSON.stringify(attendance)}`,
-      `Are there any recommendations for the event team based on these incidents and attendance? ${JSON.stringify(incidents)} ${JSON.stringify(attendance)}`
+      `Summarize the most important incidents for this event: ${JSON.stringify(sanitizedIncidents)}`,
+      `What trends or patterns can you identify from these incidents: ${JSON.stringify(sanitizedIncidents)}`,
+      `Based on the attendance data, what can you infer about crowd flow and surges? ${JSON.stringify(sanitizedAttendance)}`,
+      `Are there any recommendations for the event team based on these incidents and attendance? ${JSON.stringify(sanitizedIncidents)} ${JSON.stringify(sanitizedAttendance)}`
     ];
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     let totalTokens = 0;
     let totalCost = 0;
+    
     const completions = await Promise.all(prompts.map(async (prompt) => {
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
@@ -123,7 +180,7 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'event_id, hour' });
 
-    // Log usage (simplified for now since logAIUsage function needs server-side client)
+    // Log usage
     try {
       await supabase.from('ai_usage').insert({
         event_id: eventId,
@@ -134,12 +191,30 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString()
       });
     } catch (logError) {
-      console.warn('Failed to log AI usage:', logError);
+      logger.error('Failed to log AI usage', logError, {
+        component: 'AIInsightsAPI',
+        action: 'POST',
+        eventId
+      });
     }
+
+    logger.info('AI insights generated successfully', {
+      component: 'AIInsightsAPI',
+      action: 'POST',
+      eventId,
+      totalTokens,
+      totalCost
+    });
 
     return NextResponse.json({ insights: completions, cached: false });
   } catch (error) {
-    console.error('AI Insights error:', error);
+    logger.error('AI Insights error', error, {
+      component: 'AIInsightsAPI',
+      action: 'POST'
+    });
     return NextResponse.json({ error: 'Failed to generate AI insight.' }, { status: 500 });
   }
-} 
+}
+
+// Export rate-limited handler
+export const POST = withRateLimit(handleAIInsights, 'ai'); 

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { withRateLimit } from '@/lib/rateLimit';
+import { validateRequest, schemas } from '@/lib/validation';
+import { sanitize } from '@/lib/sanitize';
+import { withAuth } from '@/lib/authMiddleware';
+import { logger } from '@/lib/logger';
 import { supabase } from '../../../lib/supabase';
 import { 
   autoAssignIncident, 
@@ -9,54 +12,26 @@ import {
   type StaffMember 
 } from '../../../lib/incidentAssignment';
 
-// Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 100; // 100 requests per minute
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-// Rate limiting middleware
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now();
-  const userLimit = rateLimitStore.get(identifier);
-  
-  if (!userLimit || now > userLimit.resetTime) {
-    rateLimitStore.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  
-  if (userLimit.count >= MAX_REQUESTS_PER_WINDOW) {
-    return false;
-  }
-  
-  userLimit.count++;
-  return true;
-}
-
-export async function POST(request: NextRequest) {
+async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
   try {
-    // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Rate limiting check
-    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    const rateLimitKey = `${user.id}-${clientIP}`;
-    
-    if (!checkRateLimit(rateLimitKey)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
+    
+    // Validate and sanitize input
+    const validation = validateRequest(schemas.staff.staffAssignment, body, 'staff-assignment-post');
+    if (!validation.success) {
+      logger.warn('Staff assignment validation failed', { 
+        context: 'staff-assignment-post',
+        errors: validation.errors 
+      });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: validation.errors },
+        { status: 400 }
+      );
+    }
+
     const { 
       incidentId, 
       staffIds, 
@@ -66,8 +41,8 @@ export async function POST(request: NextRequest) {
       priority,
       location,
       requiredSkills = [],
-      bulkAssignments = [] // New field for bulk operations
-    } = body;
+      bulkAssignments = []
+    } = validation.data;
 
     // Handle bulk assignments
     if (bulkAssignments && bulkAssignments.length > 0) {
@@ -283,7 +258,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in staff assignment:', error);
+    logger.error('Error in staff assignment', error, { 
+      context: 'staff-assignment-post',
+      userId: user.id 
+    });
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -294,22 +272,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function handleStaffAssignmentGET(request: NextRequest, user: any) {
   try {
-    // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId');
     const incidentId = searchParams.get('incidentId');
+
+    // Validate query parameters
+    const queryValidation = validateRequest(schemas.common.queryParams, { eventId, incidentId }, 'staff-assignment-get');
+    if (!queryValidation.success) {
+      logger.warn('Staff assignment query validation failed', { 
+        context: 'staff-assignment-get',
+        errors: queryValidation.errors 
+      });
+      return NextResponse.json(
+        { error: 'Invalid query parameters', details: queryValidation.errors },
+        { status: 400 }
+      );
+    }
 
     if (!eventId) {
       return NextResponse.json(
@@ -379,7 +359,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error getting staff assignments:', error);
+    logger.error('Error getting staff assignments', error, { 
+      context: 'staff-assignment-get',
+      userId: user.id 
+    });
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -390,26 +373,29 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+async function handleStaffAssignmentPUT(request: NextRequest, user: any) {
   try {
-    // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const body = await request.json();
     
-    if (authError || !user) {
+    // Validate and sanitize input
+    const validation = validateRequest(schemas.staff.staffAssignmentUpdate, body, 'staff-assignment-put');
+    if (!validation.success) {
+      logger.warn('Staff assignment update validation failed', { 
+        context: 'staff-assignment-put',
+        errors: validation.errors 
+      });
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Invalid request data', details: validation.errors },
+        { status: 400 }
       );
     }
 
-    const body = await request.json();
     const { 
       incidentId, 
       staffIds, 
       assignmentType = 'manual',
       notes 
-    } = body;
+    } = validation.data;
 
     if (!incidentId || !staffIds || !Array.isArray(staffIds)) {
       return NextResponse.json(
@@ -495,7 +481,10 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating staff assignment:', error);
+    logger.error('Error updating staff assignment', error, { 
+      context: 'staff-assignment-put',
+      userId: user.id 
+    });
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -506,22 +495,24 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleStaffAssignmentDELETE(request: NextRequest, user: any) {
   try {
-    // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const incidentId = searchParams.get('incidentId');
     const staffId = searchParams.get('staffId');
+
+    // Validate query parameters
+    const queryValidation = validateRequest(schemas.common.deleteParams, { incidentId, staffId }, 'staff-assignment-delete');
+    if (!queryValidation.success) {
+      logger.warn('Staff assignment delete validation failed', { 
+        context: 'staff-assignment-delete',
+        errors: queryValidation.errors 
+      });
+      return NextResponse.json(
+        { error: 'Invalid query parameters', details: queryValidation.errors },
+        { status: 400 }
+      );
+    }
 
     if (!incidentId) {
       return NextResponse.json(
@@ -576,7 +567,10 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error removing staff assignment:', error);
+    logger.error('Error removing staff assignment', error, { 
+      context: 'staff-assignment-delete',
+      userId: user.id 
+    });
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -586,3 +580,23 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const POST = withRateLimit(
+  withAuth(handleStaffAssignmentPOST, { requireRole: ['user', 'admin', 'superadmin'] }),
+  'general'
+);
+
+export const GET = withRateLimit(
+  withAuth(handleStaffAssignmentGET, { requireRole: ['user', 'admin', 'superadmin'] }),
+  'general'
+);
+
+export const PUT = withRateLimit(
+  withAuth(handleStaffAssignmentPUT, { requireRole: ['user', 'admin', 'superadmin'] }),
+  'general'
+);
+
+export const DELETE = withRateLimit(
+  withAuth(handleStaffAssignmentDELETE, { requireRole: ['user', 'admin', 'superadmin'] }),
+  'general'
+);
