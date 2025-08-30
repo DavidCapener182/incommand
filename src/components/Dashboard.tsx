@@ -44,7 +44,6 @@ import { createPortal } from 'react-dom';
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
-import { ErrorBoundary, useErrorHandler } from './ErrorBoundary'
 
 
 // <style>
@@ -403,9 +402,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 
 
-function DashboardContent() {
-  const errorHandler = useErrorHandler();
-  
+export default function Dashboard() {
   let auth;
   try {
     auth = useAuth();
@@ -504,22 +501,12 @@ function DashboardContent() {
     setLoadingCurrentEvent(true);
     setCurrentEvent(null);
     try {
-      const { data, error: supabaseError } = await supabase
+      const { data } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
         .eq('company_id', companyId)
         .single();
-
-      if (supabaseError) {
-        logger.error('Error fetching current event', supabaseError, { 
-          component: 'Dashboard', 
-          action: 'fetchCurrentEvent',
-          companyId 
-        });
-        setError('Failed to load current event');
-        return;
-      }
 
       if (data) {
         data.venue_name = data.venue_name
@@ -529,17 +516,10 @@ function DashboardContent() {
         setCurrentEvent(data);
         setHasCurrentEvent(true);
         setCurrentEventId(data.id);
-        
         if (data.venue_address) {
           try {
             const coords = await geocodeAddress(data.venue_address);
             setCoordinates(coords);
-            logger.debug('Geocoded venue address', { 
-              component: 'Dashboard', 
-              action: 'geocodeAddress',
-              venueAddress: data.venue_address,
-              coordinates: coords 
-            });
           } catch (error) {
             logger.error('Error geocoding address', error, { 
               component: 'Dashboard', 
@@ -548,32 +528,21 @@ function DashboardContent() {
             });
             // Don't set error state for geocoding failures, just log them
           }
+        } else {
+          setHasCurrentEvent(false);
+          setCurrentEventId(null);
         }
-        
-        logger.debug('Current event loaded successfully', { 
-          component: 'Dashboard', 
-          action: 'fetchCurrentEvent',
-          eventId: data.id,
-          eventName: data.event_name 
-        });
       } else {
         setHasCurrentEvent(false);
         setCurrentEventId(null);
-        logger.debug('No current event found', { 
-          component: 'Dashboard', 
-          action: 'fetchCurrentEvent',
-          companyId 
-        });
       }
     } catch (err) {
-      const error = err as Error;
-      logger.error('Unexpected error in fetchCurrentEvent', error, { 
+      logger.error('Unexpected error in fetchCurrentEvent', err, { 
         component: 'Dashboard', 
         action: 'fetchCurrentEvent',
         companyId 
       });
-      errorHandler(error);
-      setError('An unexpected error occurred while loading the current event');
+      setError('An unexpected error occurred');
     } finally {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
@@ -1269,13 +1238,4 @@ function DashboardContent() {
       )}
     </div>
   )
-}
-
-// Export the Dashboard component wrapped with Error Boundary
-export default function Dashboard() {
-  return (
-    <ErrorBoundary componentName="Dashboard">
-      <DashboardContent />
-    </ErrorBoundary>
-  );
 } 

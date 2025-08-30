@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withRateLimit } from '@/lib/rateLimit';
-import { validateRequest, schemas } from '@/lib/validation';
-import { sanitize } from '@/lib/sanitize';
-import { withAuth } from '@/lib/authMiddleware';
-import { logger } from '@/lib/logger';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { supabase } from '../../../lib/supabase';
 import { 
   autoAssignIncident, 
@@ -11,28 +8,55 @@ import {
   validateAssignmentRules,
   type StaffMember 
 } from '../../../lib/incidentAssignment';
-import { geocodeAddress } from '../../../utils/geocoding';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 100; // 100 requests per minute
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
-async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
+// Rate limiting middleware
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitStore.get(identifier);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitStore.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (userLimit.count >= MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check for Supabase authentication
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
-    // Validate and sanitize input
-    const validation = validateRequest(schemas.staff.staffAssignment, body, 'staff-assignment-post');
-    if (!validation.success) {
-      logger.warn('Staff assignment validation failed', { 
-        context: 'staff-assignment-post',
-        errors: validation.errors 
-      });
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: validation.errors },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
+    // Rate limiting check
+    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitKey = `${user.id}-${clientIP}`;
+    
+    if (!checkRateLimit(rateLimitKey)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    const body = await request.json();
     const { 
       incidentId, 
       staffIds, 
@@ -42,8 +66,8 @@ async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
       priority,
       location,
       requiredSkills = [],
-      bulkAssignments = []
-    } = validation.data;
+      bulkAssignments = [] // New field for bulk operations
+    } = body;
 
     // Handle bulk assignments
     if (bulkAssignments && bulkAssignments.length > 0) {
@@ -128,32 +152,12 @@ async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
         );
       }
 
-      // Convert location string to coordinates if provided
-      let coordinates: { latitude: number; longitude: number } | undefined;
-      if (location) {
-        try {
-          const coords = await geocodeAddress(location);
-          coordinates = {
-            latitude: coords.lat,
-            longitude: coords.lon
-          };
-        } catch (error) {
-          logger.warn('Failed to geocode location for auto-assignment', {
-            component: 'StaffAssignment',
-            action: 'auto-assignment',
-            location,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-          // Continue without coordinates if geocoding fails
-        }
-      }
-
       const assignment = await autoAssignIncident(
         incidentId,
         eventId,
         incidentType,
         priority,
-        coordinates,
+        location,
         requiredSkills
       );
 
@@ -279,10 +283,7 @@ async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
     });
 
   } catch (error) {
-    logger.error('Error in staff assignment', error, { 
-      context: 'staff-assignment-post',
-      userId: user.id 
-    });
+    console.error('Error in staff assignment:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -293,24 +294,22 @@ async function handleStaffAssignmentPOST(request: NextRequest, user: any) {
   }
 }
 
-async function handleStaffAssignmentGET(request: NextRequest, user: any) {
+export async function GET(request: NextRequest) {
   try {
+    // Check for Supabase authentication
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId');
     const incidentId = searchParams.get('incidentId');
-
-    // Validate query parameters
-    const queryValidation = validateRequest(schemas.common.queryParams, { eventId, incidentId }, 'staff-assignment-get');
-    if (!queryValidation.success) {
-      logger.warn('Staff assignment query validation failed', { 
-        context: 'staff-assignment-get',
-        errors: queryValidation.errors 
-      });
-      return NextResponse.json(
-        { error: 'Invalid query parameters', details: queryValidation.errors },
-        { status: 400 }
-      );
-    }
 
     if (!eventId) {
       return NextResponse.json(
@@ -380,10 +379,7 @@ async function handleStaffAssignmentGET(request: NextRequest, user: any) {
     });
 
   } catch (error) {
-    logger.error('Error getting staff assignments', error, { 
-      context: 'staff-assignment-get',
-      userId: user.id 
-    });
+    console.error('Error getting staff assignments:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -394,29 +390,26 @@ async function handleStaffAssignmentGET(request: NextRequest, user: any) {
   }
 }
 
-async function handleStaffAssignmentPUT(request: NextRequest, user: any) {
+export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check for Supabase authentication
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
-    // Validate and sanitize input
-    const validation = validateRequest(schemas.staff.staffAssignmentUpdate, body, 'staff-assignment-put');
-    if (!validation.success) {
-      logger.warn('Staff assignment update validation failed', { 
-        context: 'staff-assignment-put',
-        errors: validation.errors 
-      });
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: validation.errors },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
+    const body = await request.json();
     const { 
       incidentId, 
       staffIds, 
       assignmentType = 'manual',
       notes 
-    } = validation.data;
+    } = body;
 
     if (!incidentId || !staffIds || !Array.isArray(staffIds)) {
       return NextResponse.json(
@@ -502,10 +495,7 @@ async function handleStaffAssignmentPUT(request: NextRequest, user: any) {
     });
 
   } catch (error) {
-    logger.error('Error updating staff assignment', error, { 
-      context: 'staff-assignment-put',
-      userId: user.id 
-    });
+    console.error('Error updating staff assignment:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -516,24 +506,22 @@ async function handleStaffAssignmentPUT(request: NextRequest, user: any) {
   }
 }
 
-async function handleStaffAssignmentDELETE(request: NextRequest, user: any) {
+export async function DELETE(request: NextRequest) {
   try {
+    // Check for Supabase authentication
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const incidentId = searchParams.get('incidentId');
     const staffId = searchParams.get('staffId');
-
-    // Validate query parameters
-    const queryValidation = validateRequest(schemas.common.deleteParams, { incidentId, staffId }, 'staff-assignment-delete');
-    if (!queryValidation.success) {
-      logger.warn('Staff assignment delete validation failed', { 
-        context: 'staff-assignment-delete',
-        errors: queryValidation.errors 
-      });
-      return NextResponse.json(
-        { error: 'Invalid query parameters', details: queryValidation.errors },
-        { status: 400 }
-      );
-    }
 
     if (!incidentId) {
       return NextResponse.json(
@@ -588,10 +576,7 @@ async function handleStaffAssignmentDELETE(request: NextRequest, user: any) {
     });
 
   } catch (error) {
-    logger.error('Error removing staff assignment', error, { 
-      context: 'staff-assignment-delete',
-      userId: user.id 
-    });
+    console.error('Error removing staff assignment:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -601,23 +586,3 @@ async function handleStaffAssignmentDELETE(request: NextRequest, user: any) {
     );
   }
 }
-
-export const POST = withRateLimit(
-  withAuth(handleStaffAssignmentPOST, { requireRole: ['user', 'admin', 'superadmin'] }),
-  'general'
-);
-
-export const GET = withRateLimit(
-  withAuth(handleStaffAssignmentGET, { requireRole: ['user', 'admin', 'superadmin'] }),
-  'general'
-);
-
-export const PUT = withRateLimit(
-  withAuth(handleStaffAssignmentPUT, { requireRole: ['user', 'admin', 'superadmin'] }),
-  'general'
-);
-
-export const DELETE = withRateLimit(
-  withAuth(handleStaffAssignmentDELETE, { requireRole: ['user', 'admin', 'superadmin'] }),
-  'general'
-);

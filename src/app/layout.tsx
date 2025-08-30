@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
@@ -7,10 +6,8 @@ import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import GlobalEscalationToast from '../components/GlobalEscalationToast'
-import { ErrorBoundary } from '../components/ErrorBoundary'
-import '../lib/globalErrorHandler' // Re-enabled after fixing client-side rendering
 
-const inter = Inter({ subsets: ['latin'] })
+// Using system/Tailwind fonts to avoid network fetches during build
 
 export const metadata: Metadata = {
   title: 'InCommand - Event Management',
@@ -53,16 +50,14 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.supabase.co" />
         <link rel="dns-prefetch" href="https://api.supabase.co" />
       </head>
-      <body className={inter.className + " bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
-        <ErrorBoundary componentName="RootLayout">
+      <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <AuthProvider>
-        <NotificationDrawerProvider>
-        <MaintenanceBanner />
-        <GlobalEscalationToast />
-        <LayoutWrapper>{children}</LayoutWrapper>
-        </NotificationDrawerProvider>
+          <NotificationDrawerProvider>
+            <MaintenanceBanner />
+            <GlobalEscalationToast />
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </NotificationDrawerProvider>
         </AuthProvider>
-        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

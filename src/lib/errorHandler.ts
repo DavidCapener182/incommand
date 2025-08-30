@@ -143,7 +143,7 @@ class ErrorHandler {
 
       localStorage.setItem('errorLogs', JSON.stringify(storedErrors));
     } catch (error) {
-      logger.error('Failed to store error locally', error, { component: 'ErrorHandler', action: 'storeErrorLocally' });
+      console.error('Failed to store error locally:', error);
     }
   }
 
@@ -230,10 +230,10 @@ class ErrorHandler {
       });
 
       if (!response.ok) {
-        logger.error('Failed to log error to external service', null, { component: 'ErrorHandler', action: 'logToExternalService', status: response.status });
+        console.error('Failed to log error to external service');
       }
     } catch (error) {
-      logger.error('Error logging to external service', error, { component: 'ErrorHandler', action: 'logToExternalService' });
+      console.error('Error logging to external service:', error);
     }
   }
 
@@ -255,7 +255,7 @@ class ErrorHandler {
         errorLog.resolution = 'synced';
       }
     } catch (error) {
-      logger.error('Failed to sync error log', error, { component: 'ErrorHandler', action: 'syncErrorLog' });
+      console.error('Failed to sync error log:', error);
     }
   }
 
@@ -277,18 +277,35 @@ class ErrorHandler {
   }
 
   /**
-   * Clear resolved errors
+   * Clear resolved errors from local storage
    */
   clearResolvedErrors(): void {
-    this.errorLogs = this.errorLogs.filter(log => !log.resolved);
-    
-    // Also clear from local storage
     try {
-      const storedErrors = JSON.parse(localStorage.getItem('errorLogs') || '[]');
-      const unresolvedErrors = storedErrors.filter((error: any) => !error.resolved);
+      const storedErrors = this.getStoredErrors();
+      const unresolvedErrors = storedErrors.filter((error: ErrorLog) => !error.resolved);
       localStorage.setItem('errorLogs', JSON.stringify(unresolvedErrors));
     } catch (error) {
       logger.error('Failed to clear resolved errors from storage', error, { component: 'ErrorHandler', action: 'clearResolvedErrors' });
+    }
+  }
+
+  /**
+   * Get stored errors from local storage
+   */
+  private getStoredErrors(): ErrorLog[] {
+    try {
+      const storedErrors = JSON.parse(localStorage.getItem('errorLogs') || '[]');
+      return storedErrors.map((error: any) => ({
+        ...error,
+        error: {
+          name: error.error.name,
+          message: error.error.message,
+          stack: error.error.stack
+        }
+      }));
+    } catch (error) {
+      logger.error('Failed to get stored errors from local storage', error, { component: 'ErrorHandler', action: 'getStoredErrors' });
+      return [];
     }
   }
 

@@ -178,7 +178,7 @@ export default function StaffCommandCentre() {
     };
     fetchCurrentEvent();
   }, []);
-
+  
   // Load positions and assignments from Supabase when eventId changes
   useEffect(() => {
     if (!eventId) return;
@@ -364,9 +364,9 @@ export default function StaffCommandCentre() {
           .find(g => g.group === r.area)
           ?.positions.find(
             p =>
-              p.callsign === r.callsign &&
-              p.short === r.short_code &&
-              p.position === r.position
+            p.callsign === r.callsign &&
+            p.short === r.short_code &&
+            p.position === r.position
           );
         if (match) idMap[match.id] = r.id;
       });
@@ -476,10 +476,10 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     required?: boolean;
     skills?: string[];
   };
-  
-  type Category = { 
+
+  type Category = {
     id: number;
-    name: string; 
+    name: string;
     color: string;
     positions: Position[] 
   };
@@ -634,8 +634,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   const filteredCategories = categories.map(category => ({
     ...category,
     positions: category.positions.filter(position => 
-      position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
-      position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
+          position.callsign.toLowerCase().includes(globalSearch.toLowerCase()) ||
+          position.position.toLowerCase().includes(globalSearch.toLowerCase()) ||
       (position.assignedStaff && staffList.find(s => s.id === position.assignedStaff)?.full_name.toLowerCase().includes(globalSearch.toLowerCase()))
     )
   })).filter(category => 
@@ -681,12 +681,12 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Add new position
   const addPosition = (categoryId: number, position: Omit<Position, 'id'>) => {
     const newPosition = {
-      ...position,
+        ...position,
       id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-    
-    setCategories(prev => prev.map(cat => 
-      cat.id === categoryId 
+      };
+
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
         ? { ...cat, positions: [...cat.positions, newPosition] }
         : cat
     ));
@@ -799,7 +799,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             assigned_name = staffList.find(s => s.id === pos.assignedStaff)?.full_name || null;
           }
           return {
-            event_id: eventId,
+          event_id: eventId,
             position_id: (uniqueRoles.find(r => r.area === category.name && r.short_code === (pos.short || pos.callsign)) || {}).id,
             user_id,
             assigned_name,
@@ -920,8 +920,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+            </div>
+          </div>
 
       <div className="px-6 py-6">
         {/* Enhanced Stats Row */}
@@ -957,12 +957,12 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                 <div>
                   <div className={`text-3xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
                   <div className="text-sm text-gray-500 dark:text-gray-300">{kpi.label}</div>
-                </div>
+            </div>
                 <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-[#182447] flex items-center justify-center">
                   {kpi.icon}
-                </div>
-              </div>
+          </div>
             </div>
+          </div>
           ))}
         </div>
 
@@ -1006,11 +1006,11 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{category.name}</h2>
                     <div className="hidden sm:flex gap-2">
                       <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
-                        {category.positions.length} positions
-                      </span>
+                      {category.positions.length} positions
+                    </span>
                       <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
                         {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
-                      </span>
+                    </span>
                       {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
                         <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs px-2.5 py-1 rounded-full font-medium">
                           {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
@@ -1019,7 +1019,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
+              <button
                       onClick={() => {
                         setEditingCategory(category);
                         setShowEditCategoryModal(true);
@@ -1042,8 +1042,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                    </button>
-                  </div>
+              </button>
+            </div>
                 </div>
               </div>
 
@@ -1063,7 +1063,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                         : null;
                       const isAssigned = !!assignedStaff || !!position.assignedName;
 
-                      return (
+                return (
                         <PositionCard
                           key={position.id}
                           position={position}
@@ -1096,14 +1096,14 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               <span className="font-medium">You have unsaved changes</span>
             </div>
-            <button
-              onClick={saveChanges}
+          <button
+            onClick={saveChanges}
               className="bg-white text-blue-600 px-6 py-2 rounded-xl font-medium hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
+          >
               Save Changes
-            </button>
-          </div>
+          </button>
         </div>
+      </div>
       )}
 
       {/* Modals */}
@@ -1162,8 +1162,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             <div className="flex justify-end gap-3">
               <button onClick={cancelDeletePosition} className="px-6 py-2 rounded-xl bg-gray-200 text-gray-800 hover:bg-gray-300 transition-all duration-200">Cancel</button>
               <button onClick={confirmDeletePosition} className="px-6 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all duration-200">Delete</button>
-            </div>
           </div>
+      </div>
         </div>
       )}
     </div>
@@ -1242,19 +1242,19 @@ function PositionCard({
       }`}>
         {isAssigned ? '✓' : '!'}
       </div>
-      
+
       {/* Enhanced Edit/Delete Buttons */}
       <div className="absolute top-2 right-10 flex gap-1 z-10">
-        <button 
-          onClick={onEdit} 
-          title="Edit position" 
+          <button
+            onClick={onEdit}
+            title="Edit position"
           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
-        >
+          >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" />
-          </svg>
-        </button>
-        <button 
+            </svg>
+          </button>
+                        <button
           onClick={onDelete} 
           title="Delete position" 
           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
@@ -1262,8 +1262,8 @@ function PositionCard({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </button>
-      </div>
+                        </button>
+            </div>
       
       <div className="p-4 flex flex-col gap-3">
         {/* Enhanced Role Badge Header */}
@@ -1274,7 +1274,7 @@ function PositionCard({
           <span className="inline-block bg-gray-100 dark:bg-[#182447] border-2 border-gray-200 dark:border-[#2d437a] rounded-xl px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm">
             {position.position}
           </span>
-        </div>
+                      </div>
         
         {/* Enhanced Assigned Staff or Name with Photo/Initials */}
         {isAssigned && (
@@ -1284,7 +1284,7 @@ function PositionCard({
             ) : assignedStaff ? (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {(assignedStaff.full_name || '').split(' ').map((n: string) => n[0]).join('')}
-              </div>
+            </div>
             ) : assignedName ? (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {(assignedName || '').split(' ').map((n: string) => n[0]).join('')}
@@ -1295,12 +1295,12 @@ function PositionCard({
             </span>
           </div>
         )}
-        
+
         {/* Enhanced Vacant State */}
         {isVacant && (
           <div className="mt-3 flex flex-col items-center gap-3">
             <span className="inline-block text-sm text-gray-500 dark:text-gray-400 font-medium">No one assigned</span>
-            <button
+              <button
               ref={assignBtnRef}
               className="text-blue-600 text-sm font-medium hover:text-blue-800 bg-transparent p-0 border-0 assign-btn hover:underline transition-all duration-200"
               onClick={() => setShowAssignMenu(v => !v)}
@@ -1308,7 +1308,7 @@ function PositionCard({
               style={{ minWidth: 0 }}
             >
               Assign Staff
-            </button>
+              </button>
             {showAssignMenu && dropdownPos && createPortal(
               <div 
                 className="assign-dropdown-container" 
@@ -1340,7 +1340,7 @@ function PositionCard({
                         {staff.full_name}
                       </button>
                     ))}
-                  </div>
+            </div>
                 )}
               </div>,
               document.body
@@ -1486,7 +1486,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
               className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               required
             />
-      </div>
+        </div>
 
           <div className="flex items-center gap-2">
             <input
@@ -1583,12 +1583,12 @@ function EditPositionModal({ isOpen, position, onClose, onSave }: {
         {(formData.assignedStaff || formData.assignedName) && (
           <>
             <div className="mb-2 text-xs text-gray-700 dark:text-gray-200">This will remove the current assignment from this position.</div>
-            <button
+          <button
               onClick={handleUnassign}
               className="mb-4 px-4 py-2 rounded border border-orange-500 text-orange-600 font-semibold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-            >
+          >
               Unassign
-            </button>
+          </button>
           </>
         )}
         <div className="flex justify-end gap-2">
@@ -1831,10 +1831,10 @@ function StaffListView() {
     <div className="p-6 sm:p-8">
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
+        <div>
             <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Staff Management</h2>
-            <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
-          </div>
+          <p className="text-gray-600 dark:text-gray-300">Manage your team members and their details</p>
+        </div>
           <button
             onClick={openAddModal}
             className="hidden sm:inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow"
@@ -1850,8 +1850,8 @@ function StaffListView() {
             {/* Search */}
             <div className="relative">
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
+          <input
+            type="text"
                 placeholder="Search by name..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -1886,13 +1886,13 @@ function StaffListView() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={openAddModal}
+          <button
+            onClick={openAddModal}
                 className="sm:hidden inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold"
-              >
-                <PlusIcon className="h-5 w-5" />
+          >
+            <PlusIcon className="h-5 w-5" />
                 Add
-              </button>
+          </button>
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500 dark:text-blue-100">Showing {filteredStaff.length} of {staff.length}</div>
@@ -1929,66 +1929,66 @@ function StaffListView() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
-              </tr>
-            </thead>
+                </tr>
+              </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-[#2d437a]">
                 {filteredStaff.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-[#2d437a] cursor-pointer" onClick={() => openProfileModal(member)}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-inner">
                           <span className="text-white font-semibold text-sm">
                             {(member.full_name || '').split(' ').map((n: string) => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {member.full_name}
+                            </span>
                           </div>
+                          <div className="ml-4">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {member.full_name}
+                            </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {member.email || ''}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {member.contact_number ? (
                         <a href={`tel:${member.contact_number}`} className="text-blue-600 dark:text-blue-300 hover:underline">{member.contact_number}</a>
                       ) : (
                         'Not provided'
                       )}
-                    </td>
-                    <td className="px-6 py-4">
+                      </td>
+                      <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {(member.skill_tags || []).map((skill: string) => (
-                          <span
-                            key={skill}
+                                <span
+                                  key={skill}
                             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-800/60 dark:text-blue-100"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
                         onClick={(e) => { e.stopPropagation(); openEditModal(member); }}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                      >
+                        >
                         <PencilSquareIcon className="w-4 h-4" /> Edit
-                      </button>
-                      <button
+                        </button>
+                        <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(member.id); }}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 dark:border-red-700 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
-                      >
+                        >
                         <TrashIcon className="w-4 h-4" /> Delete
-                      </button>
-                  </td>
-                </tr>
+                        </button>
+                      </td>
+                    </tr>
               ))}
-            </tbody>
-          </table>
-      </div>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -2293,4 +2293,4 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
       </div>
     </div>
   );
-}
+} 
