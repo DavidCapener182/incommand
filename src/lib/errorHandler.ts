@@ -1,3 +1,5 @@
+import { logger } from './logger'
+
 /**
  * Centralized Error Handling Service for PWA Components
  * 
@@ -104,14 +106,14 @@ class ErrorHandler {
     
     switch (errorLog.severity) {
       case 'low':
-        console.log(logMessage);
+        logger.info(logMessage, { component: 'ErrorHandler', action: 'logError', severity: 'low' });
         break;
       case 'medium':
-        console.warn(logMessage);
+        logger.warn(logMessage, { component: 'ErrorHandler', action: 'logError', severity: 'medium' });
         break;
       case 'high':
       case 'critical':
-        console.error(logMessage, errorLog.error);
+        logger.error(logMessage, errorLog.error, { component: 'ErrorHandler', action: 'logError', severity: errorLog.severity });
         break;
     }
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon } from '@heroicons/react/24/outline'
@@ -61,7 +62,7 @@ const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id'>) =
 const recentToasts = new Map<string, number>(); // Track recent toasts to prevent duplicates
 
 // Add debugging
-console.log('🔧 IncidentTable module loaded. Active subscriptions:', activeSubscriptions.size, 'Toast callbacks:', globalToastCallbacks.size);
+logger.debug('IncidentTable module loaded', { component: 'IncidentTable', action: 'moduleLoad', activeSubscriptions: activeSubscriptions.size, toastCallbacks: globalToastCallbacks.size });
 
 export default function IncidentTable({ 
   filters, 
@@ -83,7 +84,7 @@ export default function IncidentTable({
   onFiltersChange?: (filters: FilterState) => void;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
-  console.log('🔧 IncidentTable component rendered. ID:', componentId.current, 'onToast available:', !!onToast);
+  logger.debug('IncidentTable component rendered', { component: 'IncidentTable', action: 'render', componentId: componentId.current, onToastAvailable: !!onToast });
 
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -125,7 +126,7 @@ export default function IncidentTable({
         onDataLoaded(data || []);
       }
     } catch (err) {
-      console.error('Error fetching incidents:', err);
+      logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: currentEventId || undefined });
       setError('Failed to fetch incidents');
     } finally {
       setLoading(false);
@@ -144,7 +145,7 @@ export default function IncidentTable({
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
     if (subscriptionRef.current) {
-      console.log('Cleaning up incident table subscription');
+      logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: currentEventId || undefined });
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
@@ -153,13 +154,13 @@ export default function IncidentTable({
       const subscriptionKey = `incident_logs_${currentEventId}`;
       activeSubscriptions.delete(subscriptionKey);
       globalToastCallbacks.delete(subscriptionKey);
-      console.log('🧹 Removed subscription and toast callback from active maps:', subscriptionKey);
+      logger.debug('Removed subscription and toast callback from active maps', { component: 'IncidentTable', action: 'cleanup', subscriptionKey });
     }
   };
 
   useEffect(() => {
     const checkCurrentEvent = async () => {
-      console.log('🔍 CHECKING FOR CURRENT EVENT...');
+      logger.debug('Checking for current event', { component: 'IncidentTable', action: 'checkCurrentEvent' });
       try {
         const { data: eventData } = await supabase
           .from('events')
@@ -167,13 +168,11 @@ export default function IncidentTable({
           .eq('is_current', true)
           .single();
 
-        console.log('🔍 CURRENT EVENT DATA:', eventData);
         const newEventId = eventData?.id || null;
-        console.log('🔍 SETTING CURRENT EVENT ID TO:', newEventId);
+        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId });
         setCurrentEventId(newEventId);
-        console.log('🔍 CURRENT EVENT ID SET COMPLETE');
       } catch (err) {
-        console.error('❌ ERROR CHECKING CURRENT EVENT:', err);
+        logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
         setCurrentEventId(null);
       }
     };
@@ -182,23 +181,21 @@ export default function IncidentTable({
   }, []);
 
   useEffect(() => {
-    console.log('🔍 SUBSCRIPTION USEEFFECT TRIGGERED WITH:', currentEventId, 'TYPE:', typeof currentEventId);
+    logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, eventIdType: typeof currentEventId });
     if (!currentEventId || typeof currentEventId !== 'string' || currentEventId.trim() === '') {
-      console.log('❌ NO CURRENT EVENT ID - SKIPPING SUBSCRIPTION. VALUE:', currentEventId);
+      logger.debug('No current event ID - skipping subscription', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
       return;
     }
-    console.log('✅ CURRENT EVENT ID VALID - PROCEEDING WITH SUBSCRIPTION SETUP');
+    logger.debug('Current event ID valid - proceeding with subscription setup', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
 
     // Check if there's already an active subscription for this event
     const subscriptionKey = `incident_logs_${currentEventId}`;
-    console.log('🔍 Component', componentId.current, 'checking subscription for key:', subscriptionKey);
-    console.log('🔍 Active subscriptions map:', Array.from(activeSubscriptions.keys()));
-    console.log('🔍 Toast callbacks map:', Array.from(globalToastCallbacks.keys()));
+    logger.debug('Checking subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current, subscriptionKey });
     
     if (activeSubscriptions.has(subscriptionKey)) {
-      console.log('⚠️ SUBSCRIPTION ALREADY EXISTS FOR EVENT:', currentEventId, '- SKIPPING DUPLICATE. Component:', componentId.current);
+      logger.debug('Subscription already exists for event - skipping duplicate', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, componentId: componentId.current });
       // IMPORTANT: Don't overwrite existing toast callback to prevent duplicates
-      console.log('🔒 KEEPING EXISTING TOAST CALLBACK TO PREVENT DUPLICATES. Component:', componentId.current);
+      logger.debug('Keeping existing toast callback to prevent duplicates', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
       return;
     }
 
@@ -210,16 +207,16 @@ export default function IncidentTable({
     activeSubscriptions.set(subscriptionKey, true);
     if (onToast) {
       globalToastCallbacks.set(subscriptionKey, onToast);
-      console.log('📝 REGISTERED TOAST CALLBACK FOR NEW SUBSCRIPTION. Component:', componentId.current);
+      logger.debug('Registered toast callback for new subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
     }
-    console.log('✅ Component', componentId.current, 'created new subscription for:', subscriptionKey);
+    logger.debug('Created new subscription for', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });
 
     // Set up new subscription with a stable channel name
-    console.log('🔗 SETTING UP SUPABASE SUBSCRIPTION FOR EVENT:', currentEventId);
-    console.log('🔗 SUBSCRIPTION FILTER:', `event_id=eq.${currentEventId}`);
+    logger.debug('Setting up Supabase subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Subscription filter', { component: 'IncidentTable', action: 'subscriptionEffect', filter: `event_id=eq.${currentEventId}` });
     
     // Basic connectivity verification
-    console.log('🔧 Setting up real-time subscription for event', currentEventId);
+    logger.debug('Setting up real-time subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
     
     subscriptionRef.current = supabase
       .channel(`incident_logs_${currentEventId}`)
@@ -231,9 +228,9 @@ export default function IncidentTable({
           filter: `event_id=eq.${currentEventId}`
         },
         (payload) => {
-          console.log('🔔 Real-time event:', payload.eventType, 'for incident', (payload.new as any)?.log_number || (payload.old as any)?.log_number);
-          console.log('🔔 Event details:', payload.new || payload.old);
-          console.log('🔔 onToast available:', !!onToastRef.current);
+          logger.debug('Real-time event received', { component: 'IncidentTable', action: 'subscriptionEffect', eventType: payload.eventType, incidentLogNumber: (payload.new as any)?.log_number || (payload.old as any)?.log_number });
+        logger.debug('Event details', { component: 'IncidentTable', action: 'subscriptionEffect', details: payload.new || payload.old });
+        logger.debug('onToast available', { component: 'IncidentTable', action: 'subscriptionEffect', available: !!onToastRef.current });
           
           setIncidents(prev => {
           let newIncidents: Incident[] = [];
@@ -242,9 +239,9 @@ export default function IncidentTable({
               
               // Show toast for new incident using global callback
               const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
-              console.log('🔔 INSERT event received. Subscription key:', subscriptionKey);
-              console.log('🔔 Global toast callback available:', !!globalToastCallback);
-              console.log('🔔 All toast callbacks:', Array.from(globalToastCallbacks.keys()));
+              logger.debug('INSERT event received. Subscription key', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });
+        logger.debug('Global toast callback available', { component: 'IncidentTable', action: 'subscriptionEffect', available: !!globalToastCallback });
+        logger.debug('All toast callbacks', { component: 'IncidentTable', action: 'subscriptionEffect', keys: Array.from(globalToastCallbacks.keys()) });
               
               if (globalToastCallback) {
                 const incident = payload.new as Incident;
@@ -255,7 +252,7 @@ export default function IncidentTable({
                 
                 // Check if we've shown this toast recently (within 10 seconds)
                 if (recentToasts.has(toastKey) && (now - recentToasts.get(toastKey)!) < 10000) {
-                  console.log('🚫 DUPLICATE TOAST PREVENTED FOR:', incident.log_number);
+                  logger.debug('Duplicate toast prevented for', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: incident.log_number });
                   return newIncidents; // Early return to prevent duplicate toast
                 }
                 
@@ -275,7 +272,7 @@ export default function IncidentTable({
                   'Evacuation', 'Medical', 'Suspicious Behaviour'
                 ].includes(incident.incident_type);
                 
-                console.log('📢 SENDING TOAST FOR NEW INCIDENT:', incident.log_number, 'Type:', incident.incident_type);
+                logger.debug('Sending toast for new incident', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: incident.log_number, incidentType: incident.incident_type });
                 globalToastCallback({
                   type: isHighPriority ? 'warning' : 'info',
                   title: `New ${incident.incident_type} Incident`,
@@ -283,10 +280,10 @@ export default function IncidentTable({
                   duration: isHighPriority ? 12000 : 8000, // Increased from 8000/5000 to 12000/8000
                   urgent: isHighPriority
                 });
-                console.log('📢 TOAST SENT FOR NEW INCIDENT:', incident.log_number);
-              } else {
-                console.log('❌ NO GLOBAL TOAST CALLBACK FOUND FOR KEY:', subscriptionKey);
-              }
+                logger.debug('Toast sent for new incident', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: incident.log_number });
+        } else {
+          logger.debug('No global toast callback found for key', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });
+        }
           } else if (payload.eventType === 'UPDATE') {
               newIncidents = prev.map(incident => {
                 if (incident.id === payload.new.id) {
@@ -310,10 +307,10 @@ export default function IncidentTable({
                         message: `Log ${updated.log_number}: ${updated.incident_type}`,
                         duration: 6000 // Increased from 4000 to 6000
                       });
-                      console.log('📢 TOAST SENT FOR STATUS CHANGE:', updated.log_number);
-                    } else {
-                      console.log('🚫 DUPLICATE STATUS TOAST PREVENTED FOR:', updated.log_number);
-                    }
+                      logger.debug('Toast sent for status change', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
+                      } else {
+                        logger.debug('Duplicate status toast prevented for', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
+                      }
                   }
                   
                   return updated;
@@ -330,21 +327,20 @@ export default function IncidentTable({
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active for event', currentEventId);
+          logger.debug('Real-time subscription active for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error');
+          logger.error('Real-time subscription error', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
         }
       });
 
     // Add a timeout to check if subscription status is never called
     setTimeout(() => {
-      console.log('⏰ CHECKING SUBSCRIPTION STATUS AFTER 5 SECONDS...');
-      if (subscriptionRef.current) {
-        console.log('📊 SUBSCRIPTION OBJECT EXISTS:', !!subscriptionRef.current);
-        console.log('📊 SUBSCRIPTION STATE:', subscriptionRef.current.state);
-      } else {
-        console.log('❌ NO SUBSCRIPTION OBJECT FOUND AFTER 5 SECONDS');
-      }
+      logger.debug('Checking subscription status after 5 seconds', { component: 'IncidentTable', action: 'subscriptionEffect' });
+        if (subscriptionRef.current) {
+          logger.debug('Subscription object exists', { component: 'IncidentTable', action: 'subscriptionEffect', exists: !!subscriptionRef.current, state: subscriptionRef.current.state });
+        } else {
+          logger.debug('No subscription object found after 5 seconds', { component: 'IncidentTable', action: 'subscriptionEffect' });
+        }
     }, 5000);
 
     fetchIncidents();
@@ -407,7 +403,7 @@ export default function IncidentTable({
     if (incident.incident_type === 'Attendance') return;
     
     const newStatus = !incident.is_closed;
-    console.log('Toggling status for incident:', incident.id, 'New status:', newStatus);
+    logger.debug('Toggling status for incident', { component: 'IncidentTable', action: 'toggleIncidentStatus', incidentId: incident.id, newStatus });
     
     // Track this as a manual status change to prevent duplicate toast
     setManualStatusChanges(prev => new Set(prev).add(incident.id));
@@ -440,7 +436,7 @@ export default function IncidentTable({
           updated_by: 'Event Control'
         });
       
-      console.log('Status update successful');
+      logger.debug('Status update successful', { component: 'IncidentTable', action: 'toggleIncidentStatus', incidentId: incident.id });
       
       // Show toast notification for manual status change
       if (onToastRef.current) {
@@ -450,7 +446,7 @@ export default function IncidentTable({
           message: `Log ${incident.log_number}: ${incident.incident_type}`,
           duration: 6000
         });
-        console.log('📢 TOAST SENT FOR MANUAL STATUS CHANGE:', incident.log_number);
+        logger.debug('Toast sent for manual status change', { component: 'IncidentTable', action: 'toggleIncidentStatus', incidentLogNumber: incident.log_number });
       }
       
       // Remove from manual changes after a delay to allow real-time event to be filtered
@@ -462,7 +458,7 @@ export default function IncidentTable({
         });
       }, 1000);
     } catch (err) {
-      console.error('Error updating incident status:', err);
+      logger.error('Error updating incident status', err, { component: 'IncidentTable', action: 'toggleIncidentStatus', incidentId: incident.id });
       // Revert the optimistic update if there was an error
       setIncidents(prev => 
         prev.map(inc => 

@@ -1,6 +1,7 @@
 import type { MLCEngine as MLCEngineType } from '@mlc-ai/web-llm';
 import { extractIncidentJson } from '@/utils/incidentJson';
 import { INCIDENT_EXTRACTION_SYSTEM, buildIncidentExtractionUser } from '@/prompts/incidentExtraction';
+import { logger } from '@/lib/logger'
 
 // Interface matching the structure expected by the incident parsing system
 export interface BrowserLLMResult {
@@ -87,11 +88,11 @@ export const initializeBrowserLLM = async (onProgress?: (progress: number) => vo
 
       const debug = process.env.NODE_ENV !== 'production';
       if (debug) {
-        console.debug('Browser LLM initialized successfully');
+        logger.debug('Browser LLM initialized successfully', { component: 'BrowserLLMService', action: 'initializeBrowserLLM' });
       }
       lastInitError = null;
     } catch (error) {
-      console.error('Failed to initialize browser LLM:', error);
+      logger.error('Failed to initialize browser LLM', error, { component: 'BrowserLLMService', action: 'initializeBrowserLLM' });
       engineInstance = null;
       lastInitError = error as Error;
       throw error;
@@ -143,8 +144,8 @@ export const parseIncidentWithBrowserLLM = async (
     const content = normalizeLLMContent(contentRaw);
     const debug = process.env.NODE_ENV !== 'production';
     if (debug) {
-      console.debug('WebLLM raw response:', response);
-      console.debug('WebLLM content (normalized):', content);
+      logger.debug('WebLLM raw response', { component: 'BrowserLLMService', action: 'parseIncidentWithBrowserLLM', response });
+      logger.debug('WebLLM content (normalized)', { component: 'BrowserLLMService', action: 'parseIncidentWithBrowserLLM', content });
     }
     if (!content) return null;
 
@@ -161,7 +162,7 @@ export const parseIncidentWithBrowserLLM = async (
     }
     return normalized
   } catch (error) {
-    console.error('Browser LLM parsing error:', error);
+    logger.error('Browser LLM parsing error', error, { component: 'BrowserLLMService', action: 'parseIncidentWithBrowserLLM' });
     return null; // Return null instead of throwing to allow fallback
   }
 };

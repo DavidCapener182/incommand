@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { logger } from '../lib/logger'
 import { useRouter, usePathname } from 'next/navigation'
 import { AuthContextType, UserRole } from '../types/auth'
 import { SystemSettings, UserPreferences, DEFAULT_USER_PREFERENCES, DEFAULT_SYSTEM_SETTINGS } from '../types/settings'
@@ -43,7 +44,7 @@ const getCachedRole = (userId: string): UserRole | null => {
     sessionStorage.removeItem(getRoleCacheKey(userId))
     return null
   } catch (error) {
-    console.error('Error reading cached role:', error)
+    logger.error('Error reading cached role', error, { component: 'AuthContext', action: 'getCachedRole' });
     return null
   }
 }
@@ -62,7 +63,7 @@ const setCachedRole = (userId: string, role: UserRole): void => {
     }
     sessionStorage.setItem(getRoleCacheKey(userId), JSON.stringify(cache))
   } catch (error) {
-    console.error('Error caching role:', error)
+    logger.error('Error caching role', error, { component: 'AuthContext', action: 'setCachedRole' });
   }
 }
 
@@ -75,7 +76,7 @@ const clearCachedRole = (userId: string): void => {
     
     sessionStorage.removeItem(getRoleCacheKey(userId))
   } catch (error) {
-    console.error('Error clearing cached role:', error)
+    logger.error('Error clearing cached role', error, { component: 'AuthContext', action: 'clearCachedRole' });
   }
 }
 
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('Error loading system settings:', error)
+        logger.error('Failed to load system settings', error, { component: 'AuthContext', action: 'loadSystemSettings' });
         // Use default settings as fallback
         setSystemSettings({
           id: 'default',
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updated_at: new Date().toISOString(),
       })
     } catch (error) {
-      console.error('Error loading system settings:', error)
+      logger.error('Error loading system settings', error, { component: 'AuthContext', action: 'loadSystemSettings' });
       // Use default settings as fallback
       setSystemSettings({
         id: 'default',
@@ -148,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error('Error loading user preferences:', error)
+        logger.error('Failed to load user preferences', error, { component: 'AuthContext', action: 'loadUserPreferences', userId });
         // Create default preferences for user
         const defaultPrefs: UserPreferences = {
           id: 'default',
@@ -174,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updated_at: new Date().toISOString(),
       })
     } catch (error) {
-      console.error('Error loading user preferences:', error)
+      logger.error('Error loading user preferences', error, { component: 'AuthContext', action: 'loadUserPreferences', userId });
       // Use default preferences as fallback
       const defaultPrefs: UserPreferences = {
         id: 'default',
@@ -203,33 +204,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check cache first
         const cachedRole = getCachedRole(userId)
         if (cachedRole) {
-          console.log('AuthContext - Using cached role:', cachedRole)
+          logger.debug('Using cached role', { component: 'AuthContext', action: 'fetchUserRole', userId, role: cachedRole });
           return cachedRole
         }
 
-        console.log('AuthContext - Fetching role for user:', userId)
+        logger.debug('Fetching role for user', { component: 'AuthContext', action: 'fetchUserRole', userId });
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', userId)
           .single()
 
-        console.log('AuthContext - Role data:', data)
-        console.log('AuthContext - Role error:', error)
-
         if (error) {
-          console.error('Error fetching user role:', error)
+          logger.error('Error fetching user role', error, { component: 'AuthContext', action: 'fetchUserRole', userId });
           
           // Handle specific error types
           if (error.code === 'PGRST116') {
             // No rows returned - user profile doesn't exist
-            console.warn('User profile not found, creating default role')
+            logger.warn('User profile not found, using default role', { component: 'AuthContext', action: 'fetchUserRole', userId });
             return 'user' as UserRole // Default fallback role
           }
           
           if (error.code === 'PGRST301') {
             // Multiple rows returned - data inconsistency
-            console.error('Data inconsistency: multiple profiles found for user')
+            logger.error('Data inconsistency: multiple profiles found for user', { component: 'AuthContext', action: 'fetchUserRole', userId });
             throw new Error('Data inconsistency detected')
           }
           
@@ -238,9 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         const userRole = data?.role as UserRole | null
-        console.log('AuthContext - Setting role to:', userRole)
-        console.log('AuthContext - User ID:', userId)
-        console.log('AuthContext - Raw data:', data)
+        logger.debug('Role fetched successfully', { component: 'AuthContext', action: 'fetchUserRole', userId, role: userRole });
         
         // Cache the role if it exists
         if (userRole) {
@@ -249,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         return userRole
       } catch (error) {
-        console.error(`Error fetching user role (attempt ${retryCount + 1}):`, error)
+        logger.error(`Error fetching user role (attempt ${retryCount + 1})`, error, { component: 'AuthContext', action: 'fetchUserRole', userId, attempt: retryCount + 1 });
         
         // Don't retry for certain error types
         if (error instanceof Error) {
@@ -265,40 +261,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     while (retryCount < maxRetries) {
       try {
         const role = await attemptFetch()
-        console.log('AuthContext - Setting role in state:', role)
+        logger.debug('Setting role in state', { component: 'AuthContext', action: 'fetchUserRole', userId, role });
         setRole(role)
         return
       } catch (error) {
         retryCount++
         
         if (retryCount >= maxRetries) {
-          console.error(`Failed to fetch user role after ${maxRetries} attempts:`, error)
+          logger.error(`Failed to fetch user role after ${maxRetries} attempts`, error, { component: 'AuthContext', action: 'fetchUserRole', userId, attempts: maxRetries });
           
           // Final fallback strategy
           if (error instanceof Error) {
             if (error.message.includes('network') || error.message.includes('timeout')) {
-              console.warn('Network error detected, using cached role if available')
-              const cachedRole = getCachedRole(userId)
-              if (cachedRole) {
-                setRole(cachedRole)
-                return
-              }
+              logger.warn('Network error detected, using default role', { component: 'AuthContext', action: 'fetchUserRole', userId });
+              setRole('user' as UserRole)
+              return
             }
           }
           
-          // Set a default role as last resort
-          console.warn('Using default role as fallback')
+          // Set default role and continue
+          logger.warn('Using default role due to persistent errors', { component: 'AuthContext', action: 'fetchUserRole', userId });
           setRole('user' as UserRole)
-          
-          // Show user-facing error message (could be implemented with a toast notification)
-          // For now, we'll just log it
-          console.error('Role fetch failed. Please refresh the page or contact support if the issue persists.')
-        } else {
-          // Wait before retrying (exponential backoff)
-          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000)
-          console.log(`Retrying in ${delay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
+          return
         }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
       }
     }
   }, [])
@@ -387,7 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const invalidateRoleCache = () => {
     if (user?.id) {
       clearCachedRole(user.id)
-      console.log('AuthContext - Role cache invalidated for user:', user.id)
+      logger.debug('Role cache invalidated for user', { component: 'AuthContext', action: 'invalidateRoleCache', userId: user.id });
     }
   }
 
@@ -400,7 +388,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
       router.push('/login')
     } catch (error) {
-      console.error('Error during sign out:', error)
+      logger.error('Error during sign out', error, { component: 'AuthContext', action: 'signOut' });
       // Fallback: redirect to login even if signOut fails
       router.push('/login')
     }
@@ -439,45 +427,45 @@ export const useAuth = () => {
   try {
     const context = useContext(AuthContext)
     if (context === undefined) {
-      console.error('useAuth called outside of AuthProvider')
+      logger.warn('useAuth called outside of AuthProvider', { component: 'AuthContext', action: 'useAuth' });
       // Return a safe fallback instead of throwing
       return {
         user: null,
         role: null,
         loading: true,
         signOut: async () => {
-          console.warn('signOut called but AuthContext not available')
+          logger.warn('signOut called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
           window.location.href = '/login'
         },
         invalidateRoleCache: () => {
-          console.warn('invalidateRoleCache called but AuthContext not available')
+          logger.warn('invalidateRoleCache called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
         },
         systemSettings: null,
         userPreferences: null,
         refreshSettings: async () => {
-          console.warn('refreshSettings called but AuthContext not available')
+          logger.warn('refreshSettings called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
         },
       }
     }
     return context
   } catch (error) {
-    console.error('Error in useAuth:', error)
+    logger.error('Error in useAuth', error, { component: 'AuthContext', action: 'useAuth' });
     // Return a safe fallback
     return {
       user: null,
       role: null,
       loading: true,
       signOut: async () => {
-        console.warn('signOut called but AuthContext not available')
+        logger.warn('signOut called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
         window.location.href = '/login'
       },
       invalidateRoleCache: () => {
-        console.warn('invalidateRoleCache called but AuthContext not available')
+        logger.warn('invalidateRoleCache called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
       },
       systemSettings: null,
       userPreferences: null,
       refreshSettings: async () => {
-        console.warn('refreshSettings called but AuthContext not available')
+        logger.warn('refreshSettings called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
       },
     }
   }

@@ -3,13 +3,14 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRole } from '@/hooks/useRole'
 import { ROLES } from '@/types/auth'
+import { logger } from '@/lib/logger'
 
 export default function AdminDebugPage() {
   let auth;
   try {
     auth = useAuth();
   } catch (error) {
-    console.error('Auth context not available in debug page:', error);
+    logger.error('Auth context not available in debug page', error, { component: 'AdminDebugPage', action: 'useAuth' });
     auth = { user: null, loading: true };
   }
   const { user, loading } = auth;

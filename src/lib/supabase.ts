@@ -1,6 +1,7 @@
 'use client'
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { logger } from './logger'
 
 // Use the Next.js auth-helpers client so browser sessions are synced to server via cookies
 export const supabase = createClientComponentClient()
@@ -16,13 +17,14 @@ export const createUser = async (email: string, password: string) => {
     })
 
     if (error) {
-      console.warn('Auth error:', error.message)
+      logger.warn('User creation failed', { email, error: error.message });
       return null
     }
 
+    logger.info('User created successfully', { email });
     return data
   } catch (err) {
-    console.warn('Unexpected error:', err)
+    logger.error('Unexpected error during user creation', err, { email });
     return null
   }
 }
@@ -64,9 +66,11 @@ export async function logAIUsage({
       },
     ]);
     if (error) {
-      console.warn('Failed to log AI usage:', error.message);
+      logger.error('Failed to log AI usage', error, { endpoint, model, userId: user_id, eventId: event_id });
+    } else {
+      logger.debug('AI usage logged successfully', { endpoint, model, tokens_used, cost_usd });
     }
   } catch (err) {
-    console.warn('Unexpected error logging AI usage:', err);
+    logger.error('Unexpected error logging AI usage', err, { endpoint, model, userId: user_id, eventId: event_id });
   }
 } 

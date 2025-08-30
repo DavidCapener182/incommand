@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 // Utility to format date/time for logs table
 function formatDateTime(ts: string | Date | undefined) {
@@ -23,7 +24,7 @@ export default function EventsSettingsPage() {
   const [reenablingEventId, setReenablingEventId] = useState<string | null>(null);
 
   const fetchEvents = async (background = false) => {
-    console.log('DEBUG: fetchEvents called. background:', background, 'at', new Date().toISOString());
+    logger.debug('Fetching events', { component: 'EventsSettingsPage', action: 'fetchEvents', background });
     if (background) {
       setIsRefreshing(true);
     } else {
@@ -66,7 +67,7 @@ export default function EventsSettingsPage() {
   };
 
   const fetchLogs = async (eventId: string | null | undefined) => {
-    console.log('DEBUG: fetchLogs called. eventId:', eventId, 'at', new Date().toISOString());
+    logger.debug('Fetching logs', { component: 'EventsSettingsPage', action: 'fetchLogs', eventId: eventId || undefined });
     if (!eventId) return setLogs([]);
     setLogsLoading(true);
     setError(null);
@@ -81,7 +82,7 @@ export default function EventsSettingsPage() {
   };
 
   useEffect(() => {
-    console.log('DEBUG: useEffect for events/logs ran. currentEvent:', currentEvent, 'selectedEvent:', selectedEvent, 'at', new Date().toISOString());
+    logger.debug('useEffect for events/logs ran', { component: 'EventsSettingsPage', action: 'useEffect', currentEvent, selectedEvent });
     fetchEvents(false);
   }, []);
 
@@ -143,74 +144,74 @@ export default function EventsSettingsPage() {
     alert(`Delete event ${event.event_name} functionality coming soon!`);
   };
   const handleDeleteLog = async (logId: string) => {
-    console.log('Attempting to delete log with ID:', logId, 'Type:', typeof logId);
+    logger.debug('Attempting to delete log', { component: 'EventsSettingsPage', action: 'handleDeleteLog', logId, logIdType: typeof logId });
     setDeletingLogId(logId);
     setError(null);
     
     try {
-      // Find the log in the logs state
-      const log = logs.find((l: any) => l.id === parseInt(logId) || l.id === logId);
+      // Find the log in our state
+      const log = logs.find(l => l.id.toString() === logId || l.id === logId);
       
       if (!log) {
-        console.log('Log not found in state. Available logs:', logs.map(l => ({ id: l.id, type: typeof l.id })));
+        logger.debug('Log not found in state', { component: 'EventsSettingsPage', action: 'handleDeleteLog', availableLogs: logs.map(l => ({ id: l.id, type: typeof l.id })) });
         setError('Log not found');
         setDeletingLogId(null);
         return;
       }
 
-      console.log('Found log to delete:', log);
+      logger.debug('Found log to delete', { component: 'EventsSettingsPage', action: 'handleDeleteLog', log });
 
       // Convert logId to integer for database operations
       const numericLogId = parseInt(logId);
 
       // Delete related data first (in reverse order of dependencies)
-      console.log('Deleting related data...');
+      logger.debug('Deleting related data', { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
       
       // Delete incident events
       const { error: eventsError } = await supabase
         .from('incident_events')
         .delete()
         .eq('incident_id', numericLogId);
-      if (eventsError) console.log('Events deletion error:', eventsError);
+      if (eventsError) logger.debug('Events deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: eventsError });
 
       // Delete incident attachments
       const { error: attachmentsError } = await supabase
         .from('incident_attachments')
         .delete()
         .eq('incident_id', numericLogId);
-      if (attachmentsError) console.log('Attachments deletion error:', attachmentsError);
+      if (attachmentsError) logger.debug('Attachments deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: attachmentsError });
 
       // Delete incident links (both directions)
       const { error: linksError } = await supabase
         .from('incident_links')
         .delete()
         .or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`);
-      if (linksError) console.log('Links deletion error:', linksError);
+      if (linksError) logger.debug('Links deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: linksError });
 
       // Delete incident escalations
       const { error: escalationsError } = await supabase
         .from('incident_escalations')
         .delete()
         .eq('incident_id', numericLogId);
-      if (escalationsError) console.log('Escalations deletion error:', escalationsError);
+      if (escalationsError) logger.debug('Escalations deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: escalationsError });
 
       // Delete incident updates
       const { error: updatesError } = await supabase
         .from('incident_updates')
         .delete()
         .eq('incident_id', numericLogId);
-      if (updatesError) console.log('Updates deletion error:', updatesError);
+      if (updatesError) logger.debug('Updates deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: updatesError });
 
       // Delete staff assignments
       const { error: assignmentsError } = await supabase
-        .from('staff_assignments')
+        .from('incident_staff_assignments')
         .delete()
         .eq('incident_id', numericLogId);
-      if (assignmentsError) console.log('Assignments deletion error:', assignmentsError);
+      if (assignmentsError) logger.debug('Assignments deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: assignmentsError });
 
       // If this is an attendance log, also delete from attendance_records
       if (log.incident_type === 'Attendance') {
-        console.log('Deleting attendance record for event_id:', log.event_id, 'timestamp:', log.timestamp);
+        logger.debug('Deleting attendance record', { component: 'EventsSettingsPage', action: 'handleDeleteLog', eventId: log.event_id, timestamp: log.timestamp });
         const { error: attendanceError } = await supabase
           .from('attendance_records')
           .delete()
@@ -218,44 +219,44 @@ export default function EventsSettingsPage() {
           .eq('timestamp', log.timestamp);
         
         if (attendanceError) {
-          console.error('Error deleting attendance record:', attendanceError);
+          logger.error('Error deleting attendance record', attendanceError, { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
         } else {
-          console.log('Successfully deleted attendance record');
+          logger.debug('Successfully deleted attendance record', { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
         }
       }
 
       // Finally, delete the incident log itself
-      console.log('Deleting main incident log...');
+      logger.debug('Deleting main incident log', { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
       const { error, count } = await supabase
         .from('incident_logs')
         .delete()
         .eq('id', numericLogId);
 
-      console.log('Delete result:', { error, count });
+      logger.debug('Delete result', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error, count });
 
       if (error) {
-        console.error('Failed to delete log:', error);
+        logger.error('Failed to delete log', error, { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
         setError('Failed to delete log: ' + error.message);
         setDeletingLogId(null);
         return;
       }
 
-      console.log('Log deleted successfully. Updating UI...');
+      logger.debug('Log deleted successfully. Updating UI', { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
 
       // Update local state immediately for better UX
       setLogs(prevLogs => {
         const filtered = prevLogs.filter(log => log.id !== numericLogId && log.id !== logId);
-        console.log('Filtered logs:', filtered.length, 'from', prevLogs.length);
+        logger.debug('Filtered logs', { component: 'EventsSettingsPage', action: 'handleDeleteLog', filteredCount: filtered.length, originalCount: prevLogs.length });
         return filtered;
       });
       
       // Also refresh from database to ensure consistency
       if (selectedEvent) {
-        console.log('Refreshing logs from database...');
+        logger.debug('Refreshing logs from database', { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
         await fetchLogs(selectedEvent.id);
       }
     } catch (error) {
-      console.error('Error deleting log:', error);
+      logger.error('Error deleting log', error, { component: 'EventsSettingsPage', action: 'handleDeleteLog' });
       setError('Failed to delete log: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setDeletingLogId(null);

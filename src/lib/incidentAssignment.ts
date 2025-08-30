@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logger } from './logger'
 
 // Caching for performance optimization
 const staffCache = new Map<string, { data: StaffMember[]; timestamp: number }>();
@@ -42,7 +43,9 @@ function logAssignmentError(
     originalError
   };
 
-  console.error('Assignment Error:', {
+  logger.error('Assignment Error', { 
+    component: 'IncidentAssignment', 
+    action: 'logAssignmentError',
     type: error.type,
     message: error.message,
     context: error.context,

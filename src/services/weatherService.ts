@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 // Using OpenWeatherMap API for weather data
 const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
@@ -18,7 +20,7 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
       throw new Error(errorData.error || 'Failed to fetch weather data');
     }
     const data = await response.json();
-    console.log('Current weather API response:', data); // Debug log
+    logger.debug('Weather API response received', { lat, lon, temperature: data.main?.temp });
     return {
       temperature: Math.round(data.main.temp),
       description: data.weather[0].description,
@@ -27,7 +29,7 @@ export const getCurrentWeather = async (lat: number, lon: number): Promise<Weath
       rain: data.rain?.['1h'] || 0
     };
   } catch (error) {
-    console.error('Error fetching weather:', error);
+    logger.error('Failed to fetch weather data', error, { lat, lon });
     throw error;
   }
 };

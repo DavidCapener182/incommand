@@ -43,7 +43,7 @@ import RotatingText from './RotatingText'
 import { createPortal } from 'react-dom';
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
-
+import { logger } from '../lib/logger'
 
 
 // <style>
@@ -407,7 +407,7 @@ export default function Dashboard() {
   try {
     auth = useAuth();
   } catch (error) {
-    console.error('Auth context not available in Dashboard:', error);
+    logger.error('Auth context not available in Dashboard', error, { component: 'Dashboard', action: 'useAuth' });
     auth = { user: null };
   }
   const { user } = auth;
@@ -735,14 +735,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (incidents) {
       // Debug: Log some incident data to understand the structure
-      console.log('🔍 DEBUG: Sample incidents data:', incidents.slice(0, 3).map(inc => ({
-        id: inc.id,
-        log_number: inc.log_number,
-        incident_type: inc.incident_type,
-        is_closed: inc.is_closed,
-        status: inc.status,
-        occurrence: inc.occurrence?.substring(0, 50) + '...'
-      })));
+      logger.debug('Sample incidents data', { 
+        component: 'Dashboard', 
+        action: 'incidentDataEffect',
+        sampleIncidents: incidents.slice(0, 3).map(inc => ({
+          id: inc.id,
+          log_number: inc.log_number,
+          incident_type: inc.incident_type,
+          is_closed: inc.is_closed,
+          status: inc.status,
+          occurrence: inc.occurrence?.substring(0, 50) + '...'
+        }))
+      });
       
       // Always use unfiltered incidents for stats - StatCards should show total counts
       const isCountable = (incident: any) => 
@@ -778,7 +782,7 @@ export default function Dashboard() {
       const other = countableIncidents.filter(i => !['Refusal', 'Ejection', 'Medical'].includes(i.incident_type)).length;
       
       // Debug: Log the stats calculations
-      console.log('🔍 DEBUG: Stats calculations:', {
+      logger.debug('Stats calculations', {
         total,
         closed,
         open,

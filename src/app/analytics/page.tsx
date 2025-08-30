@@ -61,6 +61,7 @@ import {
 // Import export functionality only
 import { ExportMenu } from '../../components/ExportMenu';
 import { exportAnalyticsData } from '../../utils/exportUtils';
+import { logger } from '@/lib/logger';
 
 ChartJS.register(
   CategoryScale,
@@ -361,8 +362,7 @@ export default function AnalyticsPage() {
   // Debug: log incident data to browser console
   useEffect(() => {
     if (incidentData.length) {
-      // eslint-disable-next-line no-console
-      console.log('INCIDENT DATA:', incidentData);
+      logger.debug('Incident data loaded', { component: 'AnalyticsPage', action: 'incidentDataEffect', count: incidentData.length });
     }
   }, [incidentData]);
 
