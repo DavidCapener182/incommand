@@ -8,7 +8,7 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import GlobalEscalationToast from '../components/GlobalEscalationToast'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import '../lib/globalErrorHandler' // Re-enabled after fixing webpack issue
+import '../lib/globalErrorHandler' // Re-enabled after fixing client-side rendering
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,13 +55,13 @@ export default function RootLayout({
       </head>
       <body className={inter.className + " bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <ErrorBoundary componentName="RootLayout">
-          <AuthProvider>
-            <NotificationDrawerProvider>
-              <MaintenanceBanner />
-              <GlobalEscalationToast />
-              <LayoutWrapper>{children}</LayoutWrapper>
-            </NotificationDrawerProvider>
-          </AuthProvider>
+        <AuthProvider>
+        <NotificationDrawerProvider>
+        <MaintenanceBanner />
+        <GlobalEscalationToast />
+        <LayoutWrapper>{children}</LayoutWrapper>
+        </NotificationDrawerProvider>
+        </AuthProvider>
         </ErrorBoundary>
         <Analytics />
       </body>
