@@ -1951,6 +1951,7 @@ export default function IncidentCreationModal({
   const [recognition, setRecognition] = useState<any>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [recognitionTimeout, setRecognitionTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Offline sync functionality
   const [offlineState, offlineActions] = useOfflineSync();
@@ -1963,28 +1964,23 @@ export default function IncidentCreationModal({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Voice recognition setup
+  // Enhanced voice recognition setup with fallback
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // Enhanced recognition settings to prevent audio cutoff
-      // Enhanced recognition settings to prevent audio cutoff
-      recognition.continuous = true; // Enable continuous recognition
+      // Conservative settings for better reliability
+      recognition.continuous = false; // Start with false for better stability
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
       
-      // Additional settings for better recognition quality
-      if ('webkitSpeechRecognition' in window) {
-        // Webkit-specific optimizations
-        (recognition as any).grammars = null; // Disable grammar constraints
-        (recognition as any).serviceURI = null; // Use default service
-      }
-      
       // Add a flag to track if we're manually stopping
       let isManuallyStopping = false;
+      let audioChunks: Blob[] = [];
+      let mediaRecorder: MediaRecorder | null = null;
+      let audioContext: AudioContext | null = null;
       
       recognition.onstart = () => {
         setIsListening(true);
@@ -1992,14 +1988,18 @@ export default function IncidentCreationModal({
         isManuallyStopping = false;
         console.log('Voice recognition started');
         
-        // Set a timeout to automatically stop after 2 minutes (extended for better UX)
+        // Also start audio recording as backup
+        startAudioRecording();
+        
+        // Set a timeout to automatically stop after 1 minute
         const timeout = setTimeout(() => {
           if (isListening) {
-            console.log('Auto-stopping voice recognition after extended timeout');
+            console.log('Auto-stopping voice recognition after timeout');
             isManuallyStopping = true;
             recognition.stop();
+            stopAudioRecording();
           }
-        }, 120000); // 2 minutes instead of 30 seconds
+        }, 60000); // 1 minute timeout
         
         setRecognitionTimeout(timeout);
       };
@@ -2020,9 +2020,7 @@ export default function IncidentCreationModal({
         
         // Update transcript: replace with accumulated final results + current interim
         if (finalTranscript) {
-          // Get the current transcript without interim results
           setTranscript(prev => {
-            // Remove any previous interim results and add new final results
             const cleanPrev = prev.replace(/\s*\[interim\].*$/, '').trim();
             return cleanPrev + ' ' + finalTranscript.trim();
           });
@@ -2078,6 +2076,7 @@ export default function IncidentCreationModal({
         
         setVoiceError(errorMessage);
         setIsListening(false);
+        stopAudioRecording();
         
         // Auto-clear error after 5 seconds
         setTimeout(() => {
@@ -2088,6 +2087,7 @@ export default function IncidentCreationModal({
       recognition.onend = () => {
         console.log('Voice recognition ended');
         setIsListening(false);
+        stopAudioRecording();
         
         // Clear the timeout
         if (recognitionTimeout) {
@@ -2095,13 +2095,88 @@ export default function IncidentCreationModal({
           setRecognitionTimeout(null);
         }
         
+        // Check if we got a very short transcript (likely cut off)
+        const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
+        if (cleanTranscript && cleanTranscript.split(' ').length < 3 && !isManuallyStopping) {
+          console.log('Short transcript detected, likely cut off. Retrying...');
+          setIsRetrying(true);
+          // Auto-retry for short transcripts
+          setTimeout(() => {
+            if (!isListening && !isManuallyStopping) {
+              setIsRetrying(false);
+              startListening();
+            }
+          }, 500);
+          return;
+        }
+        
         // Only process transcript if it's not empty and no error occurred
-        if (transcript.trim() && !voiceError && !isManuallyStopping) {
-          // Clean up the transcript by removing interim markers
-          const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
+        if (cleanTranscript && !voiceError && !isManuallyStopping) {
           handleQuickAdd(cleanTranscript);
           setTranscript('');
         }
+      };
+      
+      // Audio recording functions
+      const startAudioRecording = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              sampleRate: 44100,
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            } 
+          });
+          
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(stream);
+          const processor = audioContext.createScriptProcessor(4096, 1, 1);
+          
+          processor.onaudioprocess = (event) => {
+            const inputBuffer = event.inputBuffer;
+            const inputData = inputBuffer.getChannelData(0);
+            
+            // Convert to blob for storage
+            const audioData = new Float32Array(inputData.length);
+            audioData.set(inputData);
+            
+            // Store audio chunks
+            const blob = new Blob([audioData], { type: 'audio/wav' });
+            audioChunks.push(blob);
+          };
+          
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+          
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunks.push(event.data);
+            }
+          };
+          
+          mediaRecorder.start(100); // Small timeslice for better capture
+          console.log('Audio recording started as backup');
+          
+        } catch (error) {
+          console.error('Failed to start audio recording:', error);
+        }
+      };
+      
+      const stopAudioRecording = () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+        if (mediaRecorder && mediaRecorder.stream) {
+          mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        console.log('Audio recording stopped');
       };
       
       // Store the manual stopping flag in the recognition object
@@ -3676,6 +3751,12 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                      <div className="flex items-center gap-1">
                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                        <span className="text-xs text-blue-600 dark:text-blue-400">Ready to submit</span>
+                     </div>
+                   )}
+                   {isRetrying && (
+                     <div className="flex items-center gap-1">
+                       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs text-yellow-600 dark:text-yellow-400">Retrying...</span>
                      </div>
                    )}
                 </div>
