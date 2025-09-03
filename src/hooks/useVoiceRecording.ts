@@ -37,6 +37,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
     resolve: (value: RecordingResult) => void;
     reject: (reason: any) => void;
   } | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   const resetState = useCallback(() => {
     setRecordingState('idle');
@@ -44,6 +45,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
     setUploadProgress(0);
     audioChunksRef.current = [];
     stopRecordingPromiseRef.current = null;
+    recordingStartTimeRef.current = 0;
   }, []);
 
   const startRecording = useCallback(async () => {
@@ -52,28 +54,35 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
       audioChunksRef.current = [];
       setRecordingDuration(0);
       stopRecordingPromiseRef.current = null;
+      recordingStartTimeRef.current = Date.now();
 
-      // Request microphone permission
+      // Request microphone permission with better audio settings
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 44100
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1,
+          latency: 0.01
         } 
       });
       
       streamRef.current = stream;
 
-      // Create MediaRecorder with WebM format
+      // Create MediaRecorder with optimal settings for voice recording
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000
       });
       
       mediaRecorderRef.current = mediaRecorder;
 
+      // Collect data as it becomes available (no timeslice to ensure full capture)
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
+          console.log('Audio chunk received:', event.data.size, 'bytes');
         }
       };
 
@@ -81,12 +90,21 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
         setRecordingState('processing');
         
         try {
+          console.log('Recording stopped, processing audio chunks...');
+          console.log('Total chunks:', audioChunksRef.current.length);
+          console.log('Total size:', audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0), 'bytes');
+          
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           
           // Basic validation
           if (audioBlob.size === 0) {
             throw new Error('Recording produced no audio data');
           }
+
+          // Calculate actual recording duration from start time
+          const actualDuration = Math.round((Date.now() - recordingStartTimeRef.current) / 1000);
+          console.log('Actual recording duration:', actualDuration, 'seconds');
+          console.log('Final audio blob size:', audioBlob.size, 'bytes');
 
           setRecordingState('uploading');
           
@@ -111,10 +129,12 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
 
           const recordingResult: RecordingResult = {
             url: urlData.publicUrl,
-            duration: Math.round(recordingDuration / 1000),
+            duration: actualDuration,
             blob: audioBlob,
             fileName
           };
+
+          console.log('Recording result:', recordingResult);
 
           // Resolve the promise with the recording result
           if (stopRecordingPromiseRef.current) {
@@ -140,12 +160,14 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
         }
       };
 
-      mediaRecorder.start(1000); // Collect data every second
+      // Start recording WITHOUT timeslice to ensure full audio capture
+      mediaRecorder.start();
+      console.log('MediaRecorder started without timeslice');
 
-      // Start duration timer
+      // Start duration timer with higher precision
       durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1000);
-      }, 1000);
+        setRecordingDuration(prev => prev + 100); // Update every 100ms for smoother display
+      }, 100);
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -157,12 +179,14 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
       resetState();
       throw error;
     }
-  }, [recordingDuration, resetState, addToast]);
+  }, [resetState, addToast]);
 
   const stopRecording = useCallback(async (): Promise<RecordingResult> => {
     if (!mediaRecorderRef.current || recordingState !== 'recording') {
       throw new Error('No active recording to stop');
     }
+
+    console.log('Stopping recording...');
 
     // Create a promise that will be resolved when the recording is processed
     return new Promise<RecordingResult>((resolve, reject) => {
@@ -187,6 +211,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
 
   const cancelRecording = useCallback(() => {
     if (mediaRecorderRef.current && recordingState === 'recording') {
+      console.log('Cancelling recording...');
       mediaRecorderRef.current.stop();
       
       if (durationIntervalRef.current) {
