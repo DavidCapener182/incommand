@@ -1970,10 +1970,18 @@ export default function IncidentCreationModal({
       const recognition = new SpeechRecognition();
       
       // Enhanced recognition settings to prevent audio cutoff
+      // Enhanced recognition settings to prevent audio cutoff
       recognition.continuous = true; // Enable continuous recognition
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
+      
+      // Additional settings for better recognition quality
+      if ('webkitSpeechRecognition' in window) {
+        // Webkit-specific optimizations
+        (recognition as any).grammars = null; // Disable grammar constraints
+        (recognition as any).serviceURI = null; // Use default service
+      }
       
       // Add a flag to track if we're manually stopping
       let isManuallyStopping = false;
@@ -2000,6 +2008,7 @@ export default function IncidentCreationModal({
         let finalTranscript = '';
         let interimTranscript = '';
         
+        // Process all results from the current event
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
@@ -2009,12 +2018,22 @@ export default function IncidentCreationModal({
           }
         }
         
-        // Accumulate final transcripts and show interim results
+        // Update transcript: replace with accumulated final results + current interim
         if (finalTranscript) {
-          setTranscript(prev => prev + finalTranscript);
+          // Get the current transcript without interim results
+          setTranscript(prev => {
+            // Remove any previous interim results and add new final results
+            const cleanPrev = prev.replace(/\s*\[interim\].*$/, '').trim();
+            return cleanPrev + ' ' + finalTranscript.trim();
+          });
         }
+        
+        // Show interim results separately
         if (interimTranscript) {
-          setTranscript(prev => prev + interimTranscript);
+          setTranscript(prev => {
+            const base = prev.replace(/\s*\[interim\].*$/, '').trim();
+            return base + ' [interim] ' + interimTranscript;
+          });
         }
       };
       
@@ -2078,7 +2097,9 @@ export default function IncidentCreationModal({
         
         // Only process transcript if it's not empty and no error occurred
         if (transcript.trim() && !voiceError && !isManuallyStopping) {
-          handleQuickAdd(transcript);
+          // Clean up the transcript by removing interim markers
+          const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
+          handleQuickAdd(cleanTranscript);
           setTranscript('');
         }
       };
@@ -3645,14 +3666,42 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     <MicrophoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Voice Input:</span>
                   </div>
-                  {isListening && (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
-                    </div>
-                  )}
+                                     {isListening && (
+                     <div className="flex items-center gap-1">
+                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
+                     </div>
+                   )}
+                   {transcript && !isListening && (
+                     <div className="flex items-center gap-1">
+                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                       <span className="text-xs text-blue-600 dark:text-blue-400">Ready to submit</span>
+                     </div>
+                   )}
                 </div>
                 <p className="text-sm text-blue-800 dark:text-blue-200">{transcript}</p>
+                
+                {/* Manual Submit Button */}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
+                      if (cleanTranscript) {
+                        handleQuickAdd(cleanTranscript);
+                        setTranscript('');
+                      }
+                    }}
+                    className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Use This Text
+                  </button>
+                  <button
+                    onClick={() => setTranscript('')}
+                    className="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
