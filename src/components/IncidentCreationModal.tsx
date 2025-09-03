@@ -1969,8 +1969,8 @@ export default function IncidentCreationModal({
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // Configure recognition settings to prevent aborted errors
-      recognition.continuous = false; // Changed to false to prevent conflicts
+      // Enhanced recognition settings to prevent audio cutoff
+      recognition.continuous = true; // Enable continuous recognition
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
@@ -1984,14 +1984,14 @@ export default function IncidentCreationModal({
         isManuallyStopping = false;
         console.log('Voice recognition started');
         
-        // Set a timeout to automatically stop after 30 seconds
+        // Set a timeout to automatically stop after 2 minutes (extended for better UX)
         const timeout = setTimeout(() => {
           if (isListening) {
-            console.log('Auto-stopping voice recognition after timeout');
+            console.log('Auto-stopping voice recognition after extended timeout');
             isManuallyStopping = true;
             recognition.stop();
           }
-        }, 30000);
+        }, 120000); // 2 minutes instead of 30 seconds
         
         setRecognitionTimeout(timeout);
       };
@@ -2003,13 +2003,19 @@ export default function IncidentCreationModal({
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcript;
+            finalTranscript += transcript + ' ';
           } else {
-            interimTranscript += transcript;
+            interimTranscript = transcript;
           }
         }
         
-        setTranscript(finalTranscript + interimTranscript);
+        // Accumulate final transcripts and show interim results
+        if (finalTranscript) {
+          setTranscript(prev => prev + finalTranscript);
+        }
+        if (interimTranscript) {
+          setTranscript(prev => prev + interimTranscript);
+        }
       };
       
       recognition.onerror = (event: any) => {
@@ -2184,15 +2190,18 @@ export default function IncidentCreationModal({
   const stopListening = useCallback(() => {
     if (recognition && isListening) {
       try {
-        // Set manual stopping flag to prevent error messages
-        recognition.isManuallyStopping = true;
-        recognition.stop();
-        
-        // Clear the timeout
-        if (recognitionTimeout) {
-          clearTimeout(recognitionTimeout);
-          setRecognitionTimeout(null);
-        }
+        // Add a delay to ensure all audio is captured before stopping
+        setTimeout(() => {
+          // Set manual stopping flag to prevent error messages
+          recognition.isManuallyStopping = true;
+          recognition.stop();
+          
+          // Clear the timeout
+          if (recognitionTimeout) {
+            clearTimeout(recognitionTimeout);
+            setRecognitionTimeout(null);
+          }
+        }, 800); // 800ms delay to capture remaining audio
       } catch (error) {
         console.error('Error stopping voice recognition:', error);
         setIsListening(false);
@@ -3594,32 +3603,32 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
             </div>
             
-            {/* Voice-to-Text Button */}
-            <motion.button
-              type="button"
-              onClick={toggleListening}
-              disabled={!recognition}
-              className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 touch-target-large ${
-                isListening 
-                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/50 animate-pulse' 
-                  : voiceError
-                  ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/50'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md hover:shadow-lg'
-              } ${!recognition ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
-              whileHover={{ scale: recognition ? 1.1 : 1 }}
-              whileTap={{ scale: 0.95 }}
-              title={
-                recognition 
-                  ? (isListening 
-                      ? 'Stop recording' 
-                      : voiceError 
-                        ? 'Voice recognition error - click to try again' 
-                        : 'Start voice recording')
-                  : 'Voice recognition not available'
-              }
-            >
-              <MicrophoneIcon className="h-5 w-5" />
-            </motion.button>
+                         {/* Voice-to-Text Button */}
+             <motion.button
+               type="button"
+               onClick={toggleListening}
+               disabled={!recognition}
+               className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 touch-target-large ${
+                 isListening 
+                   ? 'bg-red-500 text-white shadow-lg shadow-red-500/50 animate-pulse' 
+                   : voiceError
+                   ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/50'
+                   : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md hover:shadow-lg'
+               } ${!recognition ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
+               whileHover={{ scale: recognition ? 1.1 : 1 }}
+               whileTap={{ scale: 0.95 }}
+               title={
+                 recognition 
+                   ? (isListening 
+                       ? 'Stop recording (will process for 800ms)' 
+                       : voiceError 
+                         ? 'Voice recognition error - click to try again' 
+                         : 'Start voice recording')
+                   : 'Voice recognition not available'
+               }
+             >
+               <MicrophoneIcon className="h-5 w-5" />
+             </motion.button>
           </div>
 
           {/* Voice Transcript Display */}
