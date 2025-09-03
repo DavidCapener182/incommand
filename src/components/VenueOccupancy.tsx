@@ -30,21 +30,47 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     }
 
     // Show toast for 90%+ capacity
-    if (percentage >= 90) {
+    if (percentage >= 100) {
       console.log('🚨 Triggering capacity alert:', { percentage, count, expected });
       const toastId = Math.random().toString(36).substr(2, 9)
       setCapacityToastId(toastId)
       
-      addToast({
+      const toastData = {
         id: toastId,
-        type: percentage >= 100 ? 'error' : 'warning',
-        title: percentage >= 100 ? '🚨 Venue at Full Capacity!' : '⚠️ Venue Nearing Capacity',
+        type: 'error' as const,
+        title: '🚨 Venue at Full Capacity!',
         message: `Current occupancy: ${count.toLocaleString()}/${expected.toLocaleString()} (${Math.round(percentage)}%)`,
         duration: 0, // Persistent toast
-        urgent: percentage >= 100, // Urgent for full capacity
-      })
+        urgent: true, // Urgent for full capacity
+      };
+      
+      console.log('📤 Adding toast with data:', toastData);
+      addToast(toastData);
       
       console.log('✅ Capacity toast added:', toastId);
+      
+      // Debug: Check if toast was actually added
+      setTimeout(() => {
+        console.log('🔍 Toast status check - messages should contain our toast');
+      }, 100);
+    } else if (percentage >= 90) {
+      console.log('⚠️ Triggering warning capacity alert:', { percentage, count, expected });
+      const toastId = Math.random().toString(36).substr(2, 9)
+      setCapacityToastId(toastId)
+      
+      const toastData = {
+        id: toastId,
+        type: 'warning' as const,
+        title: '⚠️ Venue Nearing Capacity',
+        message: `Current occupancy: ${count.toLocaleString()}/${expectedAttendance.toLocaleString()} (${Math.round(percentage)}%)`,
+        duration: 0, // Persistent toast
+        urgent: false,
+      };
+      
+      console.log('📤 Adding warning toast with data:', toastData);
+      addToast(toastData);
+      
+      console.log('✅ Warning toast added:', toastId);
     } else {
       console.log('ℹ️ No capacity alert needed:', { percentage, threshold: 90 });
     }
@@ -305,7 +331,8 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         <div className="mt-2 p-1 bg-gray-100 rounded text-xs max-h-20 overflow-y-auto">
           <div className="text-gray-600 mb-1 text-[10px]">Debug:</div>
           <div className="text-[8px]">C:{currentCount} E:{expectedAttendance} P:{Math.round(percentage)}%</div>
-          <div className="text-[8px]">Toast: {capacityToastId ? 'Yes' : 'No'}</div>
+          <div className="text-[8px]">Toast ID: {capacityToastId || 'None'}</div>
+          <div className="text-[8px]">Toast Type: {percentage >= 100 ? 'Error' : percentage >= 90 ? 'Warning' : 'None'}</div>
           <button
             onClick={() => {
               console.log('🧪 Manual capacity alert test');
