@@ -227,6 +227,9 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     percentage: expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0
   });
 
+  // Calculate percentage and determine progress bar color
+  const percentage = expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0;
+  
   // Don't show loading skeleton - instead show the component with loading state
   const displayCount = loading ? '...' : currentCount.toLocaleString();
   const displayExpected = loading ? '...' : expectedAttendance.toLocaleString();
@@ -240,9 +243,6 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       </div>
     );
   }
-
-  // Calculate percentage and determine progress bar color
-  const percentage = expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0;
   
   // Color logic: green (0-70%) → amber (70-90%) → red (90%+)
   const getProgressColor = (percent: number) => {
