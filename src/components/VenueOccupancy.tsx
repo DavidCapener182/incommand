@@ -227,16 +227,10 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     percentage: expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0
   });
 
-  if (loading) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        <div className="animate-pulse space-y-4 w-full">
-          <div className="h-12 bg-gray-200 rounded"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        </div>
-      </div>
-    )
-  }
+  // Don't show loading skeleton - instead show the component with loading state
+  const displayCount = loading ? '...' : currentCount.toLocaleString();
+  const displayExpected = loading ? '...' : expectedAttendance.toLocaleString();
+  const displayPercentage = loading ? 0 : percentage;
 
   // Add a debug div that will show even if other parts fail
   if (!currentEventId) {
@@ -272,12 +266,17 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         
         <div className="text-center">
           <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {currentCount.toLocaleString()}
-            <span className="text-xs md:text-base text-gray-500 dark:text-gray-100 ml-1">/ {expectedAttendance.toLocaleString()}</span>
+            {displayCount}
+            <span className="text-xs md:text-base text-gray-500 dark:text-gray-100 ml-1">/ {displayExpected}</span>
           </p>
           <p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-100 mt-0.5">
             Venue Occupancy
           </p>
+          {loading && (
+            <div className="mt-1">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </div>
+          )}
         </div>
         {expectedAttendance > 0 && (
           <div className="w-full space-y-0.5">
@@ -285,7 +284,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
               <span
                 className={`text-[10px] font-medium ${isCriticalCapacity ? 'text-red-500 animate-pulse font-bold' : currentCount > expectedAttendance ? 'text-red-500' : currentCount >= expectedAttendance * 0.9 ? 'text-amber-500' : currentCount >= expectedAttendance * 0.7 ? 'text-amber-500' : 'text-green-500'}`}
               >
-                {Math.round(percentage)}%
+                {Math.round(displayPercentage)}%
               </span>
               {currentCount > expectedAttendance && (
                 <span className="text-[10px] font-medium text-red-500">
@@ -296,7 +295,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
             <div className={`w-full rounded-full h-2 ${isCriticalCapacity ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'} ${isCriticalCapacity ? 'border-2 border-red-300 dark:border-red-600' : ''}`}>
               <div 
                 className={`h-2 rounded-full transition-all duration-300 ${progressColor} ${isCriticalCapacity ? 'animate-pulse' : ''}`}
-                style={{ width: `${percentage}%` }}
+                style={{ width: `${displayPercentage}%` }}
               />
             </div>
           </div>
