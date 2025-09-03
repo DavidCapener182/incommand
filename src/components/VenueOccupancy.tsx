@@ -20,14 +20,18 @@ export default function VenueOccupancy({ currentEventId }: Props) {
 
   // Function to handle capacity alerts
   const handleCapacityAlert = (percentage: number, count: number, expected: number) => {
+    console.log('🔔 Capacity alert check:', { percentage, count, expected, capacityToastId });
+    
     // Remove existing capacity toast if present
     if (capacityToastId) {
+      console.log('🗑️ Removing existing capacity toast:', capacityToastId);
       removeToast(capacityToastId)
       setCapacityToastId(null)
     }
 
     // Show toast for 90%+ capacity
     if (percentage >= 90) {
+      console.log('🚨 Triggering capacity alert:', { percentage, count, expected });
       const toastId = Math.random().toString(36).substr(2, 9)
       setCapacityToastId(toastId)
       
@@ -39,6 +43,10 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         duration: 0, // Persistent toast
         urgent: percentage >= 100, // Urgent for full capacity
       })
+      
+      console.log('✅ Capacity toast added:', toastId);
+    } else {
+      console.log('ℹ️ No capacity alert needed:', { percentage, threshold: 90 });
     }
   }
 
@@ -59,10 +67,12 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     }
 
     console.log('Setting up venue occupancy for event:', currentEventId)
+    
+    // Set loading only once at the start
+    setLoading(true)
 
     // Fetch initial occupancy and expected attendance
     const fetchData = async () => {
-      setLoading(true)
       try {
         // Get expected attendance from events table
         const { data: eventData, error: eventError } = await supabase
@@ -72,15 +82,11 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .single()
 
         if (eventError) throw eventError
+        
+        let newExpected = 0
         if (eventData?.expected_attendance) {
-          const newExpected = parseInt(eventData.expected_attendance)
+          newExpected = parseInt(eventData.expected_attendance)
           setExpectedAttendance(newExpected)
-          
-          // Check capacity when expected attendance is updated
-          if (currentCount > 0) {
-            const percentage = Math.min((currentCount / newExpected) * 100, 100);
-            handleCapacityAlert(percentage, currentCount, newExpected);
-          }
         }
 
         // Get latest attendance count
@@ -99,9 +105,11 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         if (attendanceData) {
           setCurrentCount(attendanceData.count)
           
-          // Check capacity for initial data
-          const initialPercentage = expectedAttendance > 0 ? Math.min((attendanceData.count / expectedAttendance) * 100, 100) : 0;
-          handleCapacityAlert(initialPercentage, attendanceData.count, expectedAttendance);
+          // Check capacity for initial data - use newExpected instead of expectedAttendance
+          if (newExpected > 0) {
+            const initialPercentage = Math.min((attendanceData.count / newExpected) * 100, 100);
+            handleCapacityAlert(initialPercentage, attendanceData.count, newExpected);
+          }
         } else {
           setCurrentCount(0) // Start with 0 actual attendance
         }
@@ -282,6 +290,24 @@ export default function VenueOccupancy({ currentEventId }: Props) {
             </div>
           </div>
         )}
+        
+        {/* Debug Section - Remove in production */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+          <div className="text-gray-600 mb-2">Debug Info:</div>
+          <div>Current: {currentCount}</div>
+          <div>Expected: {expectedAttendance}</div>
+          <div>Percentage: {Math.round(percentage)}%</div>
+          <div>Capacity Toast ID: {capacityToastId || 'None'}</div>
+          <button
+            onClick={() => {
+              console.log('🧪 Manual capacity alert test');
+              handleCapacityAlert(percentage, currentCount, expectedAttendance);
+            }}
+            className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+          >
+            Test Capacity Alert
+          </button>
+        </div>
       </div>
     </div>
   )
