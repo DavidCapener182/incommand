@@ -63,8 +63,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 48000,
-          channelCount: 1,
-          latency: 0.01
+          channelCount: 1
         } 
       });
       
