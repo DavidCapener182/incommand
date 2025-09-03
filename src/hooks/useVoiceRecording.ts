@@ -4,12 +4,19 @@ import { useToast } from '@/components/Toast';
 
 export type RecordingState = 'idle' | 'recording' | 'processing' | 'uploading';
 
+export interface RecordingResult {
+  url: string;
+  duration: number;
+  blob: Blob;
+  fileName: string;
+}
+
 interface UseVoiceRecordingReturn {
   recordingState: RecordingState;
   isRecording: boolean;
   recordingDuration: number;
   startRecording: () => Promise<void>;
-  stopRecording: () => Promise<void>;
+  stopRecording: () => Promise<RecordingResult>;
   cancelRecording: () => void;
   uploadProgress: number;
   handleKeyDown: (event: KeyboardEvent) => void;
@@ -26,12 +33,17 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
   const audioChunksRef = useRef<Blob[]>([]);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const stopRecordingPromiseRef = useRef<{
+    resolve: (value: RecordingResult) => void;
+    reject: (reason: any) => void;
+  } | null>(null);
 
   const resetState = useCallback(() => {
     setRecordingState('idle');
     setRecordingDuration(0);
     setUploadProgress(0);
     audioChunksRef.current = [];
+    stopRecordingPromiseRef.current = null;
   }, []);
 
   const startRecording = useCallback(async () => {
@@ -39,6 +51,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
       setRecordingState('recording');
       audioChunksRef.current = [];
       setRecordingDuration(0);
+      stopRecordingPromiseRef.current = null;
 
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -70,45 +83,9 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
         try {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           
-          // Compress audio if file is too large (>5MB)
-          let finalBlob = audioBlob;
-          if (audioBlob.size > 5 * 1024 * 1024) {
-            // Simple compression by reducing quality
-            const audioContext = new AudioContext();
-            const arrayBuffer = await audioBlob.arrayBuffer();
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            
-            // Create a new audio buffer with reduced sample rate
-            const compressedBuffer = audioContext.createBuffer(
-              1, // mono
-              audioBuffer.length * 0.5, // reduce length
-              22050 // reduced sample rate
-            );
-            
-            const channelData = audioBuffer.getChannelData(0);
-            const compressedData = compressedBuffer.getChannelData(0);
-            
-            for (let i = 0; i < compressedData.length; i++) {
-              compressedData[i] = channelData[i * 2];
-            }
-            
-            // Convert back to blob
-            const mediaStreamDestination = audioContext.createMediaStreamDestination();
-            const source = audioContext.createBufferSource();
-            source.buffer = compressedBuffer;
-            source.connect(mediaStreamDestination);
-            source.start();
-            
-            const mediaRecorder = new MediaRecorder(mediaStreamDestination.stream);
-            const chunks: Blob[] = [];
-            
-            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-            mediaRecorder.onstop = () => {
-              finalBlob = new Blob(chunks, { type: 'audio/webm' });
-            };
-            
-            mediaRecorder.start();
-            setTimeout(() => mediaRecorder.stop(), compressedBuffer.duration * 1000);
+          // Basic validation
+          if (audioBlob.size === 0) {
+            throw new Error('Recording produced no audio data');
           }
 
           setRecordingState('uploading');
@@ -118,7 +95,7 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
           
           const { data, error } = await supabase.storage
             .from('voice_notes')
-            .upload(fileName, finalBlob, {
+            .upload(fileName, audioBlob, {
               cacheControl: '3600',
               upsert: false
             });
@@ -132,13 +109,19 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
             .from('voice_notes')
             .getPublicUrl(fileName);
 
-          resetState();
-          
-          // Return the file URL and duration for the calling component
-          return {
+          const recordingResult: RecordingResult = {
             url: urlData.publicUrl,
-            duration: Math.round(recordingDuration / 1000)
+            duration: Math.round(recordingDuration / 1000),
+            blob: audioBlob,
+            fileName
           };
+
+          // Resolve the promise with the recording result
+          if (stopRecordingPromiseRef.current) {
+            stopRecordingPromiseRef.current.resolve(recordingResult);
+          }
+
+          resetState();
           
         } catch (error) {
           console.error('Error processing recording:', error);
@@ -147,6 +130,12 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
             title: 'Processing Failed',
             message: 'Failed to process voice recording'
           });
+          
+          // Reject the promise if there was an error
+          if (stopRecordingPromiseRef.current) {
+            stopRecordingPromiseRef.current.reject(error);
+          }
+          
           resetState();
         }
       };
@@ -166,23 +155,34 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
         message: 'Failed to start recording. Please check microphone permissions.'
       });
       resetState();
+      throw error;
     }
-  }, [recordingDuration, resetState]);
+  }, [recordingDuration, resetState, addToast]);
 
-  const stopRecording = useCallback(async () => {
-    if (mediaRecorderRef.current && recordingState === 'recording') {
-      mediaRecorderRef.current.stop();
+  const stopRecording = useCallback(async (): Promise<RecordingResult> => {
+    if (!mediaRecorderRef.current || recordingState !== 'recording') {
+      throw new Error('No active recording to stop');
+    }
+
+    // Create a promise that will be resolved when the recording is processed
+    return new Promise<RecordingResult>((resolve, reject) => {
+      stopRecordingPromiseRef.current = { resolve, reject };
       
+      // Stop the recording
+      mediaRecorderRef.current!.stop();
+      
+      // Stop the duration timer
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
       
+      // Stop the media stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
-    }
+    });
   }, [recordingState]);
 
   const cancelRecording = useCallback(() => {
@@ -199,6 +199,11 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
         streamRef.current = null;
       }
       
+      // Reject any pending promise
+      if (stopRecordingPromiseRef.current) {
+        stopRecordingPromiseRef.current.reject(new Error('Recording cancelled'));
+      }
+      
       resetState();
     }
   }, [recordingState, resetState]);
@@ -211,11 +216,17 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
     }
   }, [recordingState, startRecording]);
 
-  const handleKeyUp = useCallback((event: KeyboardEvent) => {
+  const handleKeyUp = useCallback(async (event: KeyboardEvent) => {
     // Stop recording on key release for push-to-talk
     if ((event.code === 'Space' || event.code === 'KeyV') && recordingState === 'recording') {
       event.preventDefault();
-      stopRecording();
+      try {
+        const result = await stopRecording();
+        console.log('Recording completed:', result);
+        // You can handle the result here if needed
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+      }
     }
   }, [recordingState, stopRecording]);
 
@@ -235,6 +246,11 @@ export const useVoiceRecording = (): UseVoiceRecordingReturn => {
       
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      // Reject any pending promise on cleanup
+      if (stopRecordingPromiseRef.current) {
+        stopRecordingPromiseRef.current.reject(new Error('Component unmounted'));
       }
     };
   }, [handleKeyDown, handleKeyUp]);

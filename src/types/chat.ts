@@ -10,6 +10,14 @@ export interface QuickAction {
   category?: ActionCategory;
 }
 
+// Voice recording result interface
+export interface RecordingResult {
+  url: string;
+  duration: number;
+  blob: Blob;
+  fileName: string;
+}
+
 // Topic categories for conversation analysis
 export enum TopicCategory {
   MEDICAL = 'medical',
