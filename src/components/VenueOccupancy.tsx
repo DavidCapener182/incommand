@@ -219,7 +219,13 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     };
       }, [currentEventId, expectedAttendance, capacityToastId, removeToast]);
 
-  console.log('Render state:', { loading, currentCount, expectedAttendance });
+  console.log('🎯 VenueOccupancy render:', { 
+    loading, 
+    currentCount, 
+    expectedAttendance, 
+    currentEventId,
+    percentage: expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0
+  });
 
   if (loading) {
     return (
@@ -259,6 +265,11 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-1 w-full">
+        {/* Component Status Indicator */}
+        <div className="text-[8px] text-blue-600 bg-blue-100 px-1 rounded mb-1">
+          VenueOccupancy Active
+        </div>
+        
         <div className="text-center">
           <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
             {currentCount.toLocaleString()}
@@ -292,20 +303,18 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         )}
         
         {/* Debug Section - Remove in production */}
-        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-          <div className="text-gray-600 mb-2">Debug Info:</div>
-          <div>Current: {currentCount}</div>
-          <div>Expected: {expectedAttendance}</div>
-          <div>Percentage: {Math.round(percentage)}%</div>
-          <div>Capacity Toast ID: {capacityToastId || 'None'}</div>
+        <div className="mt-2 p-1 bg-gray-100 rounded text-xs max-h-20 overflow-y-auto">
+          <div className="text-gray-600 mb-1 text-[10px]">Debug:</div>
+          <div className="text-[8px]">C:{currentCount} E:{expectedAttendance} P:{Math.round(percentage)}%</div>
+          <div className="text-[8px]">Toast: {capacityToastId ? 'Yes' : 'No'}</div>
           <button
             onClick={() => {
               console.log('🧪 Manual capacity alert test');
               handleCapacityAlert(percentage, currentCount, expectedAttendance);
             }}
-            className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+            className="mt-1 px-1 py-0.5 bg-blue-500 text-white rounded text-[8px] hover:bg-blue-600"
           >
-            Test Capacity Alert
+            Test
           </button>
         </div>
       </div>
