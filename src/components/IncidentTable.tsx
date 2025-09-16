@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
@@ -8,6 +8,7 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
+import IncidentTimeline from './IncidentTimeline'
 import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
 import { FilterState, filterIncidents } from '../utils/incidentFilters'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +25,8 @@ interface Incident {
   is_closed: boolean
   event_id: string
   status: string
+  priority?: string
+  resolved_at?: string | null
 }
 
 const getRowStyle = (incident: Incident) => {
@@ -65,23 +68,25 @@ const recentToasts = new Map<string, number>(); // Track recent toasts to preven
 // Add debugging
 logger.debug('IncidentTable module loaded', { component: 'IncidentTable', action: 'moduleLoad', activeSubscriptions: activeSubscriptions.size, toastCallbacks: globalToastCallbacks.size });
 
-export default function IncidentTable({ 
-  filters, 
-  onDataLoaded, 
+export default function IncidentTable({
+  filters,
+  onDataLoaded,
   onToast,
   viewMode = 'table',
   onViewModeChange,
   currentUser,
   currentEventId: propCurrentEventId,
+  currentEvent,
   onFiltersChange
-}: { 
-  filters: FilterState; 
-  onDataLoaded?: (data: Incident[]) => void; 
+}: {
+  filters: FilterState;
+  onDataLoaded?: (data: Incident[]) => void;
   onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
-  viewMode?: 'table' | 'board' | 'staff';
-  onViewModeChange?: (mode: 'table' | 'board' | 'staff') => void;
+  viewMode?: 'table' | 'board' | 'timeline' | 'staff';
+  onViewModeChange?: (mode: 'table' | 'board' | 'timeline' | 'staff') => void;
   currentUser?: any;
   currentEventId?: string;
+  currentEvent?: any;
   onFiltersChange?: (filters: FilterState) => void;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
@@ -601,15 +606,21 @@ export default function IncidentTable({
   const sortedIncidents = [...filteredIncidents].sort((a, b) => {
     const aIsHighPriorityOpen = isHighPriorityAndOpen(a);
     const bIsHighPriorityOpen = isHighPriorityAndOpen(b);
-    
+
     // If both are high priority and open, or both are not, sort by timestamp (newest first)
     if (aIsHighPriorityOpen === bIsHighPriorityOpen) {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     }
-    
+
     // High priority open incidents go to the top
     return aIsHighPriorityOpen ? -1 : 1;
   });
+
+  const chronologicalIncidents = useMemo(() => {
+    return [...filteredIncidents].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, [filteredIncidents]);
 
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {
@@ -694,6 +705,17 @@ export default function IncidentTable({
                 whileTap={{ scale: 0.95 }}
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
+              </motion.button>
+              <motion.button
+                onClick={() => onViewModeChange('timeline')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
+                  viewMode === 'timeline' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="text-base leading-none">⏱️</span>
+                Timeline
               </motion.button>
               {/* Staff toggle hidden intentionally */}
             </div>
@@ -1053,9 +1075,9 @@ export default function IncidentTable({
         </>
       )}
     </>
-  ) : (
-    <>
-      {/* Board View */}
+      ) : viewMode === 'board' ? (
+        <>
+          {/* Board View */}
       <div className="h-[700px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
         <CollaborationBoard
           eventId={propCurrentEventId || currentEventId || ''}
@@ -1090,16 +1112,35 @@ export default function IncidentTable({
         />
       </div>
       
-      {/* Incident Details Modal for Board View */}
-      {isDetailsModalOpen && selectedIncidentId && (
-        <IncidentDetailsModal
-          isOpen={isDetailsModalOpen}
-          incidentId={selectedIncidentId}
-          onClose={handleCloseModal}
+        {/* Incident Details Modal for Board View */}
+        {isDetailsModalOpen && selectedIncidentId && (
+          <IncidentDetailsModal
+            isOpen={isDetailsModalOpen}
+            incidentId={selectedIncidentId}
+            onClose={handleCloseModal}
+          />
+        )}
+      </>
+    ) : (
+      <>
+        <IncidentTimeline
+          incidents={incidents}
+          displayedIncidents={chronologicalIncidents}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          currentEvent={currentEvent}
+          onSelectIncident={handleIncidentClick}
         />
-      )}
-    </>
-  )}
+
+        {isDetailsModalOpen && selectedIncidentId && (
+          <IncidentDetailsModal
+            isOpen={isDetailsModalOpen}
+            incidentId={selectedIncidentId}
+            onClose={handleCloseModal}
+          />
+        )}
+      </>
+    )}
     </>
   )
 } 
