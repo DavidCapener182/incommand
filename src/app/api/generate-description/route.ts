@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { logAIUsage } from '@/lib/supabase';
+import { logAIUsage } from '@/lib/supabaseServer';
 
 // Debug logging for environment variables
 console.log('API Route - Environment variables check:', {

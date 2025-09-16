@@ -1,27 +1,34 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
+import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import webpush from 'web-push';
 
 // Configure VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 
-if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+const hasVapidKeys = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+
+if (hasVapidKeys) {
+  webpush.setVapidDetails(
+    'mailto:admin@incommand.com',
+    VAPID_PUBLIC_KEY!,
+    VAPID_PRIVATE_KEY!
+  );
+} else {
   console.error('VAPID keys not configured');
 }
-
-webpush.setVapidDetails(
-  'mailto:admin@incommand.com',
-  VAPID_PUBLIC_KEY!,
-  VAPID_PRIVATE_KEY!
-);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!hasVapidKeys) {
+    return res.status(500).json({ error: 'Push notifications are not configured' });
+  }
+
   try {
+    const supabase = createServerSupabaseClient({ req, res });
     // Get user from Supabase auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     

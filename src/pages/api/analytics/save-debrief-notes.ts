@@ -1,5 +1,5 @@
-import { supabase } from '../../../lib/supabase';
 import { NextApiRequest, NextApiResponse } from 'next';
+import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -13,6 +13,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const supabase = createServerSupabaseClient({ req, res });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     // Check if a debrief for this event already exists
     const { data: existingDebrief, error: selectError } = await supabase
       .from('debriefs')

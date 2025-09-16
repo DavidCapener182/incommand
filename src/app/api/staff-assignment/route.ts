@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { supabase } from '../../../lib/supabase';
 import { 
   autoAssignIncident, 
   getAvailableStaff, 
@@ -35,8 +34,8 @@ function checkRateLimit(identifier: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const supabaseClient = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
       return NextResponse.json(
@@ -84,7 +83,7 @@ export async function POST(request: NextRequest) {
           }
           
           // Validate staff availability for bulk assignment
-          const availableStaff = await getAvailableStaff(eventId);
+          const availableStaff = await getAvailableStaff(eventId, supabaseClient);
           const unavailableStaff = bulkStaffIds.filter(staffId => 
             !availableStaff.some(staff => 
               staff.id === staffId && 
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
           }
           
           // Update incident with assigned staff
-          const { error: updateError } = await supabase
+          const { error: updateError } = await supabaseClient
             .from('incident_logs')
             .update({
               assigned_staff_ids: bulkStaffIds,
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get available staff for validation
-    const availableStaff = await getAvailableStaff(eventId);
+    const availableStaff = await getAvailableStaff(eventId, supabaseClient);
 
     // Handle auto-assignment
     if (assignmentType === 'auto') {
@@ -158,7 +157,8 @@ export async function POST(request: NextRequest) {
         incidentType,
         priority,
         location,
-        requiredSkills
+        requiredSkills,
+        supabaseClient
       );
 
       if (!assignment) {
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Update incident with auto-assigned staff
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
         .from('incident_logs')
         .update({
           assigned_staff_ids: assignment.assignedStaff,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get incident details for validation
-    const { data: incident, error: incidentError } = await supabase
+    const { data: incident, error: incidentError } = await supabaseClient
       .from('incident_logs')
       .select('incident_type, priority')
       .eq('id', incidentId)
@@ -244,7 +244,8 @@ export async function POST(request: NextRequest) {
         staffId,
         incident.incident_type,
         staff.active_assignments,
-        staff.skill_tags || []
+        staff.skill_tags || [],
+        supabaseClient
       );
 
       if (!validation.valid) {
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update incident with assigned staff
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
       .from('incident_logs')
       .update({
         assigned_staff_ids: staffIds,
@@ -297,8 +298,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const supabaseClient = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
       return NextResponse.json(
@@ -319,10 +320,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current staff assignments and availability
-    const availableStaff = await getAvailableStaff(eventId);
+    const availableStaff = await getAvailableStaff(eventId, supabaseClient);
 
     // Get current assignments for the event
-    const { data: assignments, error: assignmentsError } = await supabase
+    const { data: assignments, error: assignmentsError } = await supabaseClient
       .from('incident_logs')
       .select(`
         id,
@@ -393,8 +394,8 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const supabaseClient = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
       return NextResponse.json(
@@ -419,7 +420,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get current incident details
-    const { data: incident, error: incidentError } = await supabase
+    const { data: incident, error: incidentError } = await supabaseClient
       .from('incident_logs')
       .select('event_id, assigned_staff_ids, incident_type')
       .eq('id', incidentId)
@@ -433,7 +434,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get available staff for validation
-    const availableStaff = await getAvailableStaff(incident.event_id);
+    const availableStaff = await getAvailableStaff(incident.event_id, supabaseClient);
 
     // Validate staff availability and skills
     const validationErrors: string[] = [];
@@ -475,7 +476,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update incident assignment
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
       .from('incident_logs')
       .update({
         assigned_staff_ids: staffIds,
@@ -509,8 +510,8 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Check for Supabase authentication
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const supabaseClient = createRouteHandlerClient({ cookies });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     
     if (authError || !user) {
       return NextResponse.json(
@@ -531,7 +532,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get current incident
-    const { data: incident, error: incidentError } = await supabase
+    const { data: incident, error: incidentError } = await supabaseClient
       .from('incident_logs')
       .select('assigned_staff_ids')
       .eq('id', incidentId)
@@ -555,7 +556,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Update incident
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
       .from('incident_logs')
       .update({
         assigned_staff_ids: newAssignedStaff,

@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { getServiceSupabaseClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -13,6 +11,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    let supabase;
+    try {
+      supabase = getServiceSupabaseClient();
+    } catch (configError) {
+      console.error('Supabase configuration error', configError);
+      return res.status(500).json({ error: 'Supabase environment variables are not configured' });
+    }
     // Get incidents with timestamps
     const { data, error } = await supabase
       .from('incident_logs')

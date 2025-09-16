@@ -23,7 +23,25 @@ import 'chartjs-adapter-date-fns';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { FaArrowUp, FaArrowDown, FaFileExport, FaPrint, FaMapMarkerAlt, FaClock, FaExclamationTriangle, FaUsers, FaCheck, FaLightbulb } from 'react-icons/fa';
+import { 
+  FaArrowUp,
+  FaArrowDown,
+  FaFileExport,
+  FaPrint,
+  FaMapMarkerAlt,
+  FaClock,
+  FaExclamationTriangle,
+  FaUsers,
+  FaCheck,
+  FaLightbulb,
+  FaBolt,
+  FaClipboardList,
+  FaCheckCircle,
+  FaChartLine,
+  FaRegClock,
+  FaArrowRight,
+  FaBullseye
+} from 'react-icons/fa';
 import { 
   ChartBarIcon, 
   ClockIcon, 
@@ -135,6 +153,25 @@ const msToTime = (ms: number | null) => {
   return parts.join(' ');
 };
 
+const formatDisplayTime = (timestamp: string | null | undefined) => {
+  if (!timestamp) return '–';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatShortDateTime = (timestamp: string | null | undefined) => {
+  if (!timestamp) return '–';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 // Loading skeleton component
 function Skeleton({ height = 24, width = '100%' }) {
   return <div style={{ height, width }} className="bg-gray-200 animate-pulse rounded" />;
@@ -153,12 +190,9 @@ export default function AnalyticsPage() {
   
   // Debug function to log section changes
   const handleSectionChange = (sectionId: string) => {
-    console.log('Section change requested:', sectionId);
     setActiveSection(sectionId);
   };
   
-  // Debug: log current active section
-  console.log('Current active section:', activeSection);
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [incidentData, setIncidentData] = useState<IncidentRecord[]>([]);
   const [eventDetails, setEventDetails] = useState<EventRecord | null>(null);
@@ -203,53 +237,41 @@ export default function AnalyticsPage() {
       
       try {
         // Test database connection first
-        console.log('Testing database connection...');
         const { data: testData, error: testError } = await supabase
           .from('events')
           .select('count')
           .limit(1);
         
-        console.log('Database connection test:', { testData, testError });
-        
         // Get current event - try without company_id filter first
-        console.log('Fetching current event...');
         let { data: event, error } = await supabase
           .from('events')
           .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
           .eq('is_current', true)
           .single();
         
-        console.log('Event query result:', { event, error });
-        
         // If that fails, try to get any event
         if (error || !event) {
-          console.log('Trying to get any event...');
           const { data: anyEvent, error: anyEventError } = await supabase
             .from('events')
             .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
             .limit(1)
             .single();
           
-          console.log('Any event query result:', { anyEvent, anyEventError });
-          
           if (anyEvent) {
             event = anyEvent;
             error = null;
           }
         }
-        
+
         if (error || !event) {
           console.error('No current event found:', error);
           
           // Let's check if there are any events at all in the database
-          console.log('Checking for any events in database...');
           const { data: allEvents, error: allEventsError } = await supabase
             .from('events')
             .select('id, event_date, is_current')
             .limit(5);
-          
-          console.log('All events in database:', { allEvents, allEventsError });
-          
+
           setNoCurrentEvent(true);
           setLoading(false);
           return;
@@ -494,7 +516,6 @@ export default function AnalyticsPage() {
     }
   };
 
-  const handlePrint = () => window.print();
 
   const handleSaveNotes = async () => {
     if (!eventId) {
@@ -603,11 +624,7 @@ export default function AnalyticsPage() {
   // Handle export completion
   const handleExportComplete = (result: any) => {
     setExportResult(result);
-    if (result.success) {
-      // Show success notification
-      console.log('Export completed successfully:', result.filename);
-    } else {
-      // Show error notification
+    if (!result.success) {
       console.error('Export failed:', result.error);
     }
   };
@@ -868,6 +885,60 @@ export default function AnalyticsPage() {
     ? openIncidents.reduce((latest, current) => new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current)
     : null;
 
+  const highPriorityIncidents = totalIncidentsCountable.filter(
+    incident => incident.priority?.toLowerCase() === 'high'
+  );
+  const highPriorityOpenCount = openIncidents.filter(
+    incident => incident.priority?.toLowerCase() === 'high'
+  ).length;
+  const mediumPriorityOpenCount = openIncidents.filter(
+    incident => incident.priority?.toLowerCase() === 'medium'
+  ).length;
+  const lowPriorityOpenCount = openIncidents.filter(
+    incident => incident.priority?.toLowerCase() === 'low'
+  ).length;
+
+  const longestOpenIncident = openIncidents.length > 0
+    ? openIncidents.reduce((oldest, current) =>
+        new Date(oldest.timestamp) < new Date(current.timestamp) ? oldest : current
+      )
+    : null;
+  const longestOpenDurationMs = longestOpenIncident
+    ? Date.now() - new Date(longestOpenIncident.timestamp).getTime()
+    : null;
+
+  const recentIncidents = incidentData.filter((incident) => {
+    const timestamp = new Date(incident.timestamp).getTime();
+    return !Number.isNaN(timestamp) && Date.now() - timestamp <= 1000 * 60 * 60;
+  });
+
+  const incidentsByHour = incidentData.reduce((acc, incident) => {
+    const date = new Date(incident.timestamp);
+    if (!Number.isNaN(date.getTime())) {
+      const hour = date.getHours();
+      acc[hour] = (acc[hour] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<number, number>);
+
+  const busiestHour = Object.entries(incidentsByHour).reduce(
+    (best, [hourStr, count]) => {
+      const hour = Number(hourStr);
+      if (!best || count > best.count) {
+        return { hour, count };
+      }
+      return best;
+    },
+    null as { hour: number; count: number } | null
+  );
+
+  const formatHourWindow = (hour: number) => {
+    const start = `${hour.toString().padStart(2, '0')}:00`;
+    const endHour = (hour + 1) % 24;
+    const end = `${endHour.toString().padStart(2, '0')}:00`;
+    return `${start} – ${end}`;
+  };
+
   const getPriorityColor = (priority: string | undefined) => {
     switch(priority?.toLowerCase()) {
       case 'high': return 'bg-red-500';
@@ -913,6 +984,15 @@ export default function AnalyticsPage() {
   const avgResponseTimeDisplay = avgResponseTimeMs
     ? msToTime(avgResponseTimeMs)
     : "N/A";
+
+  const sortedResponseTimes = [...responseTimes].sort((a, b) => a - b);
+  const medianResponseTimeMs = sortedResponseTimes.length
+    ? (sortedResponseTimes.length % 2 === 0
+        ? (sortedResponseTimes[sortedResponseTimes.length / 2 - 1] + sortedResponseTimes[sortedResponseTimes.length / 2]) / 2
+        : sortedResponseTimes[Math.floor(sortedResponseTimes.length / 2)])
+    : null;
+  const fastestResponseTimeMs = sortedResponseTimes.length ? sortedResponseTimes[0] : null;
+  const slowestResponseTimeMs = sortedResponseTimes.length ? sortedResponseTimes[sortedResponseTimes.length - 1] : null;
 
 
 
@@ -975,6 +1055,8 @@ export default function AnalyticsPage() {
   const currentAttendance = attendanceData.length > 0 ? attendanceData[attendanceData.length - 1].count : 0;
   const expectedAttendance = eventDetails?.expected_attendance || 0;
   const attendancePercentage = expectedAttendance > 0 ? (currentAttendance / expectedAttendance) * 100 : 0;
+  const attendanceProgress = Math.min(100, Math.round(attendancePercentage));
+  const latestAttendanceRecord = attendanceData.length > 0 ? attendanceData[attendanceData.length - 1] : null;
 
   const kpiData = [
     { title: 'Total Incidents', value: totalIncidentsCountable.length },
@@ -984,6 +1066,206 @@ export default function AnalyticsPage() {
     { title: 'Most Likely Type', value: predictions.likelyType || null },
     { title: 'Peak Attendance', value: peakAttendance > 0 ? peakAttendance.toLocaleString() : null },
   ];
+
+  const operationalInsights = [
+    {
+      label: 'Open incidents',
+      value: openIncidents.length,
+      detail: `${highPriorityOpenCount} high • ${mediumPriorityOpenCount} medium • ${lowPriorityOpenCount} low`,
+    },
+    {
+      label: 'Longest open incident',
+      value: longestOpenDurationMs ? msToTime(longestOpenDurationMs) : 'All resolved',
+      detail: longestOpenIncident
+        ? `${longestOpenIncident.incident_type} • opened ${formatDisplayTime(longestOpenIncident.timestamp)}`
+        : 'No active incidents',
+    },
+    {
+      label: 'Incidents last hour',
+      value: recentIncidents.length,
+      detail: busiestHour
+        ? `Peak window ${formatHourWindow(busiestHour.hour)} • ${busiestHour.count} total`
+        : 'Low recent activity',
+    },
+  ];
+
+  const responseInsights = [
+    {
+      label: 'Average response',
+      value: avgResponseTimeDisplay,
+      detail: medianResponseTimeMs ? `Median ${msToTime(medianResponseTimeMs)}` : 'Median unavailable',
+    },
+    {
+      label: 'Fastest response',
+      value: fastestResponseTimeMs ? msToTime(fastestResponseTimeMs) : 'N/A',
+      detail: slowestResponseTimeMs ? `Slowest ${msToTime(slowestResponseTimeMs)}` : 'Awaiting data',
+    },
+    {
+      label: 'Closed incidents',
+      value: statusCounts['Closed'],
+      detail: `${closedLogs.length} with response data`,
+    },
+  ];
+
+  const attendanceInsights = [
+    {
+      label: 'Current attendance',
+      value: currentAttendance.toLocaleString(),
+      detail: expectedAttendance ? `Forecast ${expectedAttendance.toLocaleString()}` : 'No forecast set',
+    },
+    {
+      label: 'Goal progress',
+      value: `${attendanceProgress}%`,
+      detail: latestAttendanceRecord ? `Last update ${formatDisplayTime(latestAttendanceRecord.timestamp)}` : 'Awaiting counts',
+    },
+  {
+    label: 'Biggest surge',
+    value: maxIncrease > 0 ? `+${maxIncrease.toLocaleString()}` : 'Stable',
+    detail: timeOfMaxIncrease ? `at ${formatDisplayTime(timeOfMaxIncrease)}` : 'No surge detected',
+  },
+  ];
+
+  const clearanceRate = totalIncidentsCountable.length
+    ? Math.round((statusCounts['Closed'] / totalIncidentsCountable.length) * 100)
+    : null;
+
+  const incidentHeadlineStats = [
+    {
+      label: 'High priority open',
+      value: highPriorityOpenCount,
+      tone: 'critical' as const,
+      helper: highPriorityOpenCount > 0
+        ? 'Escalate and assign senior responders'
+        : 'All high priority incidents cleared'
+    },
+    {
+      label: 'Incidents last hour',
+      value: recentIncidents.length,
+      tone: recentIncidents.length > 0 ? 'warning' : 'calm',
+      helper: recentIncidents.length > 0
+        ? 'Maintain rapid response coverage'
+        : 'Activity slowing, hold current posture'
+    },
+    {
+      label: 'Clearance rate',
+      value: clearanceRate !== null ? `${clearanceRate}%` : 'N/A',
+      tone: clearanceRate !== null && clearanceRate < 75 ? 'warning' : 'success',
+      helper: clearanceRate !== null ? 'Closed / total incidents' : 'Awaiting data'
+    }
+  ];
+
+  const criticalIncidentTypes = ['Medical', 'Fire', 'Security', 'Counter-Terror Alert', 'Hostile Act'];
+  const significantIncidentsFromLogs = totalIncidentsCountable
+    .filter((incident) => {
+      const priority = incident.priority?.toLowerCase();
+      return (
+        priority === 'high' ||
+        criticalIncidentTypes.includes(incident.incident_type) ||
+        (incident.status && incident.status.toLowerCase().includes('evac'))
+      );
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 5)
+    .map((incident) => ({
+      date: formatShortDateTime(incident.timestamp),
+      type: incident.incident_type,
+      details: incident.occurrence || incident.status || 'Logged via control room'
+    }));
+
+  const defaultLearningPoints = [] as string[];
+  if (highPriorityOpenCount > 0) {
+    defaultLearningPoints.push('Deploy additional senior responders to close remaining high-priority incidents.');
+  }
+  if (avgResponseTimeMs && avgResponseTimeMs > 10 * 60 * 1000) {
+    defaultLearningPoints.push('Average response time exceeded 10 minutes. Review radio dispatch workflow and staging positions.');
+  }
+  if (maxIncrease > 0 && timeOfMaxIncrease) {
+    defaultLearningPoints.push(`Attendance surged by ${maxIncrease.toLocaleString()} around ${formatDisplayTime(timeOfMaxIncrease)}. Consider adding ingress crowd lanes next event.`);
+  }
+  if (predictions.likelyType) {
+    defaultLearningPoints.push(`Prepare mitigations for predicted "${predictions.likelyType}" incidents ahead of the forecast window.`);
+  }
+  if (!defaultLearningPoints.length) {
+    defaultLearningPoints.push('Maintain current operational posture; no major anomalies detected.');
+  }
+
+  const displayedLearningPoints = debrief.learningPoints?.length
+    ? debrief.learningPoints
+    : defaultLearningPoints;
+
+  const displayedSignificantIncidents = debrief.significantIncidents?.length
+    ? debrief.significantIncidents
+    : significantIncidentsFromLogs;
+
+  const eventOverviewStats = [
+    {
+      label: 'Total incidents',
+      value: totalIncidentsCountable.length.toLocaleString(),
+    },
+    {
+      label: 'High priority',
+      value: highPriorityIncidents.length.toLocaleString(),
+    },
+    {
+      label: 'Average response',
+      value: avgResponseTimeDisplay,
+    },
+    {
+      label: 'Clearance rate',
+      value: clearanceRate !== null ? `${clearanceRate}%` : 'N/A',
+    },
+    {
+      label: 'Peak attendance',
+      value: peakAttendance > 0 ? peakAttendance.toLocaleString() : 'N/A',
+    },
+    {
+      label: 'Longest open incident',
+      value: longestOpenDurationMs ? msToTime(longestOpenDurationMs) : 'All resolved',
+    }
+  ];
+
+  const eventOverviewNarrative = debrief.eventOverview
+    ? debrief.eventOverview
+    : `Operations closed ${statusCounts['Closed']} of ${totalIncidentsCountable.length || '0'} incidents with an average response time of ${avgResponseTimeDisplay}. Peak attendance reached ${peakAttendance > 0 ? peakAttendance.toLocaleString() : 'N/A'} with ingress surging around ${timeOfMaxIncrease ? formatDisplayTime(timeOfMaxIncrease) : 'N/A'}.`;
+
+  const attendanceNarrative = debrief.attendanceSummary
+    ? debrief.attendanceSummary
+    : expectedAttendance
+      ? `Attendance is tracking at ${attendanceProgress}% of the forecasted ${expectedAttendance.toLocaleString()} guests.`
+      : '';
+
+  const keyTimingsData = [
+    { label: 'Doors open', value: eventDetails?.doors_open_time ? formatDisplayTime(eventDetails.doors_open_time) : null },
+    { label: 'Main act', value: eventDetails?.main_act_start_time ? formatDisplayTime(eventDetails.main_act_start_time) : null },
+    ...(eventDetails?.support_act_times || []).map(({ time, name }) => ({
+      label: name ? `${name} support` : 'Support act',
+      value: formatDisplayTime(time)
+    })),
+    { label: 'Peak attendance', value: timeOfMaxIncrease ? formatDisplayTime(timeOfMaxIncrease) : null },
+    { label: 'Busiest incident window', value: busiestHour ? formatHourWindow(busiestHour.hour) : null },
+    {
+      label: 'Last incident logged',
+      value: incidentData.length ? formatShortDateTime(incidentData[incidentData.length - 1].timestamp) : null
+    }
+  ].filter((item) => item.value);
+
+  const predictiveRecommendations = [] as string[];
+  const predictedHourNumeric = predictions.likelyHour !== null && predictions.likelyHour !== undefined && !Number.isNaN(Number(predictions.likelyHour))
+    ? Number(predictions.likelyHour)
+    : null;
+
+  if (predictions.likelyType && predictions.likelyType !== 'N/A') {
+    predictiveRecommendations.push(`Deploy resources for likely "${predictions.likelyType}" incidents early in the predicted hour.`);
+  }
+  if (predictedHourNumeric !== null) {
+    predictiveRecommendations.push(`Increase monitoring between ${formatHourWindow(predictedHourNumeric)} to get ahead of the forecasted spike.`);
+  }
+  if (predictions.likelyLocation && predictions.likelyLocation !== 'N/A') {
+    predictiveRecommendations.push(`Position a rapid response team near ${predictions.likelyLocation}.`);
+  }
+  if (!predictiveRecommendations.length) {
+    predictiveRecommendations.push('Forecast signals steady conditions. Continue standard patrol cadence.');
+  }
 
   const getKpiIcon = (title: string) => {
     switch (title) {
@@ -1021,7 +1303,10 @@ export default function AnalyticsPage() {
           title="Analytics"
         />
         
-              <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
+        <main
+          className="flex-1 sidebar-content-transition"
+          style={{ marginLeft: sidebarWidth }}
+        >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
             <div>
@@ -1056,7 +1341,10 @@ export default function AnalyticsPage() {
           title="Analytics"
         />
         
-        <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
+        <main
+          className="flex-1 sidebar-content-transition"
+          style={{ marginLeft: sidebarWidth }}
+        >
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
               <div>
@@ -1126,7 +1414,10 @@ export default function AnalyticsPage() {
         onWidthChange={setSidebarWidth}
       />
       
-      <main className="flex-1 sidebar-content-transition ml-[var(--sidebar-width)]">
+      <main
+        className="flex-1 sidebar-content-transition"
+        style={{ marginLeft: sidebarWidth }}
+      >
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
             <div>
@@ -1135,10 +1426,6 @@ export default function AnalyticsPage() {
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
               </div>
               <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
-              {/* Debug: Show current active section */}
-              <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Current section: <span className="font-semibold">{activeSection}</span>
-              </div>
             </div>
           </div>
 
@@ -1215,6 +1502,42 @@ export default function AnalyticsPage() {
               ))}
             </div>
 
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
+              {[
+                { title: 'Operational Focus', icon: <FaExclamationTriangle className="text-red-500" />, items: operationalInsights },
+                { title: 'Response Performance', icon: <FaClock className="text-blue-500" />, items: responseInsights },
+                { title: 'Attendance Pulse', icon: <FaUsers className="text-purple-500" />, items: attendanceInsights },
+              ].map((panel, index) => (
+                <div
+                  key={panel.title}
+                  className={`backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 lg:p-8 shadow-xl card-glow animate-fade-in ${index === 0 ? 'animate-delay-100' : index === 1 ? 'animate-delay-200' : 'animate-delay-300'}`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">{panel.title}</p>
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">{panel.title === 'Operational Focus' ? 'Live Watch' : panel.title === 'Response Performance' ? 'Response Quality' : 'Ingress Snapshot'}</h3>
+                    </div>
+                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/40">
+                      {panel.icon}
+                    </div>
+                  </div>
+                  <ul className="space-y-3">
+                    {panel.items.map((item) => (
+                      <li key={item.label} className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700 dark:text-blue-100">{item.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-blue-200 mt-0.5">{item.detail}</p>
+                        </div>
+                        <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                          {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
             {/* Main Grid for Charts and Widgets */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
               {/* Attendance Chart */}
@@ -1284,10 +1607,10 @@ export default function AnalyticsPage() {
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
-                        <span className="font-extrabold text-gray-900 dark:text-white">{Math.round(attendancePercentage)}%</span>
+                        <span className="font-extrabold text-gray-900 dark:text-white">{attendanceProgress}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
+                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendanceProgress}%` }}></div>
                       </div>
                       <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
                         {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
@@ -1321,32 +1644,62 @@ export default function AnalyticsPage() {
 
             {/* Second Row: Incident Analysis & Staff Efficiency */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Merged Incident Analysis Card */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[270px] flex flex-col xl:col-span-1 card-glow animate-fade-in animate-delay-400">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Incident Analysis</h2>
-                <div className="flex-grow grid grid-cols-2 gap-4">
-                  {/* Incident Volume Chart */}
-                  <div className="flex flex-col">
-                    <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Volume Over Time</h3>
-                    <div className="flex-grow relative">
-                      {filteredIncidents.length > 0 ? (
-                        <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
-                      ) : (
-                        <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
-                      )}
-                    </div>
+              {/* Enhanced Incident Analysis Card */}
+              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[320px] flex flex-col xl:col-span-1 card-glow animate-fade-in animate-delay-400">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Incident Analysis</p>
+                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Live Incident Picture</h2>
                   </div>
-                  {/* Incident Types Pie */}
-                  <div className="flex flex-col">
-                    <h3 className="font-semibold text-lg text-center text-gray-800 dark:text-white mb-2">Breakdown by Type</h3>
-                    <div className="flex-grow relative">
-                      {filteredIncidents.length > 0 ? (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
+                  <FaClipboardList className="h-7 w-7 text-blue-500" />
+                </div>
+                <div className="space-y-6 flex-1 flex flex-col">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {incidentHeadlineStats.map((stat) => {
+                      const toneClass = stat.tone === 'critical'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-900/20 dark:text-red-200'
+                        : stat.tone === 'warning'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-200'
+                          : stat.tone === 'success'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-200';
+                      return (
+                        <div key={stat.label} className={`rounded-xl px-4 py-3 shadow-sm ${toneClass}`}>
+                          <p className="text-xs font-semibold uppercase tracking-wide">{stat.label}</p>
+                          <p className="text-2xl font-black mt-1">{stat.value}</p>
+                          <p className="text-xs mt-1 opacity-80 leading-snug">{stat.helper}</p>
                         </div>
-                      ) : (
-                        <p className="text-center text-gray-500 dark:text-white py-10">No incident data.</p>
-                      )}
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+                    <div className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-blue-100">Volume Over Time</h3>
+                        <FaChartLine className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="flex-1 relative min-h-[160px]">
+                        {filteredIncidents.length > 0 ? (
+                          <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-blue-100">No incident data</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-blue-100">Breakdown by Type</h3>
+                        <FaBullseye className="h-4 w-4 text-purple-500" />
+                      </div>
+                      <div className="flex-1 relative min-h-[160px] flex items-center justify-center">
+                        {filteredIncidents.length > 0 ? (
+                          <div className="h-full w-full">
+                            <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
+                          </div>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-blue-100">No incident data</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1378,28 +1731,52 @@ export default function AnalyticsPage() {
 
               {/* Predictive Insights */}
               <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col card-glow animate-fade-in animate-delay-600">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Predictive Insights</h2>
-                <div className="flex-grow flex items-center justify-center">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Predictive Insights</p>
+                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Risk Forecast</h2>
+                  </div>
+                  <FaBolt className="h-7 w-7 text-amber-500" />
+                </div>
+                <div className="flex-1 flex flex-col">
                   {loadingPredictions ? (
-                    <Skeleton height={80} />
-                  ) : (
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <FaExclamationTriangle className="mx-auto text-red-500 h-8 w-8 mb-2" />
-                        <p className="font-semibold text-sm">Most Likely Incident</p>
-                        <p className="text-lg">{predictions.likelyType || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <FaMapMarkerAlt className="mx-auto text-blue-500 h-8 w-8 mb-2" />
-                        <p className="font-semibold text-sm">Most Likely Location</p>
-                        <p className="text-lg">{predictions.likelyLocation || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <FaClock className="mx-auto text-green-500 h-8 w-8 mb-2" />
-                        <p className="font-semibold text-sm">Most Likely Hour</p>
-                        <p className="text-lg">{predictions.likelyHour || 'N/A'}</p>
-                      </div>
+                    <div className="flex-1 flex items-center justify-center">
+                      <Skeleton height={120} />
                     </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-center shadow-sm">
+                          <FaExclamationTriangle className="mx-auto text-red-500 h-7 w-7 mb-2" />
+                          <p className="text-xs uppercase tracking-wide font-semibold text-red-700 dark:text-red-200">Most Likely Incident</p>
+                          <p className="text-lg font-bold">{predictions.likelyType || 'Steady'}</p>
+                        </div>
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 px-4 py-3 text-center shadow-sm">
+                          <FaMapMarkerAlt className="mx-auto text-blue-500 h-7 w-7 mb-2" />
+                          <p className="text-xs uppercase tracking-wide font-semibold text-blue-700 dark:text-blue-200">Most Likely Location</p>
+                          <p className="text-lg font-bold">{predictions.likelyLocation || 'No hotspot'}</p>
+                        </div>
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 px-4 py-3 text-center shadow-sm">
+                          <FaClock className="mx-auto text-emerald-500 h-7 w-7 mb-2" />
+                          <p className="text-xs uppercase tracking-wide font-semibold text-emerald-700 dark:text-emerald-200">Most Likely Hour</p>
+                          <p className="text-lg font-bold">{predictedHourNumeric !== null ? formatHourWindow(predictedHourNumeric) : 'No spike'}</p>
+                        </div>
+                      </div>
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100">Recommended Actions</h3>
+                          <FaArrowRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <ul className="space-y-2">
+                          {predictiveRecommendations.map((recommendation, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-blue-100">
+                              <FaCheckCircle className="mt-0.5 h-4 w-4 text-emerald-500" />
+                              <span>{recommendation}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1407,10 +1784,12 @@ export default function AnalyticsPage() {
 
             {/* Fourth Row: Debrief Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
-              {/* Debrief Summary */}
               <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col xl:col-span-3 card-glow animate-fade-in animate-delay-600">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 mb-4 gap-2">
-                  <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Debrief Summary</h2>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-3 border-b border-gray-200 dark:border-[#2d437a]/60 pb-4 mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Debrief Summary</p>
+                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Post-Event Overview</h2>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => eventId && handleGenerateDebrief(eventId)}
@@ -1427,88 +1806,120 @@ export default function AnalyticsPage() {
                       )}
                     </button>
                     <button onClick={handleExport} className="p-2 text-gray-600 hover:text-black disabled:opacity-50" disabled={!debrief.eventOverview && !manualNotes} title="Export as PDF">
-                      <FaFileExport />
+                      <FaFileExport className="h-5 w-5" />
                     </button>
-                    <button onClick={handlePrint} className="p-2 text-gray-600 hover:text-black" title="Print">
-                      <FaPrint />
+                    <button onClick={() => window.print()} className="p-2 text-gray-600 hover:text-black" title="Print">
+                      <FaPrint className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
-                <div className="flex-grow overflow-y-auto pr-2">
-                  {loadingDebrief ? (
+                {debriefError && (
+                  <div className="text-red-600 bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                    <h3 className="font-semibold mb-2">Unable to generate AI debrief</h3>
+                    <p className="text-sm">{debriefError}</p>
+                  </div>
+                )}
+                {loadingDebrief ? (
+                  <div className="flex-1 flex items-center justify-center">
                     <Skeleton height={200} />
-                  ) : (
-                    <div id="debrief-report" className="p-2">
-                      {debriefError && <p className="text-red-500 mb-4">Error: {debriefError}</p>}
-                      <section className="mb-6">
-                        <h3 className="text-lg font-semibold mb-2">Event Overview and Key Statistics</h3>
-                        <p className="text-gray-700 mb-2">
-                          {debrief.eventOverview}
-                        </p>
-                        {debrief.attendanceSummary && <p className="text-gray-700 mt-2">{debrief.attendanceSummary}</p>}
-                      </section>
+                  </div>
+                ) : (
+                <div className="grid xl:grid-cols-3 gap-6 flex-1">
+                  <div className="xl:col-span-2 space-y-6">
+                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Event Overview</h3>
+                      <p className="text-sm text-gray-700 dark:text-blue-100 leading-relaxed mb-3">{eventOverviewNarrative}</p>
+                      {attendanceNarrative && (
+                        <p className="text-sm text-gray-600 dark:text-blue-200 leading-relaxed mb-4">{attendanceNarrative}</p>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {eventOverviewStats.map((stat) => (
+                          <div key={stat.label} className="rounded-xl bg-slate-50 dark:bg-[#1b2f63] border border-gray-100 dark:border-[#2d437a]/60 px-4 py-3 shadow-inner">
+                            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">{stat.label}</p>
+                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
 
-                      <section className="mb-6">
-                        <h3 className="text-lg font-semibold mb-2">Significant Incidents</h3>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border text-sm bg-white dark:bg-[#23408e] text-gray-900 dark:text-white">
-                            <thead>
-                              <tr className="bg-gray-50 dark:bg-[#23408e] dark:text-white">
-                                <th className="border px-3 py-2 text-left">Date</th>
-                                <th className="border px-3 py-2 text-left">Type</th>
-                                <th className="border px-3 py-2 text-left">Details</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {debrief.significantIncidents?.map((incident, index) => (
-                                <tr key={index}>
-                                  <td className="border px-3 py-2">{incident.date}</td>
-                                  <td className="border px-3 py-2">{incident.type}</td>
-                                  <td className="border px-3 py-2">{incident.details}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </section>
+                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Significant Incidents</h3>
+                      {displayedSignificantIncidents.length > 0 ? (
+                        <ul className="space-y-3">
+                          {displayedSignificantIncidents.map((incident, index) => {
+                            const incidentRecord = incident as any;
+                            const detail = incidentRecord.details ?? incidentRecord.description ?? incidentRecord.notes ?? 'Logged incident';
+                            return (
+                              <li key={`${incidentRecord.type}-${index}`} className="flex items-start gap-3 rounded-xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/80 dark:bg-[#1b2f63]/60 px-4 py-3">
+                                <FaExclamationTriangle className="mt-1 h-4 w-4 text-amber-500" />
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-blue-100">{incidentRecord.date || formatShortDateTime(incidentRecord.timestamp)}</p>
+                                  <p className="text-sm font-bold text-gray-900 dark:text-white">{incidentRecord.type || 'Incident'}</p>
+                                  <p className="text-sm text-gray-700 dark:text-blue-100 leading-snug">{detail}</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-blue-100">No critical incidents recorded during this event.</p>
+                      )}
+                    </section>
 
-                      <section className="mb-6">
-                        <h3 className="text-lg font-semibold mb-2">Key Learning Points & Recommendations</h3>
-                        <ul className="list-disc list-inside space-y-1 text-gray-700">
-                          {debrief.learningPoints?.map((point, index) => (
-                            <li key={index}>{point}</li>
+                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Key Learning Points & Recommendations</h3>
+                      <ul className="space-y-2">
+                        {displayedLearningPoints.map((point, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-blue-100">
+                            <FaCheckCircle className="mt-0.5 h-4 w-4 text-emerald-500" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  </div>
+
+                  <aside className="space-y-6">
+                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Key Timings</h3>
+                      {keyTimingsData.length > 0 ? (
+                        <ul className="space-y-2">
+                          {keyTimingsData.map((item) => (
+                            <li key={`${item.label}-${item.value}`} className="flex items-center gap-3 text-sm text-gray-700 dark:text-blue-100">
+                              <FaRegClock className="h-4 w-4 text-blue-500" />
+                              <div>
+                                <p className="font-semibold text-gray-900 dark:text-white">{item.value}</p>
+                                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-200">{item.label}</p>
+                              </div>
+                            </li>
                           ))}
                         </ul>
-                      </section>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-blue-100">No timing information available.</p>
+                      )}
+                    </section>
 
-                      <section className="mb-4">
-                        <label htmlFor="supervisor-notes" className="block text-md font-semibold mb-1">Supervisor Notes:</label>
-                        <textarea
-                          id="supervisor-notes"
-                          rows={3}
-                          placeholder="Add manual notes here..."
-                          value={manualNotes}
-                          onChange={(e) => setManualNotes(e.target.value)}
-                          className="w-full border rounded p-2 text-gray-700 focus:ring-2 focus:ring-blue-200"
-                        />
-                        <button
-                          onClick={handleSaveNotes}
-                          disabled={isSavingNotes}
-                          className="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow disabled:bg-gray-400"
-                        >
-                          {isSavingNotes ? 'Saving...' : 'Save Notes'}
-                        </button>
-                      </section>
-
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Doors Open Time</label>
-                        <div className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100">
-                          {eventDetails?.doors_open_time || '-'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm flex flex-col">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Supervisor Notes</h3>
+                      <textarea
+                        id="supervisor-notes"
+                        rows={4}
+                        placeholder="Add manual notes here..."
+                        value={manualNotes}
+                        onChange={(e) => setManualNotes(e.target.value)}
+                        className="w-full border border-gray-200 dark:border-[#2d437a]/60 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-blue-100 bg-white/80 dark:bg-[#1b2f63]/60 focus:ring-2 focus:ring-blue-200"
+                      />
+                      <button
+                        onClick={handleSaveNotes}
+                        disabled={isSavingNotes}
+                        className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded shadow disabled:bg-gray-400"
+                      >
+                        {isSavingNotes ? 'Saving...' : 'Save Notes'}
+                      </button>
+                    </section>
+                  </aside>
                 </div>
+                )}
               </div>
             </div>
 

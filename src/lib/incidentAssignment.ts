@@ -1,5 +1,27 @@
-import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from './logger'
+
+let browserSupabaseClientPromise: Promise<SupabaseClient> | null = null;
+
+async function getBrowserSupabaseClient(): Promise<SupabaseClient> {
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client must be provided when using incident assignment utilities on the server');
+  }
+
+  if (!browserSupabaseClientPromise) {
+    browserSupabaseClientPromise = import('./supabase').then(module => module.supabase as SupabaseClient);
+  }
+
+  return browserSupabaseClientPromise;
+}
+
+async function resolveSupabaseClient(client?: SupabaseClient): Promise<SupabaseClient> {
+  if (client) {
+    return client;
+  }
+
+  return getBrowserSupabaseClient();
+}
 
 // Caching for performance optimization
 const staffCache = new Map<string, { data: StaffMember[]; timestamp: number }>();
@@ -141,7 +163,11 @@ const assignmentRulesCache = new Map<string, { rules: Record<string, AssignmentR
 const ASSIGNMENT_RULES_CACHE_DURATION = 300000; // 5 minutes
 
 // Load assignment rules from database or config file
-async function loadAssignmentRules(eventId?: string): Promise<Record<string, AssignmentRule>> {
+async function loadAssignmentRules(
+  eventId?: string,
+  supabaseClient?: SupabaseClient
+): Promise<Record<string, AssignmentRule>> {
+  const supabase = eventId ? await resolveSupabaseClient(supabaseClient) : null;
   try {
     // Check cache first
     const now = Date.now();
@@ -152,7 +178,7 @@ async function loadAssignmentRules(eventId?: string): Promise<Record<string, Ass
     }
 
     // Try to load from database first
-    if (eventId) {
+    if (eventId && supabase) {
       const { data: dbRules, error } = await supabase
         .from('assignment_rules')
         .select('*')
@@ -201,8 +227,12 @@ async function loadAssignmentRules(eventId?: string): Promise<Record<string, Ass
 }
 
 // Get assignment rules for a specific incident type
-async function getAssignmentRule(incidentType: string, eventId?: string): Promise<AssignmentRule> {
-  const rules = await loadAssignmentRules(eventId);
+async function getAssignmentRule(
+  incidentType: string,
+  eventId?: string,
+  supabaseClient?: SupabaseClient
+): Promise<AssignmentRule> {
+  const rules = await loadAssignmentRules(eventId, supabaseClient);
   return rules[incidentType.toLowerCase()] || {
     requiredSkills: [],
     maxDistance: 20,
@@ -213,7 +243,10 @@ async function getAssignmentRule(incidentType: string, eventId?: string): Promis
 }
 
 // Get available staff for an event
-export async function getAvailableStaff(eventId: string): Promise<StaffMember[]> {
+export async function getAvailableStaff(
+  eventId: string,
+  supabaseClient?: SupabaseClient
+): Promise<StaffMember[]> {
   try {
     if (!eventId) {
       throw logAssignmentError(
@@ -222,6 +255,8 @@ export async function getAvailableStaff(eventId: string): Promise<StaffMember[]>
         { eventId }
       );
     }
+
+    const supabase = await resolveSupabaseClient(supabaseClient);
 
     // Check cache first
     const now = Date.now();
@@ -398,7 +433,8 @@ export async function getStaffSuggestions(
   incidentType: string,
   priority: string,
   location?: { latitude: number; longitude: number },
-  requiredSkills: string[] = []
+  requiredSkills: string[] = [],
+  supabaseClient?: SupabaseClient
 ): Promise<AssignmentScore[]> {
   try {
     if (!eventId || !incidentType || !priority) {
@@ -426,7 +462,7 @@ export async function getStaffSuggestions(
       return cached.data;
     }
 
-    const availableStaff = await getAvailableStaff(eventId);
+    const availableStaff = await getAvailableStaff(eventId, supabaseClient);
     
     if (availableStaff.length === 0) {
       logAssignmentError(
@@ -437,7 +473,7 @@ export async function getStaffSuggestions(
       return [];
     }
 
-    const rules = await getAssignmentRule(incidentType, eventId);
+    const rules = await getAssignmentRule(incidentType, eventId, supabaseClient);
 
     const finalRequiredSkills = [...rules.requiredSkills, ...requiredSkills];
     const scores: AssignmentScore[] = [];
@@ -556,7 +592,8 @@ export async function autoAssignIncident(
   incidentType: string,
   priority: string,
   location?: { latitude: number; longitude: number },
-  requiredSkills: string[] = []
+  requiredSkills: string[] = [],
+  supabaseClient?: SupabaseClient
 ): Promise<{ assignedStaff: string[]; assignmentNotes: string }> {
   try {
     if (!incidentId || !eventId || !incidentType || !priority) {
@@ -566,6 +603,8 @@ export async function autoAssignIncident(
         { incidentId, eventId, incidentType, priority }
       );
     }
+
+    const supabase = await resolveSupabaseClient(supabaseClient);
 
     // Check if incident_logs table exists
     const { error: tableCheckError } = await supabase
@@ -604,7 +643,8 @@ export async function autoAssignIncident(
       incidentType,
       priority,
       location,
-      requiredSkills
+      requiredSkills,
+      supabase
     );
 
     if (suggestions.length === 0) {
@@ -620,7 +660,7 @@ export async function autoAssignIncident(
     }
 
     // Determine how many staff to assign based on incident type and priority
-    const staffCount = await getRequiredStaffCount(incidentType, priority, eventId);
+    const staffCount = await getRequiredStaffCount(incidentType, priority, eventId, supabase);
     const selectedStaff = suggestions.slice(0, staffCount);
     const assignedStaffIds = selectedStaff.map(s => s.staff_id);
 
@@ -692,7 +732,10 @@ export async function autoAssignIncident(
 }
 
 // Get assignment statistics
-export async function getAssignmentStats(eventId: string): Promise<AssignmentStats> {
+export async function getAssignmentStats(
+  eventId: string,
+  supabaseClient?: SupabaseClient
+): Promise<AssignmentStats> {
   try {
     if (!eventId) {
       throw logAssignmentError(
@@ -702,7 +745,7 @@ export async function getAssignmentStats(eventId: string): Promise<AssignmentSta
       );
     }
 
-    const availableStaff = await getAvailableStaff(eventId);
+    const availableStaff = await getAvailableStaff(eventId, supabaseClient);
     const totalStaff = availableStaff.length;
     
     const assignedStaff = availableStaff.filter(staff => staff.active_assignments > 0).length;
@@ -807,8 +850,13 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-async function getRequiredStaffCount(incidentType: string, priority: string, eventId?: string): Promise<number> {
-  const rule = await getAssignmentRule(incidentType, eventId);
+async function getRequiredStaffCount(
+  incidentType: string,
+  priority: string,
+  eventId?: string,
+  supabaseClient?: SupabaseClient
+): Promise<number> {
+  const rule = await getAssignmentRule(incidentType, eventId, supabaseClient);
   const baseCount = rule.maxAssignments || 2;
   
   // Adjust based on priority
@@ -906,17 +954,22 @@ export function clearAssignmentCache(eventId?: string) {
 }
 
 // Export functions for managing assignment rules
-export async function getAssignmentRules(eventId?: string): Promise<Record<string, AssignmentRule>> {
-  return await loadAssignmentRules(eventId);
+export async function getAssignmentRules(
+  eventId?: string,
+  supabaseClient?: SupabaseClient
+): Promise<Record<string, AssignmentRule>> {
+  return await loadAssignmentRules(eventId, supabaseClient);
 }
 
 export async function updateAssignmentRule(
   incidentType: string,
   rule: Partial<AssignmentRule>,
-  eventId?: string
+  eventId?: string,
+  supabaseClient?: SupabaseClient
 ): Promise<void> {
   try {
     if (eventId) {
+      const supabase = await resolveSupabaseClient(supabaseClient);
       // Update in database
       const { error } = await supabase
         .from('assignment_rules')
@@ -952,10 +1005,12 @@ export async function updateAssignmentRule(
 
 export async function deleteAssignmentRule(
   incidentType: string,
-  eventId?: string
+  eventId?: string,
+  supabaseClient?: SupabaseClient
 ): Promise<void> {
   try {
     if (eventId) {
+      const supabase = await resolveSupabaseClient(supabaseClient);
       // Soft delete in database
       const { error } = await supabase
         .from('assignment_rules')
@@ -986,7 +1041,8 @@ export async function validateAssignmentRules(
   staffId: string,
   incidentType: string,
   currentAssignments: number,
-  staffSkills: string[] = []
+  staffSkills: string[] = [],
+  supabaseClient?: SupabaseClient
 ): Promise<{ valid: boolean; reason?: string }> {
   try {
     if (!staffId || !incidentType) {
@@ -1003,7 +1059,7 @@ export async function validateAssignmentRules(
       };
     }
 
-    const rules = await getAssignmentRule(incidentType);
+    const rules = await getAssignmentRule(incidentType, undefined, supabaseClient);
     
     if (!rules) {
       return { valid: true }; // No specific rules for this incident type

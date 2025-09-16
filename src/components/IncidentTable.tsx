@@ -1056,7 +1056,7 @@ export default function IncidentTable({
   ) : (
     <>
       {/* Board View */}
-      <div className="h-[600px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
+      <div className="h-[700px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
         <CollaborationBoard
           eventId={propCurrentEventId || currentEventId || ''}
           currentUser={currentUser}

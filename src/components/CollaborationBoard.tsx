@@ -53,9 +53,9 @@ interface CollaborationBoardProps {
 }
 
 const STATUS_COLUMNS = [
-  { id: 'open', title: 'Open', color: 'bg-red-100 border-red-300' },
-  { id: 'in_progress', title: 'In Progress', color: 'bg-yellow-100 border-yellow-300' },
-  { id: 'closed', title: 'Closed', color: 'bg-gray-100 border-gray-300' }
+  { id: 'open', title: 'OPEN', color: 'bg-red-50 border-red-200', headerColor: 'bg-red-100', countColor: 'text-red-600' },
+  { id: 'in_progress', title: 'IN PROGRESS', color: 'bg-yellow-50 border-yellow-200', headerColor: 'bg-yellow-100', countColor: 'text-yellow-600' },
+  { id: 'closed', title: 'CLOSED', color: 'bg-gray-50 border-gray-200', headerColor: 'bg-gray-100', countColor: 'text-gray-600' }
 ];
 
 export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
@@ -347,10 +347,10 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-gray-50">
       {/* Header with staff panel toggle */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-xs text-gray-500">
+      <div className="flex items-center justify-between mb-6 px-2">
+        <div className="text-sm text-gray-600 font-medium">
           Total incidents: {incidents.length} | 
           Open: {getIncidentsByStatus('open').length} | 
           In Progress: {getIncidentsByStatus('in_progress').length} | 
@@ -359,14 +359,14 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
         {availableStaff.length > 0 && (
           <button
             onClick={() => setShowStaffPanel(!showStaffPanel)}
-            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors font-medium"
           >
             {showStaffPanel ? 'Hide' : 'Show'} Staff Panel
           </button>
         )}
       </div>
               <DragDropContext onDragEnd={handleDragEnd}>
-          <div className={`grid gap-4 flex-1 ${showStaffPanel ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`} style={{ minHeight: '400px' }}>
+          <div className={`grid gap-6 flex-1 px-2 ${showStaffPanel ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`} style={{ minHeight: '500px' }}>
             {/* Staff Panel */}
             {showStaffPanel && (
               <div className="flex flex-col h-full">
@@ -400,10 +400,10 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
           {STATUS_COLUMNS.map((column) => (
             <div key={column.id} className="flex flex-col h-full">
               {/* Column Header */}
-              <div className={`p-3 rounded-t-lg border ${column.color}`}>
+              <div className={`p-4 rounded-t-xl border-b-0 ${column.headerColor} border-2 border-gray-200`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-800">{column.title}</h3>
-                  <span className="bg-white bg-opacity-50 rounded-full px-2 py-1 text-xs font-medium">
+                  <h3 className="font-bold text-gray-800 text-sm tracking-wide uppercase">{column.title}</h3>
+                  <span className={`bg-white rounded-full px-3 py-1 text-sm font-bold ${column.countColor}`}>
                     {getIncidentsByStatus(column.id).length}
                   </span>
                 </div>
@@ -415,13 +415,19 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 p-2 bg-gray-50 rounded-b-lg border-t-0 border ${
-                      snapshot.isDraggingOver ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
-                    } overflow-y-auto`}
-                    style={{ maxHeight: '400px' }}
+                    className={`flex-1 p-3 bg-white rounded-b-xl border-2 border-t-0 border-gray-200 ${
+                      snapshot.isDraggingOver ? 'bg-blue-50 border-blue-300' : ''
+                    } overflow-y-auto min-h-[400px]`}
+                    style={{ maxHeight: '600px' }}
                   >
                     <AnimatePresence>
-                      {getIncidentsByStatus(column.id).map((incident, index) => (
+                      {getIncidentsByStatus(column.id).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                          <div className="text-4xl mb-2">+</div>
+                          <p className="text-sm text-center">No incidents yet.<br />Drag incidents here or create new ones.</p>
+                        </div>
+                      ) : (
+                        getIncidentsByStatus(column.id).map((incident, index) => (
                         <Draggable
                           key={incident.id}
                           draggableId={incident.id.toString()}
@@ -437,7 +443,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                               }`}
                             >
                               <div
-                                className={`bg-white rounded-lg shadow-sm border p-3 cursor-pointer hover:shadow-md transition-shadow ${getSeverityBorderClass(incident.priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
+                                className={`bg-white rounded-xl shadow-md border-2 border-gray-200 p-4 cursor-pointer hover:shadow-lg transition-all duration-200 ${getSeverityBorderClass(incident.priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
                                 onClick={() => onIncidentSelect?.(incident)}
                                 style={{
                                   ...(snapshot.isDragging && {
@@ -447,38 +453,38 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                 }}
                               >
                                 {/* Incident Header */}
-                                <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-900">
+                                    <span className="text-sm font-bold text-gray-900">
                                       Log #{incident.log_number}
                                     </span>
                                     {!incident.is_closed && ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Medical'].includes(incident.incident_type) && (
-                                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                     )}
                                   </div>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500 font-medium">
                                     {formatTimestamp(incident.timestamp)}
                                   </span>
                                 </div>
 
                                 {/* Incident Type */}
-                                <div className="mb-2">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
+                                <div className="mb-3">
+                                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
                                     {incident.incident_type}
                                   </span>
                                 </div>
 
                                 {/* Occurrence */}
-                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                <p className="text-sm text-gray-700 mb-3 line-clamp-2 font-medium leading-relaxed">
                                   {incident.occurrence}
                                 </p>
 
                                 {/* Callsigns */}
-                                <div className="flex flex-wrap gap-1 mb-2">
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
                                     From: {incident.callsign_from}
                                   </span>
-                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
                                     To: {incident.callsign_to}
                                   </span>
                                 </div>
@@ -598,23 +604,23 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                 )}
 
                                 {/* Action Buttons */}
-                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                <div className="mt-3 pt-3 border-t border-gray-200">
                                     <div className="flex items-center justify-between text-xs">
-                                      <span className="text-gray-400">Drag to move ▮▮</span>
-                                    <div className="flex gap-1">
+                                      <span className="text-gray-500 font-medium">Drag to move ▮▮</span>
+                                    <div className="flex gap-2">
                                       {!incident.is_closed && (
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleMoveToNext(incident);
                                           }}
-                                          className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs font-medium transition-colors"
                                         >
                                           Move to Next
                                         </button>
                                       )}
                                       {incident.is_closed && (
-                                        <span className="text-green-600">✓ Closed</span>
+                                        <span className="text-green-600 font-bold">✓ Closed</span>
                                       )}
                                     </div>
                                   </div>
@@ -623,7 +629,8 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                             </div>
                           )}
                         </Draggable>
-                      ))}
+                        ))
+                      )}
                     </AnimatePresence>
                     {provided.placeholder}
                   </div>

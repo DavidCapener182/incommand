@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { logAIUsage } from '@/lib/supabase';
+import { logAIUsage } from '@/lib/supabaseServer';
 import { chatCompletion, isOllamaAvailable } from '@/services/ollamaService';
 import { safeParseJson } from '@/lib/ai/json';
 

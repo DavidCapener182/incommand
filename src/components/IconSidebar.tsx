@@ -129,10 +129,11 @@ export default function IconSidebar({
   const sidebarContent = (
     <div 
       ref={sidebarRef}
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] z-40 flex flex-col sidebar-transition ${
+      style={{ width: sidebarWidth }}
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white dark:bg-[#23408e] border-r border-gray-200 dark:border-[#2d437a] z-40 flex flex-col overflow-hidden sidebar-transition ${
         isMobile 
-          ? `sidebar-mobile-slide ${mobileOpen ? 'open' : ''} w-64` 
-          : `w-16 ${collapsed ? '' : 'lg:w-50'}`
+          ? `sidebar-mobile-slide ${mobileOpen ? 'open' : ''}` 
+          : ''
       } ${className}`}
     >
       {/* Header with toggle button */}
