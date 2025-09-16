@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, UserGroupIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
 import IncidentTimeline from './IncidentTimeline'
@@ -27,6 +27,8 @@ interface Incident {
   status: string
   priority?: string
   resolved_at?: string | null
+  responded_at?: string | null
+  updated_at?: string | null
 }
 
 const getRowStyle = (incident: Incident) => {
