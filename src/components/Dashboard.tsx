@@ -560,7 +560,7 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
   const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'board' | 'staff'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'board' | 'timeline' | 'staff'>('table');
   const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
   
   // Staff availability hook
@@ -1483,7 +1483,7 @@ export default function Dashboard() {
 
         {/* Incident Table and Staff Deployment */}
         <div className="pb-24">
-          <IncidentTable 
+          <IncidentTable
             key={refreshKey}
             filters={filters}
             onFiltersChange={setFilters}
@@ -1493,6 +1493,7 @@ export default function Dashboard() {
             onViewModeChange={setViewMode}
             currentUser={user}
             currentEventId={currentEventId || undefined}
+            currentEvent={currentEvent}
           />
           
           {/* Staff Deployment Overview hidden intentionally */}

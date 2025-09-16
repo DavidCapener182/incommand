@@ -49,6 +49,8 @@ interface EventRecord {
   expected_attendance?: number;
   event_name?: string;
   venue_name?: string;
+  curfew_time?: string;
+  venue_capacity?: number;
 }
 
 interface AttendanceModalProps {
@@ -68,7 +70,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
     (async () => {
       const { data: event } = await supabase
         .from('events')
-        .select('doors_open_time, main_act_start_time, event_date, expected_attendance')
+        .select('doors_open_time, main_act_start_time, event_date, expected_attendance, curfew_time, venue_capacity')
         .eq('id', currentEventId)
         .single();
       setEventDetails(event as EventRecord);
@@ -81,6 +83,40 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
       setLoading(false);
     })();
   }, [isOpen, currentEventId]);
+
+  const parseEventDateTime = (time?: string | null) => {
+    if (!eventDetails?.event_date || !time) return null;
+    const parsed = new Date(`${eventDetails.event_date}T${time}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const maxCapacity = (() => {
+    if (eventDetails?.venue_capacity && eventDetails.venue_capacity > 0) {
+      return eventDetails.venue_capacity;
+    }
+    if (eventDetails?.expected_attendance && eventDetails.expected_attendance > 0) {
+      return eventDetails.expected_attendance;
+    }
+    const observed = attendanceData.length > 0 ? Math.max(...attendanceData.map(record => record.count)) : 0;
+    return Math.max(observed, 25000);
+  })();
+
+  const doorsOpenTime = parseEventDateTime(eventDetails?.doors_open_time ?? null);
+  const curfewTime = parseEventDateTime(eventDetails?.curfew_time ?? null);
+  const firstLogTime = attendanceData.length > 0 ? new Date(attendanceData[0].timestamp) : null;
+  const lastLogTime = attendanceData.length > 0 ? new Date(attendanceData[attendanceData.length - 1].timestamp) : null;
+
+  const capacityStart = doorsOpenTime || firstLogTime;
+  const capacityEnd = curfewTime || lastLogTime || (capacityStart ? new Date(capacityStart.getTime() + 3 * 60 * 60 * 1000) : null);
+
+  const capacityPoints = capacityStart && capacityEnd
+    ? [
+        { x: capacityStart.getTime() - 10 * 60 * 1000, y: 0 },
+        { x: capacityStart.getTime(), y: 0 },
+        { x: capacityStart.getTime(), y: maxCapacity },
+        { x: capacityEnd.getTime(), y: maxCapacity }
+      ]
+    : [];
 
   // Attendance Timeline chart data and options
   const attendanceChartData = {
@@ -101,6 +137,22 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
         pointRadius: 4,
         pointHoverRadius: 6,
       },
+      ...(capacityPoints.length > 0
+        ? [
+            {
+              label: 'Capacity',
+              data: capacityPoints,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              borderDash: [6, 4],
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHitRadius: 6,
+              fill: false,
+              tension: 0.1,
+            }
+          ]
+        : [])
     ],
   };
 
@@ -127,12 +179,16 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { 
-        display: false 
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          color: '#1f2937',
+        }
       },
-      tooltip: { 
-        enabled: true, 
-        mode: 'index' as const, 
+      tooltip: {
+        enabled: true,
+        mode: 'index' as const,
         intersect: false,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: 'white',
@@ -140,16 +196,18 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
         borderColor: '#3B82F6',
         borderWidth: 1,
         cornerRadius: 8,
-        displayColors: false,
+        displayColors: true,
         callbacks: {
           title: (context: any) => {
-            return new Date(context[0].parsed.x).toLocaleTimeString('en-GB', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
+            return new Date(context[0].parsed.x).toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit'
             });
           },
           label: (context: any) => {
-            return `Attendance: ${context.parsed.y.toLocaleString()}`;
+            const label = context.dataset?.label || 'Value';
+            const value = context.parsed?.y ?? 0;
+            return `${label}: ${value.toLocaleString()}`;
           }
         }
       },
