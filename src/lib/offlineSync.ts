@@ -1,4 +1,4 @@
-import Dexie from 'dexie';
+import { Dexie } from 'dexie';
 import { supabase } from './supabase';
 
 const isBrowser = typeof window !== 'undefined';

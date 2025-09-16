@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { useToast } from './Toast'
+import { useToast } from '../contexts/ToastContext'
 
 interface Props {
   currentEventId: string | null
@@ -15,71 +15,51 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   const [loading, setLoading] = useState(true)
   const [expectedAttendance, setExpectedAttendance] = useState<number>(0)
   const [capacityToastId, setCapacityToastId] = useState<string | null>(null)
+  const capacityToastIdRef = useRef<string | null>(null)
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
-  const { addToast, removeToast } = useToast()
+  const lastAlertTimeRef = useRef<number>(0)
+  const isCreatingToastRef = useRef<boolean>(false)
+  const { addToast, removeToast, clearAll } = useToast()
 
   // Function to handle capacity alerts
   const handleCapacityAlert = (percentage: number, count: number, expected: number) => {
-    console.log('🔔 Capacity alert check:', { percentage, count, expected, capacityToastId });
+    const now = Date.now();
+    const timeSinceLastAlert = now - lastAlertTimeRef.current;
     
-    // Remove existing capacity toast if present
-    if (capacityToastId) {
-      console.log('🗑️ Removing existing capacity toast:', capacityToastId);
-      removeToast(capacityToastId)
-      setCapacityToastId(null)
+    // Debounce: Only allow alerts every 2 seconds to prevent spam
+    if (timeSinceLastAlert < 2000) {
+      return;
     }
-
+    
+    // ALWAYS clear all existing capacity toasts first to prevent duplicates
+    clearAll();
+    setCapacityToastId(null);
+    capacityToastIdRef.current = null;
+    
     // Show toast for 90%+ capacity
-    if (percentage >= 100) {
-      console.log('🚨 Triggering capacity alert:', { percentage, count, expected });
+    if (percentage >= 90) {
+      lastAlertTimeRef.current = now;
+      
       const toastId = Math.random().toString(36).substr(2, 9)
       setCapacityToastId(toastId)
+      capacityToastIdRef.current = toastId
       
       const toastData = {
         id: toastId,
-        type: 'error' as const,
-        title: '🚨 Venue at Full Capacity!',
+        type: percentage >= 100 ? 'error' as const : 'warning' as const,
+        title: percentage >= 100 ? '🚨 Venue at Full Capacity!' : '⚠️ Venue Nearing Capacity',
         message: `Current occupancy: ${count.toLocaleString()}/${expected.toLocaleString()} (${Math.round(percentage)}%)`,
         duration: 0, // Persistent toast
-        urgent: true, // Urgent for full capacity
+        urgent: percentage >= 100,
       };
       
-      console.log('📤 Adding toast with data:', toastData);
       addToast(toastData);
-      
-      console.log('✅ Capacity toast added:', toastId);
-      
-      // Debug: Check if toast was actually added
-      setTimeout(() => {
-        console.log('🔍 Toast status check - messages should contain our toast');
-      }, 100);
-    } else if (percentage >= 90) {
-      console.log('⚠️ Triggering warning capacity alert:', { percentage, count, expected });
-      const toastId = Math.random().toString(36).substr(2, 9)
-      setCapacityToastId(toastId)
-      
-      const toastData = {
-        id: toastId,
-        type: 'warning' as const,
-        title: '⚠️ Venue Nearing Capacity',
-        message: `Current occupancy: ${count.toLocaleString()}/${expectedAttendance.toLocaleString()} (${Math.round(percentage)}%)`,
-        duration: 0, // Persistent toast
-        urgent: false,
-      };
-      
-      console.log('📤 Adding warning toast with data:', toastData);
-      addToast(toastData);
-      
-      console.log('✅ Warning toast added:', toastId);
-    } else {
-      console.log('ℹ️ No capacity alert needed:', { percentage, threshold: 90 });
     }
   }
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
     if (subscriptionRef.current) {
-      console.log('Cleaning up subscription');
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
@@ -87,12 +67,17 @@ export default function VenueOccupancy({ currentEventId }: Props) {
 
   useEffect(() => {
     if (!currentEventId) {
-      console.log('No currentEventId provided')
       cleanup()
       return
     }
-
-    console.log('Setting up venue occupancy for event:', currentEventId)
+    
+    // Clear any existing capacity toast when component mounts
+    if (capacityToastId) {
+      removeToast(capacityToastId);
+      setCapacityToastId(null);
+      capacityToastIdRef.current = null;
+    }
+    isCreatingToastRef.current = false;
     
     // Set loading only once at the start
     setLoading(true)
@@ -163,15 +148,21 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           filter: `event_id=eq.${currentEventId}`
         },
         (payload) => {
-          console.log('🔥 Attendance INSERT received:', payload);
           const newRecord = payload.new as { count: number };
           if (newRecord && typeof newRecord.count === 'number') {
-            console.log('🔥 Updating venue occupancy from', currentCount, 'to', newRecord.count);
-            setCurrentCount(newRecord.count);
-            
-            // Check capacity after count update
-            const newPercentage = expectedAttendance > 0 ? Math.min((newRecord.count / expectedAttendance) * 100, 100) : 0;
-            handleCapacityAlert(newPercentage, newRecord.count, expectedAttendance);
+            setCurrentCount(prevCount => {
+              // Only update if the count actually changed
+              if (prevCount !== newRecord.count) {
+                // Use functional update to get latest expectedAttendance
+                setExpectedAttendance(currentExpected => {
+                  const newPercentage = currentExpected > 0 ? Math.min((newRecord.count / currentExpected) * 100, 100) : 0;
+                  handleCapacityAlert(newPercentage, newRecord.count, currentExpected);
+                  return currentExpected;
+                });
+                return newRecord.count;
+              }
+              return prevCount;
+            });
           }
         }
       )
@@ -184,21 +175,25 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           filter: `event_id=eq.${currentEventId}`
         },
         (payload) => {
-          console.log('🔥 Attendance UPDATE received:', payload);
           const updatedRecord = payload.new as { count: number };
           if (updatedRecord && typeof updatedRecord.count === 'number') {
-            console.log('🔥 Updating venue occupancy from', currentCount, 'to', updatedRecord.count);
-            setCurrentCount(updatedRecord.count);
-            
-            // Check capacity after count update
-            const newPercentage = expectedAttendance > 0 ? Math.min((updatedRecord.count / expectedAttendance) * 100, 100) : 0;
-            handleCapacityAlert(newPercentage, updatedRecord.count, expectedAttendance);
+            setCurrentCount(prevCount => {
+              // Only update if the count actually changed
+              if (prevCount !== updatedRecord.count) {
+                // Use functional update to get latest expectedAttendance
+                setExpectedAttendance(currentExpected => {
+                  const newPercentage = currentExpected > 0 ? Math.min((updatedRecord.count / currentExpected) * 100, 100) : 0;
+                  handleCapacityAlert(newPercentage, updatedRecord.count, currentExpected);
+                  return currentExpected;
+                });
+                return updatedRecord.count;
+              }
+              return prevCount;
+            });
           }
         }
       )
-      .subscribe((status) => {
-        console.log('🔥 Subscription status:', status);
-      });
+      .subscribe();
 
     fetchData();
 
@@ -216,12 +211,12 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         if (!error && attendanceData) {
           setCurrentCount(prev => {
             if (attendanceData.count !== prev) {
-              console.log('🔄 Polling found new attendance count:', attendanceData.count, '(was:', prev, ')');
-              
-              // Check capacity after count update
-              const newPercentage = expectedAttendance > 0 ? Math.min((attendanceData.count / expectedAttendance) * 100, 100) : 0;
-              handleCapacityAlert(newPercentage, attendanceData.count, expectedAttendance);
-              
+              // Use functional update to get latest expectedAttendance
+              setExpectedAttendance(currentExpected => {
+                const newPercentage = currentExpected > 0 ? Math.min((attendanceData.count / currentExpected) * 100, 100) : 0;
+                handleCapacityAlert(newPercentage, attendanceData.count, currentExpected);
+                return currentExpected;
+              });
               return attendanceData.count;
             }
             return prev;
@@ -230,7 +225,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       } catch (err) {
         // Ignore polling errors
       }
-    }, 30000); // Poll every 30 seconds instead of 5 to reduce flashing
+    }, 60000); // Poll every 60 seconds to reduce flickering
 
     // Cleanup on unmount or when currentEventId changes
     return () => {
@@ -241,17 +236,12 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       if (capacityToastId) {
         removeToast(capacityToastId);
         setCapacityToastId(null);
+        capacityToastIdRef.current = null;
       }
+      isCreatingToastRef.current = false;
     };
-      }, [currentEventId, expectedAttendance, capacityToastId, removeToast]);
+      }, [currentEventId]); // Only depend on currentEventId to prevent flickering
 
-  console.log('🎯 VenueOccupancy render:', { 
-    loading, 
-    currentCount, 
-    expectedAttendance, 
-    currentEventId,
-    percentage: expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0
-  });
 
   // Calculate percentage and determine progress bar color
   const percentage = expectedAttendance > 0 ? Math.min((currentCount / expectedAttendance) * 100, 100) : 0;
@@ -285,10 +275,6 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-1 w-full">
-        {/* Component Status Indicator */}
-        <div className="text-[8px] text-blue-600 bg-blue-100 px-1 rounded mb-1">
-          VenueOccupancy Active
-        </div>
         
         <div className="text-center">
           <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -327,22 +313,6 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           </div>
         )}
         
-        {/* Debug Section - Remove in production */}
-        <div className="mt-2 p-1 bg-gray-100 rounded text-xs max-h-20 overflow-y-auto">
-          <div className="text-gray-600 mb-1 text-[10px]">Debug:</div>
-          <div className="text-[8px]">C:{currentCount} E:{expectedAttendance} P:{Math.round(percentage)}%</div>
-          <div className="text-[8px]">Toast ID: {capacityToastId || 'None'}</div>
-          <div className="text-[8px]">Toast Type: {percentage >= 100 ? 'Error' : percentage >= 90 ? 'Warning' : 'None'}</div>
-          <button
-            onClick={() => {
-              console.log('🧪 Manual capacity alert test');
-              handleCapacityAlert(percentage, currentCount, expectedAttendance);
-            }}
-            className="mt-1 px-1 py-0.5 bg-blue-500 text-white rounded text-[8px] hover:bg-blue-600"
-          >
-            Test
-          </button>
-        </div>
       </div>
     </div>
   )

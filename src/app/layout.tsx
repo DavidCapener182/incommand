@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
+import { ToastProvider } from '../contexts/ToastContext'
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
@@ -53,9 +54,11 @@ export default function RootLayout({
       <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <AuthProvider>
           <NotificationDrawerProvider>
-            <MaintenanceBanner />
-            <GlobalEscalationToast />
-            <LayoutWrapper>{children}</LayoutWrapper>
+            <ToastProvider>
+              <MaintenanceBanner />
+              <GlobalEscalationToast />
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </ToastProvider>
           </NotificationDrawerProvider>
         </AuthProvider>
         <Analytics />
