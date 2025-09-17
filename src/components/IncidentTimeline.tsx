@@ -589,6 +589,7 @@ const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   onIncidentSelect 
 }) => {
   console.log('🚀 IncidentTimeline component loaded - Version 4.0')
+  console.log('🔍 IncidentTimeline received currentEvent:', currentEvent)
   
   // Use displayedIncidents if available, otherwise use incidents
   const timelineIncidents = displayedIncidents && displayedIncidents.length > 0 ? displayedIncidents : incidents
