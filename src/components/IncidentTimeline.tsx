@@ -114,6 +114,14 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
 
   // Parse artist performances
   const artistPerformances = useMemo(() => {
+    console.log('🎭 Processing incidents:', incidents.length)
+    console.log('  Raw incidents:', incidents.map(i => ({ 
+      id: i.id, 
+      type: i.incident_type, 
+      timestamp: i.timestamp,
+      occurrence: i.occurrence 
+    })))
+
     const artistIncidents = incidents.filter(incident =>
       incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage'
     )
@@ -255,6 +263,13 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     
     // End = 1 hour after last incident (not Showdown time)
     const endTime = new Date(lastIncidentTime + 60 * 60 * 1000)
+
+    console.log('🕐 Timeline boundaries calculation:')
+    console.log('  First incident:', new Date(firstIncidentTime).toLocaleString())
+    console.log('  Last incident:', new Date(lastIncidentTime).toLocaleString())
+    console.log('  Timeline start:', startTime.toLocaleString())
+    console.log('  Timeline end:', endTime.toLocaleString())
+    console.log('  Total duration:', Math.round((endTime.getTime() - startTime.getTime()) / (60 * 60 * 1000)), 'hours')
 
     return { startTime, endTime }
   }, [artistPerformances, issues])
