@@ -22,9 +22,8 @@ interface RotatingTextProps {
 }
 
 const RotatingText: React.FC<RotatingTextProps> = ({ items = DEFAULT_ITEMS, interval = 2000, className = '' }) => {
-  if (!Array.isArray(items) || items.length === 0) {
-    return null;
-  }
+  const hasItems = Array.isArray(items) && items.length > 0;
+  const list = hasItems ? items : DEFAULT_ITEMS;
 
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<'up' | 'down'>('up');
@@ -34,18 +33,22 @@ const RotatingText: React.FC<RotatingTextProps> = ({ items = DEFAULT_ITEMS, inte
     timeoutRef.current = setTimeout(() => {
       setDirection('down');
       setTimeout(() => {
-        setIndex((prev) => (prev + 1) % items.length);
+        setIndex((prev) => (prev + 1) % list.length);
         setDirection('up');
       }, 300);
     }, interval);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [index, interval, items.length]);
+  }, [index, interval, list.length]);
+
+  if (!hasItems) {
+    return null;
+  }
 
   return (
     <span className={`rotating-text ${className}`}>
-      <span className={`rotating-text-inner rotating-text-${direction}`}>{items[index]}</span>
+      <span className={`rotating-text-inner rotating-text-${direction}`}>{list[index]}</span>
     </span>
   );
 };

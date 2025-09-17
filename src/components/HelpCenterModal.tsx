@@ -215,7 +215,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
                   {/* Helper text */}
                   <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <InformationCircleIcon className="w-4 h-4" />
-                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                    <span>Tip: Try searching for &quot;evacuation&quot; or &quot;radio&quot;.</span>
                   </div>
                 </div>
               ) : (
@@ -254,7 +254,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
                   {/* Helper text */}
                   <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
                     <InformationCircleIcon className="w-4 h-4" />
-                    <span>Tip: Try searching for "evacuation" or "radio".</span>
+                    <span>Tip: Try searching for &quot;evacuation&quot; or &quot;radio&quot;.</span>
                   </div>
                 </div>
               )}

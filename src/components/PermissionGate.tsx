@@ -81,14 +81,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
   fallback,
   showAccessDenied = false
 }) => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in PermissionGate:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth();
   const { isAdmin, isSuperAdmin } = useRoleStates()
 
   // Check if user has the required permission
@@ -136,14 +129,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
 
 // Hook for checking permissions programmatically
 export const usePermission = (permission: string): boolean => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in usePermission:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth();
   const { isSuperAdmin } = useRoleStates()
 
   if (!role) return false
@@ -155,14 +141,7 @@ export const usePermission = (permission: string): boolean => {
 
 // Hook for checking multiple permissions
 export const usePermissions = (permissions: string[]): boolean => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in usePermissions:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth();
   const { isSuperAdmin } = useRoleStates()
 
   if (!role) return false

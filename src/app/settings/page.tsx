@@ -41,14 +41,7 @@ interface CompanyData {
 }
 
 export default function GeneralSettingsPage() {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in settings page:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const { preferences } = useUserPreferences();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);

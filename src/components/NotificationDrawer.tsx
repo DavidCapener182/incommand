@@ -743,7 +743,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                       <div className="mt-4">
                         <h3 className="text-sm font-medium text-gray-900">No notifications yet</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                          When incidents are created or updated, you'll see them here.
+                          When incidents are created or updated, you&apos;ll see them here.
                         </p>
                       </div>
                     </div>
@@ -854,7 +854,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                   </div>
                 ) : (
                   <div className="text-center py-4 text-gray-500">
-                    <p>Click "Check Status" to load push notification information</p>
+                    <p>Click &quot;Check Status&quot; to load push notification information</p>
                   </div>
                 )}
               </div>
@@ -958,7 +958,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
                 <h4 className="text-sm font-semibold text-blue-900 mb-2">How Push Notifications Work</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
                   <li>• Push notifications work even when the app is closed</li>
-                  <li>• You'll receive alerts for new incidents and updates</li>
+                  <li>• You&apos;ll receive alerts for new incidents and updates</li>
                   <li>• Click on notifications to open the relevant page</li>
                   <li>• You can manage preferences in your browser settings</li>
                 </ul>

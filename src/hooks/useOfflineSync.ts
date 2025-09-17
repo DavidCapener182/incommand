@@ -24,27 +24,11 @@ export interface OfflineSyncActions {
 }
 
 export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
-  // Return no-op implementations during server-side rendering
-  if (typeof window === 'undefined' || !offlineSyncManager) {
-    const defaultState: OfflineSyncState = {
-      isOnline: true,
-      isSyncInProgress: false,
-      syncProgress: { total: 0, completed: 0, failed: 0, inProgress: false },
-      queueStatus: { pending: 0, processing: 0, completed: 0, failed: 0 }
-    };
-    const noop = async () => {};
-    const defaultActions: OfflineSyncActions = {
-      triggerManualSync: noop,
-      clearCompletedOperations: noop,
-      clearFailedOperations: noop,
-      queueOperation: async () => 0,
-      queuePhotoUpload: async () => ''
-    };
-    return [defaultState, defaultActions];
-  }
+  const isBrowser = typeof window !== 'undefined';
+  const manager = isBrowser ? offlineSyncManager : null;
 
-  const [state, setState] = useState<OfflineSyncState>({
-    isOnline: navigator.onLine,
+  const getInitialState = (): OfflineSyncState => ({
+    isOnline: isBrowser && typeof navigator !== 'undefined' ? navigator.onLine : true,
     isSyncInProgress: false,
     syncProgress: {
       total: 0,
@@ -60,35 +44,44 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
     }
   });
 
+  const [state, setState] = useState<OfflineSyncState>(getInitialState);
+
   // Update online status
   const updateOnlineStatus = useCallback(() => {
+    if (!manager || typeof navigator === 'undefined') return;
     setState(prev => ({
       ...prev,
       isOnline: navigator.onLine
     }));
-  }, []);
+  }, [manager]);
 
   // Update sync progress
   const updateSyncProgress = useCallback(() => {
-    const progress = offlineSyncManager!.getSyncProgress();
+    if (!manager) return;
+    const progress = manager.getSyncProgress();
     setState(prev => ({
       ...prev,
       syncProgress: progress,
       isSyncInProgress: progress.inProgress
     }));
-  }, []);
+  }, [manager]);
 
   // Update queue status
   const updateQueueStatus = useCallback(async () => {
-    const queueStatus = await offlineSyncManager!.getQueueStatus();
+    if (!manager) return;
+    const queueStatus = await manager.getQueueStatus();
     setState(prev => ({
       ...prev,
       queueStatus
     }));
-  }, []);
+  }, [manager]);
 
   // Setup event listeners
   useEffect(() => {
+    if (!manager) {
+      return;
+    }
+
     // Online/offline events
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
@@ -98,7 +91,7 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
 
     // Poll for updates when sync is in progress
     const interval = setInterval(() => {
-      if (offlineSyncManager!.isSyncInProgress()) {
+      if (manager.isSyncInProgress()) {
         updateSyncProgress();
         updateQueueStatus();
       }
@@ -109,48 +102,61 @@ export function useOfflineSync(): [OfflineSyncState, OfflineSyncActions] {
       window.removeEventListener('offline', updateOnlineStatus);
       clearInterval(interval);
     };
-  }, [updateOnlineStatus, updateSyncProgress, updateQueueStatus]);
+  }, [manager, updateOnlineStatus, updateSyncProgress, updateQueueStatus]);
 
   // Actions
   const triggerManualSync = useCallback(async () => {
+    if (!manager) return;
     try {
-      await offlineSyncManager!.triggerManualSync();
+      await manager.triggerManualSync();
       updateSyncProgress();
       updateQueueStatus();
     } catch (error) {
       console.error('Manual sync failed:', error);
       throw error;
     }
-  }, [updateSyncProgress, updateQueueStatus]);
+  }, [manager, updateQueueStatus, updateSyncProgress]);
 
   const clearCompletedOperations = useCallback(async () => {
-    await offlineSyncManager!.clearCompletedOperations();
+    if (!manager) return;
+    await manager.clearCompletedOperations();
     updateQueueStatus();
-  }, [updateQueueStatus]);
+  }, [manager, updateQueueStatus]);
 
   const clearFailedOperations = useCallback(async () => {
-    await offlineSyncManager!.clearFailedOperations();
+    if (!manager) return;
+    await manager.clearFailedOperations();
     updateQueueStatus();
-  }, [updateQueueStatus]);
+  }, [manager, updateQueueStatus]);
 
   const queueOperation = useCallback(async (operation: any) => {
-    const id = await offlineSyncManager!.queueOperation(operation);
+    if (!manager) return 0;
+    const id = await manager.queueOperation(operation);
     updateQueueStatus();
     return id;
-  }, [updateQueueStatus]);
+  }, [manager, updateQueueStatus]);
 
   const queuePhotoUpload = useCallback(async (file: File, metadata: any) => {
-    const photoId = await offlineSyncManager!.queuePhotoUpload(file, metadata);
+    if (!manager) return '';
+    const photoId = await manager.queuePhotoUpload(file, metadata);
     updateQueueStatus();
     return photoId;
-  }, [updateQueueStatus]);
+  }, [manager, updateQueueStatus]);
 
-  const actions: OfflineSyncActions = {
+  const noop = async () => {};
+
+  const actions: OfflineSyncActions = manager ? {
     triggerManualSync,
     clearCompletedOperations,
     clearFailedOperations,
     queueOperation,
     queuePhotoUpload
+  } : {
+    triggerManualSync: noop,
+    clearCompletedOperations: noop,
+    clearFailedOperations: noop,
+    queueOperation: async () => 0,
+    queuePhotoUpload: async () => ''
   };
 
   return [state, actions];

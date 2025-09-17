@@ -6,14 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { ChartBarIcon, CpuChipIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 export default function AIUsagePage() {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in AI usage page:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const isAdmin = useIsAdmin();
 
   const [logs, setLogs] = useState<any[]>([]);
@@ -36,6 +29,16 @@ export default function AIUsagePage() {
     };
     fetchLogs();
   }, []);
+
+  if (!user) {
+    return (
+      <div className="w-full max-w-4xl mx-auto">
+        <div className="text-center py-8">
+          <div className="text-gray-500 dark:text-gray-300">You must be signed in to view AI usage.</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

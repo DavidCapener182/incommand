@@ -12,32 +12,9 @@ interface MaintenanceBannerProps {
 }
 
 export const MaintenanceBanner: React.FC<MaintenanceBannerProps> = ({ className = '' }) => {
-  // Safe hooks with fallbacks
-  let maintenanceMode;
-  try {
-    maintenanceMode = useMaintenanceMode();
-  } catch (error) {
-    console.error('MaintenanceMode hook error:', error);
-    maintenanceMode = { isMaintenanceMode: false, maintenanceMessage: '' };
-  }
-  const { isMaintenanceMode, maintenanceMessage } = maintenanceMode;
-
-  let updateSystemSettings;
-  try {
-    updateSystemSettings = useUpdateSystemSettings();
-  } catch (error) {
-    console.error('UpdateSystemSettings hook error:', error);
-    updateSystemSettings = { toggleMaintenanceMode: async () => {} };
-  }
-  const { toggleMaintenanceMode } = updateSystemSettings;
-
-  let isAdmin = false;
-  try {
-    isAdmin = useIsAdmin();
-  } catch (error) {
-    console.error('useIsAdmin hook error:', error);
-    isAdmin = false;
-  }
+  const { isMaintenanceMode, maintenanceMessage } = useMaintenanceMode();
+  const { toggleMaintenanceMode } = useUpdateSystemSettings();
+  const isAdmin = useIsAdmin();
   const [isVisible, setIsVisible] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [showAdminControls, setShowAdminControls] = useState(false)

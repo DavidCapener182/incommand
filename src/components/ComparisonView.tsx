@@ -30,10 +30,6 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   comparisonPeriodLabel,
   className = ''
 }) => {
-  // Safety check for required props
-  if (!comparisonData || !currentPeriodLabel || !comparisonPeriodLabel) {
-    return null;
-  }
   // Calculate trend indicators and colors
   const getTrendIndicator = (metric: ComparisonMetric) => {
     if (metric.trend === 'up') {
@@ -81,44 +77,54 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
     return Math.abs(metric.changePercent) > 5; // 5% threshold for significance
   };
 
-  const metrics = useMemo(() => [
-    {
-      key: 'incidents',
-      label: 'Total Incidents',
-      data: comparisonData.incidents,
-      unit: ''
-    },
-    {
-      key: 'attendance',
-      label: 'Peak Attendance',
-      data: comparisonData.attendance,
-      unit: ' people'
-    },
-    {
-      key: 'responseTime',
-      label: 'Avg Response Time',
-      data: comparisonData.responseTime,
-      unit: ' min'
-    },
-    {
-      key: 'staffEfficiency',
-      label: 'Staff Efficiency',
-      data: comparisonData.staffEfficiency,
-      unit: '%'
-    },
-    {
-      key: 'crowdDensity',
-      label: 'Peak Crowd Density',
-      data: comparisonData.crowdDensity,
-      unit: ' people/m²'
-    },
-    {
-      key: 'weatherRisk',
-      label: 'Weather Risk Score',
-      data: comparisonData.weatherRisk,
-      unit: ''
+  const metrics = useMemo(() => {
+    if (!comparisonData) {
+      return [] as Array<{ key: string; label: string; data: ComparisonMetric; unit: string }>;
     }
-  ], [comparisonData]);
+
+    return [
+      {
+        key: 'incidents',
+        label: 'Total Incidents',
+        data: comparisonData.incidents,
+        unit: ''
+      },
+      {
+        key: 'attendance',
+        label: 'Peak Attendance',
+        data: comparisonData.attendance,
+        unit: ' people'
+      },
+      {
+        key: 'responseTime',
+        label: 'Avg Response Time',
+        data: comparisonData.responseTime,
+        unit: ' min'
+      },
+      {
+        key: 'staffEfficiency',
+        label: 'Staff Efficiency',
+        data: comparisonData.staffEfficiency,
+        unit: '%'
+      },
+      {
+        key: 'crowdDensity',
+        label: 'Peak Crowd Density',
+        data: comparisonData.crowdDensity,
+        unit: ' people/m²'
+      },
+      {
+        key: 'weatherRisk',
+        label: 'Weather Risk Score',
+        data: comparisonData.weatherRisk,
+        unit: ''
+      }
+    ];
+  }, [comparisonData]);
+
+  if (!comparisonData || !currentPeriodLabel || !comparisonPeriodLabel) {
+    return null;
+  }
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>

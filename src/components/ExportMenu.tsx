@@ -19,11 +19,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   onExportComplete,
   className = ''
 }) => {
-  // Safety check for required props
-  if (!eventId || !data) {
-    return null;
-  }
-
   const { canExport, getExportPermissions } = useDashboardCustomization();
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -34,6 +29,10 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     includeCharts: true,
     includeBranding: true
   });
+
+  if (!eventId || !data) {
+    return null;
+  }
 
   const exportPermissions = getExportPermissions();
 

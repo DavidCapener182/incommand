@@ -24,14 +24,7 @@ export function getGroupInfoTooltip(name: string) {
 
 // CommunityChat component for group chat UI/UX
 const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToast, isMobile, inputRef, handleInputFocus, handleInputBlur }) => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in CommunityChat:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);

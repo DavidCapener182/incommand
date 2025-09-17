@@ -1884,8 +1884,6 @@ export default function IncidentCreationModal({
   onIncidentCreated,
   initialIncidentType,
 }: Props) {
-  if (!isOpen) return null;
-  
   const { addToast } = useToast();
 
   const [formData, setFormData] = useState<IncidentFormData>({
@@ -2428,14 +2426,7 @@ export default function IncidentCreationModal({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in IncidentCreationModal:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -3596,6 +3587,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
     }
   }, [ejectionDetails.location, ejectionDetails.description, ejectionDetails.reason, formData.incident_type]);
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div 
       ref={modalRef}
@@ -3853,7 +3848,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <div className="flex-1">
                     <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Offline Mode</h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      You're currently offline. Incidents will be saved locally and synced when you're back online.
+                      You&apos;re currently offline. Incidents will be saved locally and synced when you&apos;re back online.
                     </p>
                   </div>
                   <motion.button
@@ -4104,7 +4099,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">///</span>
+                        <span className="text-gray-400">{'///'}</span>
                       </div>
                   <input
                         id="w3w"

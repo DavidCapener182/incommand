@@ -1,4 +1,4 @@
-import { useContext, useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useRole } from './useRole'
 import { SystemSettings, FeatureFlags, FeatureFlagKey } from '../types/settings'
@@ -8,15 +8,7 @@ import { supabase } from '../lib/supabase'
  * Hook for accessing system-wide settings
  */
 export const useSystemSettings = () => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useSystemSettings:', error);
-    auth = { systemSettings: null, refreshSettings: async () => {} };
-  }
-  const systemSettings: SystemSettings | null = auth?.systemSettings ?? null
-  const refreshSettings: () => Promise<void> = auth?.refreshSettings ?? (async () => {})
+  const { systemSettings, refreshSettings } = useAuth()
 
   return {
     systemSettings,
@@ -29,15 +21,8 @@ export const useSystemSettings = () => {
  * Hook for checking if maintenance mode is active
  */
 export const useMaintenanceMode = () => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useMaintenanceMode:', error);
-    auth = { systemSettings: null };
-  }
-  const { systemSettings } = auth;
-  
+  const { systemSettings } = useAuth()
+
   return useMemo(() => ({
     isMaintenanceMode: systemSettings?.maintenance_mode || false,
     maintenanceMessage: systemSettings?.maintenance_message || 'System is under maintenance. Please try again later.',
@@ -48,15 +33,8 @@ export const useMaintenanceMode = () => {
  * Hook for checking specific feature flags
  */
 export const useFeatureFlag = (flagName: FeatureFlagKey) => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useFeatureFlag:', error);
-    auth = { systemSettings: null };
-  }
-  const { systemSettings } = auth;
-  
+  const { systemSettings } = useAuth()
+
   return useMemo(() => {
     if (!systemSettings?.feature_flags) return false
     return systemSettings.feature_flags[flagName] || false
@@ -67,15 +45,8 @@ export const useFeatureFlag = (flagName: FeatureFlagKey) => {
  * Hook for checking multiple feature flags at once
  */
 export const useFeatureFlags = (flagNames: FeatureFlagKey[]) => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useFeatureFlags:', error);
-    auth = { systemSettings: null };
-  }
-  const { systemSettings } = auth;
-  
+  const { systemSettings } = useAuth()
+
   return useMemo(() => {
     if (!systemSettings?.feature_flags) {
       return flagNames.reduce((acc, flag) => ({ ...acc, [flag]: false }), {})
@@ -92,14 +63,7 @@ export const useFeatureFlags = (flagNames: FeatureFlagKey[]) => {
  * Hook for updating system settings (admin only)
  */
 export const useUpdateSystemSettings = () => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useUpdateSystemSettings:', error);
-    auth = { systemSettings: null, refreshSettings: async () => {} };
-  }
-  const { systemSettings, refreshSettings } = auth;
+  const { systemSettings, refreshSettings } = useAuth()
   const role = useRole()
   const isAdmin = role === 'admin' || role === 'superadmin'
   
@@ -172,15 +136,8 @@ export const useUpdateSystemSettings = () => {
  * Hook for getting platform configuration
  */
 export const usePlatformConfig = () => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in usePlatformConfig:', error);
-    auth = { systemSettings: null };
-  }
-  const { systemSettings } = auth;
-  
+  const { systemSettings } = useAuth()
+
   return useMemo(() => ({
     maxFileUploadSize: systemSettings?.platform_config?.max_file_upload_size || 10485760, // 10MB default
     sessionTimeout: systemSettings?.platform_config?.session_timeout || 3600, // 1 hour default
@@ -194,15 +151,8 @@ export const usePlatformConfig = () => {
  * Hook for getting system notification settings
  */
 export const useSystemNotificationSettings = () => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useSystemNotificationSettings:', error);
-    auth = { systemSettings: null };
-  }
-  const { systemSettings } = auth;
-  
+  const { systemSettings } = useAuth()
+
   return useMemo(() => ({
     emailEnabled: systemSettings?.notification_settings?.email_enabled || true,
     pushEnabled: systemSettings?.notification_settings?.push_enabled || true,
@@ -220,15 +170,8 @@ export const useSystemNotificationSettings = () => {
  * Hook for checking if a feature is available for the current user
  */
 export const useFeatureAvailability = (featureName: string) => {
-  let auth: any;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useFeatureAvailability:', error);
-    auth = { systemSettings: null, user: null };
-  }
-  const { systemSettings, user } = auth;
-  
+  const { systemSettings, user } = useAuth()
+
   return useMemo(() => {
     if (!systemSettings?.platform_config?.feature_rollout) {
       return true // If no rollout config, feature is available to all

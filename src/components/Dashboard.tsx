@@ -509,14 +509,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 
 export default function Dashboard() {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    logger.error('Auth context not available in Dashboard', error, { component: 'Dashboard', action: 'useAuth' });
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({ types: [], statuses: [], priorities: [], query: '' })

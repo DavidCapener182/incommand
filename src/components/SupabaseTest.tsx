@@ -7,14 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 export default function SupabaseTest() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in SupabaseTest:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
 
   useEffect(() => {
     async function testConnection() {

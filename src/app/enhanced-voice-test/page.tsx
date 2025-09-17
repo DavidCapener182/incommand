@@ -29,8 +29,8 @@ export default function EnhancedVoiceTestPage() {
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <h3 className="font-semibold text-green-900 mb-2">Test Instructions:</h3>
               <ol className="text-green-800 space-y-2 text-sm">
-                <li><strong>Live Transcription:</strong> Click "Live Transcription" mode, then "Tap to start voice input..." and speak a complete sentence</li>
-                <li><strong>Voice Recording:</strong> Switch to "Voice Recording" mode, start recording, speak, then stop</li>
+                <li><strong>Live Transcription:</strong> Click &quot;Live Transcription&quot; mode, then &quot;Tap to start voice input...&quot; and speak a complete sentence</li>
+                <li><strong>Voice Recording:</strong> Switch to &quot;Voice Recording&quot; mode, start recording, speak, then stop</li>
                 <li><strong>Error Handling:</strong> Test with microphone permissions denied or network issues</li>
                 <li><strong>Mode Switching:</strong> Try switching between modes during active sessions</li>
               </ol>

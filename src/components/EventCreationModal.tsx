@@ -481,7 +481,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   placeholder="Paste or type the event brief provided by the client here."
                   className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-sm text-gray-500">This field is for the client's event brief and can contain large pasted text.</p>
+                <p className="mt-1 text-sm text-gray-500">This field is for the client&apos;s event brief and can contain large pasted text.</p>
               </div>
             </div>
           </div>

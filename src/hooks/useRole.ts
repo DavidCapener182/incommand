@@ -6,14 +6,7 @@ import { useMemo } from 'react'
  * Hook to get the current user's role
  */
 export const useRole = () => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useRole:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return role as UserRole | null
 }
 
@@ -21,14 +14,7 @@ export const useRole = () => {
  * Hook to check if user is admin or superadmin
  */
 export const useIsAdmin = () => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useIsAdmin:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return useMemo(() => role === ROLES.ADMIN || role === ROLES.SUPERADMIN, [role])
 }
 
@@ -36,14 +22,7 @@ export const useIsAdmin = () => {
  * Hook to check if user is superadmin
  */
 export const useIsSuperAdmin = () => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useIsSuperAdmin:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return useMemo(() => role === ROLES.SUPERADMIN, [role])
 }
 
@@ -51,14 +30,7 @@ export const useIsSuperAdmin = () => {
  * Hook to check if user has a specific role
  */
 export const useHasRole = (requiredRole: UserRole) => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useHasRole:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return useMemo(() => role === requiredRole, [role, requiredRole])
 }
 
@@ -66,14 +38,7 @@ export const useHasRole = (requiredRole: UserRole) => {
  * Hook to check if user has any of the specified roles
  */
 export const useHasAnyRole = (requiredRoles: UserRole[]) => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useHasAnyRole:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return useMemo(() => role ? requiredRoles.includes(role as UserRole) : false, [role, requiredRoles])
 }
 
@@ -81,14 +46,7 @@ export const useHasAnyRole = (requiredRoles: UserRole[]) => {
  * Hook to check if user has all of the specified roles (useful for future multi-role support)
  */
 export const useHasAllRoles = (requiredRoles: UserRole[]) => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useHasAllRoles:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
+  const { role } = useAuth()
   return useMemo(() => role ? requiredRoles.every(r => r === role) : false, [role, requiredRoles])
 }
 
@@ -97,15 +55,8 @@ export const useHasAllRoles = (requiredRoles: UserRole[]) => {
  * This is the recommended hook for components that need multiple role checks
  */
 export const useRoleStates = () => {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in useRoleStates:', error);
-    auth = { role: null };
-  }
-  const { role } = auth;
-  
+  const { role } = useAuth()
+
   return useMemo(() => ({
     role: role as UserRole | null,
     isAdmin: role === ROLES.ADMIN || role === ROLES.SUPERADMIN,

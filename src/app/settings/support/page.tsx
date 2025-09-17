@@ -333,7 +333,7 @@ export default function SupportPage() {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Email Support</h2>
             </div>
             <p className="text-gray-600 dark:text-blue-100 mb-4 text-sm">
-              Send us detailed questions and we'll respond within 24 hours.
+              Send us detailed questions and we&apos;ll respond within 24 hours.
             </p>
             <a 
               href="mailto:support@incommand.app" 

@@ -600,7 +600,7 @@ export default function What3WordsSearchCard({
               aria-selected={activeIndex === index}
             >
               <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                <span className="text-blue-600 dark:text-blue-400 mr-2">///</span>
+                <span className="text-blue-600 dark:text-blue-400 mr-2">{'///'}</span>
                 {suggestion.words}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">

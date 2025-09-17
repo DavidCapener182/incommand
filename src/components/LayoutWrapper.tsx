@@ -12,14 +12,7 @@ import { supabase } from '../lib/supabase'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in AuthGate:', error);
-    auth = { user: null, loading: true };
-  }
-  const { user, loading } = auth;
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname() || '';
 
@@ -38,14 +31,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 // Component to show company name in footer
 function CompanyFooter() {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in CompanyFooter:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const [companyName, setCompanyName] = useState<string>('');
   const pathname = usePathname() || '';
   const showFooter = !['/login', '/signup'].includes(pathname);
@@ -191,4 +177,3 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     </>
   );
 }
-

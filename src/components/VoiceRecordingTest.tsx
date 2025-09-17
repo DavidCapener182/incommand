@@ -200,11 +200,11 @@ export default function VoiceRecordingTest() {
       <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
         <h3 className="font-semibold text-yellow-800 mb-2">Test Instructions</h3>
         <div className="text-sm text-yellow-700 space-y-2">
-          <p><strong>To test the fix for "only picking up first 2 words":</strong></p>
+          <p><strong>To test the fix for &quot;only picking up first 2 words&quot;:</strong></p>
           <ol className="list-decimal list-inside ml-4 space-y-1">
-            <li>Click "Start Recording" or hold Spacebar/V key</li>
-            <li>Speak a complete sentence like: "There's a medical incident at the main stage"</li>
-            <li>Release the key or click "Stop Recording"</li>
+            <li>Click &quot;Start Recording&quot; or hold Spacebar/V key</li>
+            <li>Speak a complete sentence like: &quot;There&apos;s a medical incident at the main stage&quot;</li>
+            <li>Release the key or click &quot;Stop Recording&quot;</li>
             <li>Check the debug logs to see audio chunk collection</li>
             <li>Verify the audio plays back completely</li>
           </ol>

@@ -12,10 +12,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   onFiltersChange,
   className = ''
 }) => {
-  // Safety check for eventId
-  if (!eventId) {
-    return null;
-  }
+  const normalizedEventId = eventId ?? '';
 
   const {
     filters,
@@ -25,7 +22,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     applyPreset,
     isValid,
     errors
-  } = useAnalyticsFilters(eventId);
+  } = useAnalyticsFilters(normalizedEventId);
 
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [showComparison, setShowComparison] = useState(filters?.compareMode !== 'none');
@@ -75,6 +72,10 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       onFiltersChange({ ...filters, compareDateRange: newCompareRange });
     }
   }, [filters, setComparison, onFiltersChange]);
+
+  if (!eventId) {
+    return null;
+  }
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>

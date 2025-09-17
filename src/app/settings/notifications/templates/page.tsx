@@ -25,7 +25,8 @@ interface TemplateFormData {
 }
 
 const NotificationTemplatesPage: React.FC = () => {
-  const isAdmin = useRole() === 'admin' || useRole() === 'superadmin'
+  const role = useRole()
+  const isAdmin = role === 'admin' || role === 'superadmin'
   const [templates, setTemplates] = useState<NotificationTemplate[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)

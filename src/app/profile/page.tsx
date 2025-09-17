@@ -26,14 +26,7 @@ function getInitials(nameOrEmail: string) {
 }
 
 export default function ProfilePage() {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in profile page:', error);
-    auth = { user: null };
-  }
-  const { user } = auth;
+  const { user } = useAuth();
   const role = useRole();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);

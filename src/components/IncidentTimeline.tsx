@@ -8,17 +8,20 @@ import { FilterState } from '../utils/incidentFilters'
 
 type IncidentRecord = {
   id: number
-  log_number?: string
+  log_number: string
   timestamp: string
   incident_type: string
-  occurrence?: string
-  action_taken?: string
-  status?: string
+  occurrence: string
+  action_taken: string
+  is_closed: boolean
+  event_id: string
+  callsign_from: string
+  callsign_to: string
+  status: string
   priority?: string
   resolved_at?: string | null
   responded_at?: string | null
   updated_at?: string | null
-  event_id?: string | null
 }
 
 type ArtistPerformance = {
@@ -241,12 +244,15 @@ const TimelineChart = ({
           incident_type: 'Artist Off Stage',
           occurrence: `${mainActName} off stage (Showdown)`,
           action_taken: mainActOnStage.action_taken,
+          is_closed: mainActOnStage.is_closed,
+          event_id: mainActOnStage.event_id,
+          callsign_from: mainActOnStage.callsign_from,
+          callsign_to: mainActOnStage.callsign_to,
           status: mainActOnStage.status,
           priority: mainActOnStage.priority,
           resolved_at: mainActOnStage.resolved_at,
           responded_at: mainActOnStage.responded_at,
-          updated_at: mainActOnStage.updated_at,
-          event_id: mainActOnStage.event_id
+          updated_at: mainActOnStage.updated_at
         }
 
         if (!artistGroups.has(mainActName)) {
@@ -284,7 +290,7 @@ const TimelineChart = ({
   }, [currentEventIncidents, eventDetails])
 
   const computeIssueBlocks = useCallback((incidentList: IncidentRecord[]) => {
-    const mappedIssues: IssueIncidentWithLayout[] = incidentList
+    const mappedIssues = incidentList
       .map(incident => {
         if (!incident.timestamp) return null
 
@@ -307,7 +313,7 @@ const TimelineChart = ({
           actualEndTime: actualEnd
         }
       })
-      .filter((issue): issue is IssueIncidentWithLayout => issue !== null)
+      .filter(issue => issue !== null)
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 
     const laneEndTimes: number[] = []
@@ -416,30 +422,17 @@ const TimelineChart = ({
     return { startTime, endTime }
   }, [artistPerformances, allIssueBlocks])
 
-  // Early return checks after all hooks
-  if (!incidents || incidents.length === 0) {
-    return (
-      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-        <div className="text-center">
-          <div className="text-gray-500 mb-2">📊</div>
-          <p className="text-sm text-gray-600">No incidents to display</p>
-        </div>
-      </div>
-    )
-  }
+  const hasTimelineBoundaries = Boolean(timelineBoundaries)
 
-  if (!timelineBoundaries) {
-    return (
-      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-        <div className="text-center">
-          <div className="text-gray-500 mb-2">📊</div>
-          <p className="text-sm text-gray-600">No timeline data available</p>
-        </div>
-      </div>
-    )
-  }
+  const fallbackBoundaries = useMemo(() => {
+    const now = new Date()
+    return {
+      startTime: now,
+      endTime: new Date(now.getTime() + 60 * 60 * 1000)
+    }
+  }, [])
 
-  const { startTime, endTime } = timelineBoundaries
+  const { startTime, endTime } = hasTimelineBoundaries ? timelineBoundaries! : fallbackBoundaries
   const totalDuration = endTime.getTime() - startTime.getTime()
 
   // Calculate visible time range based on zoom level
@@ -498,6 +491,28 @@ const TimelineChart = ({
       ? Math.max(0, panOffset - panAmount)
       : Math.min(totalDuration - visibleDuration, panOffset + panAmount)
     setPanOffset(newOffset)
+  }
+
+  if (!incidents || incidents.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-center">
+          <div className="text-gray-500 mb-2">📊</div>
+          <p className="text-sm text-gray-600">No incidents to display</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!hasTimelineBoundaries) {
+    return (
+      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-center">
+          <div className="text-gray-500 mb-2">📊</div>
+          <p className="text-sm text-gray-600">No timeline data available</p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -17,14 +17,7 @@ export default function AdminProtectedRoute({
   redirectTo,
   showAccessDenied = true
 }: AdminProtectedRouteProps) {
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.error('Auth context not available in AdminProtectedRoute:', error);
-    auth = { loading: true };
-  }
-  const { loading } = auth;
+  const { loading } = useAuth();
   const isAdmin = useIsAdmin()
   const router = useRouter()
 
@@ -59,7 +52,7 @@ export default function AdminProtectedRoute({
             </div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Access Denied</h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You don't have permission to access this page. Admin privileges are required.
+              You don&apos;t have permission to access this page. Admin privileges are required.
             </p>
             <button
               onClick={() => router.back()}
