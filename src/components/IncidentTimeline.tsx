@@ -170,6 +170,7 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
           updated_at: mainActOnStage.updated_at
         }
 
+        // Always set the main act group, overriding any existing off-stage
         if (!artistGroups.has(mainActName)) {
           artistGroups.set(mainActName, {})
         }
@@ -252,13 +253,11 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     // Start = 1 hour before first incident
     const startTime = new Date(firstIncidentTime - 60 * 60 * 1000)
     
-    // End = Showdown time or last incident + 1 hour
-    const endTime = eventDetails?.showdown_time ? 
-      new Date(eventDetails.showdown_time) : 
-      new Date(lastIncidentTime + 60 * 60 * 1000)
+    // End = 1 hour after last incident (not Showdown time)
+    const endTime = new Date(lastIncidentTime + 60 * 60 * 1000)
 
     return { startTime, endTime }
-  }, [artistPerformances, issues, eventDetails])
+  }, [artistPerformances, issues])
 
   if (!timelineBoundaries) {
     return (
@@ -465,26 +464,31 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
             Issues
           </div>
           <div className="flex-1 relative h-full">
-            {issues.map((issue) => {
+            {issues.map((issue, index) => {
               const startPos = getPosition(issue.startTime)
               const endPos = getPosition(issue.endTime)
-              const width = Math.max(1, endPos - startPos)
+              const width = Math.max(2, endPos - startPos)
+              
+              // Stack issues vertically if they overlap
+              const topOffset = (index % 3) * 6 // Stack up to 3 issues vertically
 
               return (
                 <div
                   key={issue.id}
-                  className={`absolute top-1/2 transform -translate-y-1/2 h-8 rounded shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-xs font-medium overflow-hidden ${
+                  className={`absolute rounded shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-xs font-medium overflow-hidden ${
                     !issue.isComplete ? 'border-dashed border-2' : ''
                   }`}
                   style={{
                     left: `${Math.max(0, Math.min(100 - width, startPos))}%`,
                     width: `${width}%`,
+                    top: `${50 + topOffset - 12}%`, // Center with vertical offset
+                    height: '16px',
                     backgroundColor: issue.color,
                     opacity: issue.isComplete ? 0.9 : 0.6,
                     zIndex: 15
                   }}
                 >
-                  {width > 4 && (
+                  {width > 6 && (
                     <span className="truncate px-1 text-center">
                       {issue.incident.incident_type}
                     </span>
