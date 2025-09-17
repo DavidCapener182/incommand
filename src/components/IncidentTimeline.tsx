@@ -86,10 +86,12 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
 
   useEffect(() => {
     console.log('🔍 useEffect triggered - currentEvent:', currentEvent)
-    if (!currentEvent?.id) {
-      console.log('❌ No currentEvent.id available')
+    if (!currentEvent || !currentEvent.id) {
+      console.log('❌ No valid currentEvent or currentEvent.id available. Resetting event details.')
+      setEventDetails(null)
       return
     }
+
     const fetchEventDetails = async () => {
       console.log('🔍 Fetching event details for event ID:', currentEvent.id)
       try {
@@ -100,7 +102,8 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
           .maybeSingle()
         
         if (error) {
-          console.log('❌ Error fetching event details:', error)
+          console.error('❌ Error fetching event details:', error)
+          setEventDetails(null)
           return
         }
         
@@ -109,13 +112,15 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
           setEventDetails(data)
         } else {
           console.log('❌ No event details found for ID:', currentEvent.id)
+          setEventDetails(null)
         }
       } catch (err) {
-        console.log('❌ Exception fetching event details:', err)
+        console.error('❌ Exception fetching event details:', err)
+        setEventDetails(null)
       }
     }
     fetchEventDetails()
-  }, [currentEvent?.id])
+  }, [currentEvent])
 
   if (!incidents || incidents.length === 0) {
     return (
@@ -128,7 +133,6 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     )
   }
 
-  console.log('🎭 TimelineChart rendering with incidents:', incidents.length)
 
   // Parse artist performances
   const artistPerformances = useMemo(() => {
@@ -139,21 +143,12 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
         const incidentDate = new Date(incident.timestamp).toDateString()
         const eventDate = new Date(eventDetails.event_date).toDateString()
         const matches = incidentDate === eventDate
-        console.log(`📅 Incident ${incident.id}: ${incidentDate} vs Event: ${eventDate} = ${matches}`)
         return matches
       }
       // If no event details, include all incidents (fallback)
-      console.log('⚠️ No event details available, including all incidents')
       return true
     })
 
-    console.log('🎭 Processing incidents:', incidents.length, '→ filtered to:', currentEventIncidents.length)
-    console.log('  Raw incidents:', currentEventIncidents.map(i => ({ 
-      id: i.id, 
-      type: i.incident_type, 
-      timestamp: i.timestamp,
-      occurrence: i.occurrence 
-    })))
 
     const artistIncidents = currentEventIncidents.filter(incident =>
       incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage'
@@ -219,7 +214,6 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
         mainActGroup.onStage = mainActOnStage
         mainActGroup.offStage = virtualOffStage
 
-        console.log(`🎭 Main act "${mainActName}" paired with Showdown at ${showdownTime}`)
       }
     }
 
@@ -256,10 +250,8 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
         const incidentDate = new Date(incident.timestamp).toDateString()
         const eventDate = new Date(eventDetails.event_date).toDateString()
         const matches = incidentDate === eventDate
-        console.log(`📅 Issue ${incident.id}: ${incidentDate} vs Event: ${eventDate} = ${matches}`)
         return matches
       }
-      console.log('⚠️ No event details available for issues, including all incidents')
       return true
     })
 
@@ -310,12 +302,6 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     // End = 1 hour after last incident (not Showdown time)
     const endTime = new Date(lastIncidentTime + 60 * 60 * 1000)
 
-    console.log('🕐 Timeline boundaries calculation:')
-    console.log('  First incident:', new Date(firstIncidentTime).toLocaleString())
-    console.log('  Last incident:', new Date(lastIncidentTime).toLocaleString())
-    console.log('  Timeline start:', startTime.toLocaleString())
-    console.log('  Timeline end:', endTime.toLocaleString())
-    console.log('  Total duration:', Math.round((endTime.getTime() - startTime.getTime()) / (60 * 60 * 1000)), 'hours')
 
     return { startTime, endTime }
   }, [artistPerformances, issues])
@@ -588,8 +574,6 @@ const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   currentEvent, 
   onIncidentSelect 
 }) => {
-  console.log('🚀 IncidentTimeline component loaded - Version 4.0')
-  console.log('🔍 IncidentTimeline received currentEvent:', currentEvent)
   
   // Use displayedIncidents if available, otherwise use incidents
   const timelineIncidents = displayedIncidents && displayedIncidents.length > 0 ? displayedIncidents : incidents
