@@ -528,6 +528,11 @@ export default function Dashboard() {
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [currentEvent, setCurrentEvent] = useState<any | null>(null)
+  
+  // Debug logging for currentEvent
+  useEffect(() => {
+    console.log('🔍 Dashboard currentEvent changed:', currentEvent)
+  }, [currentEvent])
   const [coordinates, setCoordinates] = useState<{ lat: number; lon: number }>({
     lat: 51.5074,
     lon: -0.1278
