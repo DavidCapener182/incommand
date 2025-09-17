@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { FaRegClock, FaZoomIn, FaZoomOut, FaExpand } from 'react-icons/fa'
+import { FaRegClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 import { FilterState } from '../utils/incidentFilters'
 
@@ -368,14 +368,14 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
               className="p-1 text-gray-600 hover:text-gray-800"
               disabled={panOffset <= 0}
             >
-              <FaZoomOut />
+              <FaChevronLeft />
             </button>
             <button
               onClick={() => handlePan('right')}
               className="p-1 text-gray-600 hover:text-gray-800"
               disabled={panOffset >= totalDuration - visibleDuration}
             >
-              <FaZoomIn />
+              <FaChevronRight />
             </button>
           </div>
         </div>
