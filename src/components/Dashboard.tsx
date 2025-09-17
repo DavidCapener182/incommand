@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useRef, Fragment } from 'react'
+import React, { useState, useEffect, useRef, Fragment, useCallback } from 'react'
+import Image from 'next/image'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
@@ -44,6 +45,20 @@ import { createPortal } from 'react-dom';
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
+
+const EVENT_TYPES = [
+  'Concerts',
+  'Sports Events',
+  'Conferences',
+  'Festivals',
+  'Exhibitions',
+  'Theatre Shows',
+  'Parades',
+  'Ceremonies',
+  'Community Gatherings',
+  'Charity Event',
+  'Corporate Event',
+];
 
 // Skeleton Loading Components
 const StatCardSkeleton = () => (
@@ -578,28 +593,16 @@ export default function Dashboard() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
 
   // Event types to cycle through
-  const eventTypes = [
-    'Concerts',
-    'Sports Events',
-    'Conferences',
-    'Festivals',
-    'Exhibitions',
-    'Theatre Shows',
-    'Parades',
-    'Ceremonies',
-    'Community Gatherings',
-    'Charity Event',
-    'Corporate Event',
-  ];
+  const eventTypes = EVENT_TYPES;
   const [eventTypeIndex, setEventTypeIndex] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
-      setEventTypeIndex((i) => (i + 1) % eventTypes.length);
+      setEventTypeIndex((i) => (i + 1) % EVENT_TYPES.length);
     }, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchCurrentEvent = async () => {
+  const fetchCurrentEvent = useCallback(async () => {
     console.log('Fetching current event...');
     setIsRefreshing(true);
     setLoadingCurrentEvent(true);
@@ -717,7 +720,7 @@ export default function Dashboard() {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
     }
-  };
+  }, [companyId, userRole]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -760,7 +763,20 @@ export default function Dashboard() {
       setRecentIncidents(recentFiltered);
       
       // Dispatch incident summary to BottomNav
-      const summary = generateIncidentSummary();
+      const countableIncidents = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type));
+      const openIncidents = countableIncidents.filter(inc => !inc.is_closed).length;
+      const totalIncidents = countableIncidents.length;
+      const mostRecent = countableIncidents[0];
+      const recentType = mostRecent ? mostRecent.incident_type : '';
+
+      const summary = totalIncidents === 0
+        ? 'No incidents'
+        : openIncidents === 0
+          ? `${totalIncidents} total incidents • All closed`
+          : openIncidents === totalIncidents
+            ? `${totalIncidents} open incidents • Latest: ${recentType}`
+            : `${openIncidents} open / ${totalIncidents} total • Latest: ${recentType}`;
+
       window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: summary }));
       
       // Dispatch recent incidents for scrolling ticker
@@ -935,7 +951,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchCurrentEvent();
-  }, []);
+  }, [fetchCurrentEvent]);
 
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
@@ -1024,29 +1040,6 @@ export default function Dashboard() {
     setFilters({ types: [], statuses: [], priorities: [], query: '' });
   };
 
-  // Generate incident summary for footer
-  const generateIncidentSummary = () => {
-    if (!incidents || incidents.length === 0) {
-      return 'No incidents';
-    }
-
-    const countableIncidents = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type));
-    const openIncidents = countableIncidents.filter(inc => !inc.is_closed).length;
-    const totalIncidents = countableIncidents.length;
-    
-    // Get most recent incident type
-    const mostRecent = countableIncidents[0];
-    const recentType = mostRecent ? mostRecent.incident_type : '';
-    
-    if (openIncidents === 0) {
-      return `${totalIncidents} total incidents • All closed`;
-    } else if (openIncidents === totalIncidents) {
-      return `${totalIncidents} open incidents • Latest: ${recentType}`;
-    } else {
-      return `${openIncidents} open / ${totalIncidents} total • Latest: ${recentType}`;
-    }
-  };
-
   // Fetch attendance timeline when modal opens
   useEffect(() => {
     if (isOccupancyModalOpen && currentEventId) {
@@ -1065,7 +1058,14 @@ export default function Dashboard() {
   if (!currentEvent) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#23408e] z-50 min-h-screen splash-bg">
-        <img src="/inCommand.png" alt="inCommand Logo" className="h-32 w-auto mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]" />
+        <Image
+          src="/inCommand.png"
+          alt="inCommand Logo"
+          width={256}
+          height={128}
+          className="h-32 w-auto mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
+          priority
+        />
         {/* Create + Event type on same line under logo */}
         <div className="flex flex-row items-center justify-center mb-8 gap-4">
           <span className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg md:drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]">Event Control for</span>

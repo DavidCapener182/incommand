@@ -41,6 +41,16 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
 
   const recognitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManuallyStoppingRef = useRef(false);
+  const transcriptRef = useRef('');
+  const voiceErrorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+
+  useEffect(() => {
+    voiceErrorRef.current = voiceError;
+  }, [voiceError]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -61,6 +71,8 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
         setVoiceError(null);
         setTranscript('');
         setInterimTranscript('');
+        transcriptRef.current = '';
+        voiceErrorRef.current = null;
       };
 
       recognition.onresult = (event: any) => {
@@ -77,7 +89,11 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
         }
 
         if (finalTranscript) {
-          setTranscript(prev => prev + finalTranscript + ' ');
+          setTranscript(prev => {
+            const updated = `${prev}${finalTranscript} `;
+            transcriptRef.current = updated;
+            return updated;
+          });
           setInterimTranscript('');
         } else {
           setInterimTranscript(interimTranscript);
@@ -117,6 +133,7 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
         }
 
         setVoiceError(errorMessage);
+        voiceErrorRef.current = errorMessage;
         setIsListening(false);
       };
 
@@ -130,7 +147,7 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
         }
 
         // Auto-submit if we have a transcript and no errors
-        if (transcript.trim() && !voiceError && !isManuallyStoppingRef.current) {
+        if (transcriptRef.current.trim() && !voiceErrorRef.current && !isManuallyStoppingRef.current) {
           handleTranscriptionComplete();
         }
       };
@@ -138,8 +155,9 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
       setRecognition(recognition);
     } else {
       setVoiceError('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      voiceErrorRef.current = 'Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.';
     }
-  }, []);
+  }, [handleTranscriptionComplete]);
 
   // Cleanup
   useEffect(() => {
@@ -160,22 +178,28 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
   }, [recognition]);
 
   const handleTranscriptionComplete = useCallback(() => {
-    if (transcript.trim()) {
-      onTranscriptionComplete(transcript.trim());
+    const cleanedTranscript = transcriptRef.current.trim();
+    if (cleanedTranscript) {
+      onTranscriptionComplete(cleanedTranscript);
+      transcriptRef.current = '';
       setTranscript('');
       setInterimTranscript('');
     }
-  }, [transcript, onTranscriptionComplete]);
+  }, [onTranscriptionComplete]);
 
   const startVoiceRecognition = useCallback(async () => {
     if (!recognition) {
-      setVoiceError('Voice recognition not available. Please refresh the page and try again.');
+      const message = 'Voice recognition not available. Please refresh the page and try again.';
+      setVoiceError(message);
+      voiceErrorRef.current = message;
       return;
     }
 
     try {
       setVoiceError(null);
+      voiceErrorRef.current = null;
       setTranscript('');
+      transcriptRef.current = '';
       setInterimTranscript('');
       isManuallyStoppingRef.current = false;
       
@@ -189,10 +213,14 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
       
     } catch (error: any) {
       if (error.name === 'NotAllowedError') {
-        setVoiceError('Microphone access denied. Please allow microphone permissions in your browser settings.');
+        const message = 'Microphone access denied. Please allow microphone permissions in your browser settings.';
+        setVoiceError(message);
+        voiceErrorRef.current = message;
       } else {
         console.error('Error starting voice recognition:', error);
-        setVoiceError('Failed to start voice recognition. Please try again.');
+        const message = 'Failed to start voice recognition. Please try again.';
+        setVoiceError(message);
+        voiceErrorRef.current = message;
       }
     }
   }, [recognition]);
@@ -263,6 +291,7 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
     setTranscript('');
     setInterimTranscript('');
     setVoiceError(null);
+    voiceErrorRef.current = null;
   }, []);
 
   const formatDuration = (ms: number) => {

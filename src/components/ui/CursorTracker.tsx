@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPresence } from '@/hooks/usePresence';
 
@@ -62,10 +63,13 @@ export const CursorTracker: React.FC<CursorTrackerProps> = ({ users, containerRe
               >
                 <div className="flex items-center gap-1">
                   {user.avatar ? (
-                    <img 
+                    <Image 
                       src={user.avatar} 
                       alt={user.name}
+                      width={12}
+                      height={12}
                       className="w-3 h-3 rounded-full"
+                      unoptimized
                     />
                   ) : (
                     <div 
@@ -84,4 +88,3 @@ export const CursorTracker: React.FC<CursorTrackerProps> = ({ users, containerRe
     </div>
   );
 };
-

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { UserGroupIcon, KeyIcon, DevicePhoneMobileIcon, CalendarDaysIcon, IdentificationIcon, PlusIcon, PencilSquareIcon, TrashIcon, MagnifyingGlassIcon, ChevronDownIcon, Squares2X2Icon, CheckCircleIcon, ExclamationTriangleIcon, UsersIcon } from '@heroicons/react/24/outline';
 import Link from "next/link";
@@ -64,6 +65,33 @@ const initialGroups = [
       { id: "tm1", callsign: "TM 1", short: "TM1", position: "Traffic Management" },
     ],
   },
+];
+
+type Position = {
+  id: string;
+  callsign: string;
+  position: string;
+  short?: string;
+  assignedStaff?: string;
+  assignedName?: string;
+  required?: boolean;
+  skills?: string[];
+};
+
+type Category = {
+  id: number;
+  name: string;
+  color: string;
+  positions: Position[];
+};
+
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: 1, name: 'Management', color: 'bg-gradient-to-r from-purple-500 to-purple-600', positions: [] },
+  { id: 2, name: 'Internal', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
+  { id: 3, name: 'External', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
+  { id: 4, name: 'Venue Operations', color: 'bg-gradient-to-r from-orange-500 to-orange-600', positions: [] },
+  { id: 5, name: 'Medical', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
+  { id: 6, name: 'Traffic Management', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
 ];
 
 function getNewId() {
@@ -457,34 +485,7 @@ export default function StaffCommandCentre() {
 // --- Callsign Assignment View with staff search, unassigned staff, and assignment UI ---
 function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   // Default categories with better structure - matching database areas
-  const defaultCategories = [
-    { id: 1, name: 'Management', color: 'bg-gradient-to-r from-purple-500 to-purple-600', positions: [] },
-    { id: 2, name: 'Internal', color: 'bg-gradient-to-r from-blue-500 to-blue-600', positions: [] },
-    { id: 3, name: 'External', color: 'bg-gradient-to-r from-green-500 to-green-600', positions: [] },
-    { id: 4, name: 'Venue Operations', color: 'bg-gradient-to-r from-orange-500 to-orange-600', positions: [] },
-    { id: 5, name: 'Medical', color: 'bg-gradient-to-r from-red-500 to-red-600', positions: [] },
-    { id: 6, name: 'Traffic Management', color: 'bg-gradient-to-r from-slate-500 to-slate-600', positions: [] },
-  ];
-
-  type Position = { 
-    id: string;
-    callsign: string; 
-    position: string;
-    short?: string;
-    assignedStaff?: string; // changed to string for uuid
-    assignedName?: string; // fallback if not linked to staff
-    required?: boolean;
-    skills?: string[];
-  };
-
-  type Category = {
-    id: number;
-    name: string;
-    color: string;
-    positions: Position[] 
-  };
-
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [categories, setCategories] = useState<Category[]>(() => DEFAULT_CATEGORIES.map(cat => ({ ...cat, positions: [] })));
   const [globalSearch, setGlobalSearch] = useState('');
   const [showAddPositionModal, setShowAddPositionModal] = useState(false);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
@@ -537,7 +538,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         });
       });
       // 4. Map to defaultCategories structure
-      const newCategories = defaultCategories.map(cat => {
+      const newCategories = DEFAULT_CATEGORIES.map(cat => {
         const positions = areaMap[cat.name] || [];
         return { ...cat, positions };
       });
@@ -548,18 +549,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     // Only run when eventId or userCompanyId changes
   }, [eventId, userCompanyId]);
 
-  // Load staff data from Supabase
-  useEffect(() => {
-    fetchUserCompany();
-  }, []);
-
-  useEffect(() => {
-    if (userCompanyId) {
-      fetchStaff();
-    }
-  }, [userCompanyId]);
-
-  async function fetchUserCompany() {
+  const fetchUserCompany = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -580,14 +570,14 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     } catch (error) {
       console.error("Error fetching user company:", error);
     }
-  }
+  }, []);
 
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     if (!userCompanyId) {
       console.log("No company ID available, skipping staff fetch");
       return;
     }
-    
+
     setLoadingStaff(true);
     try {
       const { data, error } = await supabase
@@ -614,7 +604,16 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     } finally {
       setLoadingStaff(false);
     }
-  }
+  }, [userCompanyId]);
+
+  // Load staff data from Supabase
+  useEffect(() => {
+    fetchUserCompany();
+  }, [fetchUserCompany]);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
 
   // Get assigned staff IDs (now includes assignedName for count)
   const assignedCount = categories.flatMap(cat =>
@@ -1280,7 +1279,14 @@ function PositionCard({
         {isAssigned && (
           <div className="flex items-center gap-3 mt-2">
             {assignedStaff && assignedStaff.photoUrl ? (
-              <img src={assignedStaff.photoUrl} alt={assignedStaff.full_name} className="h-10 w-10 rounded-full object-cover border-2 border-gray-300 shadow-md" />
+              <Image
+                src={assignedStaff.photoUrl}
+                alt={assignedStaff.full_name}
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-full object-cover border-2 border-gray-300 shadow-md"
+                unoptimized
+              />
             ) : assignedStaff ? (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {(assignedStaff.full_name || '').split(' ').map((n: string) => n[0]).join('')}
@@ -1618,17 +1624,7 @@ function StaffListView() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
 
-  useEffect(() => {
-    fetchUserCompany();
-  }, []);
-
-  useEffect(() => {
-    if (userCompanyId) {
-      fetchStaff();
-    }
-  }, [userCompanyId]);
-
-  async function fetchUserCompany() {
+  const fetchUserCompany = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -1649,9 +1645,9 @@ function StaffListView() {
     } catch (error) {
       console.error("Error fetching user company:", error);
     }
-  }
+  }, []);
 
-  async function fetchStaff() {
+  const fetchStaff = useCallback( async () => {
     if (!userCompanyId) {
       console.log("No company ID available, skipping staff fetch");
       return;
@@ -1683,7 +1679,15 @@ function StaffListView() {
     } finally {
       setLoadingStaff(false);
     }
-  }
+  }, [userCompanyId]);
+
+  useEffect(() => {
+    fetchUserCompany();
+  }, [fetchUserCompany]);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
 
   function openAddModal() {
     setCurrentStaff({

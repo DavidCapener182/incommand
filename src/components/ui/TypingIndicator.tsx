@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPresence } from '@/hooks/usePresence';
 
@@ -79,10 +80,13 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
               {typingUsers.slice(0, 2).map((user, index) => (
                 <div key={user.id} className="flex items-center gap-1">
                   {user.avatar ? (
-                    <img 
+                    <Image 
                       src={user.avatar} 
                       alt={user.name}
+                      width={16}
+                      height={16}
                       className="w-4 h-4 rounded-full"
+                      unoptimized
                     />
                   ) : (
                     <div 
@@ -115,4 +119,3 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     </AnimatePresence>
   );
 };
-

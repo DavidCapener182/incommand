@@ -206,5 +206,5 @@ export const useFeatureAvailability = (featureName: string) => {
     }
     
     return true
-  }, [systemSettings, user])
+  }, [featureName, systemSettings, user])
 }

@@ -375,10 +375,13 @@ export default function Navigation() {
                     onClick={() => setShowProfileCard(true)}
                   >
                     {profile && profile.avatar_url ? (
-                      <img
+                      <Image
                         src={profile.avatar_url}
                         alt="Profile"
+                        width={36}
+                        height={36}
                         className="w-9 h-9 rounded-full object-cover border-2 border-blue-500"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">

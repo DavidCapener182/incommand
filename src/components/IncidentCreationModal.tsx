@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
 import { supabase } from '../lib/supabase'
 import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
@@ -4213,7 +4214,14 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       <div className="text-gray-500">
                         {photoPreviewUrl ? (
                           <div className="space-y-2">
-                            <img src={photoPreviewUrl} alt="Preview" className="mx-auto h-16 w-16 object-cover rounded" />
+                            <Image
+                              src={photoPreviewUrl}
+                              alt="Selected incident attachment preview"
+                              width={64}
+                              height={64}
+                              className="mx-auto h-16 w-16 object-cover rounded"
+                              unoptimized
+                            />
                             <p className="text-sm">Photo selected</p>
                           </div>
                         ) : (

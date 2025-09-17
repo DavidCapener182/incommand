@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AIChat from './AIChat';
 import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, UsersIcon, CpuChipIcon, ChartBarIcon, BellIcon, Cog6ToothIcon, PlayCircleIcon, EnvelopeIcon, PhoneIcon, LifebuoyIcon } from '@heroicons/react/24/outline';
@@ -160,7 +161,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
       {/* Brand bar remains */}
       <div className="px-4 pt-4 pb-3 bg-[#2A3990] text-white border-b border-white/20">
         <div className="flex items-center justify-between">
-          <img src="/inCommand.png" alt="inCommand Logo" className="h-12 w-auto" />
+          <Image src="/inCommand.png" alt="inCommand Logo" width={120} height={48} className="h-12 w-auto" priority />
           <button
             type="button"
             onClick={onClose}

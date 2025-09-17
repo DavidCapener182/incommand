@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import Modal from 'react-modal';
 import { useCameraGPS } from '../hooks/useCameraGPS';
 import { geocodeAddress } from '../utils/geocoding';
@@ -462,14 +463,13 @@ export default function What3WordsSearchCard({
         className="cursor-pointer mb-2 flex-shrink-0 flex items-center justify-center"
         onClick={toggleSearch}
       >
-        <img 
-          src="/w3w.png" 
-          alt="What3Words" 
+        <Image
+          src="/w3w.png"
+          alt="What3Words"
+          width={largeLogo ? 192 : 160}
+          height={largeLogo ? 96 : 80}
           className={`${logoSizeClass} object-contain`}
-          onError={(e) => {
-            console.error('Error loading w3w image:', e);
-            e.currentTarget.style.display = 'none';
-          }}
+          priority
         />
       </div>
 

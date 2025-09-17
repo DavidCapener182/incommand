@@ -127,7 +127,7 @@ const EndOfEventPDF = ({
     <Page size="A4" style={styles.page}>
       {/* Logo and Title */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-        <Image src={logoUrl} style={styles.logo} />
+        <Image src={logoUrl} style={styles.logo} alt="Company logo" />
         <Text style={[styles.heading, { marginLeft: 16 }]}>End of Event Report</Text>
       </View>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { UsersIcon, ArrowUpCircleIcon, PaperClipIcon, ChatBubbleLeftRightIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
@@ -278,12 +279,15 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
           </div>
           {/* Show up to 5 member avatars beside group name */}
           {members.slice(0, 5).map((m) => (
-            <img
+            <Image
               key={m.id}
               src={m.avatar_url || '/icon.png'}
-              alt={m.name}
+              alt={m.name || 'Member avatar'}
+              width={28}
+              height={28}
               className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 -ml-2 first:ml-0 shadow"
               title={m.name}
+              unoptimized
             />
           ))}
         </div>
@@ -308,7 +312,14 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
           <div className="flex flex-wrap gap-2">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-1 bg-white dark:bg-gray-900 px-2 py-1 rounded shadow-sm border border-gray-100 dark:border-gray-800">
-                <img src={m.avatar_url || '/icon.png'} alt={m.name} className="w-5 h-5 rounded-full" />
+                <Image
+                  src={m.avatar_url || '/icon.png'}
+                  alt={m.name || 'Member avatar'}
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 rounded-full"
+                  unoptimized
+                />
                 <span className="text-xs font-medium">{m.name}</span>
               </div>
             ))}
@@ -328,10 +339,13 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
               const nameColor = msg.role === 'manager' ? 'text-pink-400' : msg.role === 'supervisor' ? 'text-blue-400' : 'text-gray-500';
               return (
                 <div key={msg.id} className="flex items-start gap-2 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 rounded-lg p-3 mb-2 shadow">
-                  <img
+                  <Image
                     src={msg.profiles?.avatar_url || '/default-avatar.png'}
-                    alt={msg.profiles?.full_name}
+                    alt={msg.profiles?.full_name || 'User avatar'}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-full"
+                    unoptimized
                   />
                   <div className="flex-1">
                     <div className={`font-bold ${nameColor}`}>{msg.profiles?.full_name || 'Unknown'}</div>
@@ -399,10 +413,13 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
                 style={{ animationDelay: `${idx * 40}ms` }}
               >
                 {!isOwn && (
-                  <img
+                  <Image
                     src={msg.profiles?.avatar_url || '/default-avatar.png'}
-                    alt={msg.profiles?.full_name}
+                    alt={msg.profiles?.full_name || 'User avatar'}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full mr-2"
+                    unoptimized
                   />
                 )}
                 <div className="relative max-w-lg">
@@ -433,10 +450,13 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
                   </div>
                 </div>
                 {isOwn && (
-                  <img
+                  <Image
                     src={msg.profiles?.avatar_url || '/default-avatar.png'}
-                    alt={msg.profiles?.full_name}
+                    alt={msg.profiles?.full_name || 'User avatar'}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full ml-2"
+                    unoptimized
                   />
                 )}
               </div>

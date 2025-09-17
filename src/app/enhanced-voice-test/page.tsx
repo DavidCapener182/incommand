@@ -1,4 +1,8 @@
+"use client";
+
 import { EnhancedVoiceInput } from '@/components/EnhancedVoiceInput';
+
+export const dynamic = 'force-dynamic';
 
 export default function EnhancedVoiceTestPage() {
   return (

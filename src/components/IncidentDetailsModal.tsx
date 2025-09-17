@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
@@ -738,14 +739,16 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                       <PhotoIcon className="h-5 w-5 mr-2 text-blue-600" />
                       Photo Attachment
                     </h3>
-                    <div className="relative">
-                      <img
+                    <div className="relative h-32">
+                      <Image
                         src={photoUrl}
                         alt="Incident Attachment"
-                        className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        fill
+                        className="object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setShowFullImage(true)}
                         onContextMenu={e => e.preventDefault()}
                         draggable={false}
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
                         <PhotoIcon className="h-6 w-6 text-white opacity-0 hover:opacity-100 transition-opacity" />
@@ -755,12 +758,15 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                     {showFullImage && (
                       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={() => setShowFullImage(false)}>
                         <div className="relative max-h-[90vh] max-w-[90vw]">
-                          <img
+                          <Image
                             src={photoUrl}
                             alt="Full Incident Attachment"
-                            className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl"
+                            width={1920}
+                            height={1080}
+                            className="max-h-[90vh] max-w-[90vw] w-auto h-auto rounded-lg shadow-2xl object-contain"
                             onContextMenu={e => e.preventDefault()}
                             draggable={false}
+                            unoptimized
                           />
                           <button
                             onClick={() => setShowFullImage(false)}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -128,10 +129,13 @@ export default function ProfilePage() {
           <>
             <div className="flex flex-col items-center mb-6">
               {avatarUrl ? (
-                <img
+                <Image
                   src={avatarUrl}
                   alt="Profile"
+                  width={96}
+                  height={96}
                   className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 mb-2"
+                  unoptimized
                 />
               ) : (
                 <div className="w-24 h-24 rounded-full bg-blue-200 dark:bg-[#23408e] flex items-center justify-center text-3xl font-bold text-blue-700 dark:text-blue-200 border-2 border-blue-500 mb-2 transition-colors duration-300">

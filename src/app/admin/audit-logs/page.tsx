@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   CalendarIcon, 
   MagnifyingGlassIcon, 
@@ -68,17 +68,7 @@ export default function AuditLogsPage() {
   const [totalLogs, setTotalLogs] = useState(0);
   const logsPerPage = 50;
 
-  useEffect(() => {
-    if (user) {
-      loadAuditLogs();
-    }
-  }, [user, page]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [auditLogs, filters]);
-
-  const loadAuditLogs = async () => {
+  const loadAuditLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -157,9 +147,15 @@ export default function AuditLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters, page]);
 
-  const applyFilters = () => {
+  useEffect(() => {
+    if (user) {
+      loadAuditLogs();
+    }
+  }, [user, loadAuditLogs]);
+
+  const applyFilters = useCallback(() => {
     let filtered = [...auditLogs];
 
     if (filters.search) {
@@ -173,7 +169,11 @@ export default function AuditLogsPage() {
     }
 
     setFilteredLogs(filtered);
-  };
+  }, [auditLogs, filters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const handleExportLogs = async () => {
     try {
