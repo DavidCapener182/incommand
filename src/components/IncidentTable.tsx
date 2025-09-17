@@ -1131,7 +1131,7 @@ export default function IncidentTable({
           filters={filters}
           onFiltersChange={onFiltersChange}
           currentEvent={currentEvent}
-          onSelectIncident={handleIncidentClick}
+          onIncidentSelect={handleIncidentClick}
         />
 
         {isDetailsModalOpen && selectedIncidentId && (

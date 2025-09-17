@@ -1,10 +1,9 @@
 'use client'
 // Version: 4.0 - Interactive Gantt Timeline with Artist Performance & Issues Rows
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { FaRegClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
-import { motion } from 'framer-motion'
 import { FilterState } from '../utils/incidentFilters'
 
 type IncidentRecord = {
@@ -19,6 +18,7 @@ type IncidentRecord = {
   resolved_at?: string | null
   responded_at?: string | null
   updated_at?: string | null
+  event_id?: string | null
 }
 
 type ArtistPerformance = {
@@ -36,9 +36,15 @@ type IssueIncident = {
   id: string
   incident: IncidentRecord
   startTime: string
-  endTime?: string
+  endTime: string
   isComplete: boolean
   color: string
+}
+
+type IssueIncidentWithLayout = IssueIncident & {
+  lane: number
+  isEstimated: boolean
+  actualEndTime?: string | null
 }
 
 type IncidentTimelineProps = {
@@ -79,7 +85,21 @@ const issueTypeColors: Record<string, string> = {
   'default': '#6B7280'      // Grey
 }
 
-const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[], currentEvent?: any }) => {
+const ISSUE_BLOCK_HEIGHT = 18
+const ISSUE_LANE_SPACING = 8
+const ISSUE_ROW_TOP_PADDING = 12
+const DEFAULT_ROW_HEIGHT = 80
+const QUARTER_HOUR_MS = 15 * 60 * 1000
+
+const TimelineChart = ({ 
+  incidents, 
+  currentEvent,
+  onIncidentSelect
+}: { 
+  incidents: IncidentRecord[], 
+  currentEvent?: any,
+  onIncidentSelect?: (incident: IncidentRecord) => void 
+}) => {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('full')
   const [panOffset, setPanOffset] = useState(0)
   const [eventDetails, setEventDetails] = useState<EventSchedule | null>(null)
@@ -133,26 +153,57 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     )
   }
 
+  const currentEventIncidents = useMemo(() => {
+    if (!incidents || incidents.length === 0) return []
+
+    const eventId = currentEvent?.id ? String(currentEvent.id) : null
+    let scopedIncidents = incidents
+
+    if (eventId) {
+      const matchesEvent = incidents.filter(incident => {
+        const incidentEventId = incident.event_id ? String(incident.event_id) : null
+        return incidentEventId === eventId
+      })
+
+      if (matchesEvent.length > 0) {
+        scopedIncidents = matchesEvent
+      }
+    }
+
+    if (eventDetails?.event_date) {
+      const eventDateString = new Date(eventDetails.event_date).toDateString()
+      const matchesDate = scopedIncidents.filter(incident => {
+        const incidentDate = new Date(incident.timestamp).toDateString()
+        return incidentDate === eventDateString
+      })
+
+      if (matchesDate.length > 0) {
+        scopedIncidents = matchesDate
+      }
+    }
+
+    return scopedIncidents
+  }, [incidents, currentEvent?.id, eventDetails?.event_date])
+
 
   // Parse artist performances
+  const showdownIncident = useMemo(() => {
+    if (!currentEventIncidents || currentEventIncidents.length === 0) return null
+
+    const showdownLogs = currentEventIncidents
+      .filter(incident => (incident.incident_type || '').toLowerCase() === 'showdown')
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
+    return showdownLogs.length > 0 ? showdownLogs[showdownLogs.length - 1] : null
+  }, [currentEventIncidents])
+
   const artistPerformances = useMemo(() => {
-    // Filter incidents to only include those from the current event
-    const currentEventIncidents = incidents.filter(incident => {
-      // If we have event details, filter by event date
-      if (eventDetails?.event_date) {
-        const incidentDate = new Date(incident.timestamp).toDateString()
-        const eventDate = new Date(eventDetails.event_date).toDateString()
-        const matches = incidentDate === eventDate
-        return matches
-      }
-      // If no event details, include all incidents (fallback)
-      return true
+    if (!currentEventIncidents || currentEventIncidents.length === 0) return []
+
+    const artistIncidents = currentEventIncidents.filter(incident => {
+      const type = (incident.incident_type || '').toLowerCase()
+      return type === 'artist on stage' || type === 'artist off stage'
     })
-
-
-    const artistIncidents = currentEventIncidents.filter(incident =>
-      incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage'
-    )
 
     const artistGroups = new Map<string, { onStage?: IncidentRecord, offStage?: IncidentRecord }>()
 
@@ -172,30 +223,32 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
       }
 
       const group = artistGroups.get(artistName)!
-      if (incident.incident_type === 'Artist On Stage') {
+      const incidentType = (incident.incident_type || '').toLowerCase()
+      if (incidentType === 'artist on stage') {
         group.onStage = incident
-      } else if (incident.incident_type === 'Artist Off Stage') {
+      } else if (incidentType === 'artist off stage') {
         group.offStage = incident
       }
     })
 
     // Handle main act with Showdown time
-    const showdownTime = eventDetails?.showdown_time
-    if (showdownTime) {
-      // Find the main act (last "Artist On Stage" before showdown)
-      const mainActOnStage = artistIncidents
-        .filter(incident => incident.incident_type === 'Artist On Stage')
+    const fallbackShowdownTime = eventDetails?.showdown_time
+    const showdownTimestamp = showdownIncident?.timestamp || fallbackShowdownTime || null
+
+    if (showdownTimestamp) {
+      const onStageIncidents = artistIncidents
+        .filter(incident => (incident.incident_type || '').toLowerCase() === 'artist on stage')
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .pop()
+
+      const mainActOnStage = onStageIncidents[onStageIncidents.length - 1]
 
       if (mainActOnStage) {
         const mainActName = mainActOnStage.occurrence?.replace(/\s+on\s+stage.*$/i, '').trim() || 'Main Act'
-        
-        // Create virtual off-stage incident for main act
+
         const virtualOffStage: IncidentRecord = {
           id: mainActOnStage.id + 10000,
           log_number: mainActOnStage.log_number,
-          timestamp: showdownTime,
+          timestamp: showdownTimestamp,
           incident_type: 'Artist Off Stage',
           occurrence: `${mainActName} off stage (Showdown)`,
           action_taken: mainActOnStage.action_taken,
@@ -203,17 +256,16 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
           priority: mainActOnStage.priority,
           resolved_at: mainActOnStage.resolved_at,
           responded_at: mainActOnStage.responded_at,
-          updated_at: mainActOnStage.updated_at
+          updated_at: mainActOnStage.updated_at,
+          event_id: mainActOnStage.event_id
         }
 
-        // Always set the main act group, overriding any existing off-stage
         if (!artistGroups.has(mainActName)) {
           artistGroups.set(mainActName, {})
         }
         const mainActGroup = artistGroups.get(mainActName)!
         mainActGroup.onStage = mainActOnStage
         mainActGroup.offStage = virtualOffStage
-
       }
     }
 
@@ -240,71 +292,140 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     return performances.sort((a, b) => 
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     )
-  }, [incidents, eventDetails])
+  }, [currentEventIncidents, eventDetails])
 
-  // Parse issues
-  const issues = useMemo(() => {
-    // Use the same filtered incidents as artist performances
-    const currentEventIncidents = incidents.filter(incident => {
-      if (eventDetails?.event_date) {
-        const incidentDate = new Date(incident.timestamp).toDateString()
-        const eventDate = new Date(eventDetails.event_date).toDateString()
-        const matches = incidentDate === eventDate
-        return matches
+  const computeIssueBlocks = useCallback((incidentList: IncidentRecord[]) => {
+    const mappedIssues: IssueIncidentWithLayout[] = incidentList
+      .map(incident => {
+        if (!incident.timestamp) return null
+
+        const startTime = incident.timestamp
+        const actualEnd = incident.resolved_at || incident.responded_at || null
+        const displayEnd = new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString()
+
+        const colorKey = incident.incident_type || 'default'
+        const color = issueTypeColors[colorKey] || issueTypeColors.default
+
+        return {
+          id: `issue-${incident.id}`,
+          incident,
+          startTime,
+          endTime: displayEnd,
+          isComplete: !!actualEnd,
+          color,
+          isEstimated: true,
+          lane: 0,
+          actualEndTime: actualEnd
+        }
+      })
+      .filter((issue): issue is IssueIncidentWithLayout => issue !== null)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+
+    const laneEndTimes: number[] = []
+
+    return mappedIssues.map(issue => {
+      const startMs = new Date(issue.startTime).getTime()
+      const endMs = new Date(issue.endTime).getTime()
+
+      if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+        return issue
       }
-      return true
+
+      let assignedLane = 0
+      while (assignedLane < laneEndTimes.length && startMs < laneEndTimes[assignedLane]) {
+        assignedLane += 1
+      }
+
+      laneEndTimes[assignedLane] = Math.max(laneEndTimes[assignedLane] || 0, endMs)
+
+      return { ...issue, lane: assignedLane }
+    })
+  }, [])
+
+  const issueRows = useMemo(() => {
+    const excludedTypes = new Set(['artist on stage', 'artist off stage', 'showdown'])
+
+    const issueIncidents = (currentEventIncidents || []).filter(incident => {
+      const type = (incident.incident_type || '').toLowerCase()
+      return !excludedTypes.has(type)
     })
 
-    const issueIncidents = currentEventIncidents.filter(incident =>
-      incident.incident_type !== 'Artist On Stage' && 
-      incident.incident_type !== 'Artist Off Stage' &&
-      incident.incident_type !== 'Showdown'
-    )
+    const buckets: Record<'sitrep' | 'medical' | 'major', IncidentRecord[]> = {
+      sitrep: [],
+      medical: [],
+      major: []
+    }
 
-    return issueIncidents.map(incident => {
-      const startTime = incident.timestamp
-      const endTime = incident.resolved_at || incident.updated_at
-      const isComplete = !!endTime
-      
-      // Default to 1 hour if no end time
-      const effectiveEndTime = endTime || new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString()
-      
-      const color = issueTypeColors[incident.incident_type] || issueTypeColors.default
+    issueIncidents.forEach(incident => {
+      const type = (incident.incident_type || '').toLowerCase()
+      if (type.includes('sit') && type.includes('rep')) {
+        buckets.sitrep.push(incident)
+      } else if (type.includes('medical')) {
+        buckets.medical.push(incident)
+      } else {
+        buckets.major.push(incident)
+      }
+    })
+
+    const rows = [
+      { id: 'sitrep' as const, title: 'Sit Reps', incidents: buckets.sitrep },
+      { id: 'medical' as const, title: 'Medicals', incidents: buckets.medical },
+      { id: 'major' as const, title: 'Major Issues', incidents: buckets.major }
+    ]
+
+    return rows.map(row => {
+      const blocks = computeIssueBlocks(row.incidents)
+      const maxLane = blocks.reduce((max, issue) => Math.max(max, issue.lane), 0)
+      const rowHeight = Math.max(
+        DEFAULT_ROW_HEIGHT,
+        ISSUE_ROW_TOP_PADDING * 2 + (maxLane + 1) * ISSUE_BLOCK_HEIGHT + maxLane * ISSUE_LANE_SPACING
+      )
 
       return {
-        id: `issue-${incident.id}`,
-        incident,
-        startTime,
-        endTime: effectiveEndTime,
-        isComplete,
-        color
+        id: row.id,
+        title: row.title,
+        issues: blocks,
+        rowHeight
       }
-    }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-  }, [incidents, eventDetails])
+    })
+  }, [computeIssueBlocks, currentEventIncidents])
+
+  const allIssueBlocks = useMemo(
+    () => issueRows.flatMap(row => row.issues),
+    [issueRows]
+  )
 
   // Calculate timeline boundaries
   const timelineBoundaries = useMemo(() => {
-    const allTimestamps = [
-      ...artistPerformances.map(p => new Date(p.startTime).getTime()),
-      ...artistPerformances.filter(p => p.endTime).map(p => new Date(p.endTime!).getTime()),
-      ...issues.map(i => new Date(i.startTime).getTime()),
-      ...issues.map(i => new Date(i.endTime).getTime())
-    ]
+    const timestamps: number[] = []
 
-    if (allTimestamps.length === 0) return null
+    artistPerformances.forEach(performance => {
+      timestamps.push(new Date(performance.startTime).getTime())
+      if (performance.endTime) {
+        timestamps.push(new Date(performance.endTime).getTime())
+      }
+    })
 
-    const firstIncidentTime = Math.min(...allTimestamps)
-    const lastIncidentTime = Math.max(...allTimestamps)
-    
-    // Start = 1 hour before first incident
-    const startTime = new Date(firstIncidentTime - 60 * 60 * 1000)
-    
-    // End = 1 hour after last incident (not Showdown time)
-    const endTime = new Date(lastIncidentTime + 60 * 60 * 1000)
+    allIssueBlocks.forEach(issue => {
+      timestamps.push(new Date(issue.startTime).getTime())
+      timestamps.push(new Date(issue.endTime).getTime())
+    })
 
+    if (timestamps.length === 0) return null
+
+    const firstIncidentTime = Math.min(...timestamps)
+    const lastIncidentTime = Math.max(...timestamps)
+
+    const alignedStart = Math.floor(firstIncidentTime / QUARTER_HOUR_MS) * QUARTER_HOUR_MS
+    const startTime = new Date(alignedStart)
+    const endTime = new Date(lastIncidentTime + 30 * 60 * 1000)
+
+    if (endTime <= startTime) {
+      endTime.setTime(startTime.getTime() + 30 * 60 * 1000)
+    }
 
     return { startTime, endTime }
-  }, [artistPerformances, issues])
+  }, [artistPerformances, allIssueBlocks])
 
   if (!timelineBoundaries) {
     return (
@@ -359,6 +480,10 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
     const startPos = getPosition(startTimestamp)
     const endPos = getPosition(endTimestamp)
     return Math.max(0.5, endPos - startPos)
+  }
+
+  const formatDisplayTime = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   }
 
   const handleZoom = (level: ZoomLevel) => {
@@ -472,14 +597,26 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
                     opacity: 0.9,
                     zIndex: 20
                   }}
+                  role="button"
+                  tabIndex={0}
+                  title={`${performance.artistName} • ${formatDisplayTime(performance.startTime)}${performance.endTime ? ` – ${formatDisplayTime(performance.endTime)}` : ''}`}
+                  onClick={() => {
+                    if (onIncidentSelect) {
+                      onIncidentSelect(performance.onStageIncident)
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if ((event.key === 'Enter' || event.key === ' ' || event.key === 'Space') && onIncidentSelect) {
+                      event.preventDefault()
+                      onIncidentSelect(performance.onStageIncident)
+                    }
+                  }}
                 >
-                  {width > 8 && (
-                    <span className="truncate px-2 text-center">
-                      {performance.artistName}
-                      {performance.isMainAct && <span className="text-xs opacity-75 ml-1">(Main)</span>}
-                    </span>
-                  )}
-                  
+                  <span className={`truncate px-2 text-center font-semibold tracking-wide text-white ${width < 10 ? 'text-[11px]' : 'text-sm'} drop-shadow-sm`}>
+                    {performance.artistName}
+                    {performance.isMainAct && <span className="text-[10px] opacity-80 ml-1">(Main)</span>}
+                  </span>
+
                   {/* Tooltip */}
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700 pointer-events-none">
                     <div className="font-medium">{performance.artistName}</div>
@@ -505,62 +642,94 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
           </div>
         </div>
 
-        {/* Issues Row */}
-        <div className="h-20 border-b border-gray-100 flex items-center relative">
-          <div className="w-40 flex-shrink-0 px-4 text-sm font-medium text-gray-800">
-            Issues
-          </div>
-          <div className="flex-1 relative h-full">
-            {issues.map((issue, index) => {
-              const startPos = getPosition(issue.startTime)
-              const endPos = getPosition(issue.endTime)
-              const width = Math.max(2, endPos - startPos)
-              
-              // Stack issues vertically if they overlap
-              const topOffset = (index % 3) * 6 // Stack up to 3 issues vertically
-
-              return (
-                <div
-                  key={issue.id}
-                  className={`absolute rounded shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-xs font-medium overflow-hidden ${
-                    !issue.isComplete ? 'border-dashed border-2' : ''
-                  }`}
-                  style={{
-                    left: `${Math.max(0, Math.min(100 - width, startPos))}%`,
-                    width: `${width}%`,
-                    top: `${50 + topOffset - 12}%`, // Center with vertical offset
-                    height: '16px',
-                    backgroundColor: issue.color,
-                    opacity: issue.isComplete ? 0.9 : 0.6,
-                    zIndex: 15
-                  }}
-                >
-                  {width > 6 && (
-                    <span className="truncate px-1 text-center">
-                      {issue.incident.incident_type}
-                    </span>
-                  )}
-                  
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700 pointer-events-none">
-                    <div className="font-medium">Log #{issue.incident.log_number || issue.incident.id}</div>
-                    <div className="text-gray-300">{issue.incident.incident_type}</div>
-                    <div className="text-gray-300">
-                      {new Date(issue.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      {issue.isComplete && (
-                        <span> - {new Date(issue.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                      )}
-                    </div>
-                    <div className="max-w-xs truncate text-gray-400">{issue.incident.occurrence}</div>
-                    <div className="text-gray-400">
-                      Status: {issue.isComplete ? 'Resolved' : 'Open'}
-                    </div>
-                  </div>
+        {/* Issues Rows */}
+        {issueRows.map(row => (
+          <div
+            key={row.id}
+            className="border-b border-gray-100 flex items-stretch relative"
+            style={{ minHeight: row.rowHeight }}
+          >
+            <div className="w-40 flex-shrink-0 px-4 text-sm font-medium text-gray-800">
+              {row.title}
+            </div>
+            <div className="flex-1 relative h-full" style={{ minHeight: row.rowHeight }}>
+              {row.issues.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 italic">
+                  No {row.title.toLowerCase()} logged
                 </div>
-              )
-            })}
+              ) : (
+                row.issues.map(issue => {
+                  const startPos = getPosition(issue.startTime)
+                  const endPos = getPosition(issue.endTime)
+                  const width = Math.max(2, endPos - startPos)
+                  const laneTop = ISSUE_ROW_TOP_PADDING + issue.lane * (ISSUE_BLOCK_HEIGHT + ISSUE_LANE_SPACING)
+                  const opacity = issue.isEstimated ? 0.65 : 0.9
+                  const actualEndDisplay = issue.actualEndTime ? formatDisplayTime(issue.actualEndTime) : null
+
+                  return (
+                    <div
+                      key={issue.id}
+                      className={`absolute rounded shadow-sm cursor-pointer group flex items-center justify-center text-white text-xs font-medium overflow-hidden ${
+                        issue.isEstimated ? 'border-2 border-dotted border-white/80' : 'border border-white/80'
+                      }`}
+                      style={{
+                        left: `${Math.max(0, Math.min(100 - width, startPos))}%`,
+                        width: `${width}%`,
+                        top: `${laneTop}px`,
+                        height: `${ISSUE_BLOCK_HEIGHT}px`,
+                        backgroundColor: issue.color,
+                        opacity,
+                        zIndex: 15
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={`${issue.incident.incident_type} • ${formatDisplayTime(issue.startTime)} – ${formatDisplayTime(issue.endTime)}`}
+                      onClick={() => {
+                        if (onIncidentSelect) {
+                          onIncidentSelect(issue.incident)
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if ((event.key === 'Enter' || event.key === ' ' || event.key === 'Space') && onIncidentSelect) {
+                          event.preventDefault()
+                          onIncidentSelect(issue.incident)
+                        }
+                      }}
+                    >
+                      <span className={`truncate px-2 text-center font-semibold tracking-tight text-white ${width < 8 ? 'text-[10px]' : 'text-xs'} drop-shadow-sm`}>
+                        {issue.incident.incident_type}
+                      </span>
+
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700 pointer-events-none">
+                        <div className="font-medium">Log #{issue.incident.log_number || issue.incident.id}</div>
+                        <div className="text-gray-300">{issue.incident.incident_type}</div>
+                        <div className="text-gray-300">
+                          {new Date(issue.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          <span>
+                            {' '}– {new Date(issue.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {actualEndDisplay && (
+                          <div className="text-gray-400">
+                            Actual end: {actualEndDisplay}
+                          </div>
+                        )}
+                        <div className="max-w-xs truncate text-gray-400">{issue.incident.occurrence}</div>
+                        <div className="text-gray-400">
+                          Status: {issue.isComplete ? 'Resolved' : 'Open'}
+                        </div>
+                        {issue.isEstimated && (
+                          <div className="text-yellow-300 mt-1">1 hour display window for visibility</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   )
@@ -588,7 +757,11 @@ const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
       
       {/* Timeline Chart */}
       <div className="bg-white/95 dark:bg-[#182447]/80 border border-gray-200 dark:border-[#2d437a]/60 rounded-3xl shadow-xl p-4 md:p-6">
-        <TimelineChart incidents={timelineIncidents} currentEvent={currentEvent} />
+        <TimelineChart 
+          incidents={timelineIncidents} 
+          currentEvent={currentEvent} 
+          onIncidentSelect={onIncidentSelect}
+        />
       </div>
     </div>
   )
