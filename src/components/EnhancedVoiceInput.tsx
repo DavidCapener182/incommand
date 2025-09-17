@@ -44,6 +44,16 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
   const transcriptRef = useRef('');
   const voiceErrorRef = useRef<string | null>(null);
 
+  const handleTranscriptionComplete = useCallback(() => {
+    const cleanedTranscript = transcriptRef.current.trim();
+    if (cleanedTranscript) {
+      onTranscriptionComplete(cleanedTranscript);
+      transcriptRef.current = '';
+      setTranscript('');
+      setInterimTranscript('');
+    }
+  }, [onTranscriptionComplete]);
+
   useEffect(() => {
     transcriptRef.current = transcript;
   }, [transcript]);
@@ -176,16 +186,6 @@ export const EnhancedVoiceInput: React.FC<EnhancedVoiceInputProps> = ({
       }
     };
   }, [recognition]);
-
-  const handleTranscriptionComplete = useCallback(() => {
-    const cleanedTranscript = transcriptRef.current.trim();
-    if (cleanedTranscript) {
-      onTranscriptionComplete(cleanedTranscript);
-      transcriptRef.current = '';
-      setTranscript('');
-      setInterimTranscript('');
-    }
-  }, [onTranscriptionComplete]);
 
   const startVoiceRecognition = useCallback(async () => {
     if (!recognition) {
