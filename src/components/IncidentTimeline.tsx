@@ -85,19 +85,33 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
   const [eventDetails, setEventDetails] = useState<EventSchedule | null>(null)
 
   useEffect(() => {
-    if (!currentEvent?.id) return
+    console.log('🔍 useEffect triggered - currentEvent:', currentEvent)
+    if (!currentEvent?.id) {
+      console.log('❌ No currentEvent.id available')
+      return
+    }
     const fetchEventDetails = async () => {
       console.log('🔍 Fetching event details for event ID:', currentEvent.id)
-      const { data } = await supabase
-        .from('events')
-        .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
-        .eq('id', currentEvent.id)
-        .maybeSingle()
-      if (data) {
-        console.log('📅 Event details loaded:', data)
-        setEventDetails(data)
-      } else {
-        console.log('❌ No event details found for ID:', currentEvent.id)
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
+          .eq('id', currentEvent.id)
+          .maybeSingle()
+        
+        if (error) {
+          console.log('❌ Error fetching event details:', error)
+          return
+        }
+        
+        if (data) {
+          console.log('📅 Event details loaded:', data)
+          setEventDetails(data)
+        } else {
+          console.log('❌ No event details found for ID:', currentEvent.id)
+        }
+      } catch (err) {
+        console.log('❌ Exception fetching event details:', err)
       }
     }
     fetchEventDetails()
