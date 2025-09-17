@@ -1,9 +1,9 @@
 'use client'
-// Version: 3.0 - Professional Gantt Chart Timeline
+// Version: 4.0 - Interactive Gantt Timeline with Artist Performance & Issues Rows
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { FaRegClock } from 'react-icons/fa'
+import { FaRegClock, FaZoomIn, FaZoomOut, FaExpand } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 import { FilterState } from '../utils/incidentFilters'
 
@@ -21,22 +21,30 @@ type IncidentRecord = {
   updated_at?: string | null
 }
 
-type CombinedArtistIncident = {
+type ArtistPerformance = {
   id: string
   artistName: string
-  onStageTime: string
-  offStageTime?: string
+  startTime: string
+  endTime?: string
   onStageIncident: IncidentRecord
   offStageIncident?: IncidentRecord
-  isComplete: boolean
+  isMainAct: boolean
+  color: string
 }
 
-type TimelineDisplayItem = IncidentRecord | CombinedArtistIncident
+type IssueIncident = {
+  id: string
+  incident: IncidentRecord
+  startTime: string
+  endTime?: string
+  isComplete: boolean
+  color: string
+}
 
 type IncidentTimelineProps = {
-  incidents: IncidentRecord[]
+  incidents?: IncidentRecord[]
   displayedIncidents?: IncidentRecord[]
-  filters: FilterState
+  filters?: FilterState
   onFiltersChange?: (filters: FilterState) => void
   currentEvent?: any
   onIncidentSelect?: (incident: IncidentRecord) => void
@@ -52,75 +60,102 @@ type EventSchedule = {
   curfew_time?: string | null
 }
 
-const parseTimestamp = (timestamp: string | undefined | null): number | null => {
-  if (!timestamp) return null
-  const date = new Date(timestamp)
-  return isNaN(date.getTime()) ? null : date.getTime()
+type ZoomLevel = '15m' | '30m' | '1h' | 'full'
+
+const artistColors = [
+  '#E11D48', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', 
+  '#06B6D4', '#84CC16', '#F97316', '#D946EF', '#EF4444'
+]
+
+const issueTypeColors: Record<string, string> = {
+  'Medical': '#EF4444',      // Red
+  'Entry Breach': '#F97316', // Orange
+  'Accessibility': '#F59E0B', // Yellow
+  'Crowd': '#3B82F6',       // Blue
+  'Fight': '#EF4444',       // Red
+  'Welfare': '#10B981',     // Green
+  'Tech': '#6B7280',        // Grey
+  'Ejection': '#F59E0B',    // Yellow
+  'default': '#6B7280'      // Grey
 }
 
-const ProfessionalGanttChart = ({ incidents = [] }: { incidents: IncidentRecord[] }) => {
-  console.log('🎭 ProfessionalGanttChart rendering with incidents:', incidents.length);
+const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[], currentEvent?: any }) => {
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('full')
+  const [panOffset, setPanOffset] = useState(0)
+  const [eventDetails, setEventDetails] = useState<EventSchedule | null>(null)
+
+  useEffect(() => {
+    if (!currentEvent?.id) return
+    const fetchEventDetails = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
+        .eq('id', currentEvent.id)
+        .maybeSingle()
+      if (data) {
+        setEventDetails(data)
+      }
+    }
+    fetchEventDetails()
+  }, [currentEvent?.id])
 
   if (!incidents || incidents.length === 0) {
     return (
-      <div className="h-96 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-center">
-          <div className="text-gray-400 mb-2 text-4xl">📊</div>
-          <p className="text-sm text-gray-500">No incidents to display</p>
+          <div className="text-gray-500 mb-2">📊</div>
+          <p className="text-sm text-gray-600">No incidents to display</p>
         </div>
       </div>
-    );
+    )
   }
 
-  // Process incidents to create combined artist performances
-  const processedData = useMemo(() => {
-    const artistIncidents = incidents.filter(incident => 
+  console.log('🎭 TimelineChart rendering with incidents:', incidents.length)
+
+  // Parse artist performances
+  const artistPerformances = useMemo(() => {
+    const artistIncidents = incidents.filter(incident =>
       incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage'
-    );
-    
-    const otherIncidents = incidents.filter(incident => 
-      incident.incident_type !== 'Artist On Stage' && incident.incident_type !== 'Artist Off Stage'
-    );
-    
-    // Group artist incidents by artist name
-    const artistGroups = new Map<string, { onStage?: IncidentRecord, offStage?: IncidentRecord }>();
-    
+    )
+
+    const artistGroups = new Map<string, { onStage?: IncidentRecord, offStage?: IncidentRecord }>()
+
     artistIncidents.forEach(incident => {
-      let artistName = incident.occurrence?.trim() || '';
+      let artistName = incident.occurrence?.trim() || ''
       
-      if (incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage') {
-        if (artistName.toLowerCase().includes('on stage')) {
-          artistName = artistName.replace(/\s+on\s+stage.*$/i, '').trim();
-        } else if (artistName.toLowerCase().includes('off stage')) {
-          artistName = artistName.replace(/\s+off\s+stage.*$/i, '').trim();
-        }
-        artistName = artistName.replace(/,\s*.*$/, '').trim();
+      // Extract artist name from occurrence text
+      if (artistName.toLowerCase().includes('on stage')) {
+        artistName = artistName.replace(/\s+on\s+stage.*$/i, '').trim()
+      } else if (artistName.toLowerCase().includes('off stage')) {
+        artistName = artistName.replace(/\s+off\s+stage.*$/i, '').trim()
       }
-      
+      artistName = artistName.replace(/,\s*.*$/, '').trim()
+
       if (!artistGroups.has(artistName)) {
-        artistGroups.set(artistName, {});
+        artistGroups.set(artistName, {})
       }
-      
-      const group = artistGroups.get(artistName)!;
+
+      const group = artistGroups.get(artistName)!
       if (incident.incident_type === 'Artist On Stage') {
-        group.onStage = incident;
+        group.onStage = incident
       } else if (incident.incident_type === 'Artist Off Stage') {
-        group.offStage = incident;
+        group.offStage = incident
       }
-    });
-    
-    // For main act, use "Showdown" incident as the off-stage cue
-    const showdownIncidents = incidents.filter(incident => incident.incident_type === 'Showdown');
-    if (showdownIncidents.length > 0) {
+    })
+
+    // Handle main act with Showdown time
+    const showdownTime = eventDetails?.showdown_time
+    if (showdownTime) {
+      // Find the main act (last "Artist On Stage" before showdown)
       const mainActOnStage = artistIncidents
         .filter(incident => incident.incident_type === 'Artist On Stage')
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .pop();
-      
+        .pop()
+
       if (mainActOnStage) {
-        const mainActName = mainActOnStage.occurrence?.replace(/\s+on\s+stage.*$/i, '').trim() || 'Main Act';
-        const showdownTime = showdownIncidents[0].timestamp;
+        const mainActName = mainActOnStage.occurrence?.replace(/\s+on\s+stage.*$/i, '').trim() || 'Main Act'
         
+        // Create virtual off-stage incident for main act
         const virtualOffStage: IncidentRecord = {
           id: mainActOnStage.id + 10000,
           log_number: mainActOnStage.log_number,
@@ -133,176 +168,233 @@ const ProfessionalGanttChart = ({ incidents = [] }: { incidents: IncidentRecord[
           resolved_at: mainActOnStage.resolved_at,
           responded_at: mainActOnStage.responded_at,
           updated_at: mainActOnStage.updated_at
-        };
-        
-        if (!artistGroups.has(mainActName)) {
-          artistGroups.set(mainActName, {});
         }
-        const mainActGroup = artistGroups.get(mainActName)!;
-        mainActGroup.onStage = mainActOnStage;
-        mainActGroup.offStage = virtualOffStage;
-        
-        console.log(`🎭 Main act "${mainActName}" paired with Showdown at ${showdownTime}`);
+
+        if (!artistGroups.has(mainActName)) {
+          artistGroups.set(mainActName, {})
+        }
+        const mainActGroup = artistGroups.get(mainActName)!
+        mainActGroup.onStage = mainActOnStage
+        mainActGroup.offStage = virtualOffStage
+
+        console.log(`🎭 Main act "${mainActName}" paired with Showdown at ${showdownTime}`)
       }
     }
-    
-    // Create combined artist performance objects
-    const artistPerformances: CombinedArtistIncident[] = [];
-    
+
+    const performances: ArtistPerformance[] = []
+    let colorIndex = 0
+
     artistGroups.forEach((group, artistName) => {
       if (group.onStage) {
-        artistPerformances.push({
+        const isMainAct = !!group.offStage?.occurrence?.includes('Showdown')
+        performances.push({
           id: `artist-${group.onStage.id}`,
           artistName,
-          onStageTime: group.onStage.timestamp,
-          offStageTime: group.offStage?.timestamp,
+          startTime: group.onStage.timestamp,
+          endTime: group.offStage?.timestamp,
           onStageIncident: group.onStage,
           offStageIncident: group.offStage,
-          isComplete: !!group.offStage
-        });
+          isMainAct,
+          color: artistColors[colorIndex % artistColors.length]
+        })
+        colorIndex++
       }
-    });
-    
-    // Sort artist performances by on-stage time
-    artistPerformances.sort((a, b) => {
-      const aTime = new Date(a.onStageTime).getTime();
-      const bTime = new Date(b.onStageTime).getTime();
-      return aTime - bTime;
-    });
-    
-    console.log('🎭 Created artist performances:', artistPerformances.length);
-    
-    return {
-      artistPerformances,
-      otherIncidents: otherIncidents || []
-    };
-  }, [incidents]);
+    })
 
-  // Calculate time range
-  const timeRange = useMemo(() => {
-    const allTimestamps: number[] = [];
-    
-    processedData.artistPerformances.forEach(perf => {
-      allTimestamps.push(new Date(perf.onStageTime).getTime());
-      if (perf.offStageTime) {
-        allTimestamps.push(new Date(perf.offStageTime).getTime());
+    return performances.sort((a, b) => 
+      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    )
+  }, [incidents, eventDetails])
+
+  // Parse issues
+  const issues = useMemo(() => {
+    const issueIncidents = incidents.filter(incident =>
+      incident.incident_type !== 'Artist On Stage' && 
+      incident.incident_type !== 'Artist Off Stage' &&
+      incident.incident_type !== 'Showdown'
+    )
+
+    return issueIncidents.map(incident => {
+      const startTime = incident.timestamp
+      const endTime = incident.resolved_at || incident.updated_at
+      const isComplete = !!endTime
+      
+      // Default to 1 hour if no end time
+      const effectiveEndTime = endTime || new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString()
+      
+      const color = issueTypeColors[incident.incident_type] || issueTypeColors.default
+
+      return {
+        id: `issue-${incident.id}`,
+        incident,
+        startTime,
+        endTime: effectiveEndTime,
+        isComplete,
+        color
       }
-    });
-    
-    processedData.otherIncidents.forEach(incident => {
-      allTimestamps.push(new Date(incident.timestamp).getTime());
-    });
-    
-    if (allTimestamps.length === 0) return null;
-    
-    const minTime = Math.min(...allTimestamps);
-    const maxTime = Math.max(...allTimestamps);
-    
-    // Set event timeframe (14:00 to 00:00 next day)
-    const eventStart = new Date(minTime);
-    eventStart.setHours(14, 0, 0, 0);
-    
-    const eventEnd = new Date(minTime);
-    eventEnd.setDate(eventEnd.getDate() + (minTime >= eventStart.getTime() ? 1 : 0));
-    eventEnd.setHours(0, 0, 0, 0);
-    
-    const actualMinTime = Math.min(minTime, eventStart.getTime());
-    const actualMaxTime = Math.max(maxTime, eventEnd.getTime());
-    
-    return {
-      min: new Date(actualMinTime),
-      max: new Date(actualMaxTime),
-      range: actualMaxTime - actualMinTime
-    };
-  }, [processedData]);
+    }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+  }, [incidents])
 
-  if (!timeRange) {
+  // Calculate timeline boundaries
+  const timelineBoundaries = useMemo(() => {
+    const allTimestamps = [
+      ...artistPerformances.map(p => new Date(p.startTime).getTime()),
+      ...artistPerformances.filter(p => p.endTime).map(p => new Date(p.endTime!).getTime()),
+      ...issues.map(i => new Date(i.startTime).getTime()),
+      ...issues.map(i => new Date(i.endTime).getTime())
+    ]
+
+    if (allTimestamps.length === 0) return null
+
+    const firstIncidentTime = Math.min(...allTimestamps)
+    const lastIncidentTime = Math.max(...allTimestamps)
+    
+    // Start = 1 hour before first incident
+    const startTime = new Date(firstIncidentTime - 60 * 60 * 1000)
+    
+    // End = Showdown time or last incident + 1 hour
+    const endTime = eventDetails?.showdown_time ? 
+      new Date(eventDetails.showdown_time) : 
+      new Date(lastIncidentTime + 60 * 60 * 1000)
+
+    return { startTime, endTime }
+  }, [artistPerformances, issues, eventDetails])
+
+  if (!timelineBoundaries) {
     return (
-      <div className="h-96 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
         <div className="text-center">
-          <div className="text-gray-400 mb-2 text-4xl">⏰</div>
-          <p className="text-sm text-gray-500">No valid timestamps found</p>
+          <div className="text-gray-500 mb-2">📊</div>
+          <p className="text-sm text-gray-600">No timeline data available</p>
         </div>
       </div>
-    );
+    )
   }
+
+  const { startTime, endTime } = timelineBoundaries
+  const totalDuration = endTime.getTime() - startTime.getTime()
+
+  // Calculate visible time range based on zoom level
+  const getVisibleDuration = () => {
+    switch (zoomLevel) {
+      case '15m': return 15 * 60 * 1000
+      case '30m': return 30 * 60 * 1000
+      case '1h': return 60 * 60 * 1000
+      case 'full': return totalDuration
+      default: return totalDuration
+    }
+  }
+
+  const visibleDuration = getVisibleDuration()
+  const visibleStartTime = new Date(startTime.getTime() + panOffset)
+  const visibleEndTime = new Date(visibleStartTime.getTime() + visibleDuration)
 
   // Generate time markers
   const timeMarkers = useMemo(() => {
-    const markers = [];
-    const numMarkers = 12;
+    const markers = []
+    const numMarkers = zoomLevel === 'full' ? 12 : 8
+    const markerInterval = visibleDuration / numMarkers
+
     for (let i = 0; i <= numMarkers; i++) {
-      const time = new Date(timeRange.min.getTime() + (timeRange.range * i / numMarkers));
-      markers.push(time);
+      const time = new Date(visibleStartTime.getTime() + (markerInterval * i))
+      markers.push(time)
     }
-    return markers;
-  }, [timeRange]);
+    return markers
+  }, [visibleStartTime, visibleDuration, zoomLevel])
 
-  // Get position and width for timeline items
-  const getPositionAndWidth = (item: TimelineDisplayItem) => {
-    let startTime: number;
-    let endTime: number;
+  // Helper functions
+  const getPosition = (timestamp: string) => {
+    const time = new Date(timestamp).getTime()
+    const relativeTime = time - visibleStartTime.getTime()
+    return Math.max(0, Math.min(100, (relativeTime / visibleDuration) * 100))
+  }
 
-    if ('onStageTime' in item) {
-      startTime = new Date(item.onStageTime).getTime();
-      endTime = item.offStageTime ? new Date(item.offStageTime).getTime() : startTime + (30 * 60 * 1000);
-    } else {
-      startTime = new Date(item.timestamp).getTime();
-      endTime = startTime + (5 * 60 * 1000);
-    }
+  const getWidth = (startTimestamp: string, endTimestamp: string) => {
+    const startPos = getPosition(startTimestamp)
+    const endPos = getPosition(endTimestamp)
+    return Math.max(0.5, endPos - startPos)
+  }
 
-    const startPosition = ((startTime - timeRange.min.getTime()) / timeRange.range) * 100;
-    const endPosition = ((endTime - timeRange.min.getTime()) / timeRange.range) * 100;
-    const barWidth = Math.max(0.5, endPosition - startPosition);
+  const handleZoom = (level: ZoomLevel) => {
+    setZoomLevel(level)
+    setPanOffset(0) // Reset pan when zooming
+  }
 
-    return { startPosition, barWidth, startTime, endTime };
-  };
-
-  // Get unique incident types for rows
-  const incidentTypes = useMemo(() => {
-    const types = new Set<string>();
-    
-    if (processedData.artistPerformances.length > 0) {
-      types.add('Artist Performance');
-    }
-    
-    processedData.otherIncidents.forEach(incident => {
-      types.add(incident.incident_type);
-    });
-    
-    const sortedTypes = Array.from(types).sort();
-    if (types.has('Artist Performance')) {
-      sortedTypes.splice(sortedTypes.indexOf('Artist Performance'), 1);
-      sortedTypes.unshift('Artist Performance');
-    }
-    
-    return sortedTypes;
-  }, [processedData]);
-
-  const typeColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
-
-  const getTypeColor = (type: string) => {
-    if (type === 'Artist Performance') return '#E11D48';
-    const index = incidentTypes.indexOf(type);
-    return typeColors[index % typeColors.length];
-  };
+  const handlePan = (direction: 'left' | 'right') => {
+    const panAmount = visibleDuration * 0.2 // Pan 20% of visible duration
+    const newOffset = direction === 'left' 
+      ? Math.max(0, panOffset - panAmount)
+      : Math.min(totalDuration - visibleDuration, panOffset + panAmount)
+    setPanOffset(newOffset)
+  }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* Header */}
-      <div className="h-12 bg-gray-50 border-b border-gray-200 flex items-center px-4">
-        <div className="w-48 flex-shrink-0 text-sm font-medium text-gray-700">
-          Incident Type
+    <div className="h-[600px] bg-white rounded-lg border overflow-hidden font-sans">
+      {/* Timeline Controls */}
+      <div className="h-12 bg-gray-50 border-b flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Timeline View</span>
         </div>
-        <div className="flex-1 relative">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleZoom('15m')}
+              className={`px-2 py-1 text-xs rounded ${zoomLevel === '15m' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              15m
+            </button>
+            <button
+              onClick={() => handleZoom('30m')}
+              className={`px-2 py-1 text-xs rounded ${zoomLevel === '30m' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              30m
+            </button>
+            <button
+              onClick={() => handleZoom('1h')}
+              className={`px-2 py-1 text-xs rounded ${zoomLevel === '1h' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              1h
+            </button>
+            <button
+              onClick={() => handleZoom('full')}
+              className={`px-2 py-1 text-xs rounded ${zoomLevel === 'full' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              Full
+            </button>
+          </div>
+          <div className="flex items-center gap-1 ml-4">
+            <button
+              onClick={() => handlePan('left')}
+              className="p-1 text-gray-600 hover:text-gray-800"
+              disabled={panOffset <= 0}
+            >
+              <FaZoomOut />
+            </button>
+            <button
+              onClick={() => handlePan('right')}
+              className="p-1 text-gray-600 hover:text-gray-800"
+              disabled={panOffset >= totalDuration - visibleDuration}
+            >
+              <FaZoomIn />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline Header with Time Markers */}
+      <div className="h-12 bg-gray-50 border-b flex items-center relative">
+        <div className="w-40 flex-shrink-0 px-4 text-xs font-semibold text-gray-700">
+          Timeline
+        </div>
+        <div className="flex-1 relative h-full">
           {timeMarkers.map((time, index) => (
             <div
               key={index}
-              className="absolute top-0 h-full flex flex-col justify-center"
-              style={{ left: `${(index / 12) * 100}%` }}
+              className="absolute top-0 h-full flex flex-col justify-center items-start"
+              style={{ left: `${(index / (timeMarkers.length - 1)) * 100}%` }}
             >
-              <div className="w-px h-4 bg-gray-300"></div>
-              <div className="text-xs text-gray-500 mt-1 transform -translate-x-1/2 whitespace-nowrap">
+              <div className="w-px h-full bg-gray-200 absolute left-0"></div>
+              <div className="text-xs text-gray-500 mt-1 -translate-x-1/2 whitespace-nowrap px-1">
                 {time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
@@ -311,76 +403,117 @@ const ProfessionalGanttChart = ({ incidents = [] }: { incidents: IncidentRecord[
       </div>
 
       {/* Timeline Rows */}
-      <div className="max-h-96 overflow-y-auto">
-        {incidentTypes.map((type, typeIndex) => {
-          const itemsInRow = type === 'Artist Performance' 
-            ? processedData.artistPerformances
-            : processedData.otherIncidents.filter(incident => incident.incident_type === type);
+      <div className="overflow-y-auto" style={{ height: 'calc(100% - 6rem)' }}>
+        {/* Artist Performance Row */}
+        <div className="h-20 border-b border-gray-100 flex items-center relative">
+          <div className="w-40 flex-shrink-0 px-4 text-sm font-medium text-gray-800">
+            Artist Performance
+          </div>
+          <div className="flex-1 relative h-full">
+            {artistPerformances.map((performance) => {
+              const startPos = getPosition(performance.startTime)
+              const endPos = performance.endTime ? getPosition(performance.endTime) : startPos + 5
+              const width = Math.max(2, endPos - startPos)
 
-          return (
-            <div key={type} className="h-16 border-b border-gray-100 flex items-center relative hover:bg-gray-50">
-              {/* Row Label */}
-              <div className="w-48 flex-shrink-0 px-4 text-sm font-medium text-gray-700 truncate">
-                {type}
-              </div>
-
-              {/* Timeline Bar Area */}
-              <div className="flex-1 relative h-full">
-                {itemsInRow.map((item, itemIndex) => {
-                  const { startPosition, barWidth, startTime, endTime } = getPositionAndWidth(item);
-                  const color = getTypeColor(type);
-                  const duration = endTime - startTime;
-
-                  const incidentForTooltip = 'onStageTime' in item ? item.onStageIncident : item;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="absolute top-1/2 transform -translate-y-1/2 h-6 rounded shadow-sm border border-white cursor-pointer group"
-                      style={{
-                        left: `${Math.max(0, Math.min(99.5 - barWidth, startPosition))}%`,
-                        width: `${barWidth}%`,
-                        backgroundColor: color,
-                        opacity: 0.9
-                      }}
-                    >
-                      {/* Start marker */}
-                      <div className="w-1.5 h-1.5 bg-white rounded-full absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1/2 shadow-sm border border-gray-300"></div>
-                      
-                      {/* End marker */}
-                      {duration > 0 && (
-                        <div className="w-1.5 h-1.5 bg-white rounded-full absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 shadow-sm border border-gray-300"></div>
+              return (
+                <div
+                  key={performance.id}
+                  className="absolute top-1/2 transform -translate-y-1/2 h-12 rounded-md shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-sm font-medium overflow-hidden"
+                  style={{
+                    left: `${Math.max(0, Math.min(100 - width, startPos))}%`,
+                    width: `${width}%`,
+                    backgroundColor: performance.color,
+                    opacity: 0.9,
+                    zIndex: 20
+                  }}
+                >
+                  {width > 8 && (
+                    <span className="truncate px-2 text-center">
+                      {performance.artistName}
+                      {performance.isMainAct && <span className="text-xs opacity-75 ml-1">(Main)</span>}
+                    </span>
+                  )}
+                  
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700 pointer-events-none">
+                    <div className="font-medium">{performance.artistName}</div>
+                    <div className="text-gray-300">
+                      {new Date(performance.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      {performance.endTime && (
+                        <span> - {new Date(performance.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                       )}
-
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
-                        <div className="font-medium">
-                          {'onStageTime' in item ? `Artist: ${item.artistName}` : `Log #${incidentForTooltip.log_number}`}
-                        </div>
-                        <div className="text-gray-300">
-                          {new Date(startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                          {duration > 0 && (
-                            <span> - {new Date(endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                          )}
-                        </div>
-                        <div className="max-w-xs truncate">{incidentForTooltip.occurrence}</div>
-                        {duration > 0 && (
-                          <div className="text-gray-400">
-                            Duration: {Math.round(duration / (60 * 1000))} minutes
-                          </div>
-                        )}
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+                    <div className="text-gray-400">
+                      Duration: {performance.endTime ? 
+                        Math.round((new Date(performance.endTime).getTime() - new Date(performance.startTime).getTime()) / (60 * 1000)) : 
+                        'Ongoing'
+                      } minutes
+                    </div>
+                    {performance.isMainAct && (
+                      <div className="text-yellow-400 text-xs">Main Act (ends at Showdown)</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Issues Row */}
+        <div className="h-20 border-b border-gray-100 flex items-center relative">
+          <div className="w-40 flex-shrink-0 px-4 text-sm font-medium text-gray-800">
+            Issues
+          </div>
+          <div className="flex-1 relative h-full">
+            {issues.map((issue) => {
+              const startPos = getPosition(issue.startTime)
+              const endPos = getPosition(issue.endTime)
+              const width = Math.max(1, endPos - startPos)
+
+              return (
+                <div
+                  key={issue.id}
+                  className={`absolute top-1/2 transform -translate-y-1/2 h-8 rounded shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-xs font-medium overflow-hidden ${
+                    !issue.isComplete ? 'border-dashed border-2' : ''
+                  }`}
+                  style={{
+                    left: `${Math.max(0, Math.min(100 - width, startPos))}%`,
+                    width: `${width}%`,
+                    backgroundColor: issue.color,
+                    opacity: issue.isComplete ? 0.9 : 0.6,
+                    zIndex: 15
+                  }}
+                >
+                  {width > 4 && (
+                    <span className="truncate px-1 text-center">
+                      {issue.incident.incident_type}
+                    </span>
+                  )}
+                  
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700 pointer-events-none">
+                    <div className="font-medium">Log #{issue.incident.log_number || issue.incident.id}</div>
+                    <div className="text-gray-300">{issue.incident.incident_type}</div>
+                    <div className="text-gray-300">
+                      {new Date(issue.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      {issue.isComplete && (
+                        <span> - {new Date(issue.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                      )}
+                    </div>
+                    <div className="max-w-xs truncate text-gray-400">{issue.incident.occurrence}</div>
+                    <div className="text-gray-400">
+                      Status: {issue.isComplete ? 'Resolved' : 'Open'}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const IncidentTimeline: React.FC<IncidentTimelineProps> = ({ 
   incidents = [], 
@@ -390,57 +523,25 @@ const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   currentEvent, 
   onIncidentSelect 
 }) => {
-  console.log('🚀 IncidentTimeline component loaded - Version 3.0');
+  console.log('🚀 IncidentTimeline component loaded - Version 4.0')
   
-  const [eventDetails, setEventDetails] = useState<EventSchedule | null>(null);
-
-  useEffect(() => {
-    if (!currentEvent?.id) return;
-    
-    const fetchEventDetails = async () => {
-      try {
-        const { data } = await supabase
-          .from('events')
-          .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
-          .eq('id', currentEvent.id)
-          .maybeSingle();
-          
-        if (data) {
-          setEventDetails({
-            event_date: data.event_date,
-            doors_open_time: data.doors_open_time,
-            main_act_start_time: data.main_act_start_time,
-            support_act_times: data.support_act_times,
-            showdown_time: data.showdown_time,
-            event_end_time: data.event_end_time,
-            curfew_time: data.curfew_time
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching event details:', error);
-      }
-    };
-    
-    fetchEventDetails();
-  }, [currentEvent?.id]);
-
   // Use displayedIncidents if available, otherwise use incidents
-  const timelineIncidents = displayedIncidents && displayedIncidents.length > 0 ? displayedIncidents : incidents;
+  const timelineIncidents = displayedIncidents && displayedIncidents.length > 0 ? displayedIncidents : incidents
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 bg-white/90 dark:bg-[#203a79]/70 border border-gray-200 dark:border-[#2d437a]/50 rounded-xl px-4 py-3 shadow-sm">
         <FaRegClock className="text-blue-500" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Incident Timeline</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Interactive Timeline</span>
       </div>
       
-      {/* Gantt Chart */}
+      {/* Timeline Chart */}
       <div className="bg-white/95 dark:bg-[#182447]/80 border border-gray-200 dark:border-[#2d437a]/60 rounded-3xl shadow-xl p-4 md:p-6">
-        <ProfessionalGanttChart incidents={timelineIncidents} />
+        <TimelineChart incidents={timelineIncidents} currentEvent={currentEvent} />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default IncidentTimeline;
+export default IncidentTimeline
