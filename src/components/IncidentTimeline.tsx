@@ -87,13 +87,17 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
   useEffect(() => {
     if (!currentEvent?.id) return
     const fetchEventDetails = async () => {
+      console.log('🔍 Fetching event details for event ID:', currentEvent.id)
       const { data } = await supabase
         .from('events')
         .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
         .eq('id', currentEvent.id)
         .maybeSingle()
       if (data) {
+        console.log('📅 Event details loaded:', data)
         setEventDetails(data)
+      } else {
+        console.log('❌ No event details found for ID:', currentEvent.id)
       }
     }
     fetchEventDetails()
@@ -120,9 +124,12 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
       if (eventDetails?.event_date) {
         const incidentDate = new Date(incident.timestamp).toDateString()
         const eventDate = new Date(eventDetails.event_date).toDateString()
-        return incidentDate === eventDate
+        const matches = incidentDate === eventDate
+        console.log(`📅 Incident ${incident.id}: ${incidentDate} vs Event: ${eventDate} = ${matches}`)
+        return matches
       }
       // If no event details, include all incidents (fallback)
+      console.log('⚠️ No event details available, including all incidents')
       return true
     })
 
@@ -234,8 +241,11 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
       if (eventDetails?.event_date) {
         const incidentDate = new Date(incident.timestamp).toDateString()
         const eventDate = new Date(eventDetails.event_date).toDateString()
-        return incidentDate === eventDate
+        const matches = incidentDate === eventDate
+        console.log(`📅 Issue ${incident.id}: ${incidentDate} vs Event: ${eventDate} = ${matches}`)
+        return matches
       }
+      console.log('⚠️ No event details available for issues, including all incidents')
       return true
     })
 
