@@ -114,15 +114,27 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
 
   // Parse artist performances
   const artistPerformances = useMemo(() => {
-    console.log('🎭 Processing incidents:', incidents.length)
-    console.log('  Raw incidents:', incidents.map(i => ({ 
+    // Filter incidents to only include those from the current event
+    const currentEventIncidents = incidents.filter(incident => {
+      // If we have event details, filter by event date
+      if (eventDetails?.event_date) {
+        const incidentDate = new Date(incident.timestamp).toDateString()
+        const eventDate = new Date(eventDetails.event_date).toDateString()
+        return incidentDate === eventDate
+      }
+      // If no event details, include all incidents (fallback)
+      return true
+    })
+
+    console.log('🎭 Processing incidents:', incidents.length, '→ filtered to:', currentEventIncidents.length)
+    console.log('  Raw incidents:', currentEventIncidents.map(i => ({ 
       id: i.id, 
       type: i.incident_type, 
       timestamp: i.timestamp,
       occurrence: i.occurrence 
     })))
 
-    const artistIncidents = incidents.filter(incident =>
+    const artistIncidents = currentEventIncidents.filter(incident =>
       incident.incident_type === 'Artist On Stage' || incident.incident_type === 'Artist Off Stage'
     )
 
@@ -217,7 +229,17 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
 
   // Parse issues
   const issues = useMemo(() => {
-    const issueIncidents = incidents.filter(incident =>
+    // Use the same filtered incidents as artist performances
+    const currentEventIncidents = incidents.filter(incident => {
+      if (eventDetails?.event_date) {
+        const incidentDate = new Date(incident.timestamp).toDateString()
+        const eventDate = new Date(eventDetails.event_date).toDateString()
+        return incidentDate === eventDate
+      }
+      return true
+    })
+
+    const issueIncidents = currentEventIncidents.filter(incident =>
       incident.incident_type !== 'Artist On Stage' && 
       incident.incident_type !== 'Artist Off Stage' &&
       incident.incident_type !== 'Showdown'
@@ -242,7 +264,7 @@ const TimelineChart = ({ incidents, currentEvent }: { incidents: IncidentRecord[
         color
       }
     }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-  }, [incidents])
+  }, [incidents, eventDetails])
 
   // Calculate timeline boundaries
   const timelineBoundaries = useMemo(() => {
