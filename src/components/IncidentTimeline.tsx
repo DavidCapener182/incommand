@@ -142,17 +142,6 @@ const TimelineChart = ({
     fetchEventDetails()
   }, [currentEvent])
 
-  if (!incidents || incidents.length === 0) {
-    return (
-      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-        <div className="text-center">
-          <div className="text-gray-500 mb-2">📊</div>
-          <p className="text-sm text-gray-600">No incidents to display</p>
-        </div>
-      </div>
-    )
-  }
-
   const currentEventIncidents = useMemo(() => {
     if (!incidents || incidents.length === 0) return []
 
@@ -426,6 +415,18 @@ const TimelineChart = ({
 
     return { startTime, endTime }
   }, [artistPerformances, allIssueBlocks])
+
+  // Early return checks after all hooks
+  if (!incidents || incidents.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-center">
+          <div className="text-gray-500 mb-2">📊</div>
+          <p className="text-sm text-gray-600">No incidents to display</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!timelineBoundaries) {
     return (
