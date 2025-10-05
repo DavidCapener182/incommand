@@ -86,7 +86,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
       if (typeof window === 'undefined') return;
       const footers = document.getElementsByTagName('footer');
       const footerEl = footers && footers.length > 0 ? footers[0] as HTMLElement : null;
-      const h = footerEl ? footerEl.offsetHeight : 44;
+      const h = footerEl ? footerEl.offsetHeight + 8 : 52; // Add 8px padding above footer
       setBottomOffset(h);
     };
     measure();
@@ -107,7 +107,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
       <motion.nav 
         role="navigation" 
         aria-label="Primary" 
-        className="fixed inset-x-0 z-40 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
+        className="fixed inset-x-0 z-50 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
         style={{ bottom: bottomOffset, backdropFilter: 'blur(8px)' }}
         initial={{ y: 100 }}
         animate={{ y: isVisible ? 0 : 100 }}

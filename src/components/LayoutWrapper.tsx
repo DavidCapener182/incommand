@@ -77,7 +77,7 @@ function CompanyFooter() {
   if (!showFooter) return null;
 
   return (
-    <footer className="fixed bottom-0 left-0 w-full z-40 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
+    <footer className="fixed bottom-0 left-0 w-full z-30 px-4 py-2 flex justify-between items-center text-xs text-white dark:text-gray-100"
       style={{
         background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
         boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
