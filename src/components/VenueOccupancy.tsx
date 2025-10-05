@@ -90,7 +90,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .from('events')
           .select('expected_attendance')
           .eq('id', currentEventId)
-          .single()
+          .maybeSingle()
 
         if (eventError) throw eventError
         
@@ -107,9 +107,9 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .eq('event_id', currentEventId)
           .order('timestamp', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
 
-        if (attendanceError && attendanceError.code !== 'PGRST116') {
+        if (attendanceError) {
           throw attendanceError
         }
 
@@ -206,7 +206,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .eq('event_id', currentEventId)
           .order('timestamp', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (!error && attendanceData) {
           setCurrentCount(prev => {

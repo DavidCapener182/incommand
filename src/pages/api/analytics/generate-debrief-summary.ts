@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: callsigns, error: callsignsError } = await supabase
       .from('callsign_assignments')
-      .select('assigned_name, callsign_role_id, callsign_roles(callsign, position)')
+      .select('assigned_name, callsign_role_id, callsign_positions(callsign, position)')
       .eq('event_id', eventId);
 
     if (incidentsError || attendanceError || callsignsError) {

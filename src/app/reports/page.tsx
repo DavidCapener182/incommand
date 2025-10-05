@@ -109,7 +109,7 @@ export default function ReportsPage() {
     if (!event) return;
     const fetchAssignments = async () => {
       const { data: roles } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, short_code, callsign')
         .eq('event_id', event.id);
       const { data: assignments } = await supabase

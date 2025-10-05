@@ -532,7 +532,7 @@ export default function StaffCommandCentre() {
       setSaveStatus("Loading saved callsigns...");
       // Load roles
       const { data: roles, error: rolesError } = await supabase
-        .from("callsign_roles")
+        .from("callsign_positions")
         .select("id, area, short_code, callsign, position")
         .eq("event_id", eventId);
       // Load assignments
@@ -777,7 +777,7 @@ export default function StaffCommandCentre() {
     try {
       // Clear existing roles and assignments for this event
       await supabase.from("callsign_assignments").delete().eq("event_id", eventId);
-      await supabase.from("callsign_roles").delete().eq("event_id", eventId);
+      await supabase.from("callsign_positions").delete().eq("event_id", eventId);
 
       // Insert new roles
       const rolesToInsert = groups.flatMap(g => g.positions.map(p => ({
@@ -789,7 +789,7 @@ export default function StaffCommandCentre() {
         position: p.position,
       })));
 
-      const { error: rolesError } = await supabase.from("callsign_roles").insert(rolesToInsert);
+        const { error: rolesError } = await supabase.from("callsign_positions").insert(rolesToInsert);
       if (rolesError) throw rolesError;
 
       // Insert assignments

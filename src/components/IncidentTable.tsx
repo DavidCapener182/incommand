@@ -385,7 +385,7 @@ export default function IncidentTable({
     const fetchAssignments = async () => {
       // Get all roles
       const { data: roles } = await supabase
-        .from('callsign_roles')
+        .from('callsign_positions')
         .select('id, short_code, callsign')
         .eq('event_id', currentEventId);
       // Get all assignments

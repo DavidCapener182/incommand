@@ -454,7 +454,6 @@ export default function What3WordsSearchCard({
   }, [showSearch, venueAddress]);
 
   // Logo size classes based on largeLogo prop
-  const logoSizeClass = largeLogo ? 'h-24 w-auto' : 'h-20 w-auto';
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-2">
@@ -468,7 +467,7 @@ export default function What3WordsSearchCard({
           alt="What3Words"
           width={largeLogo ? 192 : 160}
           height={largeLogo ? 96 : 80}
-          className={`${logoSizeClass} object-contain`}
+          className="object-contain"
           priority
         />
       </div>

@@ -161,7 +161,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
       {/* Brand bar remains */}
       <div className="px-4 pt-4 pb-3 bg-[#2A3990] text-white border-b border-white/20">
         <div className="flex items-center justify-between">
-          <Image src="/inCommand.png" alt="inCommand Logo" width={120} height={48} className="h-12 w-auto" priority />
+          <Image src="/inCommand.png" alt="inCommand Logo" width={120} height={48} className="object-contain" priority />
           <button
             type="button"
             onClick={onClose}

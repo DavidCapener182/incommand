@@ -243,11 +243,13 @@ export default function AnalyticsPage() {
           .limit(1);
         
         // Get current event - try without company_id filter first
+        let eventError: any = null;
         let { data: event, error } = await supabase
           .from('events')
           .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
           .eq('is_current', true)
-          .single();
+          .maybeSingle();
+        eventError = error;
         
         // If that fails, try to get any event
         if (error || !event) {
@@ -255,16 +257,19 @@ export default function AnalyticsPage() {
             .from('events')
             .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
             .limit(1)
-            .single();
+            .maybeSingle();
           
           if (anyEvent) {
             event = anyEvent;
             error = null;
+            eventError = null;
+          } else if (anyEventError) {
+            eventError = anyEventError;
           }
         }
 
-        if (error || !event) {
-          console.error('No current event found:', error);
+        if (eventError || !event) {
+          console.error('No current event found:', eventError);
           
           // Let's check if there are any events at all in the database
           const { data: allEvents, error: allEventsError } = await supabase
@@ -302,7 +307,7 @@ export default function AnalyticsPage() {
         .eq('is_current', false)
         .order('event_date', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (previousEvent) {
         // Fetch previous event's incidents

@@ -752,7 +752,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       if (userError) throw userError;
       const validUserIds = new Set((validUsers || []).map(u => u.id));
 
-      // 1. Upsert all positions (callsign_roles)
+      // 1. Upsert all positions (callsign_positions)
       const roles = categories.flatMap(category =>
         category.positions.map(pos => {
           const key = `${category.name}|${pos.short || pos.callsign}`;

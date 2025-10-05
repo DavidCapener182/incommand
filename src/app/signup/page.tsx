@@ -67,7 +67,7 @@ export default function SignUpPage() {
           alt="inCommand Logo"
           width={180}
           height={180}
-          className="mx-auto mb-6 md:mb-8 drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] h-32 w-auto object-contain"
+          className="mx-auto mb-6 md:mb-8 drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain"
         />
         <div className="text-base text-blue-100 font-medium mb-8 text-center max-w-xl mx-auto">
           Modern incident tracking and event command for every scale of operation.

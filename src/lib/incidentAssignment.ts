@@ -303,29 +303,34 @@ export async function getAvailableStaff(
       }
     }
 
-    // Optimized query using database joins instead of multiple sequential queries
-    const { data: staffData, error: staffError } = await supabase
+    // Fetch event company to scope staff selection without relying on complex joins
+    const { data: eventData, error: eventError } = await supabase
+      .from('events')
+      .select('company_id')
+      .eq('id', eventId)
+      .maybeSingle();
+
+    if (eventError) {
+      throw logAssignmentError(
+        AssignmentErrorType.DATABASE_CONNECTION,
+        'Failed to resolve event company context',
+        { eventId, errorCode: eventError.code },
+        eventError
+      );
+    }
+
+    // Fetch available staff scoped by company (when available)
+    let staffQuery = supabase
       .from('staff')
-      .select(`
-        id,
-        full_name,
-        skill_tags,
-        availability_status,
-        max_assignments,
-        company_id,
-        incident_logs!inner(
-          assigned_staff_ids,
-          is_closed
-        ),
-        callsign_assignments!inner(
-          current_location
-        )
-      `)
+      .select('id, full_name, skill_tags, availability_status, max_assignments, company_id, active')
       .eq('availability_status', 'available')
-      .eq('active', true)
-      .eq('incident_logs.event_id', eventId)
-      .eq('incident_logs.is_closed', false)
-      .eq('callsign_assignments.event_id', eventId);
+      .eq('active', true);
+
+    if (eventData?.company_id) {
+      staffQuery = staffQuery.eq('company_id', eventData.company_id);
+    }
+
+    const { data: staffData, error: staffError } = await staffQuery;
 
     if (staffError) {
       if (staffError.code === 'PGRST301') {
@@ -361,9 +366,37 @@ export async function getAvailableStaff(
       return [];
     }
 
-    // Process joined data efficiently
+    // Fetch open incidents for assignment counts
+    const { data: openIncidents, error: incidentsError } = await supabase
+      .from('incident_logs')
+      .select('assigned_staff_ids')
+      .eq('event_id', eventId)
+      .eq('is_closed', false);
+
+    if (incidentsError) {
+      throw logAssignmentError(
+        AssignmentErrorType.DATABASE_CONNECTION,
+        'Failed to fetch incident assignment data',
+        { eventId, errorCode: incidentsError.code },
+        incidentsError
+      );
+    }
+
+    const assignmentCounts = new Map<string, number>();
+    openIncidents?.forEach(incident => {
+      if (Array.isArray(incident.assigned_staff_ids)) {
+        incident.assigned_staff_ids.forEach((id: string) => {
+          assignmentCounts.set(id, (assignmentCounts.get(id) || 0) + 1);
+        });
+      }
+    });
+
+    // Note: Location data is not available in callsign_assignments table
+    // This functionality would need to be implemented separately if location tracking is required
+    const locationByStaffId = new Map<string, { latitude: number; longitude: number }>();
+
+    // Process data into StaffMember structures
     const result = staffData?.map(staff => {
-      // Validate staff data
       if (!staff.id || !staff.full_name) {
         logAssignmentError(
           AssignmentErrorType.INVALID_DATA,
@@ -373,28 +406,19 @@ export async function getAvailableStaff(
         return null;
       }
 
-      // Count active assignments from joined data
-      const activeAssignments = staff.incident_logs?.reduce((count, incident) => {
-        if (incident.assigned_staff_ids && Array.isArray(incident.assigned_staff_ids)) {
-          return count + incident.assigned_staff_ids.filter((id: string) => id === staff.id).length;
-        }
-        return count;
-      }, 0) || 0;
-
-      // Get location from joined data
-      const currentLocation = staff.callsign_assignments?.[0]?.current_location;
+      const activeAssignments = assignmentCounts.get(staff.id) || 0;
+      const currentLocation = locationByStaffId.get(staff.id);
 
       return {
-        ...staff,
-        active_assignments: activeAssignments,
-        current_location: currentLocation && 
-          typeof currentLocation.latitude === 'number' && 
-          typeof currentLocation.longitude === 'number' 
-          ? currentLocation 
-          : undefined,
+        id: staff.id,
+        full_name: staff.full_name,
         skill_tags: Array.isArray(staff.skill_tags) ? staff.skill_tags : [],
-        max_assignments: staff.max_assignments || 3
-      };
+        availability_status: staff.availability_status,
+        active_assignments: activeAssignments,
+        current_location: currentLocation,
+        max_assignments: staff.max_assignments || 3,
+        company_id: staff.company_id
+      } as StaffMember;
     }).filter(Boolean) as StaffMember[];
 
     // Update cache with error handling

@@ -505,7 +505,7 @@ export async function getSyncStatus(userId: string): Promise<SyncStatus> {
       .eq('table_name', 'user_preferences')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
     
     // Check for pending syncs
     const isSyncing = pendingSyncs.has(`sync_${userId}`)

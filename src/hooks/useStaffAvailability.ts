@@ -685,7 +685,7 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
         )
         .subscribe(),
 
-      // Location changes
+      // Callsign assignment changes (location tracking not available in current schema)
       supabase
         .channel('staff_availability_callsigns')
         .on(
@@ -694,7 +694,7 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
             event: 'UPDATE',
             schema: 'public',
             table: 'callsign_assignments',
-            filter: `event_id=eq.${eventId} AND current_location IS NOT NULL`
+            filter: `event_id=eq.${eventId}`
           },
           throttledUpdate
         )

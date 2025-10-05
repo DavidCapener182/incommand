@@ -1063,7 +1063,7 @@ export default function Dashboard() {
           alt="inCommand Logo"
           width={256}
           height={128}
-          className="h-32 w-auto mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
+          className="mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
           priority
         />
         {/* Create + Event type on same line under logo */}

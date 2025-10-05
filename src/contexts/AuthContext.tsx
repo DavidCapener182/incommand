@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .rpc('get_user_preferences', { user_uuid: userId })
-        .single()
+        .maybeSingle()
 
       if (error) {
         logger.error('Failed to load user preferences', error, { component: 'AuthContext', action: 'loadUserPreferences', userId });
