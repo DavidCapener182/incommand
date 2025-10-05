@@ -11,6 +11,7 @@ interface Props {
 }
 
 export default function VenueOccupancy({ currentEventId }: Props) {
+  console.log('🚀 VenueOccupancy component rendered with currentEventId:', currentEventId)
   const [currentCount, setCurrentCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [expectedAttendance, setExpectedAttendance] = useState<number>(0)
