@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import PriorityBadge from './PriorityBadge'
+import {
+  getIncidentTypeStyle,
+  getPriorityBorderClass,
+  normalizePriority,
+  type Priority,
+} from '../utils/incidentStyles'
+import { getIncidentTypeIcon } from '../utils/incidentIcons'
 
 interface LiveIncidentStatusProps {
   eventId: string;
@@ -265,23 +273,6 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     };
   }, [eventId, isConnected, isReconnecting, setupSubscription]);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'text-red-600 bg-red-100 border-red-300';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-100 border-yellow-300';
-      case 'low':
-        return 'text-green-600 bg-green-100 border-green-300';
-      default:
-        return 'text-gray-600 bg-gray-100 border-gray-300';
-    }
-  };
-
-  const getPriorityAnimation = (priority: string) => {
-    return priority?.toLowerCase() === 'high' ? 'pulse-priority-high' : '';
-  };
-
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -296,6 +287,16 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('Current incident data:', currentIncident);
     }
   }, [currentIncident]);
+
+  const isIncidentHighlighted = (incident: Incident | null) => {
+    if (!incident) return false
+    const status = String(incident.status ?? '').toLowerCase()
+    const normalizedPriority = normalizePriority(incident.priority as Priority)
+    const isHighPriority = normalizedPriority === 'high' || normalizedPriority === 'urgent'
+    const isOpenStatus = !incident.is_closed && (status === 'open' || status === 'logged' || status === '')
+
+    return isHighPriority && isOpenStatus
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
@@ -324,30 +325,44 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       )}
 
       {currentIncident ? (
-        <div className="space-y-4">
+        <div
+          className={`space-y-4 rounded-xl border p-4 transition-shadow ${
+            getPriorityBorderClass(currentIncident.priority as Priority)
+          } ${
+            isIncidentHighlighted(currentIncident)
+              ? 'ring-2 ring-red-400 border-red-300 animate-pulse-border motion-reduce:animate-none shadow-md shadow-red-300/40'
+              : 'border-gray-200'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(
-                currentIncident.priority || 'unknown')} ${getPriorityAnimation(currentIncident.priority || 'unknown')}`}>
-                {currentIncident.priority || 'Unknown'} Priority
-              </div>
+              <PriorityBadge priority={currentIncident.priority} />
               <span className="text-sm text-gray-500">
                 {formatTime(currentIncident.timestamp)}
               </span>
             </div>
           </div>
 
+          <div className="flex items-center gap-3">
+            {(() => {
+              const { icon: IncidentTypeIcon } = getIncidentTypeIcon(currentIncident.incident_type);
+              return (
+                <span className={`inline-flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full ${getIncidentTypeStyle(currentIncident.incident_type)}`}>
+                  <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
+                  <span>{currentIncident.incident_type || 'Incident'}</span>
+                </span>
+              );
+            })()}
+          </div>
+
           <div>
-            <h4 className="font-medium text-gray-900 mb-1">
-              {currentIncident.incident_type || 'Incident'}
-            </h4>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 leading-relaxed">
               {currentIncident.occurrence || 'No details available'}
             </p>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Status: {currentIncident.status}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <span className="font-medium">Status: {currentIncident.status || 'Unknown'}</span>
             <span>Last updated: {lastUpdate.toLocaleTimeString()}</span>
           </div>
         </div>

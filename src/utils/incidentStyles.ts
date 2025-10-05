@@ -56,7 +56,7 @@ const PRIORITY_STYLES: Record<NormalizedPriority, PriorityDisplayConfig> = {
   urgent: {
     key: 'urgent',
     label: 'Urgent',
-    borderClass: 'border-l-[4px] border-red-600',
+    borderClass: 'border-l-[4px] border-l-red-600',
     badgeClass: 'border border-red-600 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-200',
     chipActiveClass: 'border border-red-600 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-200 shadow-sm',
     chipInactiveClass: 'border border-red-600 text-red-600 dark:text-red-200 bg-transparent hover:bg-red-50 dark:hover:bg-red-900',
@@ -66,7 +66,7 @@ const PRIORITY_STYLES: Record<NormalizedPriority, PriorityDisplayConfig> = {
   high: {
     key: 'high',
     label: 'High',
-    borderClass: 'border-l-[4px] border-red-500',
+    borderClass: 'border-l-[4px] border-l-red-500',
     badgeClass: 'border border-red-500 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300',
     chipActiveClass: 'border border-red-500 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 shadow-sm',
     chipInactiveClass: 'border border-red-500 text-red-600 dark:text-red-300 bg-transparent hover:bg-red-50 dark:hover:bg-red-900',
@@ -76,7 +76,7 @@ const PRIORITY_STYLES: Record<NormalizedPriority, PriorityDisplayConfig> = {
   medium: {
     key: 'medium',
     label: 'Medium',
-    borderClass: 'border-l-[4px] border-amber-500',
+    borderClass: 'border-l-[4px] border-l-amber-500',
     badgeClass: 'border border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
     chipActiveClass: 'border border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 shadow-sm',
     chipInactiveClass: 'border border-amber-500 text-amber-600 dark:text-amber-300 bg-transparent hover:bg-amber-50 dark:hover:bg-amber-900',
@@ -86,7 +86,7 @@ const PRIORITY_STYLES: Record<NormalizedPriority, PriorityDisplayConfig> = {
   low: {
     key: 'low',
     label: 'Low',
-    borderClass: 'border-l-[4px] border-green-500',
+    borderClass: 'border-l-[4px] border-l-green-500',
     badgeClass: 'border border-green-500 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
     chipActiveClass: 'border border-green-500 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 shadow-sm',
     chipInactiveClass: 'border border-green-500 text-green-600 dark:text-green-300 bg-transparent hover:bg-green-50 dark:hover:bg-green-900',
@@ -96,7 +96,7 @@ const PRIORITY_STYLES: Record<NormalizedPriority, PriorityDisplayConfig> = {
   unknown: {
     key: 'unknown',
     label: 'Unspecified',
-    borderClass: 'border-l-[4px] border-gray-300',
+    borderClass: 'border-l-[4px] border-l-gray-300',
     badgeClass: 'border border-gray-300 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200',
     chipActiveClass: 'border border-gray-300 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm',
     chipInactiveClass: 'border border-gray-300 text-gray-600 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800',

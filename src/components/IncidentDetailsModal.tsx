@@ -18,6 +18,14 @@ import {
   MapPinIcon,
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline'
+import PriorityBadge from './PriorityBadge'
+import {
+  getIncidentTypeStyle,
+  getPriorityBorderClass,
+  normalizePriority,
+  type Priority,
+} from '../utils/incidentStyles'
+import { getIncidentTypeIcon } from '../utils/incidentIcons'
 
 interface Props {
   isOpen: boolean
@@ -331,26 +339,6 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     }
   };
 
-  const getIncidentTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      'Ejection': 'bg-red-100 text-red-800 border-red-200',
-      'Refusal': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'Code Green': 'bg-green-100 text-green-800 border-green-200',
-      'Code Purple': 'bg-purple-100 text-purple-800 border-purple-200',
-      'Code White': 'bg-gray-100 text-gray-800 border-gray-200',
-      'Code Black': 'bg-black text-white border-gray-800',
-      'Code Pink': 'bg-pink-100 text-pink-800 border-pink-200',
-      'Attendance': 'bg-blue-100 text-blue-800 border-blue-200',
-      'Aggressive Behaviour': 'bg-orange-100 text-orange-800 border-orange-200',
-      'Queue Build-Up': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      'Medical': 'bg-red-100 text-red-800 border-red-200',
-      'Security': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'Technical': 'bg-blue-100 text-blue-800 border-blue-200',
-      'General': 'bg-gray-100 text-gray-800 border-gray-200'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
   const getStatusIcon = (isClosed: boolean) => {
     return isClosed ? (
       <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -487,17 +475,32 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div
+                      className={`space-y-4 rounded-xl border p-4 ${
+                        getPriorityBorderClass(incident?.priority as Priority)
+                      } ${(() => {
+                        if (!incident) return 'border-gray-200';
+                        const status = String(incident.status ?? '').toLowerCase();
+                        const normalizedPriority = normalizePriority(incident.priority as Priority);
+                        const isHighPriority = normalizedPriority === 'high' || normalizedPriority === 'urgent';
+                        const isOpenStatus = !incident.is_closed && (status === 'open' || status === 'logged' || status === '');
+                        return isOpenStatus && isHighPriority
+                          ? 'ring-2 ring-red-400 border-red-300 animate-pulse-border motion-reduce:animate-none shadow-md shadow-red-300/40'
+                          : 'border-gray-200';
+                      })()}`}
+                    >
                       {/* Incident Type Badge */}
-                      <div className="flex items-center space-x-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getIncidentTypeColor(incident?.incident_type || '')}`}>
-                          {incident?.incident_type}
-                        </span>
-                        {incident?.priority && (
-                          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                            {incident.priority} Priority
-                          </span>
-                        )}
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident?.incident_type || '');
+                          return (
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full ${getIncidentTypeStyle(incident?.incident_type || '')}`}>
+                              <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
+                              <span>{incident?.incident_type || 'Incident'}</span>
+                            </span>
+                          );
+                        })()}
+                        <PriorityBadge priority={incident?.priority} />
                       </div>
 
                       {/* Key Details Grid */}

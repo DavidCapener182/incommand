@@ -594,33 +594,28 @@ export default function IncidentTable({
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
-    const highPriorityTypes = [
-      'Ejection',
-      'Code Green',
-      'Code Black',
-      'Code Pink',
-      'Aggressive Behaviour',
-      'Missing Child/Person',
-      'Hostile Act',
-      'Counter-Terror Alert',
-      'Fire Alarm',
-      'Evacuation',
-      'Medical',
-      'Suspicious Behaviour',
-      'Queue Build-Up'
-    ];
+    const status = String(incident.status ?? '').toLowerCase()
+    const isClosedOrInProgress =
+      incident.is_closed ||
+      status === 'closed' ||
+      status === 'resolved' ||
+      status === 'in_progress' ||
+      status === 'in progress'
 
-    const normalizedPriority = normalizePriority(incident.priority as Priority);
-    const isPriorityCritical = normalizedPriority === 'urgent' || normalizedPriority === 'high';
+    if (
+      isClosedOrInProgress ||
+      incident.incident_type === 'Sit Rep' ||
+      incident.incident_type === 'Attendance'
+    ) {
+      return false
+    }
 
-    return (
-      !incident.is_closed &&
-      incident.status !== 'Logged' &&
-      incident.incident_type !== 'Sit Rep' &&
-      incident.incident_type !== 'Attendance' &&
-      (isPriorityCritical || highPriorityTypes.includes(incident.incident_type))
-    );
-  };
+    const normalizedPriority = normalizePriority(incident.priority as Priority)
+    const isHighPriority = normalizedPriority === 'high' || normalizedPriority === 'urgent'
+    const isOpenStatus = status === 'open' || status === 'logged' || status === ''
+
+    return isHighPriority && isOpenStatus
+  }
 
   // Sort incidents: Pin open high priority incidents to the top, then chronological order
   const sortedIncidents = [...filteredIncidents].sort((a, b) => {
@@ -900,18 +895,12 @@ export default function IncidentTable({
               return (
               <motion.div
                 key={incident.id}
-                className={`relative bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${priorityBorderClass} ${getRowStyle(incident)} ${
-                  isHighPriorityAndOpen(incident) && normalizePriority(incident.priority as Priority) === 'urgent'
-                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border-urgent border-red-300' 
-                    : isHighPriorityAndOpen(incident)
-                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border border-red-300'
+                className={`relative bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${priorityBorderClass} ${getRowStyle(incident)} ${
+                  isHighPriorityAndOpen(incident)
+                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
                     : 'border-gray-200 dark:border-[#2d437a] hover:border-blue-300 dark:hover:border-blue-500'
                 }`}
                 style={{
-                  ...(isHighPriorityAndOpen(incident) && {
-                    boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                    animation: 'pulse-glow 3s ease-in-out infinite'
-                  }),
                   transform: swipedIncidentId === incident.id ? `translateX(${swipeOffset}px)` : 'translateX(0)'
                 }}
                 onTouchStart={(e) => handleTouchStart(e, incident.id)}
@@ -1047,20 +1036,14 @@ export default function IncidentTable({
                 return (
                   <div
                     key={incident.id} 
-                    className={`relative grid items-center px-0 py-3 cursor-pointer ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-1 ${
-                      isHighPriorityAndOpen(incident) && normalizePriority(incident.priority as Priority) === 'urgent'
-                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border-urgent border border-red-300' 
-                        : isHighPriorityAndOpen(incident)
-                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border border border-red-300'
-                        : 'border border-transparent hover:border-blue-300 dark:hover:border-blue-500'
+                    className={`relative grid items-center px-0 py-3 cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-1 ${
+                      isHighPriorityAndOpen(incident)
+                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
+                        : 'hover:border-blue-300 dark:hover:border-blue-500'
                     }`}
                     style={{ 
                       gridTemplateColumns: '5% 5% 8% 8% 29% 8% 29% 7%',
-                      minHeight: '56px',
-                      ...(isHighPriorityAndOpen(incident) && {
-                        boxShadow: '0 0 20px rgba(239, 68, 68, 0.4), 0 0 40px rgba(220, 38, 38, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        animation: 'pulse-glow 3s ease-in-out infinite'
-                      })
+                      minHeight: '56px'
                     }}
                     onClick={(e) => {
                       // Only open modal if not clicking on a button

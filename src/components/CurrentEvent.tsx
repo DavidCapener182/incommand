@@ -209,9 +209,9 @@ export default function CurrentEvent({
   }
 
   return (
-    <>
-      <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 w-full relative transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-        <div className="px-5 py-4">
+    <div className="h-full">
+      <div className="h-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 w-full relative transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col">
+        <div className="px-5 py-4 flex-1">
           {currentEvent ? (
             <div className="space-y-3">
               <div className="flex items-start justify-between">
@@ -360,6 +360,6 @@ export default function CurrentEvent({
         onClose={handleCloseModal}
         onEventCreated={handleEventCreated}
       />
-    </>
+    </div>
   )
-} 
+}

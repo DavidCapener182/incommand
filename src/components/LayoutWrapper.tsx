@@ -8,6 +8,7 @@ import HelpCenterPanel from './HelpCenterModal'
 import { usePathname, useRouter } from 'next/navigation'
 import IncidentCreationModal from './IncidentCreationModal'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
+import { IncidentSummaryProvider } from '@/contexts/IncidentSummaryContext'
 import { supabase } from '../lib/supabase'
 // FAB components removed (FloatingAIChat, Dock)
 
@@ -135,45 +136,47 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   );
 
   return (
-    <>
-      <AuthGate>
-        {showNav && <Navigation />}
-        <main className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24">{children}</main>
-        {showNav && (
-          <BottomNav
-            onOpenHelpCenter={() => {
-              try {
-                setIsHelpCenterOpen(true);
-              } catch {}
-            }}
-          />
-        )}
-        {isHelpCenterOpen && (
-          <>
-            {/* Click-outside overlay (no dim) */}
-            <div
-              className="fixed inset-0 z-40"
-              aria-hidden="true"
-              onClick={() => setIsHelpCenterOpen(false)}
+    <IncidentSummaryProvider>
+      <>
+        <AuthGate>
+          {showNav && <Navigation />}
+          <main className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24">{children}</main>
+          {showNav && (
+            <BottomNav
+              onOpenHelpCenter={() => {
+                try {
+                  setIsHelpCenterOpen(true);
+                } catch {}
+              }}
             />
-            {/* Floating panel */}
-            <div className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]">
-              <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
-            </div>
-          </>
-        )}
-        
-        {/* FABs removed; sticky BottomNav will provide actions */}
-        {/* Modals - Always available */}
-        {showNav && (
-          <IncidentCreationModal
-            isOpen={isIncidentModalOpen}
-            onClose={() => setIsIncidentModalOpen(false)}
-            onIncidentCreated={handleIncidentCreated}
-          />
-        )}
-      </AuthGate>
-      <CompanyFooter />
-    </>
+          )}
+          {isHelpCenterOpen && (
+            <>
+              {/* Click-outside overlay (no dim) */}
+              <div
+                className="fixed inset-0 z-40"
+                aria-hidden="true"
+                onClick={() => setIsHelpCenterOpen(false)}
+              />
+              {/* Floating panel */}
+              <div className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]">
+                <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
+              </div>
+            </>
+          )}
+          
+          {/* FABs removed; sticky BottomNav will provide actions */}
+          {/* Modals - Always available */}
+          {showNav && (
+            <IncidentCreationModal
+              isOpen={isIncidentModalOpen}
+              onClose={() => setIsIncidentModalOpen(false)}
+              onIncidentCreated={handleIncidentCreated}
+            />
+          )}
+        </AuthGate>
+        <CompanyFooter />
+      </>
+    </IncidentSummaryProvider>
   );
 }

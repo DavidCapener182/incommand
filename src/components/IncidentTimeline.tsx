@@ -126,10 +126,10 @@ const TimelineChart = ({
       console.log('🔍 Fetching event details for event ID:', currentEvent.id)
       try {
         const { data, error } = await supabase
-          .from('events')
+        .from('events')
           .select('event_date, doors_open_time, main_act_start_time, support_act_times, show_down_time, event_end_time, curfew_time')
           .eq('id', currentEvent.id)
-          .maybeSingle()
+        .maybeSingle()
         
         if (error) {
           console.error('❌ Error fetching event details:', error)
@@ -137,7 +137,7 @@ const TimelineChart = ({
           return
         }
         
-        if (data) {
+      if (data) {
           console.log('📅 Event details loaded:', data)
           setEventDetails(data)
         } else {
@@ -609,7 +609,7 @@ const TimelineChart = ({
               const endPos = performance.endTime ? getPosition(performance.endTime) : startPos + 5
               const width = Math.max(2, endPos - startPos)
 
-              return (
+            return (
                 <div
                   key={performance.id}
                   className="absolute top-1/2 transform -translate-y-1/2 h-12 rounded-md shadow-sm border border-white cursor-pointer group flex items-center justify-center text-white text-sm font-medium overflow-hidden"

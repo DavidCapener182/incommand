@@ -2,7 +2,14 @@ import { supabase } from './supabase';
 import { logger } from './logger';
 
 export interface WebSocketMessage {
-  type: 'incident-update' | 'status-change' | 'new-incident' | 'user-activity' | 'location-update';
+  type:
+    | 'incident-update'
+    | 'status-change'
+    | 'new-incident'
+    | 'user-activity'
+    | 'location-update'
+    | 'risk_metrics_update'
+    | 'incident_summary_update';
   payload: any;
   timestamp: number;
   userId?: string;
@@ -151,6 +158,14 @@ class WebSocketService {
     return this.send(channelName, {
       type: 'location-update',
       payload: location
+    });
+  }
+
+  // Send incident summary update
+  sendIncidentSummaryUpdate(channelName: string, summary: { open: number; in_progress: number; closed: number; total: number; timestamp?: string }) {
+    return this.send(channelName, {
+      type: 'incident_summary_update',
+      payload: summary
     });
   }
 

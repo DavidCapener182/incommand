@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/Toast';
 import EscalationTimer from './EscalationTimer';
 
@@ -13,9 +13,15 @@ interface StaffMember {
   skill_tags: string[];
 }
 
-import { getIncidentTypeStyle, getSeverityBorderClass, getPriorityBorderClass, normalizePriority, type Priority } from '../utils/incidentStyles'
+import {
+  getIncidentTypeStyle,
+  getPriorityBorderClass,
+  normalizePriority,
+  type Priority,
+} from '../utils/incidentStyles'
 import { FilterState, filterIncidents } from '../utils/incidentFilters'
 import PriorityBadge from './PriorityBadge'
+import { getIncidentTypeIcon } from '../utils/incidentIcons'
 
 // Define the Incident interface to match IncidentTable
 interface Incident {
@@ -115,21 +121,47 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
     };
   }, []);
 
+  const isHighPriorityAndOpen = useCallback((incident: Incident) => {
+    const status = String(incident.status ?? '').toLowerCase()
+
+    if (
+      incident.is_closed ||
+      status === 'closed' ||
+      status === 'resolved' ||
+      status === 'in_progress' ||
+      status === 'in progress' ||
+      incident.incident_type === 'Sit Rep' ||
+      incident.incident_type === 'Attendance'
+    ) {
+      return false
+    }
+
+    const normalizedPriority = normalizePriority(incident.priority as Priority)
+    const isHighPriority = normalizedPriority === 'high' || normalizedPriority === 'urgent'
+    const isOpenStatus = status === 'open' || status === 'logged' || status === ''
+
+    return isHighPriority && isOpenStatus
+  }, [])
+
   const getIncidentsByStatus = useCallback((status: string) => {
     // Exclude attendance logs and sit reps from board view
     let filteredIncidents = incidents.filter(incident => {
       if (incident.incident_type === 'Attendance' || incident.incident_type === 'Sit Rep') {
         return false;
       }
-      
-      // Simplified status logic
+
+      const normalizedStatus = String(incident.status ?? '').toLowerCase();
+
       switch (status) {
         case 'open':
-          return !incident.is_closed && (!incident.status || incident.status === 'open');
+          return (
+            !incident.is_closed &&
+            (normalizedStatus === 'open' || normalizedStatus === 'logged' || normalizedStatus === '')
+          );
         case 'in_progress':
-          return !incident.is_closed && incident.status === 'in_progress';
+          return !incident.is_closed && (normalizedStatus === 'in_progress' || normalizedStatus === 'in progress');
         case 'closed':
-          return incident.is_closed || incident.status === 'closed';
+          return incident.is_closed || normalizedStatus === 'closed' || normalizedStatus === 'resolved';
         default:
           return false;
       }
@@ -469,34 +501,47 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                           draggableId={incident.id.toString()}
                           index={index}
                         >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`mb-3 ${
-                                snapshot.isDragging ? 'rotate-2 shadow-xl' : ''
-                              }`}
-                            >
+                          {(provided, snapshot) => {
+                            const isHighlighted = isHighPriorityAndOpen(incident);
+                            const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority);
+                            const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type);
+
+                            const cardClasses = [
+                              'relative bg-white rounded-xl shadow-md border p-4 cursor-pointer transition-all duration-200',
+                              priorityBorderClass,
+                              snapshot.isDragging ? 'shadow-xl rotate-2' : 'hover:shadow-lg',
+                              isHighlighted
+                                ? 'ring-2 ring-red-400 border-red-300 animate-pulse-border motion-reduce:animate-none shadow-red-500/40'
+                                : 'border-gray-200 hover:border-blue-300',
+                            ]
+                              .filter(Boolean)
+                              .join(' ');
+
+                            return (
                               <div
-                                className={`bg-white rounded-xl shadow-md border-2 border-gray-200 p-4 cursor-pointer hover:shadow-lg transition-all duration-200 ${getPriorityBorderClass(incident.priority as Priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
-                                onClick={() => onIncidentSelect?.(incident)}
-                                style={{
-                                  ...(snapshot.isDragging && {
-                                    transform: 'rotate(5deg) scale(1.05)',
-                                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                                  })
-                                }}
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`mb-3 ${
+                                  snapshot.isDragging ? 'rotate-2 shadow-xl' : ''
+                                }`}
                               >
-                                {/* Incident Header */}
+                                <div
+                                  className={cardClasses}
+                                  onClick={() => onIncidentSelect?.(incident)}
+                                  style={{
+                                    ...(snapshot.isDragging && {
+                                      transform: 'rotate(5deg) scale(1.05)',
+                                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                                    })
+                                  }}
+                                >
+                                  {/* Incident Header */}
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-gray-900">
                                       Log #{incident.log_number}
                                     </span>
-                                    {!incident.is_closed && ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Medical'].includes(incident.incident_type) && (
-                                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                    )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <PriorityBadge priority={incident.priority} />
@@ -508,8 +553,9 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
 
                                 {/* Incident Type */}
                                 <div className="mb-3">
-                                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
-                                    {incident.incident_type}
+                                  <span className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-bold rounded-full ${getIncidentTypeStyle(incident.incident_type)}`}>
+                                    <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
+                                    <span>{incident.incident_type}</span>
                                   </span>
                                 </div>
 
@@ -644,8 +690,8 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
 
                                 {/* Action Buttons */}
                                 <div className="mt-3 pt-3 border-t border-gray-200">
-                                    <div className="flex items-center justify-between text-xs">
-                                      <span className="text-gray-500 font-medium">Drag to move ▮▮</span>
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500 font-medium">Drag to move ▮▮</span>
                                     <div className="flex gap-2">
                                       {!incident.is_closed && (
                                         <button
@@ -666,7 +712,8 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                 </div>
                               </div>
                             </div>
-                          )}
+                            );
+                          }}
                         </Draggable>
                         ))
                       )}

@@ -20,6 +20,7 @@ import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
 import EscalationTimer from './EscalationTimer'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
+import useWhat3Words from '@/hooks/useWhat3Words'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -1900,6 +1901,7 @@ export default function IncidentCreationModal({
       priority: 'medium',
       location_name: ''
   });
+  const [w3wInput, setW3wInput] = useState('')
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
     description: '',
@@ -1938,6 +1940,13 @@ export default function IncidentCreationModal({
     occurrence: false,
     action_taken: false
   })
+  const {
+    coordinates: w3wCoordinates,
+    isLoading: isValidatingWhat3Words,
+    error: what3WordsError,
+    validate: validateWhat3Words,
+    reset: resetWhat3Words,
+  } = useWhat3Words()
   const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
@@ -2927,6 +2936,7 @@ export default function IncidentCreationModal({
           newOccurrence = newOccurrence ? `${newOccurrence} Location (${w3wMatch})` : `Location (${w3wMatch})`;
           return { ...prev, what3words: w3wMatch, occurrence: newOccurrence };
         });
+        setW3wInput(w3wMatch.replace(/^\/*/, ''))
       }
     }
 
@@ -3188,7 +3198,12 @@ export default function IncidentCreationModal({
         created_at: now,
         updated_at: now, // Keep this for backward compatibility
         timestamp: now, // Keep this for backward compatibility
-        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null
+        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null,
+        // Add GPS coordinates if what3words coordinates are available
+        ...(w3wCoordinates && {
+          latitude: w3wCoordinates.latitude,
+          longitude: w3wCoordinates.longitude
+        })
       };
 
       // First, check if the log number already exists
@@ -3310,6 +3325,15 @@ export default function IncidentCreationModal({
         banned: false,
         aggressive: false
       });
+
+      // Broadcast incident summary update
+      try {
+        const { broadcastIncidentSummaryUpdate } = await import('@/lib/incidentSummaryBroadcast')
+        await broadcastIncidentSummaryUpdate(effectiveEvent.id)
+      } catch (broadcastError) {
+        console.warn('Failed to broadcast incident summary update:', broadcastError)
+        // Don't fail the incident creation if broadcast fails
+      }
 
       // Call onIncidentCreated callback with the created incident and close modal
       await onIncidentCreated(insertedIncident);
@@ -3459,6 +3483,8 @@ export default function IncidentCreationModal({
       priority: 'medium',
       location_name: ''
     });
+    setW3wInput('')
+    resetWhat3Words()
     setRefusalDetails({
       policeRequired: false,
       description: '',
@@ -3499,27 +3525,88 @@ export default function IncidentCreationModal({
 
   // Update handleW3WChange to set the manual edit flag
   const handleW3WChange = (value: string) => {
-    setW3wManuallyEdited(true);
-    setFormData(prev => ({ ...prev, what3words: value }));
-  };
+    setW3wManuallyEdited(true)
+    const sanitized = value
+      .toLowerCase()
+      .replace(/[^a-z0-9.\s]/g, '')
+      .replace(/\s+/g, '.')
+      .replace(/\.+/g, '.')
+      .replace(/^\.+/, '')
 
-  const handleW3WBlur = () => {
-    let value = formData.what3words.trim();
-    // Remove leading slashes
-    value = value.replace(/^\/*/, '');
-    // If three words separated by spaces, convert to dot format
-    const spacePattern = /^([a-zA-Z0-9]+)\s+([a-zA-Z0-9]+)\s+([a-zA-Z0-9]+)$/;
-    const dotPattern = /^([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)$/;
-    if (spacePattern.test(value)) {
-      const match = value.match(spacePattern);
-      if (match) value = `${match[1]}.${match[2]}.${match[3]}`;
+    setW3wInput(sanitized)
+    setFormData((prev) => ({
+      ...prev,
+      what3words: sanitized ? `///${sanitized}` : '',
+    }))
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
     }
-    if (dotPattern.test(value)) {
-      value = value;
+
+    if (!w3wInput) {
+      resetWhat3Words()
+      return
     }
-    if (value && !value.startsWith('///')) value = `///${value}`;
-    setFormData(prev => ({ ...prev, what3words: value }));
-  };
+
+    const normalized = w3wInput.replace(/^\/*/, '')
+    let isActive = true
+
+    const timeout = setTimeout(async () => {
+      const success = await validateWhat3Words(normalized)
+      if (!isActive) {
+        return
+      }
+
+      if (success) {
+        try {
+          window.localStorage?.setItem('last_w3w_location', normalized)
+        } catch (error) {
+          console.warn('Unable to persist last what3words location', error)
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          what3words: `///${normalized}`,
+        }))
+      }
+    }, 500)
+
+    return () => {
+      isActive = false
+      clearTimeout(timeout)
+    }
+  }, [isOpen, resetWhat3Words, validateWhat3Words, w3wInput])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const existing = formData.what3words?.replace(/^\/*/, '').replace(/^\.+/, '') || ''
+    let initialValue = existing
+
+    if (!initialValue && typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem('last_w3w_location')
+        if (stored) {
+          initialValue = stored
+        }
+      } catch (error) {
+        console.warn('Unable to read last what3words location', error)
+      }
+    }
+
+    setW3wInput(initialValue)
+    if (initialValue) {
+      setFormData((prev) =>
+        prev.what3words === `///${initialValue}`
+          ? prev
+          : { ...prev, what3words: `///${initialValue}` }
+      )
+    }
+  }, [formData.what3words, isOpen])
 
   // Extract w3w from Quick Input
   const extractW3WFromQuickInput = (input: string) => {
@@ -4105,14 +4192,51 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <input
                         id="w3w"
                     type="text"
-                        value={formData.what3words?.replace('///', '') || ''}
-                        onChange={(e) => handleW3WChange(`///${e.target.value}`)}
-                        onBlur={handleW3WBlur}
+                        value={w3wInput}
+                        onChange={(e) => handleW3WChange(e.target.value)}
                         placeholder="word.word.word"
-                        className="w-full rounded-lg border border-gray-200 pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-lg border border-gray-200 pl-8 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
+                      {isValidatingWhat3Words && (
+                        <span className="absolute inset-y-0 right-2 flex items-center">
+                          <svg
+                            className="h-4 w-4 animate-spin text-blue-500"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            aria-hidden
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                          </svg>
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Enter a valid what3words address</p>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1" aria-live="polite">
+                      {what3WordsError && (
+                        <p className="font-semibold text-red-600 dark:text-red-400">{what3WordsError}</p>
+                      )}
+                      {w3wCoordinates && !what3WordsError && !isValidatingWhat3Words && (
+                        <p className="text-gray-600 dark:text-gray-300">
+                          Coordinates: <span className="font-semibold">{w3wCoordinates.lat.toFixed(5)}</span>,{' '}
+                          <span className="font-semibold">{w3wCoordinates.lng.toFixed(5)}</span>
+                        </p>
+                      )}
+                      {!what3WordsError && !w3wCoordinates && !isValidatingWhat3Words && (
+                        <p>Enter a valid what3words address</p>
+                      )}
+                    </div>
                 </div>
                 <div>
                     <div className="flex items-center justify-between mb-2">
