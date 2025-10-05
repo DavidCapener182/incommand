@@ -85,6 +85,8 @@ export default function VenueOccupancy({ currentEventId }: Props) {
     // Fetch initial occupancy and expected attendance
     const fetchData = async () => {
       try {
+        console.log('🔍 VenueOccupancy: Fetching data for event:', currentEventId)
+        
         // Get expected attendance from events table
         const { data: eventData, error: eventError } = await supabase
           .from('events')
@@ -92,12 +94,22 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .eq('id', currentEventId)
           .maybeSingle()
 
-        if (eventError) throw eventError
+        if (eventError) {
+          console.error('❌ VenueOccupancy: Error fetching event data:', eventError)
+          throw eventError
+        }
+        
+        console.log('📊 VenueOccupancy: Event data:', eventData)
         
         let newExpected = 0
         if (eventData?.expected_attendance) {
           newExpected = parseInt(eventData.expected_attendance)
           setExpectedAttendance(newExpected)
+          console.log('📈 VenueOccupancy: Expected attendance set to:', newExpected)
+        } else {
+          console.log('⚠️ VenueOccupancy: No expected attendance found, using default')
+          setExpectedAttendance(1000) // Default fallback
+          newExpected = 1000
         }
 
         // Get latest attendance count
@@ -110,11 +122,19 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           .maybeSingle()
 
         if (attendanceError) {
-          throw attendanceError
+          console.error('❌ VenueOccupancy: Error fetching attendance data:', attendanceError)
+          // Don't throw here, just use default values
+          setCurrentCount(0)
+          setExpectedAttendance(newExpected)
+          setLoading(false)
+          return
         }
+
+        console.log('📊 VenueOccupancy: Attendance data:', attendanceData)
 
         if (attendanceData) {
           setCurrentCount(attendanceData.count)
+          console.log('✅ VenueOccupancy: Current count set to:', attendanceData.count)
           
           // Check capacity for initial data - use newExpected instead of expectedAttendance
           if (newExpected > 0) {
@@ -123,13 +143,15 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           }
         } else {
           setCurrentCount(0) // Start with 0 actual attendance
+          console.log('📊 VenueOccupancy: No attendance data found, using 0')
         }
       } catch (err) {
-        console.error('Error fetching occupancy data:', err)
+        console.error('❌ VenueOccupancy: Error fetching occupancy data:', err)
         setCurrentCount(0)
-        setExpectedAttendance(0)
+        setExpectedAttendance(1000) // Default fallback
       } finally {
         setLoading(false)
+        console.log('✅ VenueOccupancy: Loading complete')
       }
     }
 
