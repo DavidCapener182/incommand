@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/Toast';
@@ -78,6 +78,25 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   const [showStaffPanel, setShowStaffPanel] = useState(false);
   const { addToast } = useToast();
   const [columnOrder, setColumnOrder] = useState<Record<string, number[]>>({});
+
+  // Suppress react-beautiful-dnd defaultProps warning
+  useEffect(() => {
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      if (
+        args[0] &&
+        typeof args[0] === 'string' &&
+        args[0].includes('Support for defaultProps will be removed from memo components')
+      ) {
+        return; // Suppress this specific warning
+      }
+      originalWarn.apply(console, args);
+    };
+
+    return () => {
+      console.warn = originalWarn;
+    };
+  }, []);
 
   const getIncidentsByStatus = useCallback((status: string) => {
     // Exclude attendance logs and sit reps from board view
