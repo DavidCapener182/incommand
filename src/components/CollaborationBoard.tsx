@@ -13,8 +13,9 @@ interface StaffMember {
   skill_tags: string[];
 }
 
-import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
+import { getIncidentTypeStyle, getSeverityBorderClass, getPriorityBorderClass, normalizePriority, type Priority } from '../utils/incidentStyles'
 import { FilterState, filterIncidents } from '../utils/incidentFilters'
+import PriorityBadge from './PriorityBadge'
 
 // Define the Incident interface to match IncidentTable
 interface Incident {
@@ -478,7 +479,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                               }`}
                             >
                               <div
-                                className={`bg-white rounded-xl shadow-md border-2 border-gray-200 p-4 cursor-pointer hover:shadow-lg transition-all duration-200 ${getSeverityBorderClass(incident.priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
+                                className={`bg-white rounded-xl shadow-md border-2 border-gray-200 p-4 cursor-pointer hover:shadow-lg transition-all duration-200 ${getPriorityBorderClass(incident.priority as Priority)} ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}`}
                                 onClick={() => onIncidentSelect?.(incident)}
                                 style={{
                                   ...(snapshot.isDragging && {
@@ -497,9 +498,12 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
                                       <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                     )}
                                   </div>
+                                  <div className="flex items-center gap-2">
+                                    <PriorityBadge priority={incident.priority} />
                                     <span className="text-xs text-gray-500 font-medium">
-                                    {formatTimestamp(incident.timestamp)}
-                                  </span>
+                                      {formatTimestamp(incident.timestamp)}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 {/* Incident Type */}

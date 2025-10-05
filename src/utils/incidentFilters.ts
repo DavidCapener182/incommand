@@ -1,3 +1,6 @@
+import type { Priority } from './incidentStyles'
+import { normalizePriority } from './incidentStyles'
+
 export interface FilterState {
   types: string[];
   statuses: string[];
@@ -56,10 +59,23 @@ export function filterIncidents<T extends AnyIncident>(incidents: T[], filters: 
     // Multi-select filters: if arrays are empty, treat as no filter for that field
     const typeOk = types.length === 0 || types.includes(incident.incident_type);
     const statusOk = statuses.length === 0 || statuses.includes(incident.status || (incident.is_closed ? 'closed' : 'open'));
-    const priorityOk = priorities.length === 0 || priorities.includes(String(incident.priority || ''));
+    const normalizedFilters = priorities
+      .map((priority) => normalizePriority(priority as Priority))
+      .filter((priority) => priority !== 'unknown');
+
+    const incidentPriorityRaw = String(incident.priority ?? '');
+    const incidentPriorityNormalized = normalizePriority(incident.priority);
+
+    const rawMatch = priorities.some(
+      (priority) => String(priority ?? '').toLowerCase() === incidentPriorityRaw.toLowerCase()
+    );
+
+    const normalizedMatch = normalizedFilters.length === 0
+      ? false
+      : normalizedFilters.includes(incidentPriorityNormalized);
+
+    const priorityOk = priorities.length === 0 || rawMatch || normalizedMatch;
     const queryOk = matchesQuery(incident, query);
     return typeOk && statusOk && priorityOk && queryOk;
   });
 }
-
-

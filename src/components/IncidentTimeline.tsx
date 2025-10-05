@@ -5,6 +5,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { FaRegClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import { FilterState } from '../utils/incidentFilters'
+import {
+  getPriorityIcon,
+  getPriorityIndicatorClass,
+  getPriorityLabel,
+  normalizePriority,
+  type Priority,
+} from '../utils/incidentStyles'
 
 type IncidentRecord = {
   id: number
@@ -681,6 +688,12 @@ const TimelineChart = ({
                   const laneTop = ISSUE_ROW_TOP_PADDING + issue.lane * (ISSUE_BLOCK_HEIGHT + ISSUE_LANE_SPACING)
                   const opacity = issue.isEstimated ? 0.65 : 0.9
                   const actualEndDisplay = issue.actualEndTime ? formatDisplayTime(issue.actualEndTime) : null
+                  const normalizedPriority = normalizePriority(issue.incident.priority as Priority)
+                  const showPriorityIndicator = normalizedPriority !== 'unknown'
+                  const PriorityIcon = getPriorityIcon(issue.incident.priority as Priority)
+                  const priorityIndicatorClass = getPriorityIndicatorClass(issue.incident.priority as Priority)
+                  const priorityLabel = getPriorityLabel(issue.incident.priority as Priority)
+                  const labelPaddingClass = showPriorityIndicator && width >= 10 ? 'pl-6' : ''
 
                   return (
                     <div
@@ -712,7 +725,13 @@ const TimelineChart = ({
                         }
                       }}
                     >
-                      <span className={`truncate px-2 text-center font-semibold tracking-tight text-white ${width < 8 ? 'text-[10px]' : 'text-xs'} drop-shadow-sm`}>
+                      {showPriorityIndicator && (
+                        <span className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${priorityIndicatorClass}`}>
+                          <PriorityIcon size={14} aria-hidden />
+                          <span className="sr-only">{`${priorityLabel} priority`}</span>
+                        </span>
+                      )}
+                      <span className={`truncate px-2 text-center font-semibold tracking-tight text-white ${width < 8 ? 'text-[10px]' : 'text-xs'} ${labelPaddingClass} drop-shadow-sm`}>
                         {issue.incident.incident_type}
                       </span>
 

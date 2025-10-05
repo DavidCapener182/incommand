@@ -9,9 +9,19 @@ import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIco
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
 import IncidentTimeline from './IncidentTimeline'
-import { getIncidentTypeStyle, getSeverityBorderClass } from '../utils/incidentStyles'
+import {
+  getIncidentTypeStyle,
+  getPriorityBorderClass,
+  getPriorityChipClass,
+  getPriorityDisplayConfig,
+  normalizePriority,
+  type NormalizedPriority,
+  type Priority,
+} from '../utils/incidentStyles'
 import { FilterState, filterIncidents } from '../utils/incidentFilters'
 import { motion, AnimatePresence } from 'framer-motion'
+import PriorityBadge from './PriorityBadge'
+import { getIncidentTypeIcon } from '../utils/incidentIcons'
 
 interface Incident {
   id: number
@@ -30,6 +40,8 @@ interface Incident {
   responded_at?: string | null
   updated_at?: string | null
 }
+
+const PRIORITY_FILTER_OPTIONS: NormalizedPriority[] = ['urgent', 'high', 'medium', 'low']
 
 const getRowStyle = (incident: Incident) => {
   const highPriorityTypes = [
@@ -597,11 +609,17 @@ export default function IncidentTable({
       'Suspicious Behaviour',
       'Queue Build-Up'
     ];
-    return !incident.is_closed && 
-           incident.status !== 'Logged' && 
-           incident.incident_type !== 'Sit Rep' && 
-           incident.incident_type !== 'Attendance' &&
-           highPriorityTypes.includes(incident.incident_type);
+
+    const normalizedPriority = normalizePriority(incident.priority as Priority);
+    const isPriorityCritical = normalizedPriority === 'urgent' || normalizedPriority === 'high';
+
+    return (
+      !incident.is_closed &&
+      incident.status !== 'Logged' &&
+      incident.incident_type !== 'Sit Rep' &&
+      incident.incident_type !== 'Attendance' &&
+      (isPriorityCritical || highPriorityTypes.includes(incident.incident_type))
+    );
   };
 
   // Sort incidents: Pin open high priority incidents to the top, then chronological order
@@ -623,6 +641,32 @@ export default function IncidentTable({
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
   }, [filteredIncidents]);
+
+  const normalizedSelectedPriorities = useMemo(
+    () => filters.priorities.map((priority) => normalizePriority(priority as Priority)),
+    [filters.priorities]
+  );
+
+  const handlePriorityToggle = useCallback(
+    (target: NormalizedPriority) => {
+      if (!onFiltersChange) return;
+
+      const shouldRemove = normalizedSelectedPriorities.includes(target);
+      const updatedPriorities = shouldRemove
+        ? filters.priorities.filter(
+            (priority) => normalizePriority(priority as Priority) !== target
+          )
+        : [...filters.priorities, target];
+
+      onFiltersChange({ ...filters, priorities: updatedPriorities });
+    },
+    [filters, normalizedSelectedPriorities, onFiltersChange]
+  );
+
+  const handleClearPriorityFilters = useCallback(() => {
+    if (!onFiltersChange) return;
+    onFiltersChange({ ...filters, priorities: [] });
+  }, [filters, onFiltersChange]);
 
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {
@@ -740,6 +784,46 @@ export default function IncidentTable({
           </div>
         </div>
         
+        {onFiltersChange && (
+          <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Filter incidents by priority">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Priority</span>
+            {PRIORITY_FILTER_OPTIONS.map((priorityOption) => {
+              const isActive = normalizedSelectedPriorities.includes(priorityOption);
+              const config = getPriorityDisplayConfig(priorityOption);
+              const Icon = config.icon;
+              const buttonClasses = [
+                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
+                getPriorityChipClass(priorityOption, isActive),
+                isActive ? 'shadow-md' : 'hover:shadow-sm',
+              ]
+                .filter(Boolean)
+                .join(' ');
+
+              return (
+                <button
+                  key={priorityOption}
+                  type="button"
+                  onClick={() => handlePriorityToggle(priorityOption)}
+                  className={buttonClasses}
+                  aria-pressed={isActive}
+                >
+                  <Icon size={18} aria-hidden />
+                  <span>{config.label}</span>
+                </button>
+              );
+            })}
+            {filters.priorities.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearPriorityFilters}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Removed extra filters block since Types moved inline above */}
 
         {searchQuery && (
@@ -809,12 +893,18 @@ export default function IncidentTable({
               <div className="basis-[24%] text-right">Status</div>
             </div>
             
-            {sortedIncidents.map((incident) => (
+            {sortedIncidents.map((incident) => {
+              const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
+              const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
+
+              return (
               <motion.div
                 key={incident.id}
-                className={`bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${getRowStyle(incident)} ${
-                  isHighPriorityAndOpen(incident) 
-                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow border-red-300' 
+                className={`relative bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer ${priorityBorderClass} ${getRowStyle(incident)} ${
+                  isHighPriorityAndOpen(incident) && normalizePriority(incident.priority as Priority) === 'urgent'
+                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border-urgent border-red-300' 
+                    : isHighPriorityAndOpen(incident)
+                    ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border border-red-300'
                     : 'border-gray-200 dark:border-[#2d437a] hover:border-blue-300 dark:hover:border-blue-500'
                 }`}
                 style={{
@@ -854,7 +944,8 @@ export default function IncidentTable({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="p-4">
+                <PriorityBadge priority={incident.priority} className="absolute right-3 top-3" />
+                <div className="p-4 pt-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="basis-[28%] font-bold text-blue-700 dark:text-blue-300 text-sm truncate flex items-center gap-2">
                       {isHighPriorityAndOpen(incident) && (
@@ -868,8 +959,9 @@ export default function IncidentTable({
                       </span>
                     </div>
                     <div className="basis-[24%] flex items-center justify-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold mx-auto text-center shadow-sm ${getIncidentTypeStyle(incident.incident_type)} dark:bg-gray-700 dark:text-gray-100`}>
-                        {incident.incident_type}
+                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mx-auto text-center shadow-sm ${getIncidentTypeStyle(incident.incident_type)} dark:bg-gray-700 dark:text-gray-100`}>
+                        <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
+                        <span>{incident.incident_type}</span>
                       </span>
                     </div>
                     <div className="basis-[24%] text-xs text-gray-500 dark:text-gray-300 flex items-center justify-center font-medium">
@@ -921,7 +1013,8 @@ export default function IncidentTable({
                   )}
                 </div>
               </motion.div>
-            ))}
+              )
+            })}
             
 
           </div>
@@ -945,6 +1038,8 @@ export default function IncidentTable({
             {/* Enhanced Desktop Table Body */}
             <div className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
               {sortedIncidents.map((incident, idx) => {
+                const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
+                const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
                 let rowColor = getRowStyle(incident);
                 if (rowColor === 'hover:bg-gray-50') {
                   rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
@@ -952,9 +1047,11 @@ export default function IncidentTable({
                 return (
                   <div
                     key={incident.id} 
-                    className={`grid items-center px-0 py-3 cursor-pointer ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-1 ${
-                      isHighPriorityAndOpen(incident) 
-                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-glow border border-red-300' 
+                    className={`relative grid items-center px-0 py-3 cursor-pointer ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-1 ${
+                      isHighPriorityAndOpen(incident) && normalizePriority(incident.priority as Priority) === 'urgent'
+                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border-urgent border border-red-300' 
+                        : isHighPriorityAndOpen(incident)
+                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 relative animate-pulse-border border border-red-300'
                         : 'border border-transparent hover:border-blue-300 dark:hover:border-blue-500'
                     }`}
                     style={{ 
@@ -1018,9 +1115,10 @@ export default function IncidentTable({
                         {incident.occurrence}
                       </span>
                     </div>
-                  <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)} ${getSeverityBorderClass((incident as any).priority)}`}>
-                        {incident.incident_type}
+                    <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                      <span className={`inline-flex items-center gap-2 px-3 py-1 text-xs leading-4 font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                        <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
+                        <span>{incident.incident_type}</span>
                       </span>
                     </div>
                     <div className="px-4 text-sm text-gray-600 dark:text-gray-300 flex items-center leading-relaxed" style={{
@@ -1039,7 +1137,8 @@ export default function IncidentTable({
                         {incident.action_taken}
                       </span>
                     </div>
-                   <div className={`flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 pr-4`}>
+                    <div className="flex flex-col items-end gap-2 text-sm text-gray-600 dark:text-gray-300 pr-4">
+                      <PriorityBadge priority={incident.priority} />
                       {incident.incident_type === 'Attendance' ? (
                         <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
                           Logged
