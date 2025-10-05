@@ -82,19 +82,35 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
   // Suppress react-beautiful-dnd defaultProps warning
   useEffect(() => {
     const originalWarn = console.warn;
+    const originalError = console.error;
+    
     console.warn = (...args) => {
       if (
         args[0] &&
         typeof args[0] === 'string' &&
-        args[0].includes('Support for defaultProps will be removed from memo components')
+        (args[0].includes('Support for defaultProps will be removed from memo components') ||
+         args[0].includes('Connect(Droppable)'))
       ) {
         return; // Suppress this specific warning
       }
       originalWarn.apply(console, args);
     };
 
+    console.error = (...args) => {
+      if (
+        args[0] &&
+        typeof args[0] === 'string' &&
+        (args[0].includes('Support for defaultProps will be removed from memo components') ||
+         args[0].includes('Connect(Droppable)'))
+      ) {
+        return; // Suppress this specific error
+      }
+      originalError.apply(console, args);
+    };
+
     return () => {
       console.warn = originalWarn;
+      console.error = originalError;
     };
   }, []);
 
