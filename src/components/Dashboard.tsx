@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, Fragment, useCallback } from 'react'
+import React, { useState, useEffect, useRef, Fragment, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
@@ -45,6 +45,8 @@ import { createPortal } from 'react-dom';
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
+import IncidentSummaryBar, { type SummaryStatus } from './IncidentSummaryBar'
+import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -525,9 +527,25 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { updateCounts } = useIncidentSummary()
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({ types: [], statuses: [], priorities: [], query: '' })
+  const activeSummaryStatus = useMemo<SummaryStatus | null>(() => {
+    if (filters.statuses.length !== 1) {
+      return null
+    }
+
+    const status = String(filters.statuses[0]).toLowerCase()
+    if (status === 'open' || status === 'closed') {
+      return status
+    }
+    if (status === 'in_progress' || status === 'in progress') {
+      return 'in_progress'
+    }
+
+    return null
+  }, [filters.statuses])
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   const [initialIncidentType, setInitialIncidentType] = useState<
@@ -601,6 +619,60 @@ export default function Dashboard() {
     }, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleIncidentsLoaded = useCallback((data: any[]) => {
+    const list = Array.isArray(data) ? data : []
+    setIncidents(list)
+
+    const summary = list.reduce(
+      (acc: { open: number; in_progress: number; closed: number }, incident: any) => {
+        const status = String(incident?.status ?? '').toLowerCase()
+        const isClosed = Boolean(incident?.is_closed) || status === 'closed' || status === 'resolved'
+        const isInProgress = status === 'in_progress' || status === 'in progress'
+
+        if (isClosed) {
+          acc.closed += 1
+        } else if (isInProgress) {
+          acc.in_progress += 1
+        } else {
+          acc.open += 1
+        }
+
+        return acc
+      },
+      { open: 0, in_progress: 0, closed: 0 }
+    )
+
+    updateCounts(summary)
+  }, [updateCounts])
+
+  const handleSummaryFilter = useCallback((status: SummaryStatus | null) => {
+    setFilters((prev) => {
+      if (!status) {
+        return { ...prev, statuses: [], priorities: [], types: [] }
+      }
+
+      const statusFilters = (() => {
+        switch (status) {
+          case 'open':
+            return ['open', 'Open']
+          case 'in_progress':
+            return ['in_progress', 'in progress', 'In Progress']
+          case 'closed':
+            return ['closed', 'Closed', 'resolved', 'Resolved']
+          default:
+            return [status]
+        }
+      })()
+
+      return {
+        ...prev,
+        statuses: statusFilters,
+        priorities: [],
+        types: [],
+      }
+    })
+  }, [])
 
   const fetchCurrentEvent = useCallback(async () => {
     console.log('Fetching current event...');
@@ -1187,8 +1259,8 @@ export default function Dashboard() {
 
       {/* Incident Dashboard */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+          <div className="flex-1">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center mb-2">
               <div className="h-8 w-1 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3"></div>
               Incident Dashboard
@@ -1206,10 +1278,15 @@ export default function Dashboard() {
             </p>
           </div>
 
+          <div className="flex-shrink-0">
+            <IncidentSummaryBar
+              onFilter={handleSummaryFilter}
+              activeStatus={activeSummaryStatus}
+              className=""
+            />
+          </div>
         </div>
 
-        
-        
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3 mb-6">
           {loadingCurrentEvent ? (
@@ -1462,7 +1539,7 @@ export default function Dashboard() {
             key={refreshKey}
             filters={filters}
             onFiltersChange={setFilters}
-            onDataLoaded={setIncidents}
+            onDataLoaded={handleIncidentsLoaded}
             onToast={addToast}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
