@@ -64,7 +64,7 @@ type EventSchedule = {
   doors_open_time?: string | null
   main_act_start_time?: string | null
   support_act_times?: { time: string; name?: string }[] | null
-  showdown_time?: string | null
+  show_down_time?: string | null
   event_end_time?: string | null
   curfew_time?: string | null
 }
@@ -120,7 +120,7 @@ const TimelineChart = ({
       try {
         const { data, error } = await supabase
           .from('events')
-          .select('event_date, doors_open_time, main_act_start_time, support_act_times, showdown_time, event_end_time, curfew_time')
+          .select('event_date, doors_open_time, main_act_start_time, support_act_times, show_down_time, event_end_time, curfew_time')
           .eq('id', currentEvent.id)
           .maybeSingle()
         
@@ -224,7 +224,7 @@ const TimelineChart = ({
     })
 
     // Handle main act with Showdown time
-    const fallbackShowdownTime = eventDetails?.showdown_time
+    const fallbackShowdownTime = eventDetails?.show_down_time
     const showdownTimestamp = showdownIncident?.timestamp || fallbackShowdownTime || null
 
     if (showdownTimestamp) {
