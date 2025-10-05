@@ -24,7 +24,7 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
-import SocialMediaMonitoringCard from './SocialMediaMonitoringCard'
+import LiveRiskPulse from './LiveRiskPulse'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
@@ -144,9 +144,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02]"
+      className="relative h-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] flex flex-col"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative flex-1">
         <div className="md:block relative">
           <div className="hidden md:block">
             <motion.h2 
@@ -1106,7 +1106,7 @@ export default function Dashboard() {
       {/* Event Header - Sticky */}
       <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-8">
         {/* Desktop view */}
-        <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           <CurrentEvent
             currentTime={currentTime}
             currentEvent={currentEvent}
@@ -1127,6 +1127,7 @@ export default function Dashboard() {
               timeSinceLastIncident={timeSinceLastIncident}
             />
           )}
+          <LiveRiskPulse className="h-full" />
         </div>
 
         {/* Mobile view */}
@@ -1384,24 +1385,8 @@ export default function Dashboard() {
               </>
             )}
           </div>
-          {/* Mobile: Social Media Monitoring Card */}
-          <div className="block md:hidden mb-8">
-            {loadingCurrentEvent ? (
-              <CardSkeleton />
-            ) : (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                whileHover={{ y: -4 }}
-                className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-              >
-                <SocialMediaMonitoringCard eventId={currentEvent?.id} />
-              </motion.div>
-            )}
-          </div>
           {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in a single row */}
-          <div className="hidden md:grid grid-cols-5 gap-4 mb-8">
+          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
             {loadingCurrentEvent ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <CardSkeleton key={index} />
@@ -1466,14 +1451,6 @@ export default function Dashboard() {
                     selectedType={filters.types[0] || null}
                   />
                 </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                  whileHover={{ y: -4 }}
-                >
-                  <SocialMediaMonitoringCard eventId={currentEvent?.id} />
-                </motion.div>
               </>
             )}
           </div>
@@ -1513,7 +1490,7 @@ export default function Dashboard() {
 
       {/* Floating New Incident Button */}
       {!isIncidentModalOpen && (
-        <div className="fixed bottom-20 right-6 z-50">
+        <div className="fixed bottom-32 right-6 z-50">
           <div className="relative">
             <button 
               type="button"
