@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import LiveRiskPulse from '../LiveRiskPulse';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { act } from 'react-dom/test-utils';

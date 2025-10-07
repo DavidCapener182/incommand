@@ -1,0 +1,692 @@
+'use client'
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import {
+  Users,
+  RotateCcw,
+  Search,
+  Clock,
+  RefreshCcw,
+  Lightbulb,
+} from 'lucide-react'
+
+import { supabase } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
+
+interface StaffMember {
+  id: string
+  name: string
+  callsign: string
+  qualifications: string[]
+  experience_level: 'junior' | 'intermediate' | 'senior'
+  previous_events: string[]
+  current_role?: string
+  active_assignments?: number
+}
+
+interface DepartmentColumn {
+  id: string
+  name: string
+  capacity: number
+  colorClass: string
+  description: string
+}
+
+interface DepartmentState extends DepartmentColumn {
+  staff: StaffMember[]
+}
+
+interface RoleRecommendation {
+  recommended_role: string
+  confidence: number
+  justification: string
+  alternative_roles: Array<{ role: string; confidence: number }>
+}
+
+interface AssignmentHistoryEntry {
+  staff_id: string
+  staff_name: string
+  from_department: string
+  to_department: string
+  timestamp: string
+}
+
+interface StaffingCentreProps {
+  eventId?: string
+}
+
+const DEPARTMENTS: DepartmentColumn[] = [
+  {
+    id: 'crowd_management',
+    name: 'Crowd Management',
+    capacity: 15,
+    colorClass: 'border-blue-300 bg-blue-50 dark:bg-blue-950/40',
+    description: 'Front-of-house stewards and crowd flow guardians',
+  },
+  {
+    id: 'control_room',
+    name: 'Control Room',
+    capacity: 8,
+    colorClass: 'border-purple-300 bg-purple-50 dark:bg-purple-950/40',
+    description: 'Coordinators and communications specialists',
+  },
+  {
+    id: 'security',
+    name: 'Security',
+    capacity: 12,
+    colorClass: 'border-red-300 bg-red-50 dark:bg-red-950/40',
+    description: 'Static and roaming security officers',
+  },
+  {
+    id: 'medical',
+    name: 'Medical',
+    capacity: 6,
+    colorClass: 'border-green-300 bg-green-50 dark:bg-green-950/40',
+    description: 'Clinicians and first responders',
+  },
+  {
+    id: 'technical',
+    name: 'Technical Support',
+    capacity: 4,
+    colorClass: 'border-amber-300 bg-amber-50 dark:bg-amber-950/40',
+    description: 'AV, staging, and infrastructure specialists',
+  },
+]
+
+const DEPARTMENT_SKILLS: Record<string, string[]> = {
+  crowd_management: ['crowd', 'steward'],
+  control_room: ['control', 'radio', 'communications'],
+  security: ['security', 'sia'],
+  medical: ['medical', 'first_aid', 'paramedic'],
+  technical: ['technical', 'it', 'engineer', 'av'],
+}
+
+const DEFAULT_EXPERIENCE: StaffMember['experience_level'] = 'intermediate'
+
+const StaffCard = React.forwardRef<HTMLDivElement, { staff: StaffMember; isDragging: boolean; onSelect: (staff: StaffMember) => void }>(
+  ({ staff, isDragging, onSelect }, ref) => {
+    return (
+      <div
+        ref={ref}
+        onClick={() => onSelect(staff)}
+        className={`rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm transition hover:border-blue-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900 ${
+          isDragging ? 'ring-2 ring-blue-200' : ''
+        }`}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onSelect(staff)
+          }
+        }}
+        aria-label={`View recommendation for ${staff.name}`}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{staff.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{staff.callsign}</p>
+          </div>
+          {typeof staff.active_assignments === 'number' && staff.active_assignments > 0 && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              {staff.active_assignments} assigned
+            </span>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {staff.qualifications.slice(0, 3).map((qualification) => (
+            <span
+              key={qualification}
+              className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:bg-blue-900/40 dark:text-blue-200"
+            >
+              {qualification}
+            </span>
+          ))}
+          {staff.qualifications.length > 3 && (
+            <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:bg-blue-900/40 dark:text-blue-200">
+              +{staff.qualifications.length - 3}
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+)
+StaffCard.displayName = 'StaffCard'
+
+export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProps) {
+  const { addToast } = useToast()
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([])
+  const [columns, setColumns] = useState<Record<string, DepartmentState>>(() => {
+    const initial: Record<string, DepartmentState> = {}
+    DEPARTMENTS.forEach((department) => {
+      initial[department.id] = { ...department, staff: [] }
+    })
+    return initial
+  })
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [roleRecommendation, setRoleRecommendation] = useState<RoleRecommendation | null>(null)
+  const [loadingRecommendation, setLoadingRecommendation] = useState(false)
+  const [assignmentHistory, setAssignmentHistory] = useState<AssignmentHistoryEntry[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [announcement, setAnnouncement] = useState('')
+  const undoShortcutRef = useRef<(event: KeyboardEvent) => void>()
+
+  useEffect(() => {
+    const registerShortcuts = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        handleUndo()
+      }
+    }
+    undoShortcutRef.current = registerShortcuts
+    window.addEventListener('keydown', registerShortcuts)
+    return () => {
+      if (undoShortcutRef.current) {
+        window.removeEventListener('keydown', undoShortcutRef.current)
+      }
+    }
+  }, [assignmentHistory])
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      setCompanyId(profile?.company_id ?? null)
+    }
+
+    void fetchProfile()
+  }, [])
+
+  useEffect(() => {
+    if (!companyId) return
+    const fetchStaff = async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, full_name, callsign, skill_tags, experience_level, previous_events, current_role, active_assignments, company_id')
+        .eq('company_id', companyId)
+        .order('full_name', { ascending: true })
+
+      if (error) {
+        console.error('Failed to load staff roster', error)
+        setAvailableStaff([])
+        return
+      }
+
+      const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+      distributeStaff(normalized)
+    }
+
+    void fetchStaff()
+  }, [companyId])
+
+  const normalizeStaffRecord = useCallback((record: any, index: number): StaffMember => {
+    const qualifications = Array.isArray(record.skill_tags)
+      ? record.skill_tags.filter((tag: unknown): tag is string => typeof tag === 'string')
+      : []
+
+    const experience: StaffMember['experience_level'] = ['junior', 'intermediate', 'senior'].includes(record?.experience_level)
+      ? record.experience_level
+      : DEFAULT_EXPERIENCE
+
+    return {
+      id: record.id,
+      name: record.full_name || `Staff ${index + 1}`,
+      callsign: record.callsign || record.full_name || `STAFF-${index + 1}`,
+      qualifications,
+      experience_level: experience,
+      previous_events: Array.isArray(record.previous_events) ? record.previous_events : [],
+      current_role: record.current_role ?? undefined,
+      active_assignments: typeof record.active_assignments === 'number' ? record.active_assignments : undefined,
+    }
+  }, [])
+
+  const distributeStaff = useCallback((staffList: StaffMember[]) => {
+    const nextColumns: Record<string, DepartmentState> = {}
+    DEPARTMENTS.forEach((department) => {
+      nextColumns[department.id] = { ...department, staff: [] }
+    })
+
+    const unassigned: StaffMember[] = []
+
+    staffList.forEach((staff) => {
+      let targetDepartmentId: string | null = null
+
+      if (staff.current_role) {
+        const match = DEPARTMENTS.find((department) => department.name.toLowerCase() === staff.current_role?.toLowerCase())
+        if (match) {
+          targetDepartmentId = match.id
+        }
+      }
+
+      if (!targetDepartmentId) {
+        targetDepartmentId = inferDepartmentFromSkills(staff)
+      }
+
+      if (targetDepartmentId && nextColumns[targetDepartmentId]) {
+        nextColumns[targetDepartmentId].staff.push(staff)
+      } else {
+        unassigned.push(staff)
+      }
+    })
+
+    setColumns(nextColumns)
+    setAvailableStaff(unassigned)
+  }, [])
+
+  const inferDepartmentFromSkills = (staff: StaffMember): string | null => {
+    const tags = staff.qualifications.map((tag) => tag.toLowerCase())
+    const match = Object.entries(DEPARTMENT_SKILLS).find(([departmentId, skills]) =>
+      skills.some((skill) => tags.some((tag) => tag.includes(skill)))
+    )
+
+    return match ? match[0] : null
+  }
+
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      const { source, destination } = result
+
+      if (!destination) return
+      if (source.droppableId === destination.droppableId && source.index === destination.index) return
+
+      const sourceColumnId = source.droppableId
+      const destinationColumnId = destination.droppableId
+
+      let movingStaff: StaffMember | null = null
+
+      const updatedColumns = { ...columns }
+      let updatedAvailable = [...availableStaff]
+
+      const removeFromList = (list: StaffMember[], index: number) => {
+        const updated = [...list]
+        const [removed] = updated.splice(index, 1)
+        return { updated, removed }
+      }
+
+      if (sourceColumnId === 'available') {
+        const { updated, removed } = removeFromList(updatedAvailable, source.index)
+        updatedAvailable = updated
+        movingStaff = removed
+      } else {
+        const column = updatedColumns[sourceColumnId]
+        if (!column) return
+        const { updated, removed } = removeFromList(column.staff, source.index)
+        updatedColumns[sourceColumnId] = { ...column, staff: updated }
+        movingStaff = removed
+      }
+
+      if (!movingStaff) return
+
+      const addToList = (list: StaffMember[], index: number, staff: StaffMember) => {
+        const updated = [...list]
+        updated.splice(index, 0, staff)
+        return updated
+      }
+
+      if (destinationColumnId === 'available') {
+        updatedAvailable = addToList(updatedAvailable, destination.index, movingStaff)
+      } else {
+        const column = updatedColumns[destinationColumnId]
+        if (!column) return
+        updatedColumns[destinationColumnId] = {
+          ...column,
+          staff: addToList(column.staff, destination.index, movingStaff),
+        }
+      }
+
+      const historyEntry: AssignmentHistoryEntry = {
+        staff_id: movingStaff.id,
+        staff_name: movingStaff.name,
+        from_department: sourceColumnId,
+        to_department: destinationColumnId,
+        timestamp: new Date().toISOString(),
+      }
+
+      setAvailableStaff(updatedAvailable)
+      setColumns(updatedColumns)
+      setAssignmentHistory((previous) => [...previous, historyEntry])
+
+      const destinationName =
+        destinationColumnId === 'available'
+          ? 'Available pool'
+          : updatedColumns[destinationColumnId]?.name ?? destinationColumnId
+      setAnnouncement(`${movingStaff.name} moved to ${destinationName}`)
+    },
+    [availableStaff, columns]
+  )
+
+  const handleUndo = useCallback(() => {
+    setAssignmentHistory((previous) => {
+      if (previous.length === 0) return previous
+      const historyCopy = [...previous]
+      const lastEntry = historyCopy.pop()
+      if (!lastEntry) return previous
+
+      setColumns((prevColumns) => {
+        const next = { ...prevColumns }
+        let updatedAvailable = [...availableStaff]
+
+        const removeFromDestination = (columnId: string, staffId: string): StaffMember | null => {
+          if (columnId === 'available') {
+            const index = updatedAvailable.findIndex((staff) => staff.id === staffId)
+            if (index === -1) return null
+            const [removed] = updatedAvailable.splice(index, 1)
+            setAvailableStaff(updatedAvailable)
+            return removed
+          }
+          const column = next[columnId]
+          if (!column) return null
+          const index = column.staff.findIndex((staff) => staff.id === staffId)
+          if (index === -1) return null
+          const updated = [...column.staff]
+          const [removed] = updated.splice(index, 1)
+          next[columnId] = { ...column, staff: updated }
+          return removed
+        }
+
+        const staff = removeFromDestination(lastEntry.to_department, lastEntry.staff_id)
+        if (!staff) return prevColumns
+
+        if (lastEntry.from_department === 'available') {
+          updatedAvailable = [...updatedAvailable, staff]
+          setAvailableStaff(updatedAvailable)
+        } else {
+          const column = next[lastEntry.from_department]
+          if (column) {
+            next[lastEntry.from_department] = {
+              ...column,
+              staff: [...column.staff, staff],
+            }
+          }
+        }
+
+        setAnnouncement(`${staff.name} moved back to ${lastEntry.from_department === 'available' ? 'Available pool' : next[lastEntry.from_department]?.name}`)
+        return next
+      })
+
+      return historyCopy
+    })
+  }, [availableStaff])
+
+  const filteredAvailableStaff = useMemo(() => {
+    if (!searchTerm) return availableStaff
+    const term = searchTerm.toLowerCase()
+    return availableStaff.filter((staff) =>
+      staff.name.toLowerCase().includes(term) ||
+      staff.callsign.toLowerCase().includes(term) ||
+      staff.qualifications.some((qualification) => qualification.toLowerCase().includes(term))
+    )
+  }, [availableStaff, searchTerm])
+
+  const fetchRoleRecommendation = useCallback(async (staff: StaffMember) => {
+    setLoadingRecommendation(true)
+    setRoleRecommendation(null)
+    try {
+      const response = await fetch('/api/v1/staff/recommend-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staff_id: staff.id,
+          prior_events: staff.previous_events,
+          qualifications: staff.qualifications,
+          experience_level: staff.experience_level,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Recommendation service unavailable')
+      }
+
+      const data = (await response.json()) as RoleRecommendation
+      setRoleRecommendation(data)
+    } catch (error) {
+      console.error('Role recommendation error', error)
+      addToast({
+        type: 'error',
+        title: 'Recommendation unavailable',
+        message: 'Unable to fetch role recommendation. Using fallback guidance.',
+      })
+      setRoleRecommendation(null)
+    } finally {
+      setLoadingRecommendation(false)
+    }
+  }, [addToast])
+
+  const handleStaffSelect = useCallback(
+    (staff: StaffMember) => {
+      setSelectedStaff(staff)
+      void fetchRoleRecommendation(staff)
+    },
+    [fetchRoleRecommendation]
+  )
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Staffing Centre</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Drag and drop to balance teams, review skill coverage, and request AI-backed role recommendations.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+            <input
+              type="search"
+              placeholder="Search staff"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-56 rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => distributeStaff([...availableStaff, ...Object.values(columns).flatMap((column) => column.staff)])}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            <RefreshCcw className="h-4 w-4" aria-hidden />
+            Rebalance
+          </button>
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={assignmentHistory.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden />
+            Undo
+          </button>
+        </div>
+      </header>
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
+          <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
+            <header className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Available</h2>
+              <span className="text-xs text-gray-400">{filteredAvailableStaff.length} ready</span>
+            </header>
+            <Droppable droppableId="available">
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={`space-y-3 rounded-xl border border-dashed border-gray-300 p-3 text-sm transition ${
+                    snapshot.isDraggingOver ? 'border-blue-400 bg-blue-50/60 dark:border-blue-500 dark:bg-blue-900/30' : 'bg-transparent'
+                  }`}
+                >
+                  {filteredAvailableStaff.length === 0 && (
+                    <p className="text-xs text-gray-500">No unassigned staff. Drag team members here to free them up.</p>
+                  )}
+                  {filteredAvailableStaff.map((staff, index) => (
+                    <Draggable key={staff.id} draggableId={staff.id} index={index}>
+                      {(draggableProvided, draggableSnapshot) => (
+                        <div
+                          ref={draggableProvided.innerRef}
+                          {...draggableProvided.draggableProps}
+                          {...draggableProvided.dragHandleProps}
+                        >
+                          <StaffCard staff={staff} isDragging={draggableSnapshot.isDragging} onSelect={handleStaffSelect} />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </div>
+
+          {DEPARTMENTS.map((department) => (
+            <div
+              key={department.id}
+              className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70"
+              aria-label={`${department.name} column`}
+            >
+              <header className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{department.name}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{department.description}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  {columns[department.id]?.staff.length || 0} / {department.capacity}
+                </span>
+              </header>
+              <Droppable droppableId={department.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[180px] space-y-3 rounded-xl border border-dashed p-3 text-sm transition ${
+                      snapshot.isDraggingOver
+                        ? `${department.colorClass} ring-1 ring-blue-400`
+                        : 'border-gray-300 bg-transparent'
+                    }`}
+                  >
+                    {columns[department.id]?.staff.length ? (
+                      columns[department.id].staff.map((staff, index) => (
+                        <Draggable key={staff.id} draggableId={staff.id} index={index}>
+                          {(draggableProvided, draggableSnapshot) => (
+                            <div
+                              ref={draggableProvided.innerRef}
+                              {...draggableProvided.draggableProps}
+                              {...draggableProvided.dragHandleProps}
+                            >
+                              <StaffCard staff={staff} isDragging={draggableSnapshot.isDragging} onSelect={handleStaffSelect} />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">Drop staff here to assign them to {department.name.toLowerCase()}.</p>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          ))}
+        </div>
+      </DragDropContext>
+
+      <section className="grid gap-4 lg:grid-cols-2" aria-label="Role recommendation and recent changes">
+        <article className="rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70">
+          <header className="mb-3 flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-indigo-500" aria-hidden />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Role Recommendation</h2>
+          </header>
+          {selectedStaff ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Recommendation for <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</span>
+              </p>
+              {loadingRecommendation ? (
+                <p className="text-sm text-gray-500">Analyzing skills and experience…</p>
+              ) : roleRecommendation ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800/60 dark:bg-green-900/30 dark:text-green-200">
+                    <p className="text-xs uppercase tracking-wide">Recommended role</p>
+                    <p className="mt-1 text-lg font-semibold">{roleRecommendation.recommended_role}</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">Confidence: {(roleRecommendation.confidence * 100).toFixed(0)}%</p>
+                    <p className="mt-2 text-sm">{roleRecommendation.justification}</p>
+                  </div>
+                  {roleRecommendation.alternative_roles?.length > 0 && (
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Alternative roles</p>
+                      <ul className="mt-2 space-y-1">
+                        {roleRecommendation.alternative_roles.map((role) => (
+                          <li key={role.role} className="flex items-center justify-between">
+                            <span>{role.role}</span>
+                            <span className="text-xs text-gray-500">
+                              {(role.confidence * 100).toFixed(0)}%
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Unable to generate a recommendation. Try again later.</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Select a staff member to request a tailored placement recommendation.</p>
+          )}
+        </article>
+
+        <article className="rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70">
+          <header className="mb-3 flex items-center gap-2">
+            <Users className="h-5 w-5 text-blue-500" aria-hidden />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent changes</h2>
+          </header>
+          {assignmentHistory.length === 0 ? (
+            <p className="text-sm text-gray-500">Adjust assignments to see a change log.</p>
+          ) : (
+            <ol className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+              {assignmentHistory
+                .slice(-5)
+                .reverse()
+                .map((entry) => (
+                  <li key={`${entry.staff_id}-${entry.timestamp}`} className="flex items-start gap-2">
+                    <Clock className="mt-0.5 h-4 w-4 text-gray-400" aria-hidden />
+                    <div>
+                      <p>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{entry.staff_name}</span> moved from{' '}
+                        <span className="text-gray-800 dark:text-gray-200">{formatColumnLabel(entry.from_department)}</span> to{' '}
+                        <span className="text-gray-800 dark:text-gray-200">{formatColumnLabel(entry.to_department)}</span>
+                      </p>
+                      <p className="text-xs text-gray-400">{new Date(entry.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </li>
+                ))}
+            </ol>
+          )}
+        </article>
+      </section>
+
+      <div className="sr-only" aria-live="polite">
+        {announcement}
+      </div>
+    </div>
+  )
+}
+
+function formatColumnLabel(columnId: string): string {
+  if (columnId === 'available') return 'Available pool'
+  const match = DEPARTMENTS.find((department) => department.id === columnId)
+  return match ? match.name : columnId
+}

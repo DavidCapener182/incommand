@@ -471,7 +471,7 @@ export default function StaffCommandCentre() {
         </nav>
       </aside>
       {/* Main content area */}
-      <main className="flex-1 p-8 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
+      <main className="flex-1 p-5 bg-gray-50 dark:bg-[#15192c] transition-colors duration-300">
         <div className="w-full h-full">
           {activeView === 'staff' && <StaffListView />}
           {activeView === 'callsign' && <CallsignAssignmentView eventId={eventId} />}
@@ -491,6 +491,9 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showAddTempStaffModal, setShowAddTempStaffModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [pendingChanges, setPendingChanges] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
@@ -877,30 +880,30 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#101c36] dark:to-[#1a2a57] transition-colors duration-300">
       {/* Enhanced Sticky Header with Search */}
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm border-b border-gray-200 dark:border-[#2d437a] shadow-lg">
-      <div className="px-4 sm:px-6 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-center gap-4">
+      <div className="px-3 sm:px-4 py-2.5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md">
                 <Squares2X2Icon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Callsign Assignment</h1>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Assign your team to positions for the current event</p>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Callsign Assignment</h1>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Assign your team to positions for the current event</p>
               </div>
             </div>
             
             {/* Enhanced Search Bar */}
-            <div className="flex items-center gap-4 flex-1 lg:flex-none lg:w-96">
+            <div className="flex items-center gap-3 flex-1 lg:flex-none lg:w-96">
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Search by callsign, role, or staff name..."
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200"
                 />
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
@@ -908,23 +911,86 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
             </div>
 
             {/* Enhanced Action Buttons */}
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowAddPositionModal(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow">
-                <PlusIcon className="w-5 h-5" />
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setShowAddPositionModal(true)} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg shadow">
+                <PlusIcon className="w-4 h-4" />
                 Position
               </button>
-              <button onClick={() => setShowAddCategoryModal(true)} className="inline-flex items-center gap-2 bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a] py-2.5 px-4 rounded-lg shadow-sm hover:shadow">
-                <PlusIcon className="w-5 h-5" />
+              <button onClick={() => setShowAddCategoryModal(true)} className="inline-flex items-center gap-1.5 bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a] py-2 px-3 rounded-lg shadow-sm hover:shadow">
+                <PlusIcon className="w-4 h-4" />
                 Department
+              </button>
+              <button onClick={() => setBulkMode(!bulkMode)} className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-lg shadow-sm hover:shadow ${bulkMode ? 'bg-green-600 text-white' : 'bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a]'}`}>
+                <Squares2X2Icon className="w-4 h-4" />
+                Bulk Mode
               </button>
             </div>
           </div>
             </div>
           </div>
 
-      <div className="px-6 py-6">
+      {/* Bulk Actions Bar */}
+      {bulkMode && (
+        <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedPositions.length === categories.reduce((sum, cat) => sum + cat.positions.length, 0) && selectedPositions.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const allPositionIds = categories.flatMap(cat => cat.positions.map(pos => pos.id));
+                      setSelectedPositions(allPositionIds);
+                    } else {
+                      setSelectedPositions([]);
+                    }
+                  }}
+                  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                  {selectedPositions.length > 0 ? `${selectedPositions.length} selected` : 'Select all positions'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAddPositionModal(true)}
+                className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add Multiple Positions
+              </button>
+              {selectedPositions.length > 0 && (
+                <button
+                  onClick={() => {
+                    // Remove selected positions
+                    setCategories(prev => prev.map(cat => ({
+                      ...cat,
+                      positions: cat.positions.filter(pos => !selectedPositions.includes(pos.id))
+                    })));
+                    setSelectedPositions([]);
+                  }}
+                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                  Remove Selected ({selectedPositions.length})
+                </button>
+              )}
+              <button
+                onClick={() => setBulkMode(false)}
+                className="inline-flex items-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium"
+              >
+                Exit Bulk Mode
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 py-4">
         {/* Enhanced Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {[
             {
               label: 'Total Positions',
@@ -951,13 +1017,13 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
               icon: <UsersIcon className="w-6 h-6 text-blue-600" />,
             },
           ].map((kpi) => (
-            <div key={kpi.label} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 shadow-sm">
+            <div key={kpi.label} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className={`text-3xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-300">{kpi.label}</div>
+                  <div className={`text-2xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">{kpi.label}</div>
             </div>
-                <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-[#182447] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-xl bg-gray-50 dark:bg-[#182447] flex items-center justify-center">
                   {kpi.icon}
           </div>
             </div>
@@ -966,27 +1032,37 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         </div>
 
         {/* Available Staff Section */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-5 mb-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 mb-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Available Staff</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-300">Assign staff to open positions</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Available Staff</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-300">Assign staff to open positions</p>
             </div>
-            <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm px-3 py-1.5 rounded-full font-medium">
-              {unassignedStaff.length} available
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-xs px-2 py-1 rounded-full font-medium">
+                {unassignedStaff.length} available
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAddTempStaffModal(true)}
+                className="inline-flex items-center gap-1.5 bg-white dark:bg-[#182447] text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-[#2d437a] px-2 py-1 rounded-lg text-xs font-medium hover:shadow-sm"
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Temporary staff
+              </button>
+            </div>
           </div>
           
           {unassignedStaff.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <div className="text-4xl mb-3">🎉</div>
-              <div className="font-medium text-lg mb-2">All staff assigned</div>
-              <div className="text-sm">Great job! All available staff have been assigned to positions.</div>
+            <div className="text-center py-5 text-gray-500 dark:text-gray-400">
+              <div className="text-3xl mb-2">🎉</div>
+              <div className="font-medium text-base mb-1.5">All staff assigned</div>
+              <div className="text-xs">Great job! All available staff have been assigned to positions.</div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {unassignedStaff.map(staff => (
-                <div key={staff.id} className="bg-gray-50 dark:bg-[#182447] px-3 py-1.5 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-[#2d437a] cursor-default select-none">
+                <div key={staff.id} className="bg-gray-50 dark:bg-[#182447] px-2 py-1 rounded-lg text-xs font-medium text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-[#2d437a] cursor-default select-none">
                   {staff.full_name}
                 </div>
               ))}
@@ -995,23 +1071,23 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         </div>
 
         {/* Enhanced Department Cards */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {filteredCategories.map((category) => (
             <div key={category.id} className="bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden">
               {/* Department Header - neutral, compact */}
-              <div className="px-4 sm:px-6 py-3 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a]">
+              <div className="px-3 sm:px-4 py-2 bg-white dark:bg-[#23408e] border-b border-gray-200 dark:border-[#2d437a]">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{category.name}</h2>
-                    <div className="hidden sm:flex gap-2">
-                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                    <div className="hidden sm:flex gap-1.5">
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2 py-0.5 rounded-full font-medium">
                       {category.positions.length} positions
                     </span>
-                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                      <span className="bg-gray-100 dark:bg-[#182447] text-gray-700 dark:text-gray-200 text-xs px-2 py-0.5 rounded-full font-medium">
                         {category.positions.filter(p => p.assignedStaff || p.assignedName).length} assigned
                     </span>
                       {category.positions.some(p => !p.assignedStaff && !p.assignedName) && (
-                        <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                        <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs px-2 py-0.5 rounded-full font-medium">
                           {category.positions.filter(p => !p.assignedStaff && !p.assignedName).length} vacant
                         </span>
                       )}
@@ -1047,15 +1123,15 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
               </div>
 
               {/* Enhanced Positions Grid */}
-              <div className="p-6">
+              <div className="p-4">
                 {category.positions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                    <div className="text-4xl mb-3">📝</div>
-                    <div className="text-lg font-medium mb-2">No positions yet</div>
-                    <div className="text-sm">Click the + button above to add positions to this department</div>
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div className="text-3xl mb-2">📝</div>
+                    <div className="text-base font-medium mb-1.5">No positions yet</div>
+                    <div className="text-xs">Click the + button above to add positions to this department</div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                     {category.positions.map((position) => {
                       const assignedStaff = position.assignedStaff 
                         ? staffList.find(s => s.id === position.assignedStaff)
@@ -1076,6 +1152,15 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
                           onEdit={() => setEditingPosition(position)}
                           onDelete={() => handleDeletePosition(category.id, position.id)}
                           getMatchingStaff={getMatchingStaff}
+                          bulkMode={bulkMode}
+                          isSelected={selectedPositions.includes(position.id)}
+                          onSelect={(selected) => {
+                            if (selected) {
+                              setSelectedPositions(prev => [...prev, position.id]);
+                            } else {
+                              setSelectedPositions(prev => prev.filter(id => id !== position.id));
+                            }
+                          }}
                         />
                       );
                     })}
@@ -1153,6 +1238,22 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         onDelete={deleteCategory}
       />
 
+      <AddTempStaffModal
+        isOpen={showAddTempStaffModal}
+        onClose={() => setShowAddTempStaffModal(false)}
+        onAdd={(tempStaff) => {
+          // Add temporary staff to the staff list
+          setStaffList(prev => [...prev, {
+            id: `temp_${Date.now()}`,
+            full_name: tempStaff.name,
+            email: tempStaff.email,
+            phone: tempStaff.phone,
+            is_temporary: true
+          }]);
+          setShowAddTempStaffModal(false);
+        }}
+      />
+
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] p-8 w-full max-w-md mx-4">
@@ -1181,7 +1282,10 @@ function PositionCard({
   onUnassign, 
   onEdit, 
   onDelete,
-  getMatchingStaff
+  getMatchingStaff,
+  bulkMode = false,
+  isSelected = false,
+  onSelect = () => {}
 }: {
   position: any;
   assignedStaff: any;
@@ -1194,6 +1298,9 @@ function PositionCard({
   onEdit: () => void;
   onDelete: () => void;
   getMatchingStaff: (position: any) => any[];
+  bulkMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (selected: boolean) => void;
 }) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{top: number, left: number} | null>(null);
@@ -1234,7 +1341,19 @@ function PositionCard({
       isAssigned 
         ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-700' 
         : 'bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-700 hover:border-blue-300 dark:hover:border-blue-500'
-    } ${isAssigned ? 'shadow-lg' : 'hover:shadow-xl'}`}>
+    } ${isAssigned ? 'shadow-lg' : 'hover:shadow-xl'} ${bulkMode && isSelected ? 'ring-2 ring-green-500' : ''}`}>
+      {/* Bulk Selection Checkbox */}
+      {bulkMode && (
+        <div className="absolute top-2 left-2 z-20">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onSelect(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+          />
+        </div>
+      )}
+      
       {/* Enhanced Status Indicator */}
       <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
         isAssigned ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
@@ -2292,6 +2411,92 @@ function EditCategoryModal({ isOpen, category, onClose, onEdit, onDelete }: {
             >
               Cancel
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Add Temporary Staff Modal Component
+function AddTempStaffModal({ isOpen, onClose, onAdd }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (tempStaff: { name: string; email: string; phone: string }) => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name.trim()) {
+      onAdd(formData);
+      setFormData({ name: '', email: '', phone: '' });
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] w-full max-w-md mx-4 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-[#2d437a] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+              <PlusIcon className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Add Temporary Staff</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-4 py-3 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full px-2.5 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              placeholder="Enter full name"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              className="w-full px-2.5 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              placeholder="Enter email address"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              className="w-full px-2.5 py-2 rounded-lg border border-gray-300 dark:border-[#2d437a] bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              placeholder="Enter phone number"
+            />
+          </div>
+
+          <div className="px-0 pt-1.5 pb-1 flex gap-2 justify-end">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-[#2d437a] text-gray-700 dark:text-gray-100 hover:bg-gray-300">Cancel</button>
+            <button type="submit" className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow">Add Staff</button>
           </div>
         </form>
       </div>

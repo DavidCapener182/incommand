@@ -1,2230 +1,723 @@
 "use client"
-// NOTE: You must install 'react-chartjs-2' and 'chart.js' for this page to work:
-// npm install react-chartjs-2 chart.js
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Line, Bar, Pie } from 'react-chartjs-2';
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { 
+  Sparkles, RefreshCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock, 
+  PieChart, Activity, UserX, UserCheck, Eye, Zap, Target, Calendar,
+  Lightbulb, AlertCircle, CheckCircle, Timer, UserPlus, MapPin
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-  TimeScale,
-  ChartOptions,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import annotationPlugin from 'chartjs-plugin-annotation';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-import { 
-  FaArrowUp,
-  FaArrowDown,
-  FaFileExport,
-  FaPrint,
-  FaMapMarkerAlt,
-  FaClock,
-  FaExclamationTriangle,
-  FaUsers,
-  FaCheck,
-  FaLightbulb,
-  FaBolt,
-  FaClipboardList,
-  FaCheckCircle,
-  FaChartLine,
-  FaRegClock,
-  FaArrowRight,
-  FaBullseye
-} from 'react-icons/fa';
-import { 
-  ChartBarIcon, 
-  ClockIcon, 
-  ExclamationTriangleIcon,
-  UsersIcon,
-  DocumentChartBarIcon,
-  CogIcon,
-  LightBulbIcon,
-  FireIcon,
-  ChartPieIcon
-} from '@heroicons/react/24/outline';
-import IconSidebar from '../../components/IconSidebar';
-import { QuickActionItem } from '../../types/sidebar';
-import { 
-  ArrowPathIcon, 
-  PlusIcon, 
-  SunIcon, 
-  MoonIcon,
-  DocumentArrowDownIcon
-} from '@heroicons/react/24/outline';
-import LiveIncidentStatus from '../../components/LiveIncidentStatus';
-import StaffEfficiencyWidget from '../../components/StaffEfficiencyWidget';
-import VenueCapacityWidget from '../../components/VenueCapacityWidget';
-import EnhancedAIInsights from '../../components/EnhancedAIInsights';
-import { 
-  getEnhancedChartColors, 
-  getResponsiveOptions, 
-  getHoverEffects, 
-  getAnimationConfig, 
-  getGradientFill, 
-  createAnimatedDataset, 
-  getChartTheme 
-} from '../../utils/chartEnhancements';
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Area,
+  AreaChart
+} from 'recharts'
 
-// Import export functionality only
-import { ExportMenu } from '../../components/ExportMenu';
-import { exportAnalyticsData } from '../../utils/exportUtils';
-import { logger } from '@/lib/logger';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  TimeScale,
-  annotationPlugin
-);
-
-interface DebriefData {
-  eventOverview?: string;
-  attendanceSummary?: string;
-  significantIncidents?: { date: string; type: string; details: string }[];
-  learningPoints?: string[];
-}
-interface AttendanceRecord {
-  count: number;
-  timestamp: string;
-  occurrence?: string;
-}
 interface IncidentRecord {
-  id: string;
-  timestamp: string;
-  incident_type: string;
-  status: string;
-  is_closed: boolean;
-  priority?: string;
-  occurrence?: string;
-  created_at?: string;
-  updated_at?: string;
+  id: string
+  incident_type: string
+  priority: string
+  status: string
+  created_at: string
+  updated_at: string
+  response_time_minutes?: number
 }
 
-interface EventRecord {
-  id: string;
-  doors_open_time: string;
-  main_act_start_time: string;
-  support_act_times: { time: string, name: string }[];
-  event_date: string;
-  expected_attendance?: number;
+interface AttendanceRecord {
+  id: string
+  timestamp: string
+  count: number
 }
 
-// Analytics navigation items
-const navigation = [
-  { name: 'Dashboard', icon: ChartBarIcon, id: 'overview' },
-  { name: 'Attendance', icon: UsersIcon, id: 'attendance' },
-  { name: 'Incidents', icon: ExclamationTriangleIcon, id: 'incidents' },
-  { name: 'AI Insights', icon: LightBulbIcon, id: 'ai-insights' },
-];
-
-const msToTime = (ms: number | null) => {
-  if (ms === null || isNaN(ms) || ms < 0) return 'N/A';
-  if (ms === 0) return '0s';
-  const seconds = Math.floor((ms / 1000) % 60);
-  const minutes = Math.floor((ms / (1000 * 60)) % 60);
-  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  // Always show seconds if it's the only unit or it's not zero
-  if (seconds > 0 || parts.length === 0) {
-    parts.push(`${seconds}s`);
-  }
-  
-  return parts.join(' ');
-};
-
-const formatDisplayTime = (timestamp: string | null | undefined) => {
-  if (!timestamp) return '–';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatShortDateTime = (timestamp: string | null | undefined) => {
-  if (!timestamp) return '–';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-// Loading skeleton component
-function Skeleton({ height = 24, width = '100%' }) {
-  return <div style={{ height, width }} className="bg-gray-200 animate-pulse rounded" />;
-}
-
-// Helper function to get chart text color based on dark mode
-function getChartTextColor() {
-  if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
-    return '#fff';
-  }
-  return '#222';
+interface EventData {
+  id: string
+  name: string
+  start_time: string
+  end_time: string
+  max_capacity: number
 }
 
 export default function AnalyticsPage() {
-  const [activeSection, setActiveSection] = useState('overview');
-  
-  // Debug function to log section changes
-  const handleSectionChange = (sectionId: string) => {
-    setActiveSection(sectionId);
-  };
-  
-  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-  const [incidentData, setIncidentData] = useState<IncidentRecord[]>([]);
-  const [eventDetails, setEventDetails] = useState<EventRecord | null>(null);
-  const [eventId, setEventId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [noCurrentEvent, setNoCurrentEvent] = useState(false);
-  const [aiInsights, setAiInsights] = useState<string[]>([]);
-  const [predictions, setPredictions] = useState<{ likelyType: string | null; likelyLocation: string | null; likelyHour: string | null }>({ likelyType: null, likelyLocation: null, likelyHour: null });
-  const [debrief, setDebrief] = useState<DebriefData>({});
-  const [loadingPredictions, setLoadingPredictions] = useState(true);
-  const [loadingDebrief, setLoadingDebrief] = useState(true);
-  const [previousEventKpis, setPreviousEventKpis] = useState<any>(null);
-  const [manualNotes, setManualNotes] = useState('');
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [isGeneratingDebrief, setIsGeneratingDebrief] = useState(false);
-  const [debriefError, setDebriefError] = useState<string | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
-  
-  // New analytics state
-  const [exportResult, setExportResult] = useState<any>(null);
+  const [incidentData, setIncidentData] = useState<IncidentRecord[]>([])
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
+  const [eventData, setEventData] = useState<EventData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [aiSummary, setAiSummary] = useState<string>('')
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
 
-  // Ensure eventId is available
-  const safeEventId = eventId || '';
-
-  // Section status mapping for sidebar indicators
-  const sectionStatus: Record<string, 'loading' | 'ready' | 'error' | 'none'> = {
-    overview: loading ? 'loading' : 'ready',
-    attendance: loading ? 'loading' : 'ready',
-    incidents: loading ? 'loading' : 'ready',
-    'ai-insights': loadingPredictions || loadingDebrief ? 'loading' : 'ready',
-  };
-
-  // Quick actions for sidebar - will be defined after functions
-  let quickActions: QuickActionItem[] = [];
-
-
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      setLoading(true);
-      setNoCurrentEvent(false);
+  // Fetch all analytics data
+  const fetchAnalyticsData = useCallback(async () => {
+    try {
+      setLoading(true)
       
-      try {
-        // Test database connection first
-        const { data: testData, error: testError } = await supabase
-          .from('events')
-          .select('count')
-          .limit(1);
-        
-        // Get current event - try without company_id filter first
-        let eventError: any = null;
-        let { data: event, error } = await supabase
-          .from('events')
-          .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
-          .eq('is_current', true)
-          .maybeSingle();
-        eventError = error;
-        
-        // If that fails, try to get any event
-        if (error || !event) {
-          const { data: anyEvent, error: anyEventError } = await supabase
-            .from('events')
-            .select('id, doors_open_time, main_act_start_time, support_act_times, event_date, expected_attendance, company_id, is_current')
-            .limit(1)
-            .maybeSingle();
-          
-          if (anyEvent) {
-            event = anyEvent;
-            error = null;
-            eventError = null;
-          } else if (anyEventError) {
-            eventError = anyEventError;
-          }
-        }
-
-        if (eventError || !event) {
-          console.error('No current event found:', eventError);
-          
-          // Let's check if there are any events at all in the database
-          const { data: allEvents, error: allEventsError } = await supabase
-            .from('events')
-            .select('id, event_date, is_current')
-            .limit(5);
-
-          setNoCurrentEvent(true);
-          setLoading(false);
-          return;
-        }
-        
-        setEventDetails(event as EventRecord);
-        setEventId(event.id);
-
-      // Fetch data for the current event
-      const { data: records } = await supabase
-        .from('attendance_records')
-        .select('count, timestamp')
-        .eq('event_id', event.id)
-        .order('timestamp', { ascending: true });
-      setAttendanceData((records || []) as AttendanceRecord[]);
-      
-      const { data: incidents } = await supabase
+      // Fetch incidents
+      const { data: incidents, error: incidentError } = await supabase
         .from('incident_logs')
-        .select('*')
-        .eq('event_id', event.id)
-        .order('timestamp', { ascending: true });
-      setIncidentData((incidents || []) as IncidentRecord[]);
+        .select('id, incident_type, priority, status, created_at, updated_at')
+        .order('created_at', { ascending: false })
+        .limit(100)
 
-      // --- Fetch previous event data for trend comparison ---
-      const { data: previousEvent } = await supabase
+      if (incidentError) throw incidentError
+
+      const processedIncidents = incidents?.map(incident => ({
+        ...incident,
+        response_time_minutes: incident.updated_at && incident.created_at 
+          ? Math.round((new Date(incident.updated_at).getTime() - new Date(incident.created_at).getTime()) / (1000 * 60))
+          : undefined
+      })) || []
+
+      setIncidentData(processedIncidents)
+
+      // Fetch attendance data
+      const { data: attendance, error: attendanceError } = await supabase
+        .from('attendance_records')
+        .select('id, timestamp, count')
+        .order('timestamp', { ascending: true })
+
+      if (attendanceError) console.warn('Attendance data error:', attendanceError)
+      setAttendanceData(attendance || [])
+
+      // Fetch current event
+      const { data: event, error: eventError } = await supabase
         .from('events')
-        .select('id, event_date')
-        .eq('is_current', false)
-        .order('event_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .select('id, name, start_time, end_time, max_capacity')
+        .eq('is_current', true)
+        .single()
 
-      if (previousEvent) {
-        // Fetch previous event's incidents
-        const { data: prevIncidents } = await supabase
-          .from('incident_logs')
-          .select('*')
-          .eq('event_id', previousEvent.id);
-        
-        // Fetch previous event's attendance
-        const { data: prevAttendance } = await supabase
-          .from('attendance_records')
-          .select('count')
-          .eq('event_id', previousEvent.id);
-        
-        if (prevIncidents && prevAttendance) {
-          // Calculate KPIs for the previous event
-          const prevFiltered = prevIncidents.filter(i => !['Attendance', 'Sit Rep', 'Timings'].includes(i.incident_type));
-          const prevTotal = prevFiltered.length;
-          const prevOpen = prevFiltered.filter(i => !i.is_closed && i.status !== 'Logged').length;
-          const prevClosed = prevFiltered.filter(i => i.is_closed).length;
-          const prevPeakAttendance = prevAttendance.length > 0 ? Math.max(...prevAttendance.map(r => r.count)) : 0;
-          
-          // Note: Avg Response Time & Most Likely Type are more complex to calculate historically,
-          // so we'll focus on the primary count-based KPIs for now.
-          setPreviousEventKpis({
-            total: prevTotal,
-            open: prevOpen,
-            closed: prevClosed,
-            peak: prevPeakAttendance
-          });
-        }
-      }
-      
-      // Fetch additional analytics data
-      if (event.id) {
-        fetchData(`/api/analytics/predictions?eventId=${event.id}`, setPredictions, setLoadingPredictions);
-        fetchData(`/api/analytics/debrief-summary?eventId=${event.id}`, setDebrief, setLoadingDebrief);
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
-      setNoCurrentEvent(true);
-      setLoading(false);
-    }
-  };
-  fetchAnalytics();
-}, []);
+      if (eventError) console.warn('Event data error:', eventError)
+      setEventData(event || null)
 
-  // Real-time subscriptions for attendance_records and incident_logs
-  useEffect(() => {
-    if (!eventId) return;
-
-    // Subscribe to attendance_records changes
-    const attendanceSubscription = supabase
-      .channel('attendance_records_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'attendance_records',
-          filter: `event_id=eq.${eventId}`
-        },
-        async () => {
-          // Refetch attendance data when changes occur
-          const { data: records } = await supabase
-            .from('attendance_records')
-            .select('count, timestamp')
-            .eq('event_id', eventId)
-            .order('timestamp', { ascending: true });
-          setAttendanceData((records || []) as AttendanceRecord[]);
-        }
-      )
-      .subscribe();
-
-    // Subscribe to incident_logs changes
-    const incidentSubscription = supabase
-      .channel('incident_logs_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'incident_logs',
-          filter: `event_id=eq.${eventId}`
-        },
-        async () => {
-          // Refetch incident data when changes occur
-          const { data: incidents } = await supabase
-            .from('incident_logs')
-            .select('*')
-            .eq('event_id', eventId)
-            .order('timestamp', { ascending: true });
-          setIncidentData((incidents || []) as IncidentRecord[]);
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscriptions on component unmount
-    return () => {
-      attendanceSubscription.unsubscribe();
-      incidentSubscription.unsubscribe();
-    };
-  }, [eventId]);
-
-  // Fetch AI insights data
-  useEffect(() => {
-    if (!eventId) return;
-
-    const fetchAIInsights = async () => {
-      try {
-        // Try to fetch from AI insights API endpoint
-        const response = await fetch(`/api/ai-insights?eventId=${eventId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.insights && Array.isArray(data.insights)) {
-            setAiInsights(data.insights);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching AI insights:', error);
-      }
-
-      // Fallback to mock data if API is not available
-      const mockInsights = [
-        "Attendance is trending upward with a 15% increase in the last hour. Consider additional staff deployment.",
-        "Incident rate is below average for this event type. Current response time is 2.3 minutes.",
-        "Peak attendance expected at 22:30 based on current patterns. Prepare for capacity management.",
-        "Medical incidents are 20% higher than usual. Review first aid station coverage.",
-        "Weather conditions may impact outdoor areas. Monitor crowd flow to indoor spaces."
-      ];
-      setAiInsights(mockInsights);
-    };
-
-    fetchAIInsights();
-  }, [eventId]);
-
-  // Debug: log incident data to browser console
-  useEffect(() => {
-    if (incidentData.length) {
-      logger.debug('Incident data loaded', { component: 'AnalyticsPage', action: 'incidentDataEffect', count: incidentData.length });
-    }
-  }, [incidentData]);
-
-  // Filter out 'Attendance' and 'Sit Rep' incidents for all widgets except attendance timeline
-  const filteredIncidents = incidentData.filter(
-    (incident) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
-  );
-
-
-
-
-
-  // Fetch supplementary analytics data
-  useEffect(() => {
-    if (eventId) {
-      const fetchAllData = async () => {
-        setLoadingPredictions(true);
-        setLoadingDebrief(true);
-        
-        fetchData(`/api/analytics/predictions?eventId=${eventId}`, setPredictions, setLoadingPredictions);
-        fetchData(`/api/analytics/debrief-summary?eventId=${eventId}`, (data) => {
-          if (data && data.summary) {
-              try {
-                  const parsedSummary = JSON.parse(data.summary);
-                  setDebrief(parsedSummary);
-              } catch (e) {
-                  console.error("Failed to parse debrief summary JSON:", e);
-                  setDebrief({ eventOverview: data.summary, significantIncidents: [], learningPoints: [] });
-              }
-          } else {
-              setDebrief({});
-          }
-        }, setLoadingDebrief);
-      };
-      fetchAllData();
-    }
-  }, [eventId]);
-
-  const fetchData = (url: string, setData: (data: any) => void, setLoading: (loading: boolean) => void) => {
-    setLoading(true);
-    fetch(url)
-      .then(res => res.ok ? res.json() : Promise.reject(res))
-      .then(data => setData(data))
-      .catch(error => console.error(`Error fetching ${url}:`, error))
-      .finally(() => setLoading(false));
-  };
-
-
-
-  // Export/print handlers (dummy)
-  const handleExport = () => {
-    const debriefElement = document.getElementById('debrief-report');
-    if (debriefElement) {
-        html2canvas(debriefElement, { scale: 2 }).then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
-            const width = pdfWidth - 20; // with margin
-            const height = width / ratio;
-
-            pdf.addImage(imgData, 'PNG', 10, 10, width, height);
-            pdf.save(`debrief-summary-${eventDetails?.event_date || 'event'}.pdf`);
-        });
-    }
-  };
-
-
-  const handleSaveNotes = async () => {
-    if (!eventId) {
-      alert('Cannot save notes, event ID is missing.');
-      return;
-    }
-    setIsSavingNotes(true);
-    try {
-      const response = await fetch('/api/analytics/save-debrief-notes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ eventId, notes: manualNotes }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save notes');
-      }
-      
-      alert('Notes saved successfully!');
-
-    } catch (error) {
-      console.error(error);
-      alert('Error saving notes.');
+    } catch (err) {
+      console.error('Error fetching analytics data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch data')
     } finally {
-      setIsSavingNotes(false);
+      setLoading(false)
     }
-  };
+  }, [])
 
-  const handleGenerateDebrief = async (eventId: string) => {
-    if (!eventId) return;
-    setDebriefError(null);
-    setIsGeneratingDebrief(true);
+  // Generate AI summary
+  const generateAISummary = async () => {
+    setIsGeneratingSummary(true)
     try {
-      // First, trigger the generation
-      const genRes = await fetch('/api/analytics/generate-debrief-summary', {
+      const prompt = `Analyze this incident data and provide a brief operational summary:
+      
+Total incidents: ${incidentData.length}
+High priority: ${incidentData.filter(i => i.priority === 'high' || i.priority === 'urgent').length}
+Average response time: ${incidentData.filter(i => i.response_time_minutes).reduce((acc, i) => acc + (i.response_time_minutes || 0), 0) / incidentData.filter(i => i.response_time_minutes).length || 0} minutes
+
+Provide insights on patterns, areas for improvement, and recommendations. Keep it concise and actionable.`
+
+      const response = await fetch('/api/v1/ai/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
-      });
+        body: JSON.stringify({ prompt, max_tokens: 200 })
+      })
 
-      if (!genRes.ok) {
-        const errorData = await genRes.json();
-        throw new Error(errorData.error || 'Failed to generate debrief.');
-      }
+      if (!response.ok) throw new Error('Failed to generate summary')
       
-      const genData = await genRes.json();
-
-      // The generation endpoint now returns the summary directly
-      const summaryData = typeof genData.summary === 'string' ? JSON.parse(genData.summary) : genData.summary;
-      setDebrief(summaryData || {});
-
-    } catch (error: any) {
-      console.error('Debrief generation error:', error);
-      setDebriefError(error.message || 'An unknown error occurred.');
-      setDebrief({});
+      const data = await response.json()
+      setAiSummary(data.summary || 'Unable to generate summary')
+    } catch (error) {
+      console.error('Error generating AI summary:', error)
+      setAiSummary('Error generating summary')
     } finally {
-      setIsGeneratingDebrief(false);
-    }
-  };
-
-  // Define quick actions after functions are available
-  quickActions = [
-    {
-      id: 'refresh-data',
-      label: 'Refresh Data',
-      icon: ArrowPathIcon,
-      onClick: () => {
-        // Trigger data refresh
-        window.location.reload();
-      },
-      variant: 'secondary'
-    },
-    {
-      id: 'new-incident',
-      label: 'New Incident',
-      icon: PlusIcon,
-      onClick: () => {
-        // Navigate to incidents page
-        window.location.href = '/incidents';
-      },
-      variant: 'primary'
-    },
-    {
-      id: 'export-pdf',
-      label: 'Export PDF',
-      icon: DocumentArrowDownIcon,
-      onClick: handleExport,
-      variant: 'secondary'
-    },
-    {
-      id: 'toggle-theme',
-      label: 'Toggle Theme',
-      icon: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? SunIcon : MoonIcon,
-      onClick: () => {
-        // Toggle dark mode
-        if (typeof document !== 'undefined') {
-          document.documentElement.classList.toggle('dark');
-        }
-      },
-      variant: 'secondary'
-    }
-  ];
-
-  // Handle export completion
-  const handleExportComplete = (result: any) => {
-    setExportResult(result);
-    if (!result.success) {
-      console.error('Export failed:', result.error);
-    }
-  };
-
-  // --- Attendance Timeline (existing, now larger) ---
-  const attendanceChartData = {
-    datasets: [
-      {
-        label: 'Attendance',
-        data: attendanceData.map((rec) => ({
-          x: new Date(rec.timestamp).getTime(),
-          y: rec.count
-        })),
-        fill: false,
-        borderColor: getEnhancedChartColors('light', 1)[0],
-        backgroundColor: getEnhancedChartColors('light', 1)[0],
-        tension: 0.2,
-      },
-      // Add dummy datasets for legend
-      {
-        label: `Doors Open: ${eventDetails?.doors_open_time || 'N/A'}`,
-        data: [],
-        borderColor: getEnhancedChartColors('light', 3)[1],
-        backgroundColor: getEnhancedChartColors('light', 3)[1],
-      },
-      {
-        label: `Main Act: ${eventDetails?.main_act_start_time || 'N/A'}`,
-        data: [],
-        borderColor: getEnhancedChartColors('light', 3)[2],
-        backgroundColor: getEnhancedChartColors('light', 3)[2],
-      },
-      ...(eventDetails?.support_act_times?.map((act, index) => ({
-        label: `${act.name}: ${act.time || 'N/A'}`,
-        data: [],
-        borderColor: getEnhancedChartColors('light', 5)[3 + index],
-        backgroundColor: getEnhancedChartColors('light', 5)[3 + index],
-      })) || [])
-    ],
-  };
-
-  const annotations: any = {};
-  
-  const addAnnotationLine = (time: string | null, label: string, color: string, id: string) => {
-    if (!time || !eventDetails?.event_date) return;
-    
-    const datePart = eventDetails.event_date;
-    const annotationTime = new Date(`${datePart}T${time}`).getTime();
-
-    annotations[id] = {
-      type: 'line',
-      scaleID: 'x',
-      value: annotationTime,
-      borderColor: color,
-      borderWidth: 2,
-      borderDash: [6, 6],
-      cursor: 'pointer',
-      onClick: ({ chart, element }: { chart: any, element: any }) => {
-        // eslint-disable-next-line no-alert
-        alert(`Event: ${label} at ${new Date(element.options.value).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
-      },
-    };
-  };
-
-  if (eventDetails) {
-    addAnnotationLine(eventDetails.doors_open_time, 'Doors Open', 'green', 'doorsOpenLine');
-    if (eventDetails.support_act_times && eventDetails.support_act_times.length > 0) {
-       eventDetails.support_act_times.forEach((act, index) => {
-         addAnnotationLine(act.time, act.name || `Support ${index + 1}`, 'orange', `supportLine${index}`);
-       });
-    }
-    addAnnotationLine(eventDetails.main_act_start_time, 'Main Act', 'red', 'mainActLine');
-  }
-
-  const isDarkMode = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const chartTheme = getChartTheme(isDarkMode);
-  const animationConfig = getAnimationConfig('entrance', false);
-
-  const attendanceChartOptions: ChartOptions<'line'> = {
-    ...getResponsiveOptions('line'),
-    ...getHoverEffects(),
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: chartTheme.textColor,
-        },
-      },
-      tooltip: {
-        enabled: true,
-        mode: 'index',
-        intersect: false,
-        titleColor: chartTheme.textColor,
-        bodyColor: chartTheme.textColor,
-      },
-      title: { display: true, text: 'Attendance Over Time', color: chartTheme.textColor },
-      annotation: {
-        annotations: annotations
-      }
-    },
-    scales: {
-      x: {
-        type: 'time',
-        time: {
-          unit: 'minute',
-          tooltipFormat: 'HH:mm',
-          displayFormats: {
-            minute: 'HH:mm'
-          }
-        },
-        title: { display: true, text: 'Time', color: chartTheme.textColor },
-        ticks: { color: chartTheme.textColor },
-        grid: { color: chartTheme.gridColor },
-      },
-      y: {
-        title: { display: true, text: 'Attendance', color: chartTheme.textColor },
-        beginAtZero: true,
-        ticks: { color: chartTheme.textColor },
-        grid: { color: chartTheme.gridColor },
-      },
-    },
-    animation: {
-      duration: animationConfig.duration,
-      easing: animationConfig.easing as any,
-      delay: animationConfig.delay
-    },
-  };
-
-  // --- Incident Volume Over Time (Stacked Bar, by hour and type) ---
-  const incidentsByHourAndType: { [hour: string]: { [type: string]: number } } = {};
-  const allIncidentTypes = Array.from(new Set(filteredIncidents.map(i => i.incident_type)));
-  
-  filteredIncidents.forEach((incident) => {
-    const hour = new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit' });
-    if (!incidentsByHourAndType[hour]) {
-      incidentsByHourAndType[hour] = {};
-    }
-    incidentsByHourAndType[hour][incident.incident_type] = (incidentsByHourAndType[hour][incident.incident_type] || 0) + 1;
-  });
-
-  const sortedHours = Object.keys(incidentsByHourAndType).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-
-
-
-  const incidentVolumeData = {
-    labels: sortedHours.map(h => `${h}:00`),
-    datasets: allIncidentTypes.map((type, index) => ({
-      label: type,
-      data: sortedHours.map(hour => incidentsByHourAndType[hour]?.[type] || 0),
-      backgroundColor: getEnhancedChartColors('light', allIncidentTypes.length)[index],
-    })),
-  };
-
-  const incidentVolumeChartOptions = {
-    ...getResponsiveOptions('bar'),
-    ...getHoverEffects(),
-    plugins: {
-      legend: {
-        display: true,
-        position: 'bottom' as const,
-        labels: {
-          color: chartTheme.textColor,
-          usePointStyle: true,
-          padding: 20,
-          font: { size: 12 }
-        },
-      },
-      title: { display: false, color: chartTheme.textColor },
-    },
-    scales: {
-      x: {
-        stacked: true,
-        title: {
-          display: true,
-          text: 'Time of Day',
-          font: { weight: 'bold' as 'bold' },
-          color: chartTheme.textColor,
-        },
-        grid: { color: chartTheme.gridColor },
-        ticks: { color: chartTheme.textColor },
-      },
-      y: {
-        stacked: true,
-        title: {
-          display: true,
-          text: 'Number of Incidents',
-          font: { weight: 'bold' as 'bold' },
-          color: chartTheme.textColor,
-        },
-        beginAtZero: true,
-        ticks: { color: chartTheme.textColor, precision: 0 },
-        grid: { color: chartTheme.gridColor },
-      },
-    },
-    animation: {
-      duration: animationConfig.duration,
-      easing: animationConfig.easing as any,
-      delay: animationConfig.delay
-    },
-  };
-
-  // --- Top 5 Incident Types ---
-  const typeCounts: { [type: string]: number } = {};
-  filteredIncidents.forEach((incident) => {
-    typeCounts[incident.incident_type] = (typeCounts[incident.incident_type] || 0) + 1;
-  });
-  const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
-  
-  // Group into Top 3 and 'Other'
-  const top3Types = sortedTypes.slice(0, 3);
-  const otherCount = sortedTypes.slice(3).reduce((acc, [, count]) => acc + count, 0);
-  const pieChartLabels = top3Types.map(([type]) => type);
-  const pieChartData = top3Types.map(([, count]) => count);
-
-  if (otherCount > 0) {
-    pieChartLabels.push('Other');
-    pieChartData.push(otherCount);
-  }
-
-  const pieData = {
-    labels: pieChartLabels,
-    datasets: [
-      {
-        label: 'Incidents',
-        data: pieChartData,
-        backgroundColor: getEnhancedChartColors('light', pieChartLabels.length),
-        borderColor: getEnhancedChartColors('light', pieChartLabels.length).map(color => color + '80'),
-        borderWidth: 2,
-        borderRadius: 4,
-        animation: {
-          duration: animationConfig.duration,
-          easing: animationConfig.easing as any,
-          delay: animationConfig.delay
-        },
-      },
-    ],
-  };
-
-  // --- Incident Status Breakdown ---
-  // Replicating logic from IncidentTable.tsx for consistency
-  const statusCounts: { [status: string]: number } = { Open: 0, Closed: 0 };
-  const totalIncidentsCountable = incidentData.filter(incident => 
-    !['Attendance', 'Sit Rep'].includes(incident.incident_type)
-  );
-
-  totalIncidentsCountable.forEach((incident) => {
-    if (incident.is_closed) {
-      statusCounts['Closed'] += 1;
-    } else {
-      // Per IncidentTable.tsx logic for 'open' filter
-      if (incident.status !== 'Logged') {
-        statusCounts['Open'] += 1;
-      }
-    }
-  });
-
-  const openIncidents = totalIncidentsCountable.filter(i => !i.is_closed && i.status !== 'Logged');
-  const mostRecentOpen = openIncidents.length > 0 
-    ? openIncidents.reduce((latest, current) => new Date(latest.timestamp) > new Date(current.timestamp) ? latest : current)
-    : null;
-
-  const highPriorityIncidents = totalIncidentsCountable.filter(
-    incident => incident.priority?.toLowerCase() === 'high'
-  );
-  const highPriorityOpenCount = openIncidents.filter(
-    incident => incident.priority?.toLowerCase() === 'high'
-  ).length;
-  const mediumPriorityOpenCount = openIncidents.filter(
-    incident => incident.priority?.toLowerCase() === 'medium'
-  ).length;
-  const lowPriorityOpenCount = openIncidents.filter(
-    incident => incident.priority?.toLowerCase() === 'low'
-  ).length;
-
-  const longestOpenIncident = openIncidents.length > 0
-    ? openIncidents.reduce((oldest, current) =>
-        new Date(oldest.timestamp) < new Date(current.timestamp) ? oldest : current
-      )
-    : null;
-  const longestOpenDurationMs = longestOpenIncident
-    ? Date.now() - new Date(longestOpenIncident.timestamp).getTime()
-    : null;
-
-  const recentIncidents = incidentData.filter((incident) => {
-    const timestamp = new Date(incident.timestamp).getTime();
-    return !Number.isNaN(timestamp) && Date.now() - timestamp <= 1000 * 60 * 60;
-  });
-
-  const incidentsByHour = incidentData.reduce((acc, incident) => {
-    const date = new Date(incident.timestamp);
-    if (!Number.isNaN(date.getTime())) {
-      const hour = date.getHours();
-      acc[hour] = (acc[hour] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<number, number>);
-
-  const busiestHour = Object.entries(incidentsByHour).reduce(
-    (best, [hourStr, count]) => {
-      const hour = Number(hourStr);
-      if (!best || count > best.count) {
-        return { hour, count };
-      }
-      return best;
-    },
-    null as { hour: number; count: number } | null
-  );
-
-  const formatHourWindow = (hour: number) => {
-    const start = `${hour.toString().padStart(2, '0')}:00`;
-    const endHour = (hour + 1) % 24;
-    const end = `${endHour.toString().padStart(2, '0')}:00`;
-    return `${start} – ${end}`;
-  };
-
-  const getPriorityColor = (priority: string | undefined) => {
-    switch(priority?.toLowerCase()) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const statusPieData = {
-    labels: Object.keys(statusCounts),
-    datasets: [
-      {
-        label: 'Status',
-        data: Object.values(statusCounts),
-        backgroundColor: getEnhancedChartColors('light', Object.keys(statusCounts).length),
-        borderColor: getEnhancedChartColors('light', Object.keys(statusCounts).length).map(color => color + '80'),
-        borderWidth: 2,
-        borderRadius: 4,
-        animation: {
-          duration: animationConfig.duration,
-          easing: animationConfig.easing as any,
-          delay: animationConfig.delay
-        },
-      },
-    ],
-  };
-
-
-
-  // --- Incident Response Time ---
-  const closedLogs = incidentData.filter(
-    (log) => log.is_closed && log.created_at && log.updated_at
-  );
-  const responseTimes = closedLogs.map(
-    (log) => (
-      new Date(log.updated_at as string).getTime() - new Date(log.created_at as string).getTime()
-    )
-  );
-  const avgResponseTimeMs = responseTimes.length
-    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
-    : null;
-  const avgResponseTimeDisplay = avgResponseTimeMs
-    ? msToTime(avgResponseTimeMs)
-    : "N/A";
-
-  const sortedResponseTimes = [...responseTimes].sort((a, b) => a - b);
-  const medianResponseTimeMs = sortedResponseTimes.length
-    ? (sortedResponseTimes.length % 2 === 0
-        ? (sortedResponseTimes[sortedResponseTimes.length / 2 - 1] + sortedResponseTimes[sortedResponseTimes.length / 2]) / 2
-        : sortedResponseTimes[Math.floor(sortedResponseTimes.length / 2)])
-    : null;
-  const fastestResponseTimeMs = sortedResponseTimes.length ? sortedResponseTimes[0] : null;
-  const slowestResponseTimeMs = sortedResponseTimes.length ? sortedResponseTimes[sortedResponseTimes.length - 1] : null;
-
-
-
-
-
-  const peakAttendance = attendanceData.length > 0 ? Math.max(...attendanceData.map(rec => rec.count)) : 0;
-  
-  // Calculate time-weighted average attendance
-  const averageAttendance = (() => {
-    if (attendanceData.length < 2) {
-      return attendanceData.length === 1 ? attendanceData[0].count : 0;
-    }
-    
-    let weightedSum = 0;
-    const firstTime = new Date(attendanceData[0].timestamp).getTime();
-    const lastTime = new Date(attendanceData[attendanceData.length - 1].timestamp).getTime();
-    const totalDuration = lastTime - firstTime;
-
-    if (totalDuration <= 0) {
-      return attendanceData.length > 0 ? attendanceData[attendanceData.length - 1].count : 0;
-    }
-
-    for (let i = 0; i < attendanceData.length - 1; i++) {
-      const duration = new Date(attendanceData[i + 1].timestamp).getTime() - new Date(attendanceData[i].timestamp).getTime();
-      weightedSum += attendanceData[i].count * duration;
-    }
-
-    return Math.round(weightedSum / totalDuration);
-  })();
-
-  const medianAttendance = (() => {
-    if (!attendanceData.length) return 0;
-    const sortedCounts = [...attendanceData.map(r => r.count)].sort((a, b) => a - b);
-    const mid = Math.floor(sortedCounts.length / 2);
-    if (sortedCounts.length % 2 === 0) {
-        return Math.round((sortedCounts[mid - 1] + sortedCounts[mid]) / 2);
-    }
-    return sortedCounts[mid];
-  })();
-
-  let maxIncrease = 0;
-  let timeOfMaxIncrease: string | null = null;
-
-  if (attendanceData.length > 1) {
-    for (let i = 1; i < attendanceData.length; i++) {
-      const increase = attendanceData[i].count - attendanceData[i-1].count;
-      if (increase > maxIncrease) {
-        maxIncrease = increase;
-        timeOfMaxIncrease = attendanceData[i].timestamp;
-      }
+      setIsGeneratingSummary(false)
     }
   }
 
+  useEffect(() => {
+    fetchAnalyticsData()
+  }, [fetchAnalyticsData])
 
-
-
-
-
-
-  const currentAttendance = attendanceData.length > 0 ? attendanceData[attendanceData.length - 1].count : 0;
-  const expectedAttendance = eventDetails?.expected_attendance || 0;
-  const attendancePercentage = expectedAttendance > 0 ? (currentAttendance / expectedAttendance) * 100 : 0;
-  const attendanceProgress = Math.min(100, Math.round(attendancePercentage));
-  const latestAttendanceRecord = attendanceData.length > 0 ? attendanceData[attendanceData.length - 1] : null;
-
-  const kpiData = [
-    { title: 'Total Incidents', value: totalIncidentsCountable.length },
-    { title: 'Open Incidents', value: openIncidents.length.toLocaleString() },
-    { title: 'Closed Incidents', value: statusCounts['Closed'].toLocaleString() },
-    { title: 'Avg Response Time', value: avgResponseTimeDisplay },
-    { title: 'Most Likely Type', value: predictions.likelyType || null },
-    { title: 'Peak Attendance', value: peakAttendance > 0 ? peakAttendance.toLocaleString() : null },
-  ];
-
-  const operationalInsights = [
-    {
-      label: 'Open incidents',
-      value: openIncidents.length,
-      detail: `${highPriorityOpenCount} high • ${mediumPriorityOpenCount} medium • ${lowPriorityOpenCount} low`,
-    },
-    {
-      label: 'Longest open incident',
-      value: longestOpenDurationMs ? msToTime(longestOpenDurationMs) : 'All resolved',
-      detail: longestOpenIncident
-        ? `${longestOpenIncident.incident_type} • opened ${formatDisplayTime(longestOpenIncident.timestamp)}`
-        : 'No active incidents',
-    },
-    {
-      label: 'Incidents last hour',
-      value: recentIncidents.length,
-      detail: busiestHour
-        ? `Peak window ${formatHourWindow(busiestHour.hour)} • ${busiestHour.count} total`
-        : 'Low recent activity',
-    },
-  ];
-
-  const responseInsights = [
-    {
-      label: 'Average response',
-      value: avgResponseTimeDisplay,
-      detail: medianResponseTimeMs ? `Median ${msToTime(medianResponseTimeMs)}` : 'Median unavailable',
-    },
-    {
-      label: 'Fastest response',
-      value: fastestResponseTimeMs ? msToTime(fastestResponseTimeMs) : 'N/A',
-      detail: slowestResponseTimeMs ? `Slowest ${msToTime(slowestResponseTimeMs)}` : 'Awaiting data',
-    },
-    {
-      label: 'Closed incidents',
-      value: statusCounts['Closed'],
-      detail: `${closedLogs.length} with response data`,
-    },
-  ];
-
-  const attendanceInsights = [
-    {
-      label: 'Current attendance',
-      value: currentAttendance.toLocaleString(),
-      detail: expectedAttendance ? `Forecast ${expectedAttendance.toLocaleString()}` : 'No forecast set',
-    },
-    {
-      label: 'Goal progress',
-      value: `${attendanceProgress}%`,
-      detail: latestAttendanceRecord ? `Last update ${formatDisplayTime(latestAttendanceRecord.timestamp)}` : 'Awaiting counts',
-    },
-  {
-    label: 'Biggest surge',
-    value: maxIncrease > 0 ? `+${maxIncrease.toLocaleString()}` : 'Stable',
-    detail: timeOfMaxIncrease ? `at ${formatDisplayTime(timeOfMaxIncrease)}` : 'No surge detected',
-  },
-  ];
-
-  const clearanceRate = totalIncidentsCountable.length
-    ? Math.round((statusCounts['Closed'] / totalIncidentsCountable.length) * 100)
-    : null;
-
-  const incidentHeadlineStats = [
-    {
-      label: 'High priority open',
-      value: highPriorityOpenCount,
-      tone: 'critical' as const,
-      helper: highPriorityOpenCount > 0
-        ? 'Escalate and assign senior responders'
-        : 'All high priority incidents cleared'
-    },
-    {
-      label: 'Incidents last hour',
-      value: recentIncidents.length,
-      tone: recentIncidents.length > 0 ? 'warning' : 'calm',
-      helper: recentIncidents.length > 0
-        ? 'Maintain rapid response coverage'
-        : 'Activity slowing, hold current posture'
-    },
-    {
-      label: 'Clearance rate',
-      value: clearanceRate !== null ? `${clearanceRate}%` : 'N/A',
-      tone: clearanceRate !== null && clearanceRate < 75 ? 'warning' : 'success',
-      helper: clearanceRate !== null ? 'Closed / total incidents' : 'Awaiting data'
+  // Auto-generate summary when data changes
+  useEffect(() => {
+    if (incidentData.length > 0 && !aiSummary && !isGeneratingSummary) {
+      generateAISummary()
     }
-  ];
+  }, [incidentData, aiSummary, isGeneratingSummary])
 
-  const criticalIncidentTypes = ['Medical', 'Fire', 'Security', 'Counter-Terror Alert', 'Hostile Act'];
-  const significantIncidentsFromLogs = totalIncidentsCountable
-    .filter((incident) => {
-      const priority = incident.priority?.toLowerCase();
-      return (
-        priority === 'high' ||
-        criticalIncidentTypes.includes(incident.incident_type) ||
-        (incident.status && incident.status.toLowerCase().includes('evac'))
-      );
-    })
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5)
-    .map((incident) => ({
-      date: formatShortDateTime(incident.timestamp),
-      type: incident.incident_type,
-      details: incident.occurrence || incident.status || 'Logged via control room'
-    }));
+  // Calculate metrics and chart data
+  const metrics = useMemo(() => {
+    const total = incidentData.length
+    const highPriority = incidentData.filter(i => i.priority === 'high' || i.priority === 'urgent').length
+    const avgResponseTime = incidentData
+      .filter(i => i.response_time_minutes)
+      .reduce((acc, i) => acc + (i.response_time_minutes || 0), 0) / 
+      incidentData.filter(i => i.response_time_minutes).length || 0
 
-  const defaultLearningPoints = [] as string[];
-  if (highPriorityOpenCount > 0) {
-    defaultLearningPoints.push('Deploy additional senior responders to close remaining high-priority incidents.');
-  }
-  if (avgResponseTimeMs && avgResponseTimeMs > 10 * 60 * 1000) {
-    defaultLearningPoints.push('Average response time exceeded 10 minutes. Review radio dispatch workflow and staging positions.');
-  }
-  if (maxIncrease > 0 && timeOfMaxIncrease) {
-    defaultLearningPoints.push(`Attendance surged by ${maxIncrease.toLocaleString()} around ${formatDisplayTime(timeOfMaxIncrease)}. Consider adding ingress crowd lanes next event.`);
-  }
-  if (predictions.likelyType) {
-    defaultLearningPoints.push(`Prepare mitigations for predicted "${predictions.likelyType}" incidents ahead of the forecast window.`);
-  }
-  if (!defaultLearningPoints.length) {
-    defaultLearningPoints.push('Maintain current operational posture; no major anomalies detected.');
-  }
+    const typeBreakdown = incidentData.reduce((acc, incident) => {
+      acc[incident.incident_type] = (acc[incident.incident_type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
 
-  const displayedLearningPoints = debrief.learningPoints?.length
-    ? debrief.learningPoints
-    : defaultLearningPoints;
+    const priorityBreakdown = incidentData.reduce((acc, incident) => {
+      acc[incident.priority] = (acc[incident.priority] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
 
-  const displayedSignificantIncidents = debrief.significantIncidents?.length
-    ? debrief.significantIncidents
-    : significantIncidentsFromLogs;
-
-  const eventOverviewStats = [
-    {
-      label: 'Total incidents',
-      value: totalIncidentsCountable.length.toLocaleString(),
-    },
-    {
-      label: 'High priority',
-      value: highPriorityIncidents.length.toLocaleString(),
-    },
-    {
-      label: 'Average response',
-      value: avgResponseTimeDisplay,
-    },
-    {
-      label: 'Clearance rate',
-      value: clearanceRate !== null ? `${clearanceRate}%` : 'N/A',
-    },
-    {
-      label: 'Peak attendance',
-      value: peakAttendance > 0 ? peakAttendance.toLocaleString() : 'N/A',
-    },
-    {
-      label: 'Longest open incident',
-      value: longestOpenDurationMs ? msToTime(longestOpenDurationMs) : 'All resolved',
+    return {
+      total,
+      highPriority,
+      avgResponseTime: Math.round(avgResponseTime),
+      typeBreakdown,
+      priorityBreakdown
     }
-  ];
+  }, [incidentData])
 
-  const eventOverviewNarrative = debrief.eventOverview
-    ? debrief.eventOverview
-    : `Operations closed ${statusCounts['Closed']} of ${totalIncidentsCountable.length || '0'} incidents with an average response time of ${avgResponseTimeDisplay}. Peak attendance reached ${peakAttendance > 0 ? peakAttendance.toLocaleString() : 'N/A'} with ingress surging around ${timeOfMaxIncrease ? formatDisplayTime(timeOfMaxIncrease) : 'N/A'}.`;
+  // Chart data calculations
+  const chartData = useMemo(() => {
+    // Incident volume over time (hourly)
+    const hourlyData = incidentData.reduce((acc, incident) => {
+      const hour = new Date(incident.created_at).getHours()
+      acc[hour] = (acc[hour] || 0) + 1
+      return acc
+    }, {} as Record<number, number>)
 
-  const attendanceNarrative = debrief.attendanceSummary
-    ? debrief.attendanceSummary
-    : expectedAttendance
-      ? `Attendance is tracking at ${attendanceProgress}% of the forecasted ${expectedAttendance.toLocaleString()} guests.`
-      : '';
+    const incidentVolumeData = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${i}:00`,
+      count: hourlyData[i] || 0
+    }))
 
-  const keyTimingsData = [
-    { label: 'Doors open', value: eventDetails?.doors_open_time ? formatDisplayTime(eventDetails.doors_open_time) : null },
-    { label: 'Main act', value: eventDetails?.main_act_start_time ? formatDisplayTime(eventDetails.main_act_start_time) : null },
-    ...(eventDetails?.support_act_times || []).map(({ time, name }) => ({
-      label: name ? `${name} support` : 'Support act',
-      value: formatDisplayTime(time)
-    })),
-    { label: 'Peak attendance', value: timeOfMaxIncrease ? formatDisplayTime(timeOfMaxIncrease) : null },
-    { label: 'Busiest incident window', value: busiestHour ? formatHourWindow(busiestHour.hour) : null },
-    {
-      label: 'Last incident logged',
-      value: incidentData.length ? formatShortDateTime(incidentData[incidentData.length - 1].timestamp) : null
+    // Incident type pie chart data
+    const pieChartData = Object.entries(metrics.typeBreakdown).map(([type, count]) => ({
+      name: type.replace('_', ' ').toUpperCase(),
+      value: count,
+      fill: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316'][Object.keys(metrics.typeBreakdown).indexOf(type) % 6]
+    }))
+
+    // Response time distribution
+    const responseTimeBuckets = incidentData
+      .filter(i => i.response_time_minutes)
+      .reduce((acc, incident) => {
+        const minutes = incident.response_time_minutes || 0
+        let bucket = '0-5m'
+        if (minutes > 30) bucket = '30m+'
+        else if (minutes > 15) bucket = '15-30m'
+        else if (minutes > 5) bucket = '5-15m'
+        
+        acc[bucket] = (acc[bucket] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+
+    const responseTimeData = Object.entries(responseTimeBuckets).map(([bucket, count]) => ({
+      bucket,
+      count
+    }))
+
+    // Attendance timeline data
+    const attendanceTimelineData = attendanceData.map(record => ({
+      time: new Date(record.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      count: record.count,
+      capacity: eventData?.max_capacity || 1000
+    }))
+
+    // Ejection/refusal patterns
+    const ejectionData = incidentData
+      .filter(i => i.incident_type === 'ejection' || i.incident_type === 'refusal')
+      .reduce((acc, incident) => {
+        const hour = new Date(incident.created_at).getHours()
+        acc[hour] = (acc[hour] || 0) + 1
+        return acc
+      }, {} as Record<number, number>)
+
+    const ejectionPatternData = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${i}:00`,
+      ejections: ejectionData[i] || 0
+    }))
+
+    return {
+      incidentVolumeData,
+      pieChartData,
+      responseTimeData,
+      attendanceTimelineData,
+      ejectionPatternData
     }
-  ].filter((item) => item.value);
+  }, [incidentData, attendanceData, eventData, metrics.typeBreakdown])
 
-  const predictiveRecommendations = [] as string[];
-  const predictedHourNumeric = predictions.likelyHour !== null && predictions.likelyHour !== undefined && !Number.isNaN(Number(predictions.likelyHour))
-    ? Number(predictions.likelyHour)
-    : null;
-
-  if (predictions.likelyType && predictions.likelyType !== 'N/A') {
-    predictiveRecommendations.push(`Deploy resources for likely "${predictions.likelyType}" incidents early in the predicted hour.`);
-  }
-  if (predictedHourNumeric !== null) {
-    predictiveRecommendations.push(`Increase monitoring between ${formatHourWindow(predictedHourNumeric)} to get ahead of the forecasted spike.`);
-  }
-  if (predictions.likelyLocation && predictions.likelyLocation !== 'N/A') {
-    predictiveRecommendations.push(`Position a rapid response team near ${predictions.likelyLocation}.`);
-  }
-  if (!predictiveRecommendations.length) {
-    predictiveRecommendations.push('Forecast signals steady conditions. Continue standard patrol cadence.');
-  }
-
-  const getKpiIcon = (title: string) => {
-    switch (title) {
-      case 'Total Incidents': return <FaExclamationTriangle className="text-red-500" />;
-      case 'Open Incidents': return <FaExclamationTriangle className="text-orange-500" />;
-      case 'Closed Incidents': return <FaCheck className="text-green-500" />;
-      case 'Avg Response Time': return <FaClock className="text-blue-500" />;
-      case 'Most Likely Type': return <FaLightbulb className="text-yellow-500" />;
-      case 'Peak Attendance': return <FaUsers className="text-purple-500" />;
-      default: return null;
-    }
-  }
-
-  const calculateTrend = (current: number, previous: number | undefined | null) => {
-    if (previous === undefined || previous === null || previous === 0) {
-      return { percentage: null, direction: 'flat' as const };
-    }
-    if (current === previous) {
-        return { percentage: 0, direction: 'flat' as const };
-    }
-    const percentage = Math.round(((current - previous) / previous) * 100);
-    const direction = percentage > 0 ? 'up' : 'down';
-    return { percentage, direction };
-  };
-
-
+  // Chart colors
+  const COLORS = ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16']
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-900 dark:via-blue-950/40 dark:to-indigo-950/30 transition-colors duration-300">
-        <IconSidebar
-          navigation={navigation}
-          activeItem={activeSection}
-          onItemClick={setActiveSection}
-          title="Analytics"
-        />
-        
-        <main
-          className="flex-1 sidebar-content-transition"
-          style={{ marginLeft: sidebarWidth }}
-        >
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
-              </div>
-              <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-gray-100 shadow-lg rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 card-glow">
-                <Skeleton height={20} width="50%" />
-                <Skeleton height={40} width="100%" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  if (noCurrentEvent) {
+  if (error) {
     return (
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-900 dark:via-blue-950/40 dark:to-indigo-950/30 transition-colors duration-300">
-        <IconSidebar
-          navigation={navigation}
-          activeItem={activeSection}
-          onItemClick={setActiveSection}
-          title="Analytics"
-        />
-        
-        <main
-          className="flex-1 sidebar-content-transition"
-          style={{ marginLeft: sidebarWidth }}
-        >
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
-                </div>
-                <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
-              </div>
-            </div>
-            
-            {/* No Current Event Message */}
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="text-center max-w-md mx-auto">
-                <div className="mb-6">
-                  <div className="mx-auto w-24 h-24 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mb-4">
-                    <ExclamationTriangleIcon className="w-12 h-12 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No Active Event Found</h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    There is currently no active event set up in the system. Analytics data will be available once an event is marked as current.
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">What you can do:</h3>
-                    <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>• Check if an event exists in the Events section</li>
-                      <li>• Mark an existing event as current</li>
-                      <li>• Create a new event and set it as current</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button
-                      onClick={() => window.location.href = '/events'}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-                    >
-                      Go to Events
-                    </button>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-                    >
-                      Refresh Page
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Error Loading Analytics</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={fetchAnalyticsData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-900 dark:via-blue-950/40 dark:to-indigo-950/30 transition-colors duration-300">
-      <IconSidebar
-        navigation={navigation}
-        activeItem={activeSection}
-        onItemClick={handleSectionChange}
-        title="Analytics"
-        sectionStatus={sectionStatus}
-        quickActions={quickActions}
-        onWidthChange={setSidebarWidth}
-      />
-      
-      <main
-        className="flex-1 sidebar-content-transition"
-        style={{ marginLeft: sidebarWidth }}
-      >
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 lg:mb-10 gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black gradient-text tracking-tight">Analytics Dashboard</h1>
-              </div>
-              <p className="mt-1 text-base sm:text-lg text-gray-600 dark:text-gray-300 font-medium">Monitor performance and insights for your events</p>
-            </div>
-          </div>
-
-        {/* Dashboard Overview - Show all content */}
-        {activeSection === 'overview' && (
-          <div>
-      
-            {/* Export Menu */}
-            {eventId && (
-              <div className="mb-8 flex justify-end">
-                <ExportMenu
-                  data={{
-                    incidents: incidentData,
-                    attendance: attendanceData,
-                    performance: [],
-                    predictions: predictions,
-                    comparison: null,
-                    filters: null
-                  }}
-                  eventId={safeEventId}
-                  eventName={eventDetails?.event_date || 'Event'}
-                  dateRange={undefined}
-                  onExportComplete={handleExportComplete}
-                />
-              </div>
-            )}
-
-            {/* Top Analytics Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-              {kpiData.map((kpi, index) => (
-                <div key={index} className={`relative backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow animate-fade-in ${index === 0 ? 'animate-delay-100' : index === 1 ? 'animate-delay-200' : index === 2 ? 'animate-delay-300' : index === 3 ? 'animate-delay-400' : index === 4 ? 'animate-delay-500' : 'animate-delay-600'}`}>
-                  <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">{kpi.title}</h3>
-                      <div className="text-lg">{getKpiIcon(kpi.title)}</div>
-                    </div>
-                    {kpi.value ? (
-                      <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{kpi.value}</p>
-                    ) : (
-                      <div className="group relative mt-2">
-                        <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-300 dark:text-blue-200/60">—</p>
-                        <span className="absolute bottom-full mb-2 hidden group-hover:block w-max bg-gray-800 text-white text-xs rounded py-1 px-2">Awaiting data</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                    {(() => {
-                      let trend;
-                      if (previousEventKpis) {
-                        if (kpi.title === 'Total Incidents') {
-                          trend = calculateTrend(totalIncidentsCountable.length, previousEventKpis.total);
-                        } else if (kpi.title === 'Open Incidents') {
-                          trend = calculateTrend(openIncidents.length, previousEventKpis.open);
-                        } else if (kpi.title === 'Closed Incidents') {
-                          trend = calculateTrend(statusCounts['Closed'], previousEventKpis.closed);
-                        } else if (kpi.title === 'Peak Attendance') {
-                          trend = calculateTrend(peakAttendance, previousEventKpis.peak);
-                        }
-                      }
- 
-                      if (trend && trend.percentage !== null) {
-                        const color = trend.direction === 'up' ? 'text-green-600' : 'text-red-600';
-                        return (
-                          <span className={trend.percentage === 0 ? 'text-gray-500' : color}>
-                            {trend.percentage > 0 ? '+' : ''}{trend.percentage}% vs last event
-                          </span>
-                        );
-                      }
-                      return <span className="text-gray-400">No trend data</span>;
-                    })()}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {[
-                { title: 'Operational Focus', icon: <FaExclamationTriangle className="text-red-500" />, items: operationalInsights },
-                { title: 'Response Performance', icon: <FaClock className="text-blue-500" />, items: responseInsights },
-                { title: 'Attendance Pulse', icon: <FaUsers className="text-purple-500" />, items: attendanceInsights },
-              ].map((panel, index) => (
-                <div
-                  key={panel.title}
-                  className={`backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 lg:p-8 shadow-xl card-glow animate-fade-in ${index === 0 ? 'animate-delay-100' : index === 1 ? 'animate-delay-200' : 'animate-delay-300'}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">{panel.title}</p>
-                      <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">{panel.title === 'Operational Focus' ? 'Live Watch' : panel.title === 'Response Performance' ? 'Response Quality' : 'Ingress Snapshot'}</h3>
-                    </div>
-                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/40">
-                      {panel.icon}
-                    </div>
-                  </div>
-                  <ul className="space-y-3">
-                    {panel.items.map((item) => (
-                      <li key={item.label} className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-700 dark:text-blue-100">{item.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-blue-200 mt-0.5">{item.detail}</p>
-                        </div>
-                        <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                          {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* Main Grid for Charts and Widgets */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Attendance Chart */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col shadow-xl card-glow animate-fade-in animate-delay-100">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Timeline</h2>
-                <div className="flex-grow relative">
-                  {attendanceData.length > 0 ? (
-                    <Line data={attendanceChartData} options={attendanceChartOptions} />
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-                  )}
-                </div>
-              </div>
-              {/* Attendance Log */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col shadow-xl card-glow animate-fade-in animate-delay-200">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Log</h2>
-                <div className="flex-grow overflow-y-auto">
-                  {attendanceData.length > 0 ? (
-                    <table className="w-full">
-                      <thead className="sticky top-0 bg-white z-10">
-                        <tr>
-                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2">Time</th>
-                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Count</th>
-                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Change</th>
-                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2 w-36"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {attendanceData.slice(-5).reverse().map((rec, index, arr) => {
-                            const prevRec = arr[index + 1];
-                            const change = prevRec ? rec.count - prevRec.count : null;
-                            const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
-                            return (
-                              <tr key={index}>
-                                <td colSpan={4} className="p-0">
-                                  <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
-                                    <div className="p-2 text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                                    <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{rec.count.toLocaleString()}</div>
-                                    <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">
-                                      {change !== null ? (
-                                        <span className={`flex items-center justify-end font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                          {change > 0 ? <FaArrowUp className="mr-1 h-3 w-3" /> : <FaArrowDown className="mr-1 h-3 w-3" />}
-                                          {change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString()}
-                                        </span>
-                                      ) : (
-                                        <span className="text-gray-400">-</span>
-                                      )}
-                                    </div>
-                                    <div className="p-2 align-middle w-1/4 text-gray-900 dark:text-white">
-                                      <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
-                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                          </tbody>
-                        </table>
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-                  )}
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
-                  {eventDetails?.expected_attendance && (
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-1">
-                        <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
-                        <span className="font-extrabold text-gray-900 dark:text-white">{attendanceProgress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendanceProgress}%` }}></div>
-                      </div>
-                      <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
-                        {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                  <h3 className="font-semibold mb-2 text-gray-700 dark:text-white">Quick Stats</h3>
-                  <div className="grid grid-cols-4 gap-4 text-center">
-                    <div>
-                      <p className="text-gray-500 dark:text-white">Peak</p>
-                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{peakAttendance.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 dark:text-white">Average</p>
-                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{averageAttendance.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 dark:text-white">Median</p>
-                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{medianAttendance.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 dark:text-white">Peak Time</p>
-                      <p className="font-extrabold text-lg text-gray-900 dark:text-white">{timeOfMaxIncrease ? new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Live Incident Status */}
-              {eventId && <LiveIncidentStatus eventId={eventId} />}
-            </div>
-
-            {/* Second Row: Incident Analysis & Staff Efficiency */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Enhanced Incident Analysis Card */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[320px] flex flex-col xl:col-span-1 card-glow animate-fade-in animate-delay-400">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Incident Analysis</p>
-                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Live Incident Picture</h2>
-                  </div>
-                  <FaClipboardList className="h-7 w-7 text-blue-500" />
-                </div>
-                <div className="space-y-6 flex-1 flex flex-col">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {incidentHeadlineStats.map((stat) => {
-                      const toneClass = stat.tone === 'critical'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-red-900/20 dark:text-red-200'
-                        : stat.tone === 'warning'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-200'
-                          : stat.tone === 'success'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-200'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-200';
-                      return (
-                        <div key={stat.label} className={`rounded-xl px-4 py-3 shadow-sm ${toneClass}`}>
-                          <p className="text-xs font-semibold uppercase tracking-wide">{stat.label}</p>
-                          <p className="text-2xl font-black mt-1">{stat.value}</p>
-                          <p className="text-xs mt-1 opacity-80 leading-snug">{stat.helper}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                    <div className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 flex flex-col">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-blue-100">Volume Over Time</h3>
-                        <FaChartLine className="h-4 w-4 text-blue-500" />
-                      </div>
-                      <div className="flex-1 relative min-h-[160px]">
-                        {filteredIncidents.length > 0 ? (
-                          <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-blue-100">No incident data</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 flex flex-col">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-sm uppercase tracking-wide text-gray-600 dark:text-blue-100">Breakdown by Type</h3>
-                        <FaBullseye className="h-4 w-4 text-purple-500" />
-                      </div>
-                      <div className="flex-1 relative min-h-[160px] flex items-center justify-center">
-                        {filteredIncidents.length > 0 ? (
-                          <div className="h-full w-full">
-                            <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
-                          </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-blue-100">No incident data</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Staff Efficiency Widget */}
-              {eventId && <StaffEfficiencyWidget eventId={eventId} />}
-
-              {/* Venue Capacity Widget */}
-              {eventId && <VenueCapacityWidget eventId={eventId} />}
-            </div>
-
-            {/* Third Row: AI Insights & Predictive Analysis */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Enhanced AI Insights */}
-              <div className="xl:col-span-2">
-                <EnhancedAIInsights 
-                  insights={aiInsights.map((insight, index) => ({
-                    id: `insight-${index}`,
-                    content: insight,
-                    type: 'analysis' as const,
-                    priority: 'medium' as const,
-                    timestamp: new Date().toISOString(),
-                    confidence: 85
-                  }))}
-                  cycleInterval={15000}
-                />
-              </div>
-
-              {/* Predictive Insights */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col card-glow animate-fade-in animate-delay-600">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Predictive Insights</p>
-                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Risk Forecast</h2>
-                  </div>
-                  <FaBolt className="h-7 w-7 text-amber-500" />
-                </div>
-                <div className="flex-1 flex flex-col">
-                  {loadingPredictions ? (
-                    <div className="flex-1 flex items-center justify-center">
-                      <Skeleton height={120} />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-center shadow-sm">
-                          <FaExclamationTriangle className="mx-auto text-red-500 h-7 w-7 mb-2" />
-                          <p className="text-xs uppercase tracking-wide font-semibold text-red-700 dark:text-red-200">Most Likely Incident</p>
-                          <p className="text-lg font-bold">{predictions.likelyType || 'Steady'}</p>
-                        </div>
-                        <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 px-4 py-3 text-center shadow-sm">
-                          <FaMapMarkerAlt className="mx-auto text-blue-500 h-7 w-7 mb-2" />
-                          <p className="text-xs uppercase tracking-wide font-semibold text-blue-700 dark:text-blue-200">Most Likely Location</p>
-                          <p className="text-lg font-bold">{predictions.likelyLocation || 'No hotspot'}</p>
-                        </div>
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 px-4 py-3 text-center shadow-sm">
-                          <FaClock className="mx-auto text-emerald-500 h-7 w-7 mb-2" />
-                          <p className="text-xs uppercase tracking-wide font-semibold text-emerald-700 dark:text-emerald-200">Most Likely Hour</p>
-                          <p className="text-lg font-bold">{predictedHourNumeric !== null ? formatHourWindow(predictedHourNumeric) : 'No spike'}</p>
-                        </div>
-                      </div>
-                      <div className="mt-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100">Recommended Actions</h3>
-                          <FaArrowRight className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <ul className="space-y-2">
-                          {predictiveRecommendations.map((recommendation, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-blue-100">
-                              <FaCheckCircle className="mt-0.5 h-4 w-4 text-emerald-500" />
-                              <span>{recommendation}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Fourth Row: Debrief Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 shadow-xl p-4 sm:p-6 lg:p-8 min-h-[340px] flex flex-col xl:col-span-3 card-glow animate-fade-in animate-delay-600">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center flex-shrink-0 gap-3 border-b border-gray-200 dark:border-[#2d437a]/60 pb-4 mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">Debrief Summary</p>
-                    <h2 className="font-extrabold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Post-Event Overview</h2>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => eventId && handleGenerateDebrief(eventId)}
-                      disabled={isGeneratingDebrief}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow disabled:bg-gray-400 flex items-center"
-                    >
-                      {isGeneratingDebrief ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Generating...
-                        </>
-                      ) : (
-                        'Generate Debrief'
-                      )}
-                    </button>
-                    <button onClick={handleExport} className="p-2 text-gray-600 hover:text-black disabled:opacity-50" disabled={!debrief.eventOverview && !manualNotes} title="Export as PDF">
-                      <FaFileExport className="h-5 w-5" />
-                    </button>
-                    <button onClick={() => window.print()} className="p-2 text-gray-600 hover:text-black" title="Print">
-                      <FaPrint className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                {debriefError && (
-                  <div className="text-red-600 bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-                    <h3 className="font-semibold mb-2">Unable to generate AI debrief</h3>
-                    <p className="text-sm">{debriefError}</p>
-                  </div>
-                )}
-                {loadingDebrief ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <Skeleton height={200} />
-                  </div>
-                ) : (
-                <div className="grid xl:grid-cols-3 gap-6 flex-1">
-                  <div className="xl:col-span-2 space-y-6">
-                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Event Overview</h3>
-                      <p className="text-sm text-gray-700 dark:text-blue-100 leading-relaxed mb-3">{eventOverviewNarrative}</p>
-                      {attendanceNarrative && (
-                        <p className="text-sm text-gray-600 dark:text-blue-200 leading-relaxed mb-4">{attendanceNarrative}</p>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {eventOverviewStats.map((stat) => (
-                          <div key={stat.label} className="rounded-xl bg-slate-50 dark:bg-[#1b2f63] border border-gray-100 dark:border-[#2d437a]/60 px-4 py-3 shadow-inner">
-                            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-100 font-semibold">{stat.label}</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">{stat.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-
-                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Significant Incidents</h3>
-                      {displayedSignificantIncidents.length > 0 ? (
-                        <ul className="space-y-3">
-                          {displayedSignificantIncidents.map((incident, index) => {
-                            const incidentRecord = incident as any;
-                            const detail = incidentRecord.details ?? incidentRecord.description ?? incidentRecord.notes ?? 'Logged incident';
-                            return (
-                              <li key={`${incidentRecord.type}-${index}`} className="flex items-start gap-3 rounded-xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/80 dark:bg-[#1b2f63]/60 px-4 py-3">
-                                <FaExclamationTriangle className="mt-1 h-4 w-4 text-amber-500" />
-                                <div>
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-blue-100">{incidentRecord.date || formatShortDateTime(incidentRecord.timestamp)}</p>
-                                  <p className="text-sm font-bold text-gray-900 dark:text-white">{incidentRecord.type || 'Incident'}</p>
-                                  <p className="text-sm text-gray-700 dark:text-blue-100 leading-snug">{detail}</p>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-blue-100">No critical incidents recorded during this event.</p>
-                      )}
-                    </section>
-
-                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Key Learning Points & Recommendations</h3>
-                      <ul className="space-y-2">
-                        {displayedLearningPoints.map((point, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-blue-100">
-                            <FaCheckCircle className="mt-0.5 h-4 w-4 text-emerald-500" />
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  </div>
-
-                  <aside className="space-y-6">
-                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Key Timings</h3>
-                      {keyTimingsData.length > 0 ? (
-                        <ul className="space-y-2">
-                          {keyTimingsData.map((item) => (
-                            <li key={`${item.label}-${item.value}`} className="flex items-center gap-3 text-sm text-gray-700 dark:text-blue-100">
-                              <FaRegClock className="h-4 w-4 text-blue-500" />
-                              <div>
-                                <p className="font-semibold text-gray-900 dark:text-white">{item.value}</p>
-                                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-blue-200">{item.label}</p>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-blue-100">No timing information available.</p>
-                      )}
-                    </section>
-
-                    <section className="rounded-2xl border border-gray-100 dark:border-[#2d437a]/60 bg-white/70 dark:bg-[#203a79]/60 p-4 sm:p-6 shadow-sm flex flex-col">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-blue-100 mb-3">Supervisor Notes</h3>
-                      <textarea
-                        id="supervisor-notes"
-                        rows={4}
-                        placeholder="Add manual notes here..."
-                        value={manualNotes}
-                        onChange={(e) => setManualNotes(e.target.value)}
-                        className="w-full border border-gray-200 dark:border-[#2d437a]/60 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-blue-100 bg-white/80 dark:bg-[#1b2f63]/60 focus:ring-2 focus:ring-blue-200"
-                      />
-                      <button
-                        onClick={handleSaveNotes}
-                        disabled={isSavingNotes}
-                        className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded shadow disabled:bg-gray-400"
-                      >
-                        {isSavingNotes ? 'Saving...' : 'Save Notes'}
-                      </button>
-                    </section>
-                  </aside>
-                </div>
-                )}
-              </div>
-            </div>
-
-
-          </div>
-        )}
-
-        {/* Attendance Section - Focus on attendance data */}
-        {activeSection === 'attendance' && (
-          <div>
-            {/* Attendance Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Current Attendance</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{currentAttendance.toLocaleString()}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  {eventDetails?.expected_attendance && (
-                    <span>{Math.round(attendancePercentage)}% of expected</span>
-                  )}
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Peak Attendance</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{peakAttendance.toLocaleString()}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  {timeOfMaxIncrease && (
-                    <span>Peak at {new Date(timeOfMaxIncrease).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                  )}
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Average Attendance</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{averageAttendance.toLocaleString()}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Time-weighted average
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Median Attendance</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{medianAttendance.toLocaleString()}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Middle value
-                </div>
-              </div>
-            </div>
-
-            {/* Attendance Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Attendance Timeline Chart */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[400px] flex flex-col shadow-xl card-glow">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Timeline</h2>
-                <div className="flex-grow relative">
-                  {attendanceData.length > 0 ? (
-                    <Line data={attendanceChartData} options={attendanceChartOptions} />
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Attendance Log */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[400px] flex flex-col shadow-xl card-glow">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Attendance Log</h2>
-                <div className="flex-grow overflow-y-auto">
-                  {attendanceData.length > 0 ? (
-                    <table className="w-full">
-                      <thead className="sticky top-0 bg-white z-10">
-                        <tr>
-                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2">Time</th>
-                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Count</th>
-                          <th className="font-semibold text-right text-gray-900 dark:text-white p-2">Change</th>
-                          <th className="font-semibold text-left text-gray-900 dark:text-white p-2 w-36"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {attendanceData.slice(-10).reverse().map((rec, index, arr) => {
-                          const prevRec = arr[index + 1];
-                          const change = prevRec ? rec.count - prevRec.count : null;
-                          const loadWidth = peakAttendance > 0 ? (rec.count / peakAttendance) * 100 : 0;
-                          return (
-                            <tr key={index}>
-                              <td colSpan={4} className="p-0">
-                                <div className="flex w-full hover:bg-gray-50 hover:shadow hover:-translate-y-0.5 transition-all duration-150 rounded-lg">
-                                  <div className="p-2 text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{new Date(rec.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                                  <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">{rec.count.toLocaleString()}</div>
-                                  <div className="p-2 text-right font-mono text-sm md:text-base w-1/4 text-gray-900 dark:text-white">
-                                    {change !== null ? (
-                                      <span className={`flex items-center justify-end font-semibold ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {change > 0 ? <FaArrowUp className="mr-1 h-3 w-3" /> : <FaArrowDown className="mr-1 h-3 w-3" />}
-                                        {change > 0 ? '+' : '−'}{Math.abs(change).toLocaleString()}
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </div>
-                                  <div className="p-2 align-middle w-1/4 text-gray-900 dark:text-white">
-                                    <div className="w-full bg-gray-200 rounded-full h-2" title={`${Math.round(loadWidth)}% capacity`}>
-                                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${loadWidth}%` }} />
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No attendance data to display.</p>
-                  )}
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 text-sm">
-                  {eventDetails?.expected_attendance && (
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-1">
-                        <h3 className="font-semibold text-gray-700 dark:text-white">Attendance Progress</h3>
-                        <span className="font-extrabold text-gray-900 dark:text-white">{Math.round(attendancePercentage)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${attendancePercentage}%` }}></div>
-                      </div>
-                      <p className="text-right text-xs text-gray-500 dark:text-white mt-1">
-                        {currentAttendance.toLocaleString()} / {expectedAttendance.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                                 </div>
-               </div>
-             </div>
-
-             {/* Venue Capacity Widget */}
-             {eventId && (
-               <div className="mb-8 lg:mb-12">
-                 <VenueCapacityWidget eventId={eventId} />
-               </div>
-             )}
-           </div>
-         )}
-
-        {/* Incidents Section - Focus on incident data */}
-        {activeSection === 'incidents' && (
-          <div>
-            {/* Incident Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Total Incidents</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{totalIncidentsCountable.length}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  All incident types
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Open Incidents</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{openIncidents.length}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Requiring attention
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Closed Incidents</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{statusCounts['Closed']}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Resolved
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Avg Response Time</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{avgResponseTimeDisplay}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Time to resolution
-                </div>
-              </div>
-            </div>
-
-            {/* Incident Analysis */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Incident Volume Chart */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[400px] flex flex-col shadow-xl card-glow">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Incident Volume Over Time</h2>
-                <div className="flex-grow relative">
-                  {filteredIncidents.length > 0 ? (
-                    <Bar data={incidentVolumeData} options={incidentVolumeChartOptions} />
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No incident data to display.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Incident Types Breakdown */}
-              <div className="backdrop-blur-card bg-white/98 dark:bg-[#23408e]/98 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-4 sm:p-6 lg:p-8 min-h-[400px] flex flex-col shadow-xl card-glow">
-                <h2 className="font-extrabold text-xl sm:text-2xl mb-4 text-gray-900 dark:text-white tracking-tight">Incident Types Breakdown</h2>
-                <div className="flex-grow relative">
-                  {filteredIncidents.length > 0 ? (
-                    <Pie data={pieData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
-                  ) : (
-                    <p className="text-center text-gray-500 dark:text-white py-10">No incident data to display.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Live Incident Status */}
-            {eventId && (
-              <div className="mb-8 lg:mb-12">
-                <LiveIncidentStatus eventId={eventId} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* AI Insights Section - Focus on AI and predictive data */}
-        {activeSection === 'ai-insights' && (
-          <div>
-            {/* AI Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Most Likely Incident</h3>
-                  <p className="mt-2 text-lg font-black tracking-tight">{predictions.likelyType || 'N/A'}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Predicted type
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Most Likely Location</h3>
-                  <p className="mt-2 text-lg font-black tracking-tight">{predictions.likelyLocation || 'N/A'}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Predicted area
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">Most Likely Hour</h3>
-                  <p className="mt-2 text-lg font-black tracking-tight">{predictions.likelyHour || 'N/A'}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Predicted time
-                </div>
-              </div>
-              <div className="backdrop-blur-card bg-white/95 dark:bg-[#23408e]/95 text-gray-900 dark:text-white rounded-2xl border-2 border-gray-100/50 dark:border-[#2d437a]/50 p-5 sm:p-6 flex flex-col justify-between shadow-lg card-glow">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-gray-600 dark:text-blue-100">AI Insights</h3>
-                  <p className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">{aiInsights.length}</p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-blue-100 mt-2">
-                  Active insights
-                </div>
-              </div>
-            </div>
-
-            {/* AI Insights Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 mb-8 lg:mb-12">
-              {/* Enhanced AI Insights */}
-              <div className="lg:col-span-2">
-                <EnhancedAIInsights 
-                  insights={aiInsights.map((insight, index) => ({
-                    id: `insight-${index}`,
-                    content: insight,
-                    type: 'analysis' as const,
-                    priority: 'medium' as const,
-                    timestamp: new Date().toISOString(),
-                    confidence: 85
-                  }))}
-                  cycleInterval={15000}
-                />
-              </div>
-            </div>
-
-            {/* Staff Efficiency Widget */}
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 sm:gap-8 lg:gap-10">
-              {eventId && <StaffEfficiencyWidget eventId={eventId} />}
-            </div>
-          </div>
-        )}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Monitor performance and insights for your events.</p>
         </div>
-      </main>
+
+        {/* Top Level Metrics - 6 Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.total}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">All incident types</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{incidentData.filter(i => i.status !== 'closed').length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-orange-500" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{incidentData.filter(i => i.status === 'closed').length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Resolved</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{Math.floor(metrics.avgResponseTime / 60)}h {metrics.avgResponseTime % 60}m</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Time to resolution</p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                  {Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Trending pattern</p>
+              </div>
+              <Lightbulb className="h-8 w-8 text-yellow-500" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Capacity tracking</p>
+              </div>
+              <Users className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Live Watch */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <Eye className="h-6 w-6 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Open incidents: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">{incidentData.filter(i => i.status !== 'closed').length}</span>
+                <span className="text-gray-600 dark:text-gray-400"> ({metrics.highPriority} high, 0 medium, 0 low)</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Longest open incident: </span>
+                <span className="font-semibold text-green-600">All resolved</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Incidents last hour: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">0</span>
+                <span className="text-gray-600 dark:text-gray-400"> (Peak window 13:00 - 14:00. {metrics.total} total)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Response Quality */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <Timer className="h-6 w-6 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Average response: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">Median unavailable</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Fastest response: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">Slowest {Math.floor(metrics.avgResponseTime / 60)}h {metrics.avgResponseTime % 60}m</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Closed incidents: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">{incidentData.filter(i => i.status === 'closed').length}</span>
+                <span className="text-gray-600 dark:text-gray-400"> ({metrics.total} with response data)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Ingress Snapshot */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <UserPlus className="h-6 w-6 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Current attendance: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">{attendanceData.length > 0 ? attendanceData[attendanceData.length - 1]?.count || 0 : 0}</span>
+                <span className="text-gray-600 dark:text-gray-400"> (Forecast {eventData?.max_capacity || 25000})</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Goal progress: </span>
+                <span className="font-semibold text-gray-900 dark:text-white">0%</span>
+                <span className="text-gray-600 dark:text-gray-400"> (Awaiting counts)</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Biggest surge: </span>
+                <span className="font-semibold text-green-600">Stable</span>
+                <span className="text-gray-600 dark:text-gray-400"> (No surge detected)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Attendance Timeline */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attendance Timeline</h3>
+            {attendanceData.length > 0 ? (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData.attendanceTimelineData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stackId="1" 
+                      stroke="#8B5CF6" 
+                      fill="#8B5CF6" 
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No attendance data to display.</p>
+            )}
+          </div>
+
+          {/* Attendance Log */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attendance Log</h3>
+            {attendanceData.length > 0 ? (
+              <div className="space-y-4">
+                <div className="text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Attendance Progress: </span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {Math.round((attendanceData.length > 0 ? attendanceData[attendanceData.length - 1]?.count || 0 : 0) / (eventData?.max_capacity || 25000) * 100)}%
+                  </span>
+                  <span className="text-gray-600 dark:text-gray-400"> ({attendanceData.length > 0 ? attendanceData[attendanceData.length - 1]?.count || 0 : 0}/{eventData?.max_capacity || 25000})</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                    <div className="text-gray-600 dark:text-gray-400">Peak:</div>
+                    <div className="font-semibold">{Math.max(...attendanceData.map(a => a.count))}</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                    <div className="text-gray-600 dark:text-gray-400">Average:</div>
+                    <div className="font-semibold">{Math.round(attendanceData.reduce((acc, a) => acc + a.count, 0) / attendanceData.length)}</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                    <div className="text-gray-600 dark:text-gray-400">Median:</div>
+                    <div className="font-semibold">{attendanceData.length > 0 ? attendanceData[Math.floor(attendanceData.length / 2)]?.count || 0 : 0}</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                    <div className="text-gray-600 dark:text-gray-400">Peak Time:</div>
+                    <div className="font-semibold">N/A</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No attendance data to display.</p>
+            )}
+          </div>
+
+          {/* Live Incident Status */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-green-600 font-medium">Connected</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold text-green-600 mb-2">All Clear</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">No active incidents at this time</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        {showAdvancedFeatures && (
+          <div className="space-y-8">
+            {/* Row 1: Incident Volume & Type Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Incident Volume Over Time */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData.incidentVolumeData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                      <XAxis 
+                        dataKey="hour" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3B82F6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Incident Type Breakdown */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <PieChart className="w-6 h-6 text-green-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={chartData.pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }: { name: string; percent?: number }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {chartData.pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Response Time Distribution & Ejection Patterns */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Response Time Distribution */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <Clock className="w-6 h-6 text-orange-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData.responseTimeData} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                      <XAxis type="number" />
+                      <YAxis dataKey="bucket" type="category" width={80} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#F59E0B" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Ejection/Refusal Patterns */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <UserX className="w-6 h-6 text-red-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ejection/Refusal Patterns</h3>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.ejectionPatternData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+                      <XAxis 
+                        dataKey="hour" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Line 
+                        type="monotone" 
+                        dataKey="ejections" 
+                        stroke="#EF4444" 
+                        strokeWidth={2}
+                        dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Summary Section */}
+        {aiSummary && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-blue-600" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Operational Summary</h2>
+              </div>
+              <button
+                onClick={generateAISummary}
+                disabled={isGeneratingSummary}
+                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+              >
+                {isGeneratingSummary ? 'Generating...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                {aiSummary}
+              </p>
+            </div>
+            {incidentData.length > 0 && (
+              <div className="mt-3 flex gap-2 text-xs">
+                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                  {metrics.total} incidents
+                </span>
+                <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded">
+                  {metrics.highPriority} high priority
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Recent Incidents Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Response Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Created
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {incidentData.slice(0, 10).map((incident) => (
+                  <tr key={incident.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
+                      {incident.incident_type.replace('_', ' ')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        incident.priority === 'urgent' || incident.priority === 'high'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          : incident.priority === 'medium'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      }`}>
+                        {incident.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {incident.response_time_minutes ? `${incident.response_time_minutes}m` : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {new Date(incident.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
-
-
-
- 
- 

@@ -3201,8 +3201,8 @@ export default function IncidentCreationModal({
         what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null,
         // Add GPS coordinates if what3words coordinates are available
         ...(w3wCoordinates && {
-          latitude: w3wCoordinates.latitude,
-          longitude: w3wCoordinates.longitude
+          latitude: w3wCoordinates.lat,
+          longitude: w3wCoordinates.lng
         })
       };
 

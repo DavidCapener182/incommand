@@ -18,7 +18,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
 
   React.useEffect(() => {
-    if (!loading && !user && !['/login', '/signup'].includes(pathname)) {
+    if (!loading && !user && !['/login', '/signup', '/staffing'].includes(pathname)) {
       router.push('/login');
     }
     if (!loading && user && ['/login', '/signup'].includes(pathname)) {

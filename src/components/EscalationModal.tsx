@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog, Transition, Listbox } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
 import Fuse from 'fuse.js'
@@ -29,7 +29,7 @@ type RecipientRoleValue = (typeof RECIPIENT_ROLES)[number]['value']
 
 type NotifyVia = 'email' | 'sms' | 'both'
 
-type EscalationResponse = {
+export type EscalationResponse = {
   escalation_id: string
   escalated_at: string
   escalated_by: string | null
@@ -77,43 +77,6 @@ export function EscalationModal({
     []
   )
 
-  useEffect(() => {
-    if (isOpen) {
-      setComment('')
-      setCommentTouched(false)
-      setSearchTerm('')
-      setErrorMessage(null)
-      setNotifyVia('email')
-      setSelectedRole(RECIPIENT_ROLES[0])
-      setTimeout(() => commentRef.current?.focus(), 0)
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    const handler = (event: KeyboardEvent) => {
-      const isCmdEnter = (event.metaKey || event.ctrlKey) && event.key === 'Enter'
-      if (isCmdEnter && !isSubmitting && comment.trim().length > 0 && selectedRole) {
-        event.preventDefault()
-        void handleSubmit()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [comment, handleSubmit, isOpen, isSubmitting, selectedRole])
-
-  const filteredRoles = useMemo(() => {
-    const term = searchTerm.trim()
-    if (!term) {
-      return RECIPIENT_ROLES
-    }
-    const results = fuse.search(term)
-    if (results.length === 0) {
-      return []
-    }
-    return results.map(({ item }) => item)
-  }, [fuse, searchTerm])
-
   const remainingChars = MAX_COMMENT_LENGTH - comment.length
   const isCommentTooLong = remainingChars < 0
   const hasComment = comment.trim().length > 0
@@ -124,7 +87,7 @@ export function EscalationModal({
       : null
   const isSubmitDisabled = isSubmitting || !selectedRole || !!commentValidationError
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setCommentTouched(true)
     if (isSubmitDisabled) return
     try {
@@ -166,7 +129,53 @@ export function EscalationModal({
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [
+    addToast,
+    comment,
+    incidentId,
+    isSubmitDisabled,
+    notifyVia,
+    onClose,
+    onSuccess,
+    selectedRole,
+  ])
+
+  useEffect(() => {
+    if (isOpen) {
+      setComment('')
+      setCommentTouched(false)
+      setSearchTerm('')
+      setErrorMessage(null)
+      setNotifyVia('email')
+      setSelectedRole(RECIPIENT_ROLES[0])
+      setTimeout(() => commentRef.current?.focus(), 0)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (event: KeyboardEvent) => {
+      const isCmdEnter = (event.metaKey || event.ctrlKey) && event.key === 'Enter'
+      if (isCmdEnter && !isSubmitting && comment.trim().length > 0 && selectedRole) {
+        event.preventDefault()
+        void handleSubmit()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [comment, handleSubmit, isOpen, isSubmitting, selectedRole])
+
+  const filteredRoles = useMemo(() => {
+    const term = searchTerm.trim()
+    if (!term) {
+      return RECIPIENT_ROLES
+    }
+    const results = fuse.search(term)
+    if (results.length === 0) {
+      return []
+    }
+    return results.map(({ item }) => item)
+  }, [fuse, searchTerm])
 
   return (
     <Transition appear show={isOpen} as={Fragment}>

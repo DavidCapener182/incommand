@@ -19,6 +19,7 @@ import {
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline'
 import PriorityBadge from './PriorityBadge'
+import EscalationModal, { type EscalationResponse } from './EscalationModal'
 import {
   getIncidentTypeStyle,
   getPriorityBorderClass,
@@ -26,6 +27,7 @@ import {
   type Priority,
 } from '../utils/incidentStyles'
 import { getIncidentTypeIcon } from '../utils/incidentIcons'
+import { LuSiren } from 'react-icons/lu'
 
 interface Props {
   isOpen: boolean
@@ -80,6 +82,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [showFullImage, setShowFullImage] = useState(false)
+  const [isEscalationModalOpen, setIsEscalationModalOpen] = useState(false)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -221,6 +224,40 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       setLoading(false);
     }
   };
+
+  const handleEscalationSuccess = (_escalation: EscalationResponse) => {
+    setIncident((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      const nextLevel = (prev.escalation_level ?? 0) + 1
+      return {
+        ...prev,
+        escalated: true,
+        escalation_level: nextLevel,
+      }
+    })
+
+    setEditedIncident((prev) => {
+      const nextLevel =
+        typeof prev.escalation_level === 'number'
+          ? prev.escalation_level + 1
+          : (incident?.escalation_level ?? 0) + 1
+
+      return {
+        ...prev,
+        escalated: true,
+        escalation_level: nextLevel,
+      }
+    })
+
+    fetchIncidentDetails().catch((err) => {
+      console.error('Failed to refresh incident after escalation', err)
+    })
+
+    setIsEscalationModalOpen(false)
+  }
 
   const handleUpdateSubmit = async () => {
     if (!newUpdate.trim() || !incident) return;
@@ -368,6 +405,17 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             </div>
             
             <div className="flex items-center space-x-3">
+              {incident && !incident.is_closed && incident.incident_type !== 'Sit Rep' && (
+                <button
+                  type="button"
+                  onClick={() => setIsEscalationModalOpen(true)}
+                  className="flex items-center space-x-2 rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:scale-105 hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-200"
+                  aria-haspopup="dialog"
+                >
+                  <LuSiren className="h-4 w-4" aria-hidden />
+                  <span>Escalate</span>
+                </button>
+              )}
               {/* Status Badge */}
               {incident && incident.incident_type !== 'Sit Rep' && (
                 <button
@@ -787,6 +835,16 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           )}
         </div>
       </div>
+      {incident && (
+        <EscalationModal
+          incidentId={String(incident.id)}
+          incidentType={incident.incident_type}
+          incidentPriority={incident.priority}
+          isOpen={isEscalationModalOpen}
+          onClose={() => setIsEscalationModalOpen(false)}
+          onSuccess={handleEscalationSuccess}
+        />
+      )}
     </div>
   )
 } 

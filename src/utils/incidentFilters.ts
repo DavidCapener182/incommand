@@ -1,4 +1,4 @@
-import type { Priority } from './incidentStyles'
+import type { NormalizedPriority, Priority } from './incidentStyles'
 import { normalizePriority } from './incidentStyles'
 
 export interface FilterState {
@@ -61,7 +61,9 @@ export function filterIncidents<T extends AnyIncident>(incidents: T[], filters: 
     const statusOk = statuses.length === 0 || statuses.includes(incident.status || (incident.is_closed ? 'closed' : 'open'));
     const normalizedFilters = priorities
       .map((priority) => normalizePriority(priority as Priority))
-      .filter((priority) => priority !== 'unknown');
+      .filter(
+        (priority): priority is Exclude<NormalizedPriority, 'unknown'> => priority !== 'unknown'
+      );
 
     const incidentPriorityRaw = String(incident.priority ?? '');
     const incidentPriorityNormalized = normalizePriority(incident.priority);
@@ -72,7 +74,7 @@ export function filterIncidents<T extends AnyIncident>(incidents: T[], filters: 
 
     const normalizedMatch = normalizedFilters.length === 0
       ? false
-      : normalizedFilters.includes(incidentPriorityNormalized);
+      : incidentPriorityNormalized !== 'unknown' && normalizedFilters.includes(incidentPriorityNormalized);
 
     const priorityOk = priorities.length === 0 || rawMatch || normalizedMatch;
     const queryOk = matchesQuery(incident, query);
