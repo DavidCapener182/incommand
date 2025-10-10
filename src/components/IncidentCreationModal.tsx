@@ -2084,8 +2084,8 @@ export default function IncidentCreationModal({
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       
-      // Conservative settings for better reliability
-      recognition.continuous = false; // Start with false for better stability
+      // Enhanced settings for better voice capture
+      recognition.continuous = true; // Keep listening for longer input
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
@@ -2105,7 +2105,7 @@ export default function IncidentCreationModal({
         // Also start audio recording as backup
         startAudioRecording();
         
-        // Set a timeout to automatically stop after 1 minute
+        // Set a timeout to automatically stop after 30 seconds of continuous listening
         const timeout = setTimeout(() => {
           if (isListening) {
             console.log('Auto-stopping voice recognition after timeout');
@@ -2113,7 +2113,7 @@ export default function IncidentCreationModal({
             recognition.stop();
             stopAudioRecording();
           }
-        }, 60000); // 1 minute timeout
+        }, 30000); // 30 seconds timeout for continuous listening
         
         setRecognitionTimeout(timeout);
       };
@@ -2177,6 +2177,9 @@ export default function IncidentCreationModal({
             break;
           case 'no-speech':
             errorMessage = 'No speech detected. Please speak clearly.';
+            break;
+          case 'speech-not-detected':
+            errorMessage = 'Speech not detected. Please try again.';
             break;
           case 'not-allowed':
             errorMessage = 'Microphone access denied. Please allow microphone permissions.';
@@ -3975,9 +3978,23 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Voice Input:</span>
                   </div>
                                      {isListening && (
-                     <div className="flex items-center gap-1">
-                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
+                     <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-1">
+                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                         <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
+                       </div>
+                       <button
+                         onClick={() => {
+                           if (recognition && isListening) {
+                             recognition.isManuallyStopping = true;
+                             recognition.stop();
+                           }
+                         }}
+                         className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                         title="Stop listening"
+                       >
+                         Stop
+                       </button>
                      </div>
                    )}
                    {transcript && !isListening && (
