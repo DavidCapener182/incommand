@@ -12,6 +12,8 @@ import type { EnhancedIncidentParsingResponse } from '../types/ai'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
 import { QuickAddInput } from '@/components/ui/QuickAddInput'
+import VoiceInputButton, { VoiceInputCompact } from '@/components/VoiceInputButton'
+import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
 import { detectIncidentFromText } from '@/utils/incidentLogic'
 import { getRequiredSkillsForIncidentType } from '../lib/incidentAssignment'
@@ -23,6 +25,8 @@ import { useOfflineSync } from '@/hooks/useOfflineSync'
 import useWhat3Words from '@/hooks/useWhat3Words'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
+import { EntryType } from '@/types/auditableLog'
 
 interface Props {
   isOpen: boolean
@@ -44,6 +48,18 @@ interface IncidentFormData {
   what3words: string
   priority: string
   location_name?: string
+  // Auditable logging fields
+  time_of_occurrence?: string
+  time_logged?: string
+  entry_type?: 'contemporaneous' | 'retrospective'
+  retrospective_justification?: string
+  // Structured logging template fields
+  headline?: string
+  source?: string
+  facts_observed?: string
+  actions_taken?: string
+  outcome?: string
+  use_structured_template?: boolean
   // dependencies and auto_assign removed per requirements
 }
 
@@ -1888,6 +1904,81 @@ export default function IncidentCreationModal({
 }: Props) {
   const { addToast } = useToast();
 
+  // Helper function to generate structured occurrence text
+  const generateStructuredOccurrence = (data: IncidentFormData): string => {
+    if (!data.use_structured_template) {
+      return data.occurrence || ''
+    }
+
+    const parts = []
+    
+    if (data.headline?.trim()) {
+      parts.push(`HEADLINE: ${data.headline.trim()}`)
+    }
+    
+    if (data.source?.trim()) {
+      parts.push(`SOURCE: ${data.source.trim()}`)
+    }
+    
+    if (data.facts_observed?.trim()) {
+      parts.push(`FACTS: ${data.facts_observed.trim()}`)
+    }
+    
+    if (data.actions_taken?.trim()) {
+      parts.push(`ACTIONS: ${data.actions_taken.trim()}`)
+    }
+    
+    if (data.outcome?.trim()) {
+      parts.push(`OUTCOME: ${data.outcome.trim()}`)
+    }
+
+    return parts.length > 0 ? parts.join('\n\n') : data.occurrence || ''
+  }
+
+  // Helper function to count words in headline
+  const getHeadlineWordCount = (text: string): number => {
+    return text.trim() ? text.trim().split(/\s+/).length : 0
+  }
+
+  // AI validation for factual language
+  const validateFactualLanguage = (text: string): { warnings: string[], isFactual: boolean } => {
+    if (!text.trim()) return { warnings: [], isFactual: true }
+
+    const warnings: string[] = []
+    const lowerText = text.toLowerCase()
+
+    // Emotional language patterns
+    const emotionalPatterns = [
+      { pattern: /\b(chaotic|disaster|terrible|awful|horrible|nightmare)\b/, message: "Avoid emotional language like 'chaotic', 'terrible', 'awful'" },
+      { pattern: /\b(thankfully|fortunately|unfortunately|luckily)\b/, message: "Avoid subjective opinions like 'thankfully', 'fortunately'" },
+      { pattern: /\b(massive|huge|tiny|enormous|gigantic)\b/, message: "Use specific measurements instead of subjective size descriptors" },
+      { pattern: /\b(very|extremely|incredibly|absolutely)\b/, message: "Avoid intensifiers - be specific instead" },
+      { pattern: /\b(seems|appears|looks like|probably|maybe)\b/, message: "Avoid speculation - state only what you observed directly" },
+      { pattern: /\b(i think|i believe|i feel|i guess)\b/, message: "Avoid personal opinions - stick to facts" }
+    ]
+
+    // Check for emotional patterns
+    emotionalPatterns.forEach(({ pattern, message }) => {
+      if (pattern.test(lowerText)) {
+        warnings.push(message)
+      }
+    })
+
+    // Check for missing key information
+    if (text.length > 50 && !lowerText.includes('time') && !lowerText.includes(':')) {
+      warnings.push("Consider including specific time references")
+    }
+
+    if (text.length > 50 && !lowerText.includes('location') && !lowerText.includes('gate') && !lowerText.includes('stage') && !lowerText.includes('area')) {
+      warnings.push("Consider including location details")
+    }
+
+    return {
+      warnings,
+      isFactual: warnings.length === 0
+    }
+  }
+
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
     callsign_to: 'Event Control',
@@ -1897,9 +1988,21 @@ export default function IncidentCreationModal({
     is_closed: false,
     status: 'open',
     log_number: '',
-      what3words: '///',
-      priority: 'medium',
-      location_name: ''
+    what3words: '///',
+    priority: 'medium',
+    location_name: '',
+    // Auditable logging defaults
+    time_of_occurrence: new Date().toISOString(),
+    time_logged: new Date().toISOString(),
+    entry_type: 'contemporaneous',
+    retrospective_justification: '',
+    // Structured template defaults
+    headline: '',
+    source: '',
+    facts_observed: '',
+    actions_taken: '',
+    outcome: '',
+    use_structured_template: true
   });
   const [w3wInput, setW3wInput] = useState('')
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
@@ -1932,6 +2035,9 @@ export default function IncidentCreationModal({
   const [showRefusalActions, setShowRefusalActions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [entryTypeWarnings, setEntryTypeWarnings] = useState<string[]>([])
+  const [showAdvancedTimestamps, setShowAdvancedTimestamps] = useState(false)
+  const [factualValidationWarnings, setFactualValidationWarnings] = useState<string[]>([])
   const [nextLogNumber, setNextLogNumber] = useState<string>('')
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, string>>({})
   const [processingAI, setProcessingAI] = useState(false)
@@ -3151,7 +3257,11 @@ export default function IncidentCreationModal({
           log_number: '',
           what3words: '///',
           priority: 'medium',
-          location_name: ''
+          location_name: '',
+          time_of_occurrence: new Date().toISOString(),
+          time_logged: new Date().toISOString(),
+          entry_type: 'contemporaneous',
+          retrospective_justification: ''
         });
 
         await onIncidentCreated();
@@ -3169,10 +3279,13 @@ export default function IncidentCreationModal({
       // Get current timestamp
       const now = new Date().toISOString();
 
+      // Generate structured occurrence text or use legacy occurrence field
+      const structuredOccurrence = generateStructuredOccurrence(formData);
+      
       // Ensure required fields (incident_type, occurrence) are populated
-      const sourceText = (formData.occurrence || formData.ai_input || '').trim();
+      const sourceText = (structuredOccurrence || formData.occurrence || formData.ai_input || '').trim();
       let resolvedType = (formData.incident_type || '').trim();
-      let resolvedOccurrence = (formData.occurrence || '').trim();
+      let resolvedOccurrence = structuredOccurrence || (formData.occurrence || '').trim();
       if (!resolvedType || !resolvedOccurrence) {
         const logic = detectIncidentFromText(sourceText);
         if (!resolvedType || resolvedType.toLowerCase() === 'select type') {
@@ -3182,6 +3295,18 @@ export default function IncidentCreationModal({
           resolvedOccurrence = (logic.occurrence || sourceText || 'New incident reported.').trim();
         }
       }
+
+      // Get user info for logged_by fields
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user?.id || '')
+        .single()
+      
+      const userCallsign = formData.callsign_from || 
+        `${userProfile?.first_name?.[0]}${userProfile?.last_name?.[0]}`.toUpperCase() ||
+        'Unknown'
 
       // Prepare the incident data
       const incidentData = {
@@ -3199,6 +3324,14 @@ export default function IncidentCreationModal({
         updated_at: now, // Keep this for backward compatibility
         timestamp: now, // Keep this for backward compatibility
         what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null,
+        // Auditable logging fields
+        time_of_occurrence: formData.time_of_occurrence || now,
+        time_logged: formData.time_logged || now,
+        entry_type: formData.entry_type || 'contemporaneous',
+        retrospective_justification: formData.retrospective_justification || null,
+        logged_by_user_id: user?.id || null,
+        logged_by_callsign: userCallsign,
+        is_amended: false,
         // Add GPS coordinates if what3words coordinates are available
         ...(w3wCoordinates && {
           latitude: w3wCoordinates.lat,
@@ -3314,7 +3447,11 @@ export default function IncidentCreationModal({
         log_number: '',
         what3words: '///',
         priority: 'medium',
-        location_name: ''
+        location_name: '',
+        time_of_occurrence: new Date().toISOString(),
+        time_logged: new Date().toISOString(),
+        entry_type: 'contemporaneous',
+        retrospective_justification: ''
       });
 
       setRefusalDetails({
@@ -3481,10 +3618,23 @@ export default function IncidentCreationModal({
       log_number: '',
       what3words: '///',
       priority: 'medium',
-      location_name: ''
+      location_name: '',
+      // Auditable logging defaults
+      time_of_occurrence: new Date().toISOString(),
+      time_logged: new Date().toISOString(),
+      entry_type: 'contemporaneous',
+      retrospective_justification: '',
+      // Structured template defaults
+      headline: '',
+      source: '',
+      facts_observed: '',
+      actions_taken: '',
+      outcome: '',
+      use_structured_template: true
     });
     setW3wInput('')
     resetWhat3Words()
+    setFactualValidationWarnings([])
     setRefusalDetails({
       policeRequired: false,
       description: '',
@@ -4114,6 +4264,143 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
                     </div>
                   </div>
+                
+                {/* Entry Type Section */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Entry Type
+                    <span className="ml-1 text-gray-400" title="Select whether this is being logged in real-time or retrospectively">ⓘ</span>
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="entry_type"
+                        value="contemporaneous"
+                        checked={formData.entry_type === 'contemporaneous'}
+                        onChange={(e) => {
+                          setFormData({ ...formData, entry_type: e.target.value as EntryType })
+                          setEntryTypeWarnings([])
+                        }}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">⏱️ Contemporaneous (Real-time)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="entry_type"
+                        value="retrospective"
+                        checked={formData.entry_type === 'retrospective'}
+                        onChange={(e) => {
+                          setFormData({ ...formData, entry_type: e.target.value as EntryType })
+                          setShowAdvancedTimestamps(true)
+                        }}
+                        className="text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-gray-700">🕓 Retrospective (Delayed)</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.entry_type === 'contemporaneous' 
+                      ? 'This entry is being logged in real-time or shortly after the incident'
+                      : 'This entry is being logged after a significant delay from when the incident occurred'
+                    }
+                  </p>
+                </div>
+
+                {/* Retrospective Justification (Conditional) */}
+                {formData.entry_type === 'retrospective' && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label htmlFor="retro-justification" className="block text-sm font-medium text-amber-800 mb-2">
+                      Retrospective Justification *
+                    </label>
+                    <textarea
+                      id="retro-justification"
+                      value={formData.retrospective_justification || ''}
+                      onChange={(e) => setFormData({ ...formData, retrospective_justification: e.target.value })}
+                      placeholder="Explain why this entry is being logged retrospectively (e.g., 'Live comms prevented immediate logging')"
+                      rows={2}
+                      className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                      required
+                    />
+                    <p className="text-xs text-amber-700 mt-1">Required for retrospective entries</p>
+                  </div>
+                )}
+
+                {/* Advanced Timestamps (Collapsible) */}
+                {(showAdvancedTimestamps || formData.entry_type === 'retrospective') && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedTimestamps(!showAdvancedTimestamps)}
+                      className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-3"
+                    >
+                      {showAdvancedTimestamps ? '▼' : '▶'} Advanced Timestamps
+                    </button>
+                    {showAdvancedTimestamps && (
+                      <div className="space-y-3">
+                        <div>
+                          <label htmlFor="time-occurred" className="block text-xs font-medium text-blue-800 mb-1">
+                            Time of Occurrence
+                          </label>
+                          <input
+                            id="time-occurred"
+                            type="datetime-local"
+                            value={formData.time_of_occurrence?.slice(0, 16) || ''}
+                            onChange={(e) => {
+                              const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
+                              setFormData({ ...formData, time_of_occurrence: newTime })
+                              
+                              // Validate entry type
+                              const validation = validateEntryType(
+                                new Date(newTime),
+                                new Date(formData.time_logged || new Date().toISOString()),
+                                formData.entry_type || 'contemporaneous'
+                              )
+                              setEntryTypeWarnings(validation.warnings)
+                            }}
+                            className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="time-logged" className="block text-xs font-medium text-blue-800 mb-1">
+                            Time Logged
+                          </label>
+                          <input
+                            id="time-logged"
+                            type="datetime-local"
+                            value={formData.time_logged?.slice(0, 16) || ''}
+                            onChange={(e) => {
+                              const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
+                              setFormData({ ...formData, time_logged: newTime })
+                            }}
+                            className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            disabled
+                          />
+                          <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Entry Type Warnings */}
+                {entryTypeWarnings.length > 0 && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex gap-2">
+                      <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-yellow-800 mb-1">Entry Type Warning</p>
+                        {entryTypeWarnings.map((warning, idx) => (
+                          <p key={idx} className="text-xs text-yellow-700">{warning}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Detailed Information Card */}
@@ -4150,18 +4437,181 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       </div>
                     </div>
                 </div>
-                <div>
-                    <label htmlFor="occurrence" className="block text-sm font-medium text-gray-700 mb-1">Occurrence Description</label>
-                  <textarea
-                      id="occurrence"
-                    value={formData.occurrence || ''}
-                    onChange={(e) => setFormData({ ...formData, occurrence: e.target.value })}
-                    placeholder="Provide detailed description of the incident..."
-                    rows={4}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
-                  />
-                    <p className="text-xs text-gray-500 mt-1">Describe what happened in detail</p>
+                {/* Logging Template Toggle */}
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-blue-800">📝 Logging Template</span>
+                      <span className="text-xs text-blue-600">
+                        {formData.use_structured_template ? 'Structured (Recommended)' : 'Legacy Format'}
+                      </span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.use_structured_template || false}
+                        onChange={(e) => setFormData({ ...formData, use_structured_template: e.target.checked })}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-blue-700">Use Structured Template</span>
+                    </label>
+                  </div>
                 </div>
+
+                {formData.use_structured_template ? (
+                  /* Structured Template */
+                  <div className="space-y-4">
+                    {/* Headline */}
+                    <div>
+                      <label htmlFor="headline" className="block text-sm font-medium text-gray-700 mb-1">
+                        Headline (≤15 words)
+                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Brief summary of the incident">💡 Brief summary</span>
+                      </label>
+                      <input
+                        id="headline"
+                        type="text"
+                        value={formData.headline || ''}
+                        onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+                        placeholder="e.g., Medical incident at north gate - person collapsed"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        maxLength={150}
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500">Brief, factual headline</p>
+                        <span className={`text-xs font-medium ${getHeadlineWordCount(formData.headline || '') > 15 ? 'text-red-600' : 'text-green-600'}`}>
+                          {getHeadlineWordCount(formData.headline || '')}/15 words
+                        </span>
+                      </div>
+                      {/* Debug info */}
+                      <div className="text-xs text-gray-400 mt-1">
+                        Debug: headline="{formData.headline || ''}" wordCount={getHeadlineWordCount(formData.headline || '')}
+                      </div>
+                    </div>
+
+                    {/* Source */}
+                    <div>
+                      <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-1">
+                        Source
+                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Who reported this or where did the information come from">💡 Who/what reported</span>
+                      </label>
+                      <input
+                        id="source"
+                        type="text"
+                        value={formData.source || ''}
+                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                        placeholder="e.g., R3, CCTV North Gate, Security Team"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Callsign, person, or source of information</p>
+                    </div>
+
+                    {/* Facts Observed */}
+                    <div>
+                      <label htmlFor="facts-observed" className="block text-sm font-medium text-gray-700 mb-1">
+                        Facts Observed
+                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Stick to verifiable facts - avoid opinions or adjectives">💡 Stick to facts</span>
+                      </label>
+                      <textarea
+                        id="facts-observed"
+                        value={formData.facts_observed || ''}
+                        onChange={(e) => {
+                          const newValue = e.target.value
+                          setFormData({ ...formData, facts_observed: newValue })
+                          
+                          // Validate factual language
+                          const validation = validateFactualLanguage(newValue)
+                          setFactualValidationWarnings(validation.warnings)
+                        }}
+                        placeholder="e.g., 15:03 - Person collapsed near north gate entrance. Crowd of approximately 20 people present. Person appears unconscious, not responsive to voice. No visible injuries observed."
+                        rows={4}
+                        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-blue-500 resize-none bg-white ${
+                          factualValidationWarnings.length > 0 
+                            ? 'border-amber-300 focus:ring-amber-500' 
+                            : 'border-gray-200 focus:ring-blue-500'
+                        }`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">What was actually observed - who, what, where, when (no opinions)</p>
+                      
+                      {/* Factual Validation Warnings */}
+                      {factualValidationWarnings.length > 0 && (
+                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+                          <div className="flex gap-1">
+                            <span className="text-amber-600 font-semibold">⚠️ Factual Language Check:</span>
+                          </div>
+                          <ul className="mt-1 space-y-1">
+                            {factualValidationWarnings.map((warning, idx) => (
+                              <li key={idx} className="text-amber-700">• {warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Taken */}
+                    <div>
+                      <label htmlFor="actions-taken" className="block text-sm font-medium text-gray-700 mb-1">
+                        Actions Taken
+                        <span className="ml-2 text-xs text-blue-600 font-normal" title="What was done and by whom">💡 What was done</span>
+                      </label>
+                      <textarea
+                        id="actions-taken"
+                        value={formData.actions_taken || ''}
+                        onChange={(e) => setFormData({ ...formData, actions_taken: e.target.value })}
+                        placeholder="e.g., R3 called medical team at 15:04. Crowd control established by security. Medical team arrived at 15:06. Person assessed and transported to medical tent at 15:08."
+                        rows={3}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">What actions were taken and by whom</p>
+                    </div>
+
+                    {/* Outcome */}
+                    <div>
+                      <label htmlFor="outcome" className="block text-sm font-medium text-gray-700 mb-1">
+                        Outcome
+                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Final state or current status">💡 Current status</span>
+                      </label>
+                      <textarea
+                        id="outcome"
+                        value={formData.outcome || ''}
+                        onChange={(e) => setFormData({ ...formData, outcome: e.target.value })}
+                        placeholder="e.g., Person transported to medical tent. Incident ongoing. Crowd dispersed. Medical team monitoring."
+                        rows={3}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Current status or final outcome</p>
+                    </div>
+
+                    {/* Preview of Structured Output */}
+                    {(formData.headline || formData.source || formData.facts_observed || formData.actions_taken || formData.outcome) && (
+                      <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                          📋 Preview of Log Entry
+                          <span className="text-xs text-gray-500 font-normal">(How this will appear in the system)</span>
+                        </h4>
+                        <div className="bg-white p-3 rounded border text-sm font-mono whitespace-pre-wrap text-gray-800">
+                          {generateStructuredOccurrence(formData)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Legacy Format */
+                  <div>
+                    <label htmlFor="occurrence" className="block text-sm font-medium text-gray-700 mb-1">
+                      Occurrence Description
+                      <span className="ml-2 text-xs text-blue-600 font-normal" title="Stick to verifiable facts - avoid opinions or adjectives">💡 Stick to facts</span>
+                    </label>
+                    <textarea
+                      id="occurrence"
+                      value={formData.occurrence || ''}
+                      onChange={(e) => setFormData({ ...formData, occurrence: e.target.value })}
+                      placeholder="Provide detailed factual description of the incident... (who, what, where, when)"
+                      rows={4}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Describe what happened in detail - stick to verifiable facts only</p>
+                  </div>
+                )}
               </div>
             </div>
             </section>
@@ -4238,6 +4688,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       )}
                     </div>
                 </div>
+                {/* Legacy Actions Taken Field - Only show when structured template is disabled */}
+                {!formData.use_structured_template && (
                 <div>
                     <div className="flex items-center justify-between mb-2">
                       <label htmlFor="action-taken" className="block text-sm font-medium text-gray-700">Actions Taken</label>
@@ -4299,6 +4751,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     <TypingIndicator users={presenceUsers} fieldName="action-taken" position="bottom" />
                   </div>
                 </div>
+                )}
               </div>
             </div>
 

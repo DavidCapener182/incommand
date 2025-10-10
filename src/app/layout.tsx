@@ -7,6 +7,7 @@ import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import GlobalEscalationToast from '../components/GlobalEscalationToast'
+import OfflineIndicator from '../components/OfflineIndicator'
 
 // Using system/Tailwind fonts to avoid network fetches during build
 
@@ -57,6 +58,7 @@ export default function RootLayout({
             <ToastProvider>
               <MaintenanceBanner />
               <GlobalEscalationToast />
+              <OfflineIndicator />
               <LayoutWrapper>{children}</LayoutWrapper>
             </ToastProvider>
           </NotificationDrawerProvider>

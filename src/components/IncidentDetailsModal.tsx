@@ -20,6 +20,8 @@ import {
 } from '@heroicons/react/24/outline'
 import PriorityBadge from './PriorityBadge'
 import EscalationModal, { type EscalationResponse } from './EscalationModal'
+import IncidentRevisionHistory from './IncidentRevisionHistory'
+import IncidentAmendmentModal from './IncidentAmendmentModal'
 import {
   getIncidentTypeStyle,
   getPriorityBorderClass,
@@ -28,6 +30,12 @@ import {
 } from '../utils/incidentStyles'
 import { getIncidentTypeIcon } from '../utils/incidentIcons'
 import { LuSiren } from 'react-icons/lu'
+import { 
+  formatDualTimestamp, 
+  getEntryTypeBadgeConfig, 
+  getAmendmentBadgeConfig 
+} from '@/lib/auditableLogging'
+import { AuditableIncidentLog } from '@/types/auditableLog'
 
 interface Props {
   isOpen: boolean
@@ -65,6 +73,15 @@ interface Incident {
   auto_assigned?: boolean
   dependencies?: string[]
   what3words?: string
+  // Auditable logging fields
+  time_of_occurrence?: string
+  time_logged?: string
+  entry_type?: 'contemporaneous' | 'retrospective'
+  retrospective_justification?: string
+  logged_by_user_id?: string
+  logged_by_callsign?: string
+  is_amended?: boolean
+  original_entry_id?: string
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
@@ -83,6 +100,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [showFullImage, setShowFullImage] = useState(false)
   const [isEscalationModalOpen, setIsEscalationModalOpen] = useState(false)
+  const [isAmendmentModalOpen, setIsAmendmentModalOpen] = useState(false)
+  const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false)
+  const [revisionCount, setRevisionCount] = useState(0)
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -100,7 +120,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       // Clean up any existing subscription
       cleanup();
 
-      // Set up new subscription
+      // Set up new subscription for both incident updates and log changes
       subscriptionRef.current = supabase
         .channel(`incident_${incidentId}_${Date.now()}`)
         .on(
@@ -112,6 +132,33 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             filter: `incident_id=eq.${incidentId}`
           },
           () => {
+            console.log('Incident update detected, refreshing...');
+            fetchIncidentDetails();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'incident_logs',
+            filter: `id=eq.${incidentId}`
+          },
+          (payload) => {
+            console.log('Incident log updated, refreshing...', payload);
+            fetchIncidentDetails();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'incident_log_revisions',
+            filter: `incident_log_id=eq.${incidentId}`
+          },
+          (payload) => {
+            console.log('New revision created, refreshing...', payload);
             fetchIncidentDetails();
           }
         )
@@ -199,6 +246,17 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       setIncident(incidentData);
       setEditedIncident(incidentData);
+
+      // Fetch revision count if incident has been amended
+      if (incidentData?.is_amended) {
+        const { count } = await supabase
+          .from('incident_log_revisions')
+          .select('*', { count: 'exact', head: true })
+          .eq('incident_log_id', incidentId)
+        setRevisionCount(count || 0)
+      } else {
+        setRevisionCount(0)
+      }
 
       // Fetch updates
       const { data: updatesData, error: updatesError } = await supabase
@@ -398,9 +456,42 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                 <h2 className="text-xl font-bold">
                   Incident #{incident?.log_number}
                 </h2>
-                <p className="text-blue-100 text-sm">
-                  {incident?.incident_type} • {new Date(incident?.timestamp || '').toLocaleString()}
-                </p>
+                <div className="flex items-center gap-2 text-blue-100 text-sm flex-wrap">
+                  <span>{incident?.incident_type}</span>
+                  {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type && (
+                    <>
+                      <span>•</span>
+                      <span>
+                        {formatDualTimestamp(
+                          incident.time_of_occurrence,
+                          incident.time_logged,
+                          incident.entry_type as any
+                        ).isRetrospective ? (
+                          <>
+                            <span className="mr-1">🕓</span>
+                            Occurred: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred} | 
+                            Logged: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).logged}
+                          </>
+                        ) : (
+                          <span>
+                            {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred}
+                          </span>
+                        )}
+                      </span>
+                      {incident.is_amended && (
+                        <>
+                          <span>•</span>
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-100 rounded-full text-xs font-semibold border border-amber-400/30">
+                            AMENDED ({revisionCount})
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {!incident?.time_of_occurrence && (
+                    <span>• {new Date(incident?.timestamp || '').toLocaleString()}</span>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -464,11 +555,11 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                       Incident Information
                     </h3>
                     <button
-                      onClick={() => setEditMode(!editMode)}
+                      onClick={() => setIsAmendmentModalOpen(true)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                     >
                       <PencilIcon className="h-4 w-4" />
-                      <span>{editMode ? 'Cancel' : 'Edit'}</span>
+                      <span>Amend Entry</span>
                     </button>
                   </div>
                   
@@ -667,6 +758,14 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                   )}
                 </div>
 
+                {/* Revision History Section */}
+                {incident && (
+                  <IncidentRevisionHistory
+                    incidentId={String(incident.id)}
+                    incident={incident as any}
+                  />
+                )}
+
                 {/* Updates Timeline */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -843,6 +942,19 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           isOpen={isEscalationModalOpen}
           onClose={() => setIsEscalationModalOpen(false)}
           onSuccess={handleEscalationSuccess}
+        />
+      )}
+
+      {/* Amendment Modal */}
+      {incident && (
+        <IncidentAmendmentModal
+          isOpen={isAmendmentModalOpen}
+          onClose={() => setIsAmendmentModalOpen(false)}
+          incident={incident as any}
+          onAmendmentCreated={() => {
+            // Refresh incident data
+            fetchIncidentDetails()
+          }}
         />
       )}
     </div>

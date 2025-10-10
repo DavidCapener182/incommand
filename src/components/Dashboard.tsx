@@ -22,6 +22,7 @@ import {
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
   PlusIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import LiveRiskPulse from './LiveRiskPulse'
@@ -47,6 +48,14 @@ import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
 import IncidentSummaryBar, { type SummaryStatus } from './IncidentSummaryBar'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
+import LogReviewReminder from './LogReviewReminder'
+import TrainingModeModal from './TrainingModeModal'
+import AnalyticsKPICards from './analytics/AnalyticsKPICards'
+import MiniTrendChart from './MiniTrendChart'
+import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
+import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
+import QuickActionBar from './QuickActionBar'
+import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -115,6 +124,7 @@ interface StatCardProps {
   icon: React.ReactNode
   color?: string
   isSelected?: boolean
+  trendData?: number[]
   onClick?: () => void
   isFilterable?: boolean
   className?: string
@@ -263,7 +273,8 @@ const StatCard: React.FC<StatCardProps> = ({
   className,
   tooltip,
   showPulse,
-  index = 0
+  index = 0,
+  trendData
 }) => {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -318,7 +329,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const content = (
     <div className="flex flex-row items-center justify-between w-full">
-      <div className="flex flex-col items-start">
+      <div className="flex flex-col items-start flex-1">
         <motion.div 
           key={value}
           initial={{ scale: 1.1, opacity: 0.8 }}
@@ -331,6 +342,11 @@ const StatCard: React.FC<StatCardProps> = ({
         <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
           {title}
         </div>
+        {trendData && trendData.length > 0 && (
+          <div className="mt-1">
+            <MiniTrendChart data={trendData} height={20} width={60} />
+          </div>
+        )}
       </div>
       <motion.div 
         whileHover={{ rotate: 5, scale: 1.1 }}
@@ -548,12 +564,26 @@ export default function Dashboard() {
   }, [filters.statuses])
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
+  const [isTrainingModeOpen, setIsTrainingModeOpen] = useState(false)
   const [initialIncidentType, setInitialIncidentType] = useState<
     string | undefined
   >(undefined)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [currentEvent, setCurrentEvent] = useState<any | null>(null)
+  
+  // Real-time analytics for live updates
+  const realtimeAnalytics = useRealtimeAnalytics({
+    eventId: currentEvent?.id,
+    updateInterval: 30000, // 30 seconds
+    enableAlerts: true,
+    alertThresholds: {
+      incidentVolume: 5,
+      responseTime: 15,
+      qualityScore: 75,
+      complianceRate: 90
+    }
+  })
   
   // Debug logging for currentEvent
   useEffect(() => {
@@ -1276,6 +1306,28 @@ export default function Dashboard() {
             <p className="text-gray-600 dark:text-gray-300 text-lg">
               Track and manage security incidents in real-time
             </p>
+            
+            {/* Real-time Status and Alerts */}
+            {currentEvent && (
+              <div className="mt-4 flex flex-col lg:flex-row gap-4">
+                <div className="flex-1">
+                  <RealtimeStatusIndicator
+                    isConnected={realtimeAnalytics.isConnected}
+                    error={realtimeAnalytics.error}
+                    lastUpdated={realtimeAnalytics.data.lastUpdated}
+                    updateCount={realtimeAnalytics.data.updateCount}
+                    onRefresh={realtimeAnalytics.refresh}
+                  />
+                </div>
+                <div className="lg:w-96">
+                  <RealtimeAlertBanner
+                    alerts={realtimeAnalytics.alerts}
+                    onDismiss={realtimeAnalytics.dismissAlert}
+                    onClearAll={realtimeAnalytics.clearAlerts}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex-shrink-0">
@@ -1399,7 +1451,13 @@ export default function Dashboard() {
           )}
         </div>
 
-
+        {/* Analytics KPI Cards */}
+        {currentEvent && (
+          <AnalyticsKPICards 
+            eventId={currentEvent.id}
+            className="mb-6"
+          />
+        )}
 
         {/* Stats Grid - Second Row */}
         <div>
@@ -1562,13 +1620,44 @@ export default function Dashboard() {
       {/* Venue Occupancy Modal */}
       <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
       
+      {/* Training Mode Modal */}
+      <TrainingModeModal isOpen={isTrainingModeOpen} onClose={() => setIsTrainingModeOpen(false)} />
+      
+      {/* Quick Action Bar */}
+      {currentEvent && (
+        <QuickActionBar
+          variant="floating"
+          onActionSelect={(action) => {
+            if (action.action === 'create-incident') {
+              setInitialIncidentType(action.incidentType)
+              setIsIncidentModalOpen(true)
+            } else if (action.action === 'broadcast') {
+              // Handle broadcast action
+              console.log('Broadcast action')
+            }
+          }}
+        />
+      )}
+      
       {/* Toast Notifications */}
       <Toast messages={messages} onRemove={removeToast} />
 
-      {/* Floating New Incident Button */}
+      {/* Floating Action Buttons */}
       {!isIncidentModalOpen && (
         <div className="fixed bottom-20 right-6 z-50">
-          <div className="relative">
+          <div className="relative flex flex-col gap-3">
+            {/* Training Mode Button */}
+            <button 
+              type="button"
+              onClick={() => setIsTrainingModeOpen(true)}
+              className="inline-flex items-center px-4 py-3 rounded-full text-sm font-medium text-white shadow-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 focus:z-10 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <AcademicCapIcon className="h-5 w-5 mr-2" />
+              <span className="hidden sm:inline">Training</span>
+              <span className="sm:hidden">📚</span>
+            </button>
+
+            {/* New Incident Button */}
             <button 
               type="button"
               onClick={() => {
@@ -1582,13 +1671,16 @@ export default function Dashboard() {
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5`}
             >
-                          <PlusIcon className="h-5 w-5 mr-2" />
-            <span className="hidden sm:inline">New Incident</span>
-            <span className="sm:hidden">+</span>
-          </button>
+              <PlusIcon className="h-5 w-5 mr-2" />
+              <span className="hidden sm:inline">New Incident</span>
+              <span className="sm:hidden">+</span>
+            </button>
           </div>
         </div>
       )}
+
+      {/* Log Review Reminder for Silver Commanders */}
+      <LogReviewReminder />
     </div>
   )
 } 

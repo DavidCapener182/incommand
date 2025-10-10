@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { useLogRevisions } from '../hooks/useLogRevisions'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
@@ -22,6 +23,7 @@ import { FilterState, filterIncidents } from '../utils/incidentFilters'
 import { motion, AnimatePresence } from 'framer-motion'
 import PriorityBadge from './PriorityBadge'
 import { getIncidentTypeIcon } from '../utils/incidentIcons'
+import IncidentStatsSidebar from './IncidentStatsSidebar'
 
 interface Incident {
   id: number
@@ -39,6 +41,15 @@ interface Incident {
   resolved_at?: string | null
   responded_at?: string | null
   updated_at?: string | null
+  // Auditable logging fields
+  time_of_occurrence?: string
+  time_logged?: string
+  entry_type?: 'contemporaneous' | 'retrospective'
+  retrospective_justification?: string
+  logged_by_user_id?: string
+  logged_by_callsign?: string
+  is_amended?: boolean
+  original_entry_id?: string
 }
 
 const PRIORITY_FILTER_OPTIONS: NormalizedPriority[] = ['urgent', 'high', 'medium', 'low']
@@ -110,6 +121,19 @@ export default function IncidentTable({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  
+  // Real-time revision tracking
+  const { revisionCount } = useLogRevisions(currentEventId, (notification) => {
+    // Show toast for new revisions
+    if (onToast) {
+      onToast({
+        type: 'info',
+        title: '📋 Log Revision Created',
+        message: `${notification.changedBy} updated ${notification.fieldChanged} in a log entry`,
+        duration: 6000
+      })
+    }
+  })
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
@@ -317,28 +341,49 @@ export default function IncidentTable({
                 if (incident.id === payload.new.id) {
                   const updated = { ...incident, ...payload.new };
                   
-                  // Show toast for status change only if it wasn't a manual change
                   const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
-                  if (globalToastCallback && incident.is_closed !== updated.is_closed && !manualStatusChangesRef.current.has(incident.id)) {
-                    // Create a unique key for this status change toast to prevent duplicates
-                    const statusToastKey = `${updated.log_number}-${updated.incident_type}-STATUS-${updated.is_closed}`;
-                    const now = Date.now();
-                    
-                    // Check if we've shown this status change toast recently (within 10 seconds)
-                    if (!recentToasts.has(statusToastKey) || (now - recentToasts.get(statusToastKey)!) >= 10000) {
-                      // Mark this toast as sent
-                      recentToasts.set(statusToastKey, now);
+                  
+                  // Check for amendment (is_amended changed from false to true)
+                  const wasAmended = !incident.is_amended && updated.is_amended;
+                  
+                  if (globalToastCallback) {
+                    // Show toast for new amendments
+                    if (wasAmended) {
+                      const amendmentToastKey = `${updated.log_number}-AMENDED-${Date.now()}`;
+                      const now = Date.now();
                       
-                      globalToastCallback({
-                        type: updated.is_closed ? 'success' : 'info',
-                        title: `Incident ${updated.is_closed ? 'Closed' : 'Reopened'}`,
-                        message: `Log ${updated.log_number}: ${updated.incident_type}`,
-                        duration: 6000 // Increased from 4000 to 6000
-                      });
-                      logger.debug('Toast sent for status change', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
+                      if (!recentToasts.has(amendmentToastKey) || (now - recentToasts.get(amendmentToastKey)!) >= 10000) {
+                        recentToasts.set(amendmentToastKey, now);
+                        
+                        globalToastCallback({
+                          type: 'warning',
+                          title: '📝 Log Amended',
+                          message: `Log ${updated.log_number} has been amended. Review the audit trail for details.`,
+                          duration: 8000,
+                          urgent: true
+                        });
+                        logger.debug('Toast sent for log amendment', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
+                      }
+                    }
+                    // Show toast for status change only if it wasn't a manual change and not an amendment
+                    else if (incident.is_closed !== updated.is_closed && !manualStatusChangesRef.current.has(incident.id)) {
+                      const statusToastKey = `${updated.log_number}-${updated.incident_type}-STATUS-${updated.is_closed}`;
+                      const now = Date.now();
+                      
+                      if (!recentToasts.has(statusToastKey) || (now - recentToasts.get(statusToastKey)!) >= 10000) {
+                        recentToasts.set(statusToastKey, now);
+                        
+                        globalToastCallback({
+                          type: updated.is_closed ? 'success' : 'info',
+                          title: `Incident ${updated.is_closed ? 'Closed' : 'Reopened'}`,
+                          message: `Log ${updated.log_number}: ${updated.incident_type}`,
+                          duration: 6000
+                        });
+                        logger.debug('Toast sent for status change', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
                       } else {
                         logger.debug('Duplicate status toast prevented for', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: updated.log_number });
                       }
+                    }
                   }
                   
                   return updated;
@@ -846,7 +891,9 @@ export default function IncidentTable({
               <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
             </div>
           ) : (
-        <>
+        <div className="flex gap-6 mt-6">
+          {/* Main Content */}
+          <div className="flex-1">
           {/* Enhanced Mobile Card Layout with Pull-to-Refresh */}
           <div 
             ref={tableContainerRef} 
@@ -933,7 +980,19 @@ export default function IncidentTable({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <PriorityBadge priority={incident.priority} className="absolute right-3 top-3" />
+                <div className="absolute right-3 top-3 flex gap-2 items-center">
+                  <PriorityBadge priority={incident.priority} />
+                  {incident.entry_type === 'retrospective' && (
+                    <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-semibold" title="Retrospective entry">
+                      🕓
+                    </span>
+                  )}
+                  {incident.is_amended && (
+                    <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded font-bold" title="This log has been amended">
+                      AMENDED
+                    </span>
+                  )}
+                </div>
                 <div className="p-4 pt-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="basis-[28%] font-bold text-blue-700 dark:text-blue-300 text-sm truncate flex items-center gap-2">
@@ -1121,7 +1180,19 @@ export default function IncidentTable({
                       </span>
                     </div>
                     <div className="flex flex-col items-end gap-2 text-sm text-gray-600 dark:text-gray-300 pr-4">
-                      <PriorityBadge priority={incident.priority} />
+                      <div className="flex gap-2 items-center">
+                        <PriorityBadge priority={incident.priority} />
+                        {incident.entry_type === 'retrospective' && (
+                          <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-semibold" title="Retrospective entry">
+                            🕓
+                          </span>
+                        )}
+                        {incident.is_amended && (
+                          <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded font-bold" title="This log has been amended">
+                            AMENDED
+                          </span>
+                        )}
+                      </div>
                       {incident.incident_type === 'Attendance' ? (
                         <span className="px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
                           Logged
@@ -1156,9 +1227,17 @@ export default function IncidentTable({
               onClose={handleCloseModal}
             />
           )}
+          </div>
+          
+          {/* Stats Sidebar */}
+          <div className="hidden lg:block w-80 flex-shrink-0">
+            <IncidentStatsSidebar 
+              incidents={sortedIncidents}
+            />
+          </div>
+        </div>
+          )}
         </>
-      )}
-    </>
       ) : viewMode === 'board' ? (
         <>
           {/* Board View */}

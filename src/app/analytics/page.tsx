@@ -24,6 +24,17 @@ import {
   Area,
   AreaChart
 } from 'recharts'
+import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
+import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
+import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
+import AIInsightsDashboard from '@/components/analytics/AIInsightsDashboard'
+import ExportReportModal from '@/components/analytics/ExportReportModal'
+import RealtimeAlertBanner from '@/components/analytics/RealtimeAlertBanner'
+import RealtimeStatusIndicator from '@/components/analytics/RealtimeStatusIndicator'
+import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
+import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
+import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
+import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 interface IncidentRecord {
   id: string
@@ -58,6 +69,27 @@ export default function AnalyticsPage() {
   const [aiSummary, setAiSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
+  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking'>('operational')
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  
+  // Real-time analytics
+  const realtimeAnalytics = useRealtimeAnalytics({
+    eventId: eventData?.id,
+    updateInterval: 30000, // 30 seconds
+    enableAlerts: true,
+    alertThresholds: {
+      incidentVolume: 5, // incidents per 30 seconds
+      responseTime: 15, // minutes
+      qualityScore: 75, // percentage
+      complianceRate: 90 // percentage
+    }
+  })
+  
+  // Date range for analytics (default: last 7 days)
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    endDate: new Date()
+  })
 
   // Fetch all analytics data
   const fetchAnalyticsData = useCallback(async () => {
@@ -280,12 +312,236 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Monitor performance and insights for your events.</p>
+                {/* Header */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+                      <p className="text-gray-600 dark:text-gray-400 mt-2">Monitor performance and insights for your events.</p>
+                    </div>
+                    <button
+                      onClick={() => setIsExportModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      <span>Export Report</span>
+                    </button>
+                  </div>
+                  
+                  {/* Real-time Status and Alerts */}
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                      <RealtimeStatusIndicator
+                        isConnected={realtimeAnalytics.isConnected}
+                        error={realtimeAnalytics.error}
+                        lastUpdated={realtimeAnalytics.data.lastUpdated}
+                        updateCount={realtimeAnalytics.data.updateCount}
+                        onRefresh={realtimeAnalytics.refresh}
+                      />
+                    </div>
+                    <div className="lg:w-96">
+                      <RealtimeAlertBanner
+                        alerts={realtimeAnalytics.alerts}
+                        onDismiss={realtimeAnalytics.dismissAlert}
+                        onClearAll={realtimeAnalytics.clearAlerts}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+        {/* Tabs - Enhanced Visibility */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 mb-6 shadow-sm">
+          <nav className="flex space-x-2">
+            <button
+              onClick={() => setActiveTab('operational')}
+              className={`${
+                activeTab === 'operational'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                <span>Operational Metrics</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('quality')}
+              className={`${
+                activeTab === 'quality'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                <span>Log Quality</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('compliance')}
+              className={`${
+                activeTab === 'compliance'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>JESIP/JDM Compliance</span>
+              </div>
+            </button>
+                    <button
+                      onClick={() => setActiveTab('staff')}
+                      className={`${
+                        activeTab === 'staff'
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Users className="h-5 w-5" />
+                        <span>Staff Performance</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('ai-insights')}
+                      className={`${
+                        activeTab === 'ai-insights'
+                          ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Sparkles className="h-5 w-5" />
+                        <span>AI Insights</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('custom-metrics')}
+                      className={`${
+                        activeTab === 'custom-metrics'
+                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>Custom Metrics</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('custom-dashboards')}
+                      className={`${
+                        activeTab === 'custom-dashboards'
+                          ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span>Custom Dashboards</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('benchmarking')}
+                      className={`${
+                        activeTab === 'benchmarking'
+                          ? 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                        <span>Benchmarking</span>
+                      </div>
+                    </button>
+          </nav>
         </div>
 
+        {/* Tab Content */}
+        {activeTab === 'quality' && (
+          <LogQualityDashboard 
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            eventId={eventData?.id}
+          />
+        )}
+
+        {activeTab === 'compliance' && (
+          <ComplianceDashboard 
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            eventId={eventData?.id}
+          />
+        )}
+
+                {activeTab === 'staff' && (
+                  <UserActivityDashboard
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    eventId={eventData?.id}
+                  />
+                )}
+
+                {activeTab === 'ai-insights' && (
+                  <AIInsightsDashboard
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
+                    eventId={eventData?.id}
+                  />
+                )}
+
+                {activeTab === 'custom-metrics' && (
+                  <CustomMetricBuilder
+                    eventId={eventData?.id}
+                    onMetricCreated={(metric) => {
+                      console.log('New metric created:', metric)
+                    }}
+                    onMetricUpdated={(metric) => {
+                      console.log('Metric updated:', metric)
+                    }}
+                  />
+                )}
+
+                {activeTab === 'custom-dashboards' && (
+                  <CustomDashboardBuilder
+                    eventId={eventData?.id}
+                    onDashboardCreated={(dashboard) => {
+                      console.log('New dashboard created:', dashboard)
+                    }}
+                  />
+                )}
+
+                {activeTab === 'benchmarking' && (
+                  <BenchmarkingDashboard
+                    organizationName="Your Organization"
+                    eventName={eventData?.name || 'Current Event'}
+                    industry="security"
+                    eventType="concert"
+                    metrics={{
+                      response_time: realtimeAnalytics.data.averageResponseTime,
+                      resolution_time: realtimeAnalytics.data.averageResolutionTime,
+                      quality_score: realtimeAnalytics.data.averageQualityScore,
+                      compliance_rate: realtimeAnalytics.data.complianceScore,
+                      staff_utilization: realtimeAnalytics.data.staffUtilization,
+                      incident_rate: realtimeAnalytics.data.totalIncidents / Math.max(1, 10) // mock incidents per 1000 attendees
+                    }}
+                    period={{ start: dateRange.startDate, end: dateRange.endDate }}
+                  />
+                )}
+
+        {/* Operational Tab Content (existing charts) */}
+        {activeTab === 'operational' && (
+          <>
         {/* Top Level Metrics - 6 Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
@@ -717,7 +973,17 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </table>
           </div>
         </div>
+          </>
+        )}
       </div>
+
+      {/* Export Report Modal */}
+      <ExportReportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        eventId={eventData?.id}
+        eventName={eventData?.name}
+      />
     </div>
   )
 }
