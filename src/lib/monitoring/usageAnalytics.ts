@@ -3,7 +3,7 @@
  * Tracks user behavior, feature adoption, and engagement metrics
  */
 
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export interface UsageEvent {
   id: string
@@ -195,9 +195,7 @@ class UsageAnalytics {
     this.eventBuffer = []
 
     try {
-      const supabase = createClient()
-      
-      // Store in usage_events table (needs to be created in migration)
+      // Store in usage_events table (created in monitoring migration)
       const { error } = await supabase
         .from('usage_events')
         .insert(eventsToFlush.map(e => ({
