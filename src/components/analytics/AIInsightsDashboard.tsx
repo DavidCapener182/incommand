@@ -14,8 +14,8 @@ import {
   ChartBarIcon,
   ExclamationTriangleIcon,
   LightBulbIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowArrowTrendingUpIcon,
+  ArrowArrowTrendingDownIcon,
   ClockIcon,
   SparklesIcon,
   EyeIcon
@@ -162,9 +162,9 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               {trends.incident_count?.type === 'increasing' ? (
-                <TrendingUpIcon className="h-4 w-4 text-red-500" />
+                <ArrowTrendingUpIcon className="h-4 w-4 text-red-500" />
               ) : trends.incident_count?.type === 'decreasing' ? (
-                <TrendingDownIcon className="h-4 w-4 text-green-500" />
+                <ArrowTrendingDownIcon className="h-4 w-4 text-green-500" />
               ) : (
                 <div className="h-4 w-4 bg-gray-400 rounded-full"></div>
               )}
@@ -190,9 +190,9 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               {trends.response_time?.type === 'increasing' ? (
-                <TrendingUpIcon className="h-4 w-4 text-red-500" />
+                <ArrowTrendingUpIcon className="h-4 w-4 text-red-500" />
               ) : trends.response_time?.type === 'decreasing' ? (
-                <TrendingDownIcon className="h-4 w-4 text-green-500" />
+                <ArrowTrendingDownIcon className="h-4 w-4 text-green-500" />
               ) : (
                 <div className="h-4 w-4 bg-gray-400 rounded-full"></div>
               )}
@@ -218,9 +218,9 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               {trends.quality_score?.type === 'increasing' ? (
-                <TrendingUpIcon className="h-4 w-4 text-green-500" />
+                <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />
               ) : trends.quality_score?.type === 'decreasing' ? (
-                <TrendingDownIcon className="h-4 w-4 text-red-500" />
+                <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />
               ) : (
                 <div className="h-4 w-4 bg-gray-400 rounded-full"></div>
               )}

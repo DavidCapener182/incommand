@@ -125,8 +125,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false
-  }
-}
+// Config moved to route segment config in Next.js App Router
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
