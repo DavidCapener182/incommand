@@ -170,7 +170,8 @@
   ],
   "scope_extensions": [
     {
-      "origin": "https://incommand.app"
+      "origin": "https://incommand.app",
+      "type": "include"
     }
   ],
   "iarc_rating_id": "",

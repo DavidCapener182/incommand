@@ -62,9 +62,8 @@ const LiveRiskPulse: React.FC<LiveRiskPulseProps> = ({ className }) => {
   });
 
   useEffect(() => {
-    const handler = (message: WebSocketMessage) => handleMessage(message);
-    subscribe(handler);
-    return () => unsubscribe(handler);
+    subscribe(handleMessage);
+    return () => unsubscribe(handleMessage);
   }, [subscribe, unsubscribe, handleMessage]);
 
   useEffect(() => {

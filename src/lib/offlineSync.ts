@@ -28,7 +28,7 @@ class OfflineDatabase extends Dexie {
 
   constructor() {
     super('incommand-offline');
-    this.version(1).stores({
+    this.version(2).stores({
       offlineQueue: '++id, type, status, timestamp',
       offlinePhotos: 'id, timestamp'
     });

@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { MagnifyingGlassIcon, StarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { supabase } from '@/lib/supabase'
 import { pluginSystem, type Plugin } from '@/lib/plugins/pluginSystem'
 
 const FEATURED_PLUGINS: Plugin[] = [
@@ -36,8 +38,19 @@ const FEATURED_PLUGINS: Plugin[] = [
 ]
 
 export default function MarketplacePage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/login')
+      }
+    }
+    checkAuth()
+  }, [router])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">

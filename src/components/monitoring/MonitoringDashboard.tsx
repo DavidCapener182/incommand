@@ -20,8 +20,16 @@ export default function MonitoringDashboard() {
   const [perfReport, setPerfReport] = useState(performanceMonitor.getReport())
   const [usageMetrics, setUsageMetrics] = useState(usageAnalytics.getMetrics())
   const [activeTab, setActiveTab] = useState<'errors' | 'performance' | 'usage'>('errors')
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Initial load
+    setIsLoading(true)
+    setErrorMetrics(errorTracker.getMetrics())
+    setPerfReport(performanceMonitor.getReport())
+    setUsageMetrics(usageAnalytics.getMetrics())
+    setIsLoading(false)
+
     const interval = setInterval(() => {
       setErrorMetrics(errorTracker.getMetrics())
       setPerfReport(performanceMonitor.getReport())

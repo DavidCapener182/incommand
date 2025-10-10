@@ -1,11 +1,24 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { supabase } from '@/lib/supabase'
 
 export default function DisplayModePage() {
+  const router = useRouter()
   const [currentView, setCurrentView] = useState<'incidents' | 'map' | 'analytics'>('incidents')
   const [autoRotate, setAutoRotate] = useState(true)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/login')
+      }
+    }
+    checkAuth()
+  }, [router])
 
   useEffect(() => {
     if (!autoRotate) return

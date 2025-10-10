@@ -19,13 +19,16 @@ interface RevisionNotification {
 
 export function useLogRevisions(eventId: string | null, onRevisionCreated?: (notification: RevisionNotification) => void) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
+  const previousEventIdRef = useRef<string | null>(null)
   const [revisionCount, setRevisionCount] = useState<Record<string, number>>({})
   const [latestRevisions, setLatestRevisions] = useState<RevisionNotification[]>([])
 
   useEffect(() => {
-    if (!eventId) {
+    if (!eventId || eventId === previousEventIdRef.current) {
       return
     }
+
+    previousEventIdRef.current = eventId
 
     logger.debug('Setting up revision subscription', { 
       component: 'useLogRevisions', 
