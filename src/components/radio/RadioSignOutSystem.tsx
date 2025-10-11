@@ -26,8 +26,7 @@ interface RadioSignOut {
   status: 'out' | 'returned' | 'overdue' | 'lost'
   profile: {
     id: string
-    first_name: string
-    last_name: string
+    full_name: string
     callsign: string | null
     email: string
   }
@@ -49,6 +48,7 @@ export default function RadioSignOutSystem({
   const [showSignOutModal, setShowSignOutModal] = useState(false)
   const [showSignInModal, setShowSignInModal] = useState(false)
   const [selectedSignOut, setSelectedSignOut] = useState<RadioSignOut | null>(null)
+  const [assignedStaff, setAssignedStaff] = useState<any[]>([])
   
   // Sign-out form
   const [radioNumber, setRadioNumber] = useState('')
@@ -67,7 +67,7 @@ export default function RadioSignOutSystem({
     setError(null)
     
     try {
-      const response = await fetch(`/api/v1/events/${eventId}/radio-signouts`, {
+      const response = await fetch(`/api/v1/radio-signout?event_id=${eventId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -77,7 +77,7 @@ export default function RadioSignOutSystem({
       }
       
       const data = await response.json()
-      setSignOuts(data.signouts || [])
+      setSignOuts(data.signOuts || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -85,9 +85,28 @@ export default function RadioSignOutSystem({
     }
   }
 
+  const fetchAssignedStaff = async () => {
+    try {
+      const response = await fetch('/api/v1/staff/assigned', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch assigned staff')
+      }
+      
+      const data = await response.json()
+      setAssignedStaff(data.assignedStaff || [])
+    } catch (err) {
+      console.error('Failed to fetch assigned staff:', err)
+    }
+  }
+
   useEffect(() => {
     if (eventId) {
       fetchSignOuts()
+      fetchAssignedStaff()
     }
   }, [eventId])
 
@@ -305,7 +324,7 @@ export default function RadioSignOutSystem({
                     Radio #{signOut.radio_number}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {signOut.profile.first_name} {signOut.profile.last_name}
+                    {signOut.profile.full_name}
                     {signOut.profile.callsign && ` (${signOut.profile.callsign})`}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500">

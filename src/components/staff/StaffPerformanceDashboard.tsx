@@ -234,9 +234,6 @@ export default function StaffPerformanceDashboard({
                   Log Quality
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Resolution Rate
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -288,9 +285,6 @@ export default function StaffPerformanceDashboard({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {performance.log_quality_score}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {performance.resolution_rate.toFixed(1)}%
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
@@ -400,14 +394,6 @@ export default function StaffPerformanceDashboard({
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {selectedStaff.resolution_rate.toFixed(1)}%
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Resolution Rate
-                      </div>
-                    </div>
                   </div>
                 </div>
 
