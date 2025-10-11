@@ -25,18 +25,20 @@ class HapticFeedback {
   }
 
   constructor() {
-    // Check if haptic feedback is supported
-    this.config.enabled = 'vibrate' in navigator
-    
-    // Load user preference from localStorage
-    const savedConfig = localStorage.getItem('hapticFeedback')
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig)
-        this.config = { ...this.config, ...parsed }
-      } catch (e) {
-        console.warn('Failed to parse haptic feedback config')
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      this.config.enabled = 'vibrate' in navigator
+
+      const savedConfig = window.localStorage.getItem('hapticFeedback')
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig)
+          this.config = { ...this.config, ...parsed }
+        } catch (e) {
+          console.warn('Failed to parse haptic feedback config')
+        }
       }
+    } else {
+      this.config.enabled = false
     }
   }
 
@@ -44,7 +46,7 @@ class HapticFeedback {
    * Trigger haptic feedback with a specific pattern
    */
   trigger(pattern: HapticPattern): void {
-    if (!this.config.enabled) return
+    if (!this.config.enabled || typeof navigator === 'undefined') return
 
     const patterns = {
       light: [10],
@@ -85,7 +87,9 @@ class HapticFeedback {
    */
   updateConfig(config: Partial<HapticConfig>): void {
     this.config = { ...this.config, ...config }
-    localStorage.setItem('hapticFeedback', JSON.stringify(this.config))
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('hapticFeedback', JSON.stringify(this.config))
+    }
   }
 
   /**
@@ -113,7 +117,7 @@ class HapticFeedback {
    * Check if haptic feedback is available
    */
   isAvailable(): boolean {
-    return 'vibrate' in navigator
+    return typeof navigator !== 'undefined' && 'vibrate' in navigator
   }
 }
 

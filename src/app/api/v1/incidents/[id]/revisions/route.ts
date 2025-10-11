@@ -6,9 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
+
 import { getRevisionHistory } from '@/lib/auditableLogging'
+
 import { GetRevisionsResponse } from '@/types/auditableLog'
+
 
 export async function GET(
   request: NextRequest,

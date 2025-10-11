@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { z } from 'zod'
+
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+
 import { cookies } from 'next/headers'
+
 
 // Shared schemas (top-level so helpers can use them)
 const dashboardLayoutSchema = z.object({

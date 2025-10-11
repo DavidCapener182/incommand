@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+
 import { cookies } from 'next/headers'
+
 import { z } from 'zod'
+
 import { Ratelimit } from '@upstash/ratelimit'
+
 import { Redis } from '@upstash/redis'
 
+
 import { logger } from '@/lib/logger'
+
 import { broadcastIncidentSummaryUpdateByIncidentId } from '@/lib/incidentSummaryBroadcast'
+
 
 const escalationSchema = z.object({
   comment: z

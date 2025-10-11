@@ -35,22 +35,21 @@ class EnhancedOfflineSync {
   constructor() {
     this.queue = []
     this.failedOperations = []
+    const isBrowser = typeof window !== 'undefined'
+
     this.stats = {
       queueSize: 0,
       failedOperations: 0,
       successfulOperations: 0,
       lastSyncTime: null,
-      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true
+      isOnline: isBrowser && typeof navigator !== 'undefined' ? navigator.onLine : true
     }
 
-    // Load queued operations from localStorage
-    this.loadQueue()
-
-    // Monitor online status
-    this.setupOnlineListener()
-
-    // Start automatic sync
-    this.startAutoSync()
+    if (isBrowser) {
+      this.loadQueue()
+      this.setupOnlineListener()
+      this.startAutoSync()
+    }
   }
 
   /**

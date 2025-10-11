@@ -4,6 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 import { normalizePriority } from '@/utils/incidentStyles'
 
 const summaryParamsSchema = z.object({

@@ -6,9 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
+
 import { createImmutableLog } from '@/lib/auditableLogging'
+
 import { CreateAuditableLogRequest, CreateLogResponse } from '@/types/auditableLog'
+
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,6 +1,11 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { cookies } from 'next/headers';
+
 import { NextResponse } from 'next/server';
+
 
 export async function POST() {
   try {

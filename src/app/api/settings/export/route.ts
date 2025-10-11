@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+
 import { cookies } from 'next/headers'
+
 import { z } from 'zod'
+
 import { Ratelimit } from '@upstash/ratelimit'
+
 import { Redis } from '@upstash/redis'
+
 
 // Distributed rate limiter with Upstash (falls back to in-memory if env not set)
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN

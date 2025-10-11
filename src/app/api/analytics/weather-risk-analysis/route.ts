@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+
 import { cookies } from 'next/headers';
+
 import { PatternRecognitionEngine } from '../../../../lib/patternRecognition';
+
 import { RiskScoringEngine } from '../../../../lib/riskScoring';
+
 
 export interface WeatherRiskAnalysisResponse {
   weatherConditions: {

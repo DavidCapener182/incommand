@@ -282,6 +282,9 @@ export class ExportHistory {
   private static readonly MAX_HISTORY = 50;
 
   static addToHistory(exportResult: { success: boolean; filename?: string; error?: string }) {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
     const history = this.getHistory();
     const newEntry = {
       id: Date.now().toString(),
@@ -296,12 +299,15 @@ export class ExportHistory {
       history.splice(this.MAX_HISTORY);
     }
     
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+    window.localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
   }
 
   static getHistory() {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return [];
+    }
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const stored = window.localStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Failed to load export history:', error);
@@ -310,6 +316,8 @@ export class ExportHistory {
   }
 
   static clearHistory() {
-    localStorage.removeItem(this.STORAGE_KEY);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(this.STORAGE_KEY);
+    }
   }
 }
