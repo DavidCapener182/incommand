@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
+import { useToast } from '@/components/Toast'
 import { XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 
 interface AddStaffModalProps {
@@ -24,6 +24,7 @@ interface StaffFormData {
 }
 
 export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId }: AddStaffModalProps) {
+  const { addToast } = useToast()
   const [formData, setFormData] = useState<StaffFormData>({
     full_name: '',
     email: null,
@@ -57,7 +58,11 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.full_name.trim()) {
-      toast.error('Full name is required')
+      addToast({
+        type: 'error',
+        message: 'Full name is required',
+        duration: 4000
+      })
       return
     }
 
@@ -84,7 +89,11 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
 
       if (error) throw error
 
-      toast.success('Staff member added successfully!')
+      addToast({
+        type: 'success',
+        message: 'Staff member added successfully!',
+        duration: 4000
+      })
       setFormData({
         full_name: '',
         email: null,
@@ -98,7 +107,11 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
       onClose()
     } catch (error: any) {
       console.error('Error adding staff member:', error)
-      toast.error('Failed to add staff member: ' + error.message)
+      addToast({
+        type: 'error',
+        message: 'Failed to add staff member: ' + error.message,
+        duration: 6000
+      })
     } finally {
       setLoading(false)
     }

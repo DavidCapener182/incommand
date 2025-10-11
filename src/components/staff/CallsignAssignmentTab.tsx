@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'sonner'
+import { useToast } from '@/components/Toast'
 import { 
   UserCheck, 
   PlusIcon, 
@@ -81,6 +81,7 @@ const POSITION_TEMPLATES = {
 }
 
 export default function CallsignAssignmentTab({ staff, onStaffUpdate }: CallsignAssignmentTabProps) {
+  const { addToast } = useToast()
   const [positions, setPositions] = useState<Position[]>([])
   const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -126,7 +127,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
       setPositions(defaultPositions)
     } catch (error) {
       console.error('Error loading positions:', error)
-      toast.error('Failed to load positions')
+      addToast({
+        type: 'error',
+        message: 'Failed to load positions',
+        duration: 4000
+      })
     } finally {
       setLoading(false)
     }
@@ -149,7 +154,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
     // Remove staff from available list
     setAvailableStaff(prev => prev.filter(s => s.id !== staffId))
 
-    toast.success(`${staffMember.name} assigned to ${positions.find(p => p.id === positionId)?.callsign}`)
+    addToast({
+      type: 'success',
+      message: `${staffMember.name} assigned to ${positions.find(p => p.id === positionId)?.callsign}`,
+      duration: 4000
+    })
     onStaffUpdate()
   }
 
@@ -173,13 +182,21 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
         : pos
     ))
 
-    toast.success(`Staff unassigned from ${position.callsign}`)
+    addToast({
+      type: 'success',
+      message: `Staff unassigned from ${position.callsign}`,
+      duration: 4000
+    })
     onStaffUpdate()
   }
 
   const addNewPosition = () => {
     if (!newPosition.callsign || !newPosition.position) {
-      toast.error('Callsign and position are required')
+      addToast({
+        type: 'error',
+        message: 'Callsign and position are required',
+        duration: 4000
+      })
       return
     }
 
@@ -199,7 +216,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
       required_skills: []
     })
     setShowAddPositionModal(false)
-    toast.success('Position added successfully')
+    addToast({
+      type: 'success',
+      message: 'Position added successfully',
+      duration: 4000
+    })
   }
 
   const deletePosition = (positionId: string) => {
@@ -211,7 +232,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
     }
 
     setPositions(prev => prev.filter(p => p.id !== positionId))
-    toast.success('Position deleted')
+    addToast({
+      type: 'success',
+      message: 'Position deleted',
+      duration: 4000
+    })
   }
 
   const getStaffSuggestions = (position: Position) => {
