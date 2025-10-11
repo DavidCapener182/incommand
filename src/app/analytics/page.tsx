@@ -38,6 +38,7 @@ import EndOfEventReport from '@/components/analytics/EndOfEventReport'
 import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
 import RealtimeAnalyticsDashboard from '@/components/analytics/RealtimeAnalyticsDashboard'
 import ComparativeAnalytics, { createSampleEvents } from '@/components/analytics/ComparativeAnalytics'
+import MobileOptimizedChart from '@/components/MobileOptimizedChart'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 interface IncidentRecord {
@@ -405,27 +406,92 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         </div>
 
         {/* Mobile Content */}
-        <div className="p-4">
+        <div className="p-4 space-y-6">
           {selectedMobileView === 'dashboard' && (
-            <MobileAnalyticsCarousel
-              cards={createAnalyticsCards(incidentData, eventData)}
-              autoSwipe={false}
-              className="mb-6"
-            />
+            <>
+              {/* All Analytics Cards in One View */}
+              <div className="space-y-4">
+                {createAnalyticsCards(incidentData, eventData).map((card, index) => (
+                  <div key={card.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    {card.type === 'chart' && (
+                      <MobileOptimizedChart
+                        data={card.data.chartData || []}
+                        title={card.title}
+                        type={card.data.chartType || 'line'}
+                        height={200}
+                      />
+                    )}
+                    {card.type === 'metric' && (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{card.data.subtitle}</p>
+                        </div>
+                        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                          {card.data.value}
+                        </div>
+                      </div>
+                    )}
+                    {card.type === 'trend' && (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{card.data.changeLabel}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-gray-900 dark:text-white">{card.data.value}</div>
+                          <div className={`text-sm font-medium ${card.data.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {card.data.change > 0 ? '+' : ''}{card.data.change}%
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {card.type === 'progress' && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {card.data.current}{card.data.unit} / {card.data.target}{card.data.unit}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min((card.data.current / card.data.target) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {Math.round((card.data.current / card.data.target) * 100)}% complete
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Real-time Analytics */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
+                <RealtimeAnalyticsDashboard
+                  eventId={eventData?.id || 'current'}
+                  className=""
+                />
+              </div>
+            </>
           )}
 
           {selectedMobileView === 'comparison' && (
             <ComparativeAnalytics
               currentEvent={sampleEvents[0]}
               previousEvent={sampleEvents[1]}
-              className="mb-6"
+              className=""
             />
           )}
 
           {selectedMobileView === 'realtime' && (
             <RealtimeAnalyticsDashboard
               eventId={eventData?.id || 'current'}
-              className="mb-6"
+              className=""
             />
           )}
         </div>
