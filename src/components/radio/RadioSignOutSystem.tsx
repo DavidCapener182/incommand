@@ -87,7 +87,7 @@ export default function RadioSignOutSystem({
 
   const fetchAssignedStaff = async () => {
     try {
-      const response = await fetch('/api/v1/staff/assigned', {
+      const response = await fetch(`/api/v1/staff/assigned?event_id=${eventId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })

@@ -38,6 +38,7 @@ interface Position {
 interface CallsignAssignmentTabProps {
   staff: StaffMember[]
   onStaffUpdate: () => void
+  eventId?: string
 }
 
 // Common position templates
@@ -77,7 +78,7 @@ const POSITION_TEMPLATES = {
   ]
 }
 
-export default function CallsignAssignmentTab({ staff, onStaffUpdate }: CallsignAssignmentTabProps) {
+export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }: CallsignAssignmentTabProps) {
   const { addToast } = useToast()
   const [positions, setPositions] = useState<Position[]>([])
   const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([])
@@ -104,55 +105,15 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
   // Load positions from database or create default ones
   useEffect(() => {
     loadPositions()
-    fetchStaffFromDatabase()
-  }, [])
+    // Use staff prop instead of fetching from database
+    setAvailableStaff(staff)
+  }, [staff])
 
-  const fetchStaffFromDatabase = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single()
-
-      if (!userProfile) return
-
-      const { data: staffData, error } = await supabase
-        .from('staff')
-        .select('id, full_name, skill_tags, active')
-        .eq('company_id', userProfile.company_id)
-        .eq('active', true)
-        .order('full_name', { ascending: true })
-
-      if (error) {
-        console.error('Failed to fetch staff:', error)
-        return
-      }
-
-      const normalizedStaff = staffData.map(member => ({
-        id: member.id,
-        name: member.full_name,
-        callsign: member.full_name,
-        qualifications: member.skill_tags || [],
-        experience_level: 'intermediate' as const,
-        previous_events: [],
-        active_assignments: 0
-      }))
-
-      setAvailableStaff(normalizedStaff)
-    } catch (error) {
-      console.error('Error fetching staff:', error)
-    }
-  }
 
   const loadPositions = async () => {
     setLoading(true)
     try {
-      // For now, create default positions from templates
-      // In a real app, you'd load these from the database
+      // Create default positions from templates
       const defaultPositions: Position[] = []
       
       Object.entries(POSITION_TEMPLATES).forEach(([department, deptPositions]) => {
@@ -167,7 +128,38 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
         })
       })
 
-      setPositions(defaultPositions)
+      // If we have an event ID, load existing assignments
+      if (eventId) {
+        try {
+          const response = await fetch(`/api/v1/staff/assignments?event_id=${eventId}`)
+          if (response.ok) {
+            const data = await response.json()
+            const assignments = data.assignments || []
+            
+            // Merge assignments with default positions
+            const updatedPositions = defaultPositions.map(position => {
+              const assignment = assignments.find((a: any) => a.position_id === position.id)
+              if (assignment && assignment.staff) {
+                return {
+                  ...position,
+                  assigned_staff_id: assignment.staff.id,
+                  assigned_staff_name: assignment.staff.full_name
+                }
+              }
+              return position
+            })
+            
+            setPositions(updatedPositions)
+          } else {
+            setPositions(defaultPositions)
+          }
+        } catch (error) {
+          console.error('Failed to load assignments:', error)
+          setPositions(defaultPositions)
+        }
+      } else {
+        setPositions(defaultPositions)
+      }
     } catch (error) {
       console.error('Error loading positions:', error)
       addToast({
@@ -180,57 +172,111 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
     }
   }
 
-  const assignStaffToPosition = (positionId: string, staffId: string) => {
+  const assignStaffToPosition = async (positionId: string, staffId: string) => {
     const staffMember = availableStaff.find(s => s.id === staffId)
-    if (!staffMember) return
+    const position = positions.find(p => p.id === positionId)
+    if (!staffMember || !position || !eventId) return
 
-    setPositions(prev => prev.map(pos => 
-      pos.id === positionId 
-        ? { 
-            ...pos, 
-            assigned_staff_id: staffId, 
-            assigned_staff_name: staffMember.name 
-          }
-        : pos
-    ))
+    try {
+      const response = await fetch('/api/v1/staff/assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          staff_id: staffId,
+          position_id: positionId,
+          callsign: position.callsign,
+          position_name: position.position,
+          department: position.department
+        })
+      })
 
-    // Remove staff from available list
-    setAvailableStaff(prev => prev.filter(s => s.id !== staffId))
+      if (response.ok) {
+        setPositions(prev => prev.map(pos => 
+          pos.id === positionId 
+            ? { 
+                ...pos, 
+                assigned_staff_id: staffId, 
+                assigned_staff_name: staffMember.name 
+              }
+            : pos
+        ))
 
-    addToast({
-      type: 'success',
-      message: `${staffMember.name} assigned to ${positions.find(p => p.id === positionId)?.callsign}`,
-      duration: 4000
-    })
-    onStaffUpdate()
+        addToast({
+          type: 'success',
+          message: `${staffMember.name} assigned to ${position.callsign}`,
+          duration: 4000
+        })
+        onStaffUpdate()
+      } else {
+        throw new Error('Failed to save assignment')
+      }
+    } catch (error) {
+      console.error('Failed to assign staff:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to save assignment',
+        duration: 4000
+      })
+    }
   }
 
-  const unassignStaffFromPosition = (positionId: string) => {
+  const unassignStaffFromPosition = async (positionId: string) => {
     const position = positions.find(p => p.id === positionId)
-    if (!position || !position.assigned_staff_id) return
+    if (!position || !position.assigned_staff_id || !eventId) return
 
-    const staffMember = staff.find(s => s.id === position.assigned_staff_id)
-    if (staffMember) {
-      // Add staff back to available list
-      setAvailableStaff(prev => [...prev, staffMember])
-    }
+    try {
+      // Find the assignment to delete
+      const response = await fetch(`/api/v1/staff/assignments?event_id=${eventId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const assignment = data.assignments.find((a: any) => a.position_id === positionId)
+        
+        if (assignment) {
+          const deleteResponse = await fetch(`/api/v1/staff/assignments?id=${assignment.id}`, {
+            method: 'DELETE'
+          })
+          
+          if (deleteResponse.ok) {
+            const staffMember = staff.find(s => s.id === position.assigned_staff_id)
+            if (staffMember) {
+              // Add staff back to available list
+              setAvailableStaff(prev => [...prev, staffMember])
+            }
 
-    setPositions(prev => prev.map(pos => 
-      pos.id === positionId 
-        ? { 
-            ...pos, 
-            assigned_staff_id: undefined, 
-            assigned_staff_name: undefined 
+            setPositions(prev => prev.map(pos => 
+              pos.id === positionId 
+                ? { 
+                    ...pos, 
+                    assigned_staff_id: undefined, 
+                    assigned_staff_name: undefined 
+                  }
+                : pos
+            ))
+
+            addToast({
+              type: 'success',
+              message: `Staff unassigned from ${position.callsign}`,
+              duration: 4000
+            })
+            onStaffUpdate()
+          } else {
+            throw new Error('Failed to delete assignment')
           }
-        : pos
-    ))
-
-    addToast({
-      type: 'success',
-      message: `Staff unassigned from ${position.callsign}`,
-      duration: 4000
-    })
-    onStaffUpdate()
+        }
+      } else {
+        throw new Error('Failed to fetch assignments')
+      }
+    } catch (error) {
+      console.error('Failed to unassign staff:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to unassign staff',
+        duration: 4000
+      })
+    }
   }
 
   const addNewPosition = () => {

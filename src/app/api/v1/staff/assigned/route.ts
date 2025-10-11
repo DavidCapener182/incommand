@@ -5,53 +5,74 @@ import { cookies } from 'next/headers'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET endpoint to fetch staff assigned to positions for radio sign out
+// GET assigned staff for an event
 export async function GET(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+    const { searchParams } = new URL(request.url)
+    const eventId = searchParams.get('event_id')
+
+    if (!eventId) {
+      return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
+    }
+
     // Get user's company
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userProfile } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!userProfile) {
+    if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get all active staff in the company
-    const { data: staff, error: staffError } = await supabase
-      .from('staff')
-      .select('id, full_name, email, contact_number, skill_tags, active')
-      .eq('company_id', userProfile.company_id)
-      .eq('active', true)
-      .order('full_name', { ascending: true })
+    // Get assigned staff with their positions
+    const { data: assignments, error } = await supabase
+      .from('staff_assignments')
+      .select(`
+        id,
+        position_id,
+        callsign,
+        position_name,
+        department,
+        assigned_at,
+        staff:staff_id (
+          id,
+          full_name,
+          email,
+          contact_number,
+          skill_tags
+        )
+      `)
+      .eq('event_id', eventId)
+      .order('callsign', { ascending: true })
 
-    if (staffError) {
-      console.error('Staff fetch error:', staffError)
+    if (error) {
+      console.error('Failed to fetch assigned staff:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch staff' },
+        { error: 'Failed to fetch assigned staff' },
         { status: 500 }
       )
     }
 
-    // For now, we'll return all active staff as "assigned"
-    // In a real implementation, you'd check against a positions/assignments table
-    const assignedStaff = staff.map(member => ({
-      id: member.id,
-      full_name: member.full_name,
-      email: member.email,
-      contact_number: member.contact_number,
-      skill_tags: member.skill_tags || [],
-      position: 'General Staff', // Default position
-      callsign: member.full_name // Use full_name as callsign
+    // Transform the data to match the expected format
+    const assignedStaff = (assignments || []).map(assignment => ({
+      id: assignment.staff?.id,
+      full_name: assignment.staff?.full_name,
+      email: assignment.staff?.email,
+      contact_number: assignment.staff?.contact_number,
+      callsign: assignment.callsign,
+      position: assignment.position_name,
+      department: assignment.department,
+      position_id: assignment.position_id,
+      assigned_at: assignment.assigned_at,
+      skill_tags: assignment.staff?.skill_tags || []
     }))
 
     return NextResponse.json({

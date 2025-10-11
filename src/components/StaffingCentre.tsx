@@ -593,32 +593,33 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'callsign' && (
-        <CallsignAssignmentTab 
-          staff={availableStaff}
-          onStaffUpdate={() => {
-            // Refresh staff data when assignments change
-            if (companyId) {
-              const fetchStaff = async () => {
-                const { data, error } = await supabase
-                  .from('staff')
-                  .select('id, full_name, contact_number, email, skill_tags, notes, active')
-                  .eq('company_id', companyId)
-                  .order('full_name', { ascending: true })
+             {activeTab === 'callsign' && (
+               <CallsignAssignmentTab 
+                 staff={availableStaff}
+                 eventId={currentEvent?.id}
+                 onStaffUpdate={() => {
+                   // Refresh staff data when assignments change
+                   if (companyId) {
+                     const fetchStaff = async () => {
+                       const { data, error } = await supabase
+                         .from('staff')
+                         .select('id, full_name, contact_number, email, skill_tags, notes, active')
+                         .eq('company_id', companyId)
+                         .order('full_name', { ascending: true })
 
-                if (error) {
-                  console.error('Failed to load staff roster', error)
-                  return
-                }
+                       if (error) {
+                         console.error('Failed to load staff roster', error)
+                         return
+                       }
 
-                const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-                distributeStaff(normalized)
-              }
-              fetchStaff()
-            }
-          }}
-        />
-      )}
+                       const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+                       distributeStaff(normalized)
+                     }
+                     fetchStaff()
+                   }
+                 }}
+               />
+             )}
 
       {activeTab === 'radio' && (
         currentEvent ? (
