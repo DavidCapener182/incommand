@@ -3,6 +3,7 @@ import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
 import { ToastProvider } from '../contexts/ToastContext'
+import { NightModeProvider } from '../contexts/NightModeContext'
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
@@ -59,9 +60,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.supabase.co" />
       </head>
       <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
-        <AuthProvider>
-          <NotificationDrawerProvider>
-            <ToastProvider>
+        <NightModeProvider>
+          <AuthProvider>
+            <NotificationDrawerProvider>
+              <ToastProvider>
               <MaintenanceBanner />
               <GlobalEscalationToast />
               <OfflineIndicator />
@@ -69,6 +71,7 @@ export default function RootLayout({
             </ToastProvider>
           </NotificationDrawerProvider>
         </AuthProvider>
+        </NightModeProvider>
         <Analytics />
       </body>
     </html>

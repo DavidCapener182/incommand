@@ -3,6 +3,7 @@ import React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { HomeIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSwipeBottomNav } from '../hooks/useSwipeGestures'
 
 interface Incident {
   id: string;
@@ -31,6 +32,11 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
   const [recentIncidents, setRecentIncidents] = React.useState<Incident[]>([]);
   const [isVisible, setIsVisible] = React.useState(true);
   const [lastScrollY, setLastScrollY] = React.useState(0);
+
+  // Swipe gesture for toggling bottom nav visibility
+  const swipeGestures = useSwipeBottomNav(() => {
+    setIsVisible(prev => !prev);
+  });
 
   // Listen for incident summary updates
   React.useEffect(() => {
@@ -123,6 +129,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
           damping: 30,
           duration: 0.3
         }}
+        {...swipeGestures}
       >
         <div className="mx-auto px-2 sm:px-4 py-1">
           <div className="flex items-center justify-between gap-2">

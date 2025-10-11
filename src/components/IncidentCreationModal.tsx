@@ -21,6 +21,7 @@ import { calculateEscalationTime } from '../lib/escalationEngine'
 import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
 import EscalationTimer from './EscalationTimer'
+import { useSwipeModal } from '../hooks/useSwipeGestures'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import useWhat3Words from '@/hooks/useWhat3Words'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -1903,6 +1904,14 @@ export default function IncidentCreationModal({
   initialIncidentType,
 }: Props) {
   const { addToast } = useToast();
+
+  // Swipe gestures for modal interaction
+  const swipeGestures = useSwipeModal(
+    onClose, // Swipe down to close
+    undefined, // No next/previous for incident creation
+    undefined,
+    { minSwipeDistance: 80 } // Require longer swipe for modal close
+  );
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -3855,6 +3864,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         paddingLeft: 'max(env(safe-area-inset-left), 0px)',
         paddingRight: 'max(env(safe-area-inset-right), 0px)',
       }}
+      {...swipeGestures}
       onMouseMove={(e) => {
         if (modalRef.current) {
           const rect = modalRef.current.getBoundingClientRect();

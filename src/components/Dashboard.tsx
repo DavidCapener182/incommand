@@ -1639,31 +1639,7 @@ export default function Dashboard() {
       {/* Toast Notifications */}
       <Toast messages={messages} onRemove={removeToast} />
 
-      {/* Floating Action Buttons */}
-      {!isIncidentModalOpen && (
-        <div className="fixed bottom-20 right-6 z-50">
-          <div className="relative flex flex-col gap-3">
-
-            {/* New Incident FAB */}
-            <button 
-              type="button"
-              onClick={() => {
-                setInitialIncidentType(undefined)
-                setIsIncidentModalOpen(true)
-              }}
-              disabled={!hasCurrentEvent}
-              className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:shadow-3xl transform hover:scale-110 active:scale-95 focus:outline-none ${
-                hasCurrentEvent 
-                  ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:scale-100'
-              }`}
-              aria-label="Create new incident"
-            >
-              <PlusIcon className="h-7 w-7 text-white" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* FAB now handled by FloatingActionButton component in LayoutWrapper */}
 
         {/* Log Review Reminder for Silver Commanders */}
         <LogReviewReminder />

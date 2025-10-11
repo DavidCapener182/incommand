@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext'
 import PWAStatus from '@/components/PWAStatus';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useNightMode } from '@/contexts/NightModeContext';
 import { supabase } from '@/lib/supabase';
 import { 
   UserIcon, 
@@ -18,7 +19,8 @@ import {
   ArrowPathIcon,
   CheckIcon,
   DocumentTextIcon,
-  ClockIcon
+  ClockIcon,
+  Bars3Icon
 } from '@heroicons/react/24/outline';
 
 interface UserProfile {
@@ -44,7 +46,9 @@ interface CompanyData {
 export default function GeneralSettingsPage() {
   const { user } = useAuth();
   const { preferences } = useUserPreferences();
+  const { isNightModeAlwaysOn, toggleNightModeAlwaysOn, isNightModeActive } = useNightMode();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [compactNavigation, setCompactNavigation] = useState(false);
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -409,6 +413,58 @@ export default function GeneralSettingsPage() {
                 <span
                   className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform shadow-md ${
                     darkMode ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Night Mode Always On Setting */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <MoonIcon className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Night Mode Always On</div>
+                  <div className="text-sm text-gray-500 dark:text-purple-300">Keep dark mode enabled for field use</div>
+                </div>
+              </div>
+              <button
+                onClick={toggleNightModeAlwaysOn}
+                className={`touch-target relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
+                  isNightModeAlwaysOn ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+                aria-label={isNightModeAlwaysOn ? 'Disable night mode always on' : 'Enable night mode always on'}
+              >
+                <span
+                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform shadow-md ${
+                    isNightModeAlwaysOn ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Compact Navigation Setting */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <Bars3Icon className="h-5 w-5 text-green-600 dark:text-green-300" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Compact Navigation</div>
+                  <div className="text-sm text-gray-500 dark:text-green-300">Use icons-only navigation for more screen space</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setCompactNavigation(!compactNavigation)}
+                className={`touch-target relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
+                  compactNavigation ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+                aria-label={compactNavigation ? 'Disable compact navigation' : 'Enable compact navigation'}
+              >
+                <span
+                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform shadow-md ${
+                    compactNavigation ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
