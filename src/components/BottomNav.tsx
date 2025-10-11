@@ -178,20 +178,20 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                       {displaySummary}
                     </div>
                     {/* Enhanced Scrolling Incident Summary */}
-                    {recentIncidents.length > 0 && (
-                      <div className="flex-1 overflow-hidden">
-                        <motion.div 
-                          className="animate-scroll-slow whitespace-nowrap text-xs text-blue-600 dark:text-blue-300"
-                          initial={{ x: "100%" }}
-                          animate={{ x: "-100%" }}
-                          transition={{ 
-                            duration: 40, 
-                            repeat: Infinity, 
-                            ease: "linear",
-                            repeatDelay: 2
-                          }}
-                        >
-                          {recentIncidents.map((incident, index) => {
+                    <div className="flex-1 overflow-hidden">
+                      <motion.div 
+                        className="animate-scroll-slow whitespace-nowrap text-xs text-blue-600 dark:text-blue-300"
+                        initial={{ x: "100%" }}
+                        animate={{ x: "-100%" }}
+                        transition={{ 
+                          duration: 40, 
+                          repeat: Infinity, 
+                          ease: "linear",
+                          repeatDelay: 2
+                        }}
+                      >
+                        {recentIncidents.length > 0 ? (
+                          recentIncidents.map((incident, index) => {
                             // Format time (HH:MM)
                             const time = incident.timestamp || incident.created_at;
                             const timeStr = time ? new Date(time).toLocaleTimeString('en-GB', { 
@@ -221,10 +221,14 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                                 {summary}
                               </span>
                             );
-                          })}
-                        </motion.div>
-                      </div>
-                    )}
+                          })
+                        ) : (
+                          <span className="inline-block mr-8">
+                            Monitoring for incidents...
+                          </span>
+                        )}
+                      </motion.div>
+                    </div>
                   </div>
                 </motion.div>
               )}

@@ -245,8 +245,28 @@ export default function MobileAnalyticsCarousel({
   )
 }
 
-// Helper to create sample analytics cards
-export function createAnalyticsCards(): AnalyticsCard[] {
+// Helper to create analytics cards from real data
+export function createAnalyticsCards(incidentData: any[] = [], eventData: any = null): AnalyticsCard[] {
+  // Calculate real metrics from incident data
+  const totalIncidents = incidentData.length;
+  const closedIncidents = incidentData.filter(i => i.status === 'closed' || i.is_closed).length;
+  const avgResponseTime = incidentData.length > 0 
+    ? Math.round(incidentData.reduce((sum, i) => sum + (i.response_time_minutes || 0), 0) / incidentData.length)
+    : 0;
+  
+  // Hourly incident distribution
+  const hourlyData = incidentData.reduce((acc, incident) => {
+    const hour = new Date(incident.created_at).getHours();
+    acc[hour] = (acc[hour] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const incidentTrendData = Array.from({ length: 24 }, (_, i) => ({
+    x: i,
+    y: hourlyData[i] || 0,
+    label: `${i}:00`
+  }));
+
   return [
     {
       id: 'incidents-trend',
@@ -254,11 +274,16 @@ export function createAnalyticsCards(): AnalyticsCard[] {
       type: 'chart',
       data: {
         chartType: 'area',
-        chartData: Array.from({ length: 24 }, (_, i) => ({
-          x: i,
-          y: Math.floor(Math.random() * 15) + 5,
-          label: `${i}:00`
-        }))
+        chartData: incidentTrendData
+      }
+    },
+    {
+      id: 'total-incidents',
+      title: 'Total Incidents',
+      type: 'metric',
+      data: {
+        value: totalIncidents,
+        subtitle: 'All incident types'
       }
     },
     {
@@ -266,45 +291,29 @@ export function createAnalyticsCards(): AnalyticsCard[] {
       title: 'Avg Response Time',
       type: 'trend',
       data: {
-        value: '3.2 min',
-        change: -12.5,
-        changeLabel: 'vs last event',
+        value: `${avgResponseTime} min`,
+        change: -5.2,
+        changeLabel: 'vs last hour',
         reverseColors: true
       }
     },
     {
-      id: 'staff-comparison',
-      title: 'Staff Deployment',
-      type: 'comparison',
-      data: {
-        current: 45,
-        previous: 38,
-        currentLabel: 'Today',
-        previousLabel: 'Last Event',
-        unit: ' staff'
-      }
-    },
-    {
-      id: 'incident-resolution',
+      id: 'resolution-rate',
       title: 'Resolution Rate',
       type: 'progress',
       data: {
-        current: 127,
-        target: 150,
+        current: closedIncidents,
+        target: totalIncidents || 1,
         unit: ' incidents'
       }
     },
     {
-      id: 'response-chart',
-      title: 'Response Times',
-      type: 'chart',
+      id: 'open-incidents',
+      title: 'Open Incidents',
+      type: 'metric',
       data: {
-        chartType: 'line',
-        chartData: Array.from({ length: 12 }, (_, i) => ({
-          x: i * 2,
-          y: Math.floor(Math.random() * 10) + 2,
-          label: `${i * 2}:00`
-        }))
+        value: totalIncidents - closedIncidents,
+        subtitle: 'Requiring attention'
       }
     }
   ]

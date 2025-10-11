@@ -37,23 +37,29 @@ export default function MobileOptimizedChart({
   const tooltipRef = useRef<HTMLDivElement>(null)
 
   // Calculate chart dimensions and scales
-  const chartWidth = 300 // Fixed width for mobile
-  const chartHeight = height
+  const chartWidth = 320 // Fixed width for mobile
+  const chartHeight = Math.max(height, 200) // Ensure minimum height
   const padding = { top: 20, right: 20, bottom: 40, left: 40 }
-  const plotWidth = chartWidth - padding.left - padding.right
-  const plotHeight = chartHeight - padding.top - padding.bottom
+  const plotWidth = Math.max(chartWidth - padding.left - padding.right, 200)
+  const plotHeight = Math.max(chartHeight - padding.top - padding.bottom, 120)
 
   // Get data bounds
   const xValues = data.map(d => typeof d.x === 'number' ? d.x : parseFloat(d.x.toString()))
   const yValues = data.map(d => d.y)
-  const minX = Math.min(...xValues)
-  const maxX = Math.max(...xValues)
-  const minY = Math.min(...yValues)
-  const maxY = Math.max(...yValues)
+  const minX = data.length > 0 ? Math.min(...xValues) : 0
+  const maxX = data.length > 0 ? Math.max(...xValues) : 1
+  const minY = data.length > 0 ? Math.min(...yValues) : 0
+  const maxY = data.length > 0 ? Math.max(...yValues) : 1
 
   // Scale functions
-  const scaleX = (value: number) => padding.left + ((value - minX) / (maxX - minX)) * plotWidth
-  const scaleY = (value: number) => padding.top + plotHeight - ((value - minY) / (maxY - minY)) * plotHeight
+  const scaleX = (value: number) => {
+    if (maxX === minX) return padding.left + plotWidth / 2
+    return padding.left + ((value - minX) / (maxX - minX)) * plotWidth
+  }
+  const scaleY = (value: number) => {
+    if (maxY === minY) return padding.top + plotHeight / 2
+    return padding.top + plotHeight - ((value - minY) / (maxY - minY)) * plotHeight
+  }
 
   const handlePointHover = (point: ChartDataPoint, event: React.MouseEvent | React.TouchEvent) => {
     if (!chartRef.current) return

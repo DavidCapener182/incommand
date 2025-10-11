@@ -54,11 +54,11 @@ const GRID_SIZE = 50 // Grid cell size in pixels
 const MAX_COLUMNS = 6
 const MAX_ROWS = 8
 
-export default function CustomDashboardBuilder({
-  eventId,
+export default function CustomDashboardBuilder({ 
+  eventId, 
   onSave,
   onCancel,
-  className = ''
+  className = '' 
 }: CustomDashboardBuilderProps) {
   const [widgets, setWidgets] = useState<DashboardWidget[]>([])
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null)
@@ -210,9 +210,9 @@ export default function CustomDashboardBuilder({
       default:
         return null
     }
-  }
+    }
 
-  return (
+    return (
     <div className={`h-full flex flex-col ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -319,7 +319,7 @@ export default function CustomDashboardBuilder({
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {WIDGET_TYPES.map(widgetType => (
-                <button
+                      <button
                   key={widgetType.type}
                   onClick={() => addWidget(widgetType.type as DashboardWidget['type'])}
                   className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -328,7 +328,7 @@ export default function CustomDashboardBuilder({
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {widgetType.label}
                   </span>
-                </button>
+                      </button>
               ))}
             </div>
             <button
@@ -349,9 +349,9 @@ export default function CustomDashboardBuilder({
           className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Widget Properties
-            </h3>
+              </h3>
             <button
               onClick={() => deleteWidget(selectedWidget)}
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -361,23 +361,23 @@ export default function CustomDashboardBuilder({
           </div>
 
           {/* Widget Configuration */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Title
-              </label>
-              <input
-                type="text"
+                  </label>
+                  <input
+                    type="text"
                 value={widgets.find(w => w.id === selectedWidget)?.title || ''}
                 onChange={(e) => updateWidget(selectedWidget, { title: e.target.value })}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Position
-              </label>
+                  </label>
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
@@ -391,7 +391,7 @@ export default function CustomDashboardBuilder({
                   })}
                   className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
-                <input
+                    <input
                   type="number"
                   placeholder="Y"
                   value={widgets.find(w => w.id === selectedWidget)?.position.y || 0}
@@ -437,7 +437,7 @@ export default function CustomDashboardBuilder({
                 />
               </div>
             </div>
-          </div>
+                </div>
         </motion.div>
       )}
     </div>

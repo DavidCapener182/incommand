@@ -408,7 +408,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         <div className="p-4">
           {selectedMobileView === 'dashboard' && (
             <MobileAnalyticsCarousel
-              cards={createAnalyticsCards()}
+              cards={createAnalyticsCards(incidentData, eventData)}
               autoSwipe={false}
               className="mb-6"
             />
