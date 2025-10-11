@@ -147,15 +147,9 @@ export async function POST(request: NextRequest) {
       .or(`position_id.eq.${position_id},staff_id.eq.${staff_id}`)
       .eq('event_id', event_id)
 
-    // Find the staff record that corresponds to the authenticated user
-    const { data: userStaff, error: userStaffError } = await supabase
-      .from('staff')
-      .select('id')
-      .eq('company_id', profile.company_id)
-      .or(`full_name.ilike.%${user.email}%,email.eq.${user.email}`)
-      .single()
-
-    console.log('User staff record:', userStaff, userStaffError)
+    // For now, we'll set assigned_by to null to avoid foreign key issues
+    // TODO: Implement proper user-to-staff mapping
+    console.log('Creating assignment with assigned_by: null')
 
     // Create new assignment
     const { data: assignment, error: insertError } = await supabase
@@ -167,7 +161,7 @@ export async function POST(request: NextRequest) {
         callsign,
         position_name,
         department,
-        assigned_by: userStaff?.id || null // Use staff ID or null if not found
+        assigned_by: null // Set to null to avoid foreign key issues for now
       })
       .select()
       .single()
