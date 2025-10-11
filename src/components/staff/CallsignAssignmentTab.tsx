@@ -8,8 +8,8 @@ import {
   TrashIcon, 
   CheckIcon, 
   XMarkIcon,
-  Users,
-  Search,
+  UserGroupIcon,
+  MagnifyingGlassIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 
@@ -279,7 +279,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
       {/* Search and Filters */}
       <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search by callsign, role, or staff name..."
@@ -332,7 +332,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <Users className="h-8 w-8 text-purple-600" />
+            <UserGroupIcon className="h-8 w-8 text-purple-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Staff</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{availableStaff.length}</p>
