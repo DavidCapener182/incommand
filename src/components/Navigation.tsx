@@ -363,9 +363,9 @@ export default function Navigation() {
                       return '';
                     })()}
                   </span>
-                  {/* Profile Photo - Mobile optimized touch target */}
+                  {/* Profile Photo - Mobile optimized touch target (min 44px) */}
                   <button
-                    className="flex items-center focus:outline-none touch-target p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors"
+                    className="flex items-center focus:outline-none touch-target p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] justify-center"
                     onClick={() => setShowProfileCard(true)}
                     aria-label="Open profile"
                   >
@@ -385,10 +385,10 @@ export default function Navigation() {
                     )}
                   </button>
 
-                  {/* Notification Bell - Mobile optimized touch target */}
+                  {/* Notification Bell - Mobile optimized touch target (min 44px) */}
                   <button
                     onClick={() => setNotificationDrawerOpen(true)}
-                    className="relative touch-target p-3 md:p-2 text-white hover:text-gray-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-lg transition-colors duration-150"
+                    className="relative touch-target p-3 md:p-2 text-white hover:text-gray-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-lg transition-colors duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Open notifications"
                   >
                     {/* Bell Icon */}
@@ -405,11 +405,11 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            {/* Hamburger for mobile - Enhanced touch target */}
+            {/* Hamburger for mobile - Enhanced touch target (min 44px) */}
             <div className="xl:hidden flex items-center ml-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="touch-target inline-flex items-center justify-center p-3 rounded-lg text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] transition-colors"
+                className="touch-target inline-flex items-center justify-center p-3 rounded-lg text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] transition-colors min-h-[44px] min-w-[44px]"
                 aria-label={mobileMenuOpen ? "Close main menu" : "Open main menu"}
                 aria-expanded={mobileMenuOpen}
               >
@@ -465,18 +465,13 @@ export default function Navigation() {
               </motion.button>
           
           <motion.div
+            className="space-y-2 flex-1 overflow-y-auto"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Link href="/incidents" className={`${isActive('/incidents')} block py-3 px-4 rounded-xl text-lg font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200`}>Incidents</Link>
-          </motion.div>
+            <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          >
             <button
               onClick={() => {
                 if (!hasCurrentEvent) {
@@ -485,88 +480,119 @@ export default function Navigation() {
                 }
                 setReportsOpen((open) => !open);
               }}
-              className={`w-full text-left py-3 px-4 rounded-xl text-lg font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent ? 'opacity-50' : ''}`}
             >
               Reports
             </button>
-          </motion.div>
-          {reportsOpen && hasCurrentEvent && (
-            <div className="pl-8">
-              <Link href="/analytics" className="block py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
-              <Link href="/reports" className="block py-2 px-4 rounded-md text-base text-gray-200 hover:bg-[#4c5aa9]" onClick={() => setMobileMenuOpen(false)}>End of Event Report</Link>
-            </div>
-          )}
-
-          <Link 
-            href="/staffing" 
-            className={`${isActive('/staffing')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
-          >
-            Staff
-          </Link>
-          <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
-          <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>
-          {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-            <Link href="/admin" className={`${isActive('/admin')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Admin</Link>
-          )}
-          
-          {/* AI Assistant for Mobile */}
-          <button
-            onClick={() => {
-              setNotificationDrawerOpen(true);
-              setMobileMenuOpen(false);
-              // Switch to chat tab when opening from mobile menu
-              setTimeout(() => {
-                const chatTab = document.querySelector('[role="tab"][aria-controls="chat-panel"]');
-                if (chatTab) {
-                  (chatTab as HTMLElement).click();
-                }
-              }, 100);
-            }}
-            className="flex items-center w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
-          >
-            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            <span>AI Assistant</span>
-          </button>
-
-          {/* Notification Bell for Mobile */}
-          <button
-            onClick={() => {
-              setNotificationDrawerOpen(true);
-              setMobileMenuOpen(false);
-            }}
-            className="flex items-center justify-between w-full py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]"
-          >
-            <span>Notifications</span>
-            {unreadNotifications > 0 && (
-              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5">
-                {unreadNotifications > 99 ? '99+' : unreadNotifications}
-              </span>
+            {reportsOpen && hasCurrentEvent && (
+              <div className="pl-4 space-y-1 py-2">
+                <Link href="/analytics" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
+                <Link href="/reports" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>End of Event Report</Link>
+              </div>
             )}
-          </button>
 
-          <div className="mt-auto">
-            <button onClick={async () => {
-              try {
-                if (signOut && typeof signOut === 'function') {
-                  await signOut();
-                } else {
-                  // Fallback if signOut is not available
+            <Link 
+              href="/staffing" 
+              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Staff
+            </Link>
+            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help & Glossary</Link>
+            <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+            {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+              <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
+            )}
+            
+            {/* Divider */}
+            <div className="border-t border-white/20 my-4"></div>
+            
+            {/* AI Assistant for Mobile */}
+            <button
+              onClick={() => {
+                setNotificationDrawerOpen(true);
+                setMobileMenuOpen(false);
+                // Switch to chat tab when opening from mobile menu
+                setTimeout(() => {
+                  const chatTab = document.querySelector('[role="tab"][aria-controls="chat-panel"]');
+                  if (chatTab) {
+                    (chatTab as HTMLElement).click();
+                  }
+                }, 100);
+              }}
+              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+            >
+              <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <span>AI Assistant</span>
+            </button>
+
+            {/* Notification Bell for Mobile */}
+            <button
+              onClick={() => {
+                setNotificationDrawerOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="touch-target flex items-center justify-between w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+            >
+              <span>Notifications</span>
+              {unreadNotifications > 0 && (
+                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 shadow-lg">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
+            </button>
+
+            {/* Theme Toggle for Mobile */}
+            <button
+              onClick={() => {
+                setTheme(theme === 'dark' ? 'light' : 'dark');
+                setMobileMenuOpen(false);
+              }}
+              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+            >
+              {theme === 'dark' ? (
+                <>
+                  {SunIcon}
+                  <span className="ml-3">Light Mode</span>
+                </>
+              ) : (
+                <>
+                  {MoonIcon}
+                  <span className="ml-3">Dark Mode</span>
+                </>
+              )}
+            </button>
+          </motion.div>
+
+          {/* Sign Out - Fixed at bottom */}
+          <div className="border-t border-white/20 pt-4 mt-4">
+            <button 
+              onClick={async () => {
+                try {
+                  if (signOut && typeof signOut === 'function') {
+                    await signOut();
+                  } else {
+                    // Fallback if signOut is not available
+                    window.location.href = '/login';
+                  }
+                  setMobileMenuOpen(false);
+                } catch (error) {
+                  console.error('Error during logout:', error);
+                  // Fallback: redirect to login
                   window.location.href = '/login';
                 }
-                setMobileMenuOpen(false);
-              } catch (error) {
-                console.error('Error during logout:', error);
-                // Fallback: redirect to login
-                window.location.href = '/login';
-              }
-            }} className="w-full text-left py-3 px-4 rounded-md text-lg font-medium text-red-400 hover:bg-[#3b4a9b] hover:text-red-300">
+              }} 
+              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 min-h-[44px] flex items-center"
+            >
               Sign Out
             </button>
           </div>
         </motion.div>
-      )}
+          </>
+        )}
+      </AnimatePresence>
 
       {/* No Event Selected Modal */}
       {showNoEventModal && (

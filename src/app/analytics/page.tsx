@@ -347,17 +347,38 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
-                      <p className="text-gray-600 dark:text-gray-400 mt-2">Monitor performance and insights for your events.</p>
+      {/* Mobile Notice - Analytics Hidden on Mobile */}
+      <div className="block md:hidden bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                Analytics Dashboard
+              </h1>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Full analytics available on desktop. Use desktop for detailed insights.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Analytics - Hidden on Mobile */}
+      <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+                {/* Header - Mobile Optimized */}
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+                    <div className="flex-1">
+                      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">Monitor performance and insights for your events.</p>
                     </div>
                     <button
                       onClick={() => setIsExportModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+                      className="touch-target w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
                     >
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -366,9 +387,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                     </button>
                   </div>
                   
-                  {/* Real-time Status and Alerts */}
-                  <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="flex-1">
+                  {/* Real-time Status and Alerts - Mobile Stacked */}
+                  <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className="w-full">
                       <RealtimeStatusIndicator
                         isConnected={realtimeAnalytics.isConnected}
                         error={realtimeAnalytics.error}
@@ -377,7 +398,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         onRefresh={realtimeAnalytics.refresh}
                       />
                     </div>
-                    <div className="lg:w-96">
+                    <div className="w-full">
                       <RealtimeAlertBanner
                         alerts={realtimeAnalytics.alerts}
                         onDismiss={realtimeAnalytics.dismissAlert}
@@ -387,20 +408,21 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                   </div>
                 </div>
 
-        {/* Tabs - Enhanced Visibility */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 mb-6 shadow-sm">
-          <nav className="flex space-x-2">
+        {/* Tabs - Mobile Optimized with Horizontal Scroll */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1.5 sm:p-2 mb-4 sm:mb-6 shadow-sm overflow-x-auto">
+          <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('operational')}
               className={`${
                 activeTab === 'operational'
                   ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
                   : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                <span>Operational Metrics</span>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Operational Metrics</span>
+                <span className="sm:hidden">Operational</span>
               </div>
             </button>
             <button
@@ -409,11 +431,11 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 activeTab === 'quality'
                   ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
                   : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <Sparkles className="h-5 w-5" />
-                <span>Log Quality</span>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Quality</span>
               </div>
             </button>
             <button
@@ -422,11 +444,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 activeTab === 'compliance'
                   ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
                   : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                <span>JESIP/JDM Compliance</span>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">JESIP/JDM Compliance</span>
+                <span className="sm:hidden">Compliance</span>
               </div>
             </button>
                     <button
@@ -435,11 +458,11 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'staff'
                           ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <Users className="h-5 w-5" />
-                        <span>Staff Performance</span>
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>Staff</span>
                       </div>
                     </button>
                     <button
@@ -448,11 +471,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'ai-insights'
                           ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <Sparkles className="h-5 w-5" />
-                        <span>AI Insights</span>
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">AI Insights</span>
+                        <span className="sm:hidden">AI</span>
                       </div>
                     </button>
                     <button
@@ -461,13 +485,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'custom-metrics'
                           ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <span>Custom Metrics</span>
+                        <span className="hidden sm:inline">Custom Metrics</span>
+                        <span className="sm:hidden">Metrics</span>
                       </div>
                     </button>
                     <button
@@ -476,13 +501,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'custom-dashboards'
                           ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
-                        <span>Custom Dashboards</span>
+                        <span className="hidden sm:inline">Custom Dashboards</span>
+                        <span className="sm:hidden">Dashboards</span>
                       </div>
                     </button>
                     <button
@@ -491,13 +517,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'benchmarking'
                           ? 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
-                        <span>Benchmarking</span>
+                        <span className="hidden sm:inline">Benchmarking</span>
+                        <span className="sm:hidden">Benchmark</span>
                       </div>
                     </button>
                     <button
@@ -506,13 +533,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         activeTab === 'end-of-event'
                           ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
                           : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        <span>End-of-Event Report</span>
+                        <span className="hidden sm:inline">End-of-Event Report</span>
+                        <span className="sm:hidden">Report</span>
                       </div>
                     </button>
           </nav>
@@ -585,89 +613,89 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         {/* Operational Tab Content (existing charts) */}
         {activeTab === 'operational' && (
           <>
-        {/* Top Level Metrics - 6 Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+        {/* Top Level Metrics - 6 Cards - Mobile Optimized */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.total}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">All incident types</p>
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{metrics.total}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">All incident types</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-7 w-7 sm:h-8 sm:w-8 text-red-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{incidentData.filter(i => i.status !== 'closed').length}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Requiring attention</p>
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{incidentData.filter(i => i.status !== 'closed').length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Requiring attention</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-orange-500" />
+              <AlertCircle className="h-7 w-7 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{incidentData.filter(i => i.status === 'closed').length}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Resolved</p>
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{incidentData.filter(i => i.status === 'closed').length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Resolved</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{Math.floor(metrics.avgResponseTime / 60)}h {metrics.avgResponseTime % 60}m</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Time to resolution</p>
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1">{Math.floor(metrics.avgResponseTime / 60)}h {metrics.avgResponseTime % 60}m</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Time to resolution</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <Clock className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
+                <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white mt-1 truncate">
                   {Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Trending pattern</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Trending pattern</p>
               </div>
-              <Lightbulb className="h-8 w-8 text-yellow-500" />
+              <Lightbulb className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">
                   {attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Capacity tracking</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Capacity tracking</p>
               </div>
-              <Users className="h-8 w-8 text-purple-500" />
+              <Users className="h-7 w-7 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
             </div>
           </div>
         </div>
 
-        {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards - Mobile Stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Live Watch */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <Eye className="h-6 w-6 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
             </div>
-            <div className="space-y-3">
-              <div className="text-sm">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Open incidents: </span>
                 <span className="font-semibold text-gray-900 dark:text-white">{incidentData.filter(i => i.status !== 'closed').length}</span>
                 <span className="text-gray-600 dark:text-gray-400"> ({metrics.highPriority} high, 0 medium, 0 low)</span>
@@ -685,13 +713,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Response Quality */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <Timer className="h-6 w-6 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
             </div>
-            <div className="space-y-3">
-              <div className="text-sm">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Average response: </span>
                 <span className="font-semibold text-gray-900 dark:text-white">Median unavailable</span>
               </div>
@@ -708,13 +736,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Ingress Snapshot */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <UserPlus className="h-6 w-6 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
             </div>
-            <div className="space-y-3">
-              <div className="text-sm">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-400">Current attendance: </span>
                 <span className="font-semibold text-gray-900 dark:text-white">{attendanceData.length > 0 ? attendanceData[attendanceData.length - 1]?.count || 0 : 0}</span>
                 <span className="text-gray-600 dark:text-gray-400"> (Forecast {eventData?.max_capacity || 25000})</span>
@@ -733,19 +761,19 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
         </div>
 
-        {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards - Mobile Stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Attendance Timeline */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attendance Timeline</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Timeline</h3>
             {attendanceData.length > 0 ? (
-              <div className="h-48">
+              <div className="h-40 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData.attendanceTimelineData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} />
-                    <YAxis />
-                    <Tooltip />
+                    <XAxis dataKey="time" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={40} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip contentStyle={{ fontSize: '12px' }} />
                     <Area 
                       type="monotone" 
                       dataKey="count" 
@@ -763,8 +791,8 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Attendance Log */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Attendance Log</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Log</h3>
             {attendanceData.length > 0 ? (
               <div className="space-y-4">
                 <div className="text-sm">
@@ -799,9 +827,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Live Incident Status */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span className="text-xs text-green-600 font-medium">Connected</span>
@@ -815,30 +843,31 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Section - Mobile Optimized */}
         {showAdvancedFeatures && (
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6 md:space-y-8">
             {/* Row 1: Incident Volume & Type Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Incident Volume Over Time */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <TrendingUp className="w-6 h-6 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
                 </div>
-                <div className="h-64">
+                <div className="h-48 sm:h-56 md:h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData.incidentVolumeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                       <XAxis 
                         dataKey="hour" 
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 10 }}
                         angle={-45}
                         textAnchor="end"
-                        height={60}
+                        height={50}
+                        interval="preserveStartEnd"
                       />
-                      <YAxis />
-                      <Tooltip />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip contentStyle={{ fontSize: '12px' }} />
                       <Bar dataKey="count" fill="#3B82F6" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -846,12 +875,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
 
               {/* Incident Type Breakdown */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <PieChart className="w-6 h-6 text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
                 </div>
-                <div className="h-64">
+                <div className="h-48 sm:h-56 md:h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsPieChart>
                       <Pie
@@ -860,7 +889,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }: { name: string; percent?: number }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                        outerRadius={80}
+                        outerRadius={window.innerWidth < 640 ? 60 : 80}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -876,14 +905,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
 
             {/* Row 2: Response Time Distribution & Ejection Patterns */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Response Time Distribution */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <Clock className="w-6 h-6 text-orange-600" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
                 </div>
-                <div className="h-64">
+                <div className="h-48 sm:h-56 md:h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData.responseTimeData} layout="horizontal">
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
@@ -1018,6 +1047,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         </div>
           </>
         )}
+        </div>
       </div>
 
       {/* Export Report Modal */}

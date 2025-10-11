@@ -10,6 +10,11 @@ import IncidentCreationModal from './IncidentCreationModal'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { IncidentSummaryProvider } from '@/contexts/IncidentSummaryContext'
 import { supabase } from '../lib/supabase'
+import PWAInstallPrompt from './PWAInstallPrompt'
+import OfflineIndicator from './OfflineIndicator'
+import PWAUpdateNotification from './PWAUpdateNotification'
+import PWASplashScreen from './PWASplashScreen'
+import FloatingActionButton from './FloatingActionButton'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -78,8 +83,7 @@ function CompanyFooter() {
   if (!showFooter) return null;
 
   return (
-    <footer 
-      className="fixed bottom-0 left-0 w-full z-30 px-4 py-3 flex justify-between items-center text-xs text-white dark:text-gray-100"
+    <footer className="fixed bottom-0 left-0 w-full z-30 px-4 py-3 flex justify-between items-center text-xs text-white dark:text-gray-100"
       style={{
         background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
         boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
@@ -89,10 +93,10 @@ function CompanyFooter() {
         paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
       }}
     >
-      <span className="text-xs md:text-sm truncate">
+      <span>
         v0.1.0{companyName && ` Build for ${companyName}`}
       </span>
-      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block truncate">
+      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
         support@incommandapp.com
       </span>
     </footer>
@@ -145,11 +149,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <AuthGate>
           {showNav && <Navigation />}
           <main 
-            className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24 md:pb-20"
+            className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24"
             style={{
+              paddingTop: 'max(env(safe-area-inset-top), 0px)',
               paddingLeft: 'max(env(safe-area-inset-left), 0px)',
               paddingRight: 'max(env(safe-area-inset-right), 0px)',
-              paddingBottom: 'max(env(safe-area-inset-bottom), 6rem)',
+              minHeight: '100dvh', // Dynamic viewport height for mobile
             }}
           >
             {children}
@@ -163,6 +168,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               }}
             />
           )}
+          {showNav && <FloatingActionButton />}
           {isHelpCenterOpen && (
             <>
               {/* Click-outside overlay (no dim) */}
@@ -176,7 +182,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]"
                 style={{
                   right: 'max(env(safe-area-inset-right), 1rem)',
-                  bottom: 'max(env(safe-area-inset-bottom) + 6rem, 6rem)',
+                  bottom: 'max(env(safe-area-inset-bottom), 6rem)',
+                  maxHeight: 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem)',
                 }}
               >
                 <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
@@ -194,7 +201,14 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             />
           )}
         </AuthGate>
-        <CompanyFooter />
+        <div className="hidden md:block">
+          <CompanyFooter />
+        </div>
+        
+        {/* PWA Components */}
+        <OfflineIndicator />
+        <PWAUpdateNotification />
+        <PWASplashScreen />
       </>
     </IncidentSummaryProvider>
   );

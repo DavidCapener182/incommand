@@ -457,20 +457,39 @@ export default function What3WordsSearchCard({
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-2">
-      {/* W3W Logo */}
-      <div
-        className="cursor-pointer mb-2 flex-shrink-0 flex items-center justify-center"
-        onClick={toggleSearch}
-      >
-        <Image
-          src="/w3w.png"
-          alt="What3Words"
-          width={largeLogo ? 192 : 160}
-          height={largeLogo ? 96 : 80}
-          className="object-contain"
-          priority
-        />
+      {/* Mobile: Compact Tappable Icon */}
+      <div className="block md:hidden w-full h-full">
+        <button
+          onClick={toggleSearch}
+          className="w-full h-full flex flex-col items-center justify-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors touch-target min-h-[80px]"
+          aria-label="Open What3Words map"
+        >
+          <MapPinIcon className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-2" />
+          <span className="text-xs font-medium text-blue-700 dark:text-blue-300 text-center">
+            What3Words
+          </span>
+          <span className="text-xs text-blue-600 dark:text-blue-400 text-center">
+            Tap to open map
+          </span>
+        </button>
       </div>
+
+      {/* Desktop: Full W3W Interface */}
+      <div className="hidden md:flex w-full h-full flex-col items-center justify-center">
+        {/* W3W Logo */}
+        <div
+          className="cursor-pointer mb-2 flex-shrink-0 flex items-center justify-center"
+          onClick={toggleSearch}
+        >
+          <Image
+            src="/w3w.png"
+            alt="What3Words"
+            width={largeLogo ? 192 : 160}
+            height={largeLogo ? 96 : 80}
+            className="object-contain"
+            priority
+          />
+        </div>
 
       {/* Search Interface */}
       {showSearch && (
@@ -631,6 +650,7 @@ export default function What3WordsSearchCard({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

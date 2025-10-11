@@ -91,7 +91,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
 
   if (loading) {
     return (
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
+      <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 animate-pulse">
             <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-2"></div>
@@ -106,7 +106,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
   if (!stats) return null
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
+    <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
       {/* Log Quality Score */}
       <div className="relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-3 hover:shadow-lg transition-all duration-200 group">
         <div className="flex items-start justify-between">

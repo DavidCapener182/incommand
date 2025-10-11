@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import AIChat from './AIChat';
-import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, UsersIcon, CpuChipIcon, ChartBarIcon, BellIcon, Cog6ToothIcon, PlayCircleIcon, EnvelopeIcon, PhoneIcon, LifebuoyIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, ChatBubbleLeftRightIcon, DocumentTextIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, InformationCircleIcon, HomeIcon, QuestionMarkCircleIcon, NewspaperIcon, XMarkIcon, UsersIcon, CpuChipIcon, ChartBarIcon, BellIcon, Cog6ToothIcon, PlayCircleIcon, EnvelopeIcon, PhoneIcon, LifebuoyIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
 import EventMessagesPanel from './EventMessagesPanel';
+import TrainingModeModal from './TrainingModeModal';
 
 interface HelpCenterModalProps {
   isOpen: boolean;
@@ -62,6 +62,9 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
   const [messagesCategory, setMessagesCategory] = useState<'ai' | 'team' | 'notifications' | 'tickets'>('ai');
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  
+  // Training state
+  const [showTrainingModal, setShowTrainingModal] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -192,11 +195,17 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
                       <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
                       <span>This is inCommand technical support. How can we help?</span>
                     </div>
-                    {/* Quick Action */}
-                    <button onClick={() => { setActiveTab('messages'); setMessagesCategory('ai'); }} className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
-                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
-                      <span>Send us a message</span>
-                    </button>
+                    {/* Quick Actions */}
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => { setActiveTab('messages'); setMessagesCategory('ai'); }} className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                        <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                        <span>Send us a message</span>
+                      </button>
+                      <button onClick={() => setShowTrainingModal(true)} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                        <AcademicCapIcon className="w-5 h-5 text-white" />
+                        <span>Training & Tutorials</span>
+                      </button>
+                    </div>
                   </div>
                   {/* Search Bar */}
                   <form className="relative mb-2" onSubmit={(e) => { e.preventDefault(); if (homeSearchInput.trim()) { setActiveTab('help'); setHelpSearch(homeSearchInput.trim()); } }}>
@@ -231,11 +240,17 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
                       <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-400 dark:text-blue-200" />
                       <span>This is inCommand technical support. How can we help?</span>
                     </div>
-                    {/* Quick Action */}
-                    <button onClick={() => { setActiveTab('messages'); setMessagesCategory('ai'); }} className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
-                      <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
-                      <span>Send us a message</span>
-                    </button>
+                    {/* Quick Actions */}
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => { setActiveTab('messages'); setMessagesCategory('ai'); }} className="flex items-center gap-2 bg-[#2A3990] hover:bg-[#1e2a6a] text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                        <ChatBubbleLeftRightIcon className="w-5 h-5 text-white" />
+                        <span>Send us a message</span>
+                      </button>
+                      <button onClick={() => setShowTrainingModal(true)} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow transition">
+                        <AcademicCapIcon className="w-5 h-5 text-white" />
+                        <span>Training & Tutorials</span>
+                      </button>
+                    </div>
                   </div>
                   {/* Search Bar */}
                   <form className="relative mt-2" onSubmit={(e) => { e.preventDefault(); if (homeSearchInput.trim()) { setActiveTab('help'); setHelpSearch(homeSearchInput.trim()); } }}>
@@ -393,7 +408,6 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
               <EventMessagesPanel
                 eventId={eventId}
                 eventName={eventName}
-                AIChat={AIChat}
               />
             </div>
           )}
@@ -626,6 +640,12 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
           )}
       </div>
              {/* Messages-only panel - no bottom nav needed */}
+      
+      {/* Training Modal */}
+      <TrainingModeModal 
+        isOpen={showTrainingModal} 
+        onClose={() => setShowTrainingModal(false)} 
+      />
     </div>
   );
 } 

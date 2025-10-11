@@ -14,10 +14,11 @@ import {
   ChartBarIcon,
   ExclamationTriangleIcon,
   LightBulbIcon,
-  ArrowArrowTrendingUpIcon,
-  ArrowArrowTrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   ClockIcon,
   SparklesIcon,
+  TrophyIcon,
   EyeIcon
 } from '@heroicons/react/24/outline'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'

@@ -1904,6 +1904,21 @@ export default function IncidentCreationModal({
 }: Props) {
   const { addToast } = useToast();
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original overflow style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      // Prevent scrolling
+      document.body.style.overflow = 'hidden';
+      
+      // Cleanup function to restore scrolling when modal closes
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
+
   // Helper function to generate structured occurrence text
   const generateStructuredOccurrence = (data: IncidentFormData): string => {
     if (!data.use_structured_template) {
@@ -3835,7 +3850,11 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
   return (
     <div 
       ref={modalRef}
-      className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-50 ${isOpen ? '' : 'hidden'}`}
+      className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-[60] ${isOpen ? '' : 'hidden'}`}
+      style={{
+        paddingLeft: 'max(env(safe-area-inset-left), 0px)',
+        paddingRight: 'max(env(safe-area-inset-right), 0px)',
+      }}
       onMouseMove={(e) => {
         if (modalRef.current) {
           const rect = modalRef.current.getBoundingClientRect();
@@ -3843,7 +3862,176 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         }
       }}
     >
-      <div className="relative max-h-[85vh] overflow-hidden mx-auto p-0 border w-[95%] max-w-6xl shadow-2xl rounded-xl bg-white dark:bg-[#23408e] dark:border-[#2d437a]">
+      <div className="relative md:max-h-[85vh] h-full md:h-auto overflow-hidden mx-auto p-0 border w-full md:w-[95%] max-w-6xl shadow-2xl md:rounded-xl md:my-8 bg-white dark:bg-[#23408e] dark:border-[#2d437a] md:mx-auto md:my-8">
+        {/* Mobile: Full-screen modal */}
+        <div className="block md:hidden h-full flex flex-col">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] sticky top-0 z-10">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Incident</h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Close modal"
+            >
+              <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+          
+          {/* Mobile Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* Mobile Form Content */}
+            <div className="space-y-6">
+              {/* Quick Add Section - Mobile Optimized */}
+              <div className="bg-gray-50 dark:bg-[#1a2f6b] rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Add</h3>
+                <div className="space-y-3">
+                  <QuickAddInput
+                    onQuickAdd={handleQuickAdd}
+                    className="w-full"
+                  />
+                  <div className="flex gap-2">
+                    <VoiceInputCompact
+                      onTranscript={(transcript) => {
+                        setFormData(prev => ({ ...prev, occurrence: prev.occurrence + (prev.occurrence ? ' ' : '') + transcript }));
+                      }}
+                      className="flex-1"
+                    />
+                    <motion.button
+                      type="button"
+                      onClick={() => {
+                        // Simple AI assist - just clear the form for now
+                        setFormData(prev => ({ ...prev, occurrence: '', action_taken: '' }));
+                      }}
+                      disabled={loading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target min-h-[44px]"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <CloudArrowUpIcon className="h-5 w-5" />
+                      <span className="text-sm font-medium">
+                        Clear Form
+                      </span>
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Mobile Form Fields */}
+              <div className="space-y-4">
+                {/* Incident Type - Mobile Optimized */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Incident Type *
+                  </label>
+                  <select
+                    value={formData.incident_type}
+                    onChange={(e) => {
+                      const incidentType = e.target.value;
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        incident_type: incidentType,
+                        // Auto-set Attendance incidents to low priority
+                        priority: incidentType === 'Attendance' ? 'low' : prev.priority
+                      }));
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                    required
+                  >
+                    <option value="">Select incident type</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Security">Security</option>
+                    <option value="Crowd Control">Crowd Control</option>
+                    <option value="Fire Safety">Fire Safety</option>
+                    <option value="Traffic">Traffic</option>
+                    <option value="Technical">Technical</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                
+                {/* Occurrence - Mobile Optimized */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Occurrence *
+                  </label>
+                  <textarea
+                    value={formData.occurrence}
+                    onChange={(e) => setFormData(prev => ({ ...prev, occurrence: e.target.value }))}
+                    placeholder="Describe what happened..."
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[120px] text-base"
+                    rows={4}
+                    required
+                  />
+                </div>
+                
+                {/* Callsigns - Mobile Optimized */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      From *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.callsign_from}
+                      onChange={(e) => setFormData(prev => ({ ...prev, callsign_from: e.target.value }))}
+                      placeholder="Your callsign"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      To *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.callsign_to}
+                      onChange={(e) => setFormData(prev => ({ ...prev, callsign_to: e.target.value }))}
+                      placeholder="Target callsign"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                {/* Action Taken - Mobile Optimized */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Action Taken
+                  </label>
+                  <textarea
+                    value={formData.action_taken}
+                    onChange={(e) => setFormData(prev => ({ ...prev, action_taken: e.target.value }))}
+                    placeholder="What action was taken?"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[100px] text-base"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Mobile Footer */}
+          <div className="border-t border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] p-4 sticky bottom-0">
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] text-base font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target min-h-[44px] text-base font-medium"
+              >
+                {loading ? 'Creating...' : 'Create Incident'}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Desktop: Original Modal Content */}
+        <div className="hidden md:block">
         {/* Real-time collaboration indicators */}
         {isConnected && (
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
@@ -3868,15 +4056,17 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         {/* Cursor tracker */}
         <CursorTracker users={presenceUsers} containerRef={modalRef} />
 
-        {/* Header */}
-        <header className="px-6 pt-5 pb-3 border-b">
+        {/* Header - Mobile Optimized */}
+        <header className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b sticky top-0 bg-white dark:bg-[#23408e] z-30" style={{
+          paddingTop: 'max(env(safe-area-inset-top), 1rem)',
+        }}>
           <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">🚨</span>
+          <div className="flex items-center gap-3 sm:gap-4">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-base sm:text-lg">🚨</span>
             </div>
             <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">New Incident</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">New Incident</h3>
                 <div className="flex items-center gap-4 mt-1">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Event:</span>
@@ -3902,9 +4092,9 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           </div>
           <button
             onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
+              className="touch-target h-10 w-10 md:h-8 md:w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
           >
-              <svg className="h-4 w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 md:h-4 md:w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -4437,7 +4627,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <select
                         id="incident-type"
                     value={formData.incident_type || ''}
-                    onChange={(e) => setFormData({ ...formData, incident_type: e.target.value })}
+                    onChange={(e) => {
+                      const incidentType = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        incident_type: incidentType,
+                        // Auto-set Attendance incidents to low priority
+                        priority: incidentType === 'Attendance' ? 'low' : formData.priority
+                      });
+                    }}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                   >
                     <option value="">Select Type</option>
@@ -4839,28 +5037,30 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           </div>
         </div>
 
-        {/* Sticky Footer */}
-        <footer className="absolute bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-500">Auto-saved</div>
-            <div className="flex gap-3">
+        {/* Sticky Footer - Mobile Optimized */}
+        <footer className="sticky md:absolute bottom-0 left-0 right-0 border-t bg-white/95 dark:bg-[#23408e]/95 backdrop-blur px-3 sm:px-6 py-3 sm:py-4" style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
+        }}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">Auto-saved</div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={onClose}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 focus:ring-2 focus:ring-gray-500 transition-colors"
+                className="touch-target w-full sm:w-auto px-4 py-3 sm:py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#2d437a] focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 rounded-lg transition-colors"
+                className="touch-target hidden sm:flex w-full sm:w-auto px-4 py-3 sm:py-2 text-sm border border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:ring-2 focus:ring-blue-500 rounded-lg transition-colors font-medium"
               >
                 Save as Draft
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-6 py-2 text-sm bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center gap-2"
+                className="touch-target w-full sm:w-auto px-6 py-3 sm:py-2 text-sm bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-lg"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             Log Incident
@@ -4868,6 +5068,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </div>
           </div>
         </footer>
+      </div>
       </div>
     </div>
   );

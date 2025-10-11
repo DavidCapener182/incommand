@@ -104,7 +104,7 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Incident Summary</h2>
             <span className="text-xs text-gray-500 dark:text-gray-400">{formattedUpdated}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2 justify-end">
             {STATUS_CONFIG.map((status) => {
               const value = statusCounts[status.key]
               const isActive = activeStatus === status.key
@@ -116,7 +116,7 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
                   type="button"
                   onClick={() => onFilter?.(isActive ? null : status.key)}
                   className={classes(
-                    'group flex min-w-[110px] flex-col rounded-xl border px-3 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+                    'group flex min-w-[70px] sm:min-w-[80px] flex-col rounded-lg border px-1.5 sm:px-2 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
                     status.accent,
                     isActive && 'border-blue-400 ring-2 ring-blue-200 dark:ring-blue-500/40',
                     isChanged && 'animate-pulse motion-reduce:animate-none'
@@ -124,18 +124,18 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
                   aria-pressed={isActive}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={classes('text-xs font-semibold uppercase tracking-wide', status.color)}>
+                    <span className={classes('text-[10px] font-semibold uppercase tracking-wide', status.color)}>
                       {status.label}
                     </span>
-                    <span className={classes('h-2 w-2 rounded-full', status.dot)} aria-hidden />
+                    <span className={classes('h-1.5 w-1.5 rounded-full', status.dot)} aria-hidden />
                   </div>
-                  <span className="mt-1 text-xl font-semibold text-gray-900 dark:text-gray-100">{value}</span>
-                  <span className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{status.description}</span>
+                  <span className="mt-0.5 text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</span>
+                  <span className="mt-0.5 text-[9px] text-gray-500 dark:text-gray-400">{status.description}</span>
                 </button>
               )
             })}
-            <div className="flex flex-col justify-center rounded-xl border border-gray-200/80 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600 dark:border-white/10 dark:bg-[#111832] dark:text-gray-300">
-              <span className="uppercase tracking-wide text-[11px] text-gray-500 dark:text-gray-400">Total</span>
+            <div className="flex flex-col justify-center rounded-lg border border-gray-200/80 bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-600 dark:border-white/10 dark:bg-[#111832] dark:text-gray-300 min-w-[70px] sm:min-w-[80px]">
+              <span className="uppercase tracking-wide text-[9px] text-gray-500 dark:text-gray-400">Total</span>
               <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{counts.total}</span>
             </div>
           </div>

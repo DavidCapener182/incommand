@@ -81,15 +81,36 @@ export default function StaffPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+      {/* Mobile Notice - Simplified Staff View */}
+      <div className="block md:hidden bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+              <UserGroupIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-lg font-semibold text-green-900 dark:text-green-100">
                 Staff Management
               </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Simplified view on mobile. Full management available on desktop.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Staff Management - Hidden on Mobile */}
+      <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        {/* Header - Mobile Optimized */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                Staff Management
+              </h1>
+              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 Manage staff skills, availability, and performance
               </p>
               {currentEvent && (
@@ -98,20 +119,20 @@ export default function StaffPage() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="w-full sm:w-auto">
               {!currentEvent && (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-100 px-3 py-2 rounded-lg">
-                  <ExclamationTriangleIcon className="h-5 w-5" />
-                  <span className="text-sm font-medium">No active event</span>
+                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 px-3 py-2 rounded-lg">
+                  <ExclamationTriangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs sm:text-sm font-medium">No active event</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <nav className="flex space-x-8" aria-label="Tabs">
+        {/* Tab Navigation - Mobile Optimized */}
+        <div className="mb-6 sm:mb-8">
+          <nav className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-8" aria-label="Tabs">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -120,10 +141,10 @@ export default function StaffPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`touch-target group inline-flex items-center py-3 sm:py-2 px-4 sm:px-1 sm:border-b-2 rounded-lg sm:rounded-none font-medium text-sm transition-colors ${
                     isActive
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      ? 'sm:border-blue-500 bg-blue-50 sm:bg-transparent dark:bg-blue-900/20 sm:dark:bg-transparent text-blue-600 dark:text-blue-400'
+                      : 'sm:border-transparent bg-gray-50 sm:bg-transparent dark:bg-gray-800 sm:dark:bg-transparent text-gray-500 hover:text-gray-700 sm:hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
                 >
                   <Icon
@@ -200,9 +221,9 @@ export default function StaffPage() {
           )}
         </motion.div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        {/* Quick Stats - Mobile Optimized */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <UserGroupIcon className="h-8 w-8 text-blue-600" />
@@ -218,23 +239,23 @@ export default function StaffPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <AcademicCapIcon className="h-8 w-8 text-green-600" />
+                <AcademicCapIcon className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Certified Skills
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                   -
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <ChartBarIcon className="h-8 w-8 text-purple-600" />
@@ -249,6 +270,7 @@ export default function StaffPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext'
+import PWAStatus from '@/components/PWAStatus';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -220,7 +221,7 @@ export default function GeneralSettingsPage() {
                 value={profile?.first_name || ''}
                 onChange={(e) => setProfile(profile ? { ...profile, first_name: e.target.value } : null)}
                 onBlur={() => updateProfile('first_name', profile?.first_name)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="input-mobile"
                 placeholder="Your first name"
               />
             </div>
@@ -232,7 +233,7 @@ export default function GeneralSettingsPage() {
                 value={profile?.last_name || ''}
                 onChange={(e) => setProfile(profile ? { ...profile, last_name: e.target.value } : null)}
                 onBlur={() => updateProfile('last_name', profile?.last_name)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="input-mobile"
                 placeholder="Your last name"
               />
             </div>
@@ -255,8 +256,9 @@ export default function GeneralSettingsPage() {
                 value={profile?.phone || ''}
                 onChange={(e) => setProfile(profile ? { ...profile, phone: e.target.value } : null)}
                 onBlur={() => updateProfile('phone', profile?.phone)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="input-mobile"
                 placeholder="Your phone number"
+                inputMode="tel"
               />
             </div>
 
@@ -279,7 +281,7 @@ export default function GeneralSettingsPage() {
               value={profile?.bio || ''}
               onChange={(e) => setProfile(profile ? { ...profile, bio: e.target.value } : null)}
               onBlur={() => updateProfile('bio', profile?.bio)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-colors"
+              className="textarea-mobile"
               placeholder="Tell us about yourself..."
             />
           </div>
@@ -337,18 +339,18 @@ export default function GeneralSettingsPage() {
                   type={showPassword ? "text" : "password"}
                   value={passwordData.new}
                   onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="input-mobile pr-12"
                   placeholder="Enter new password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="touch-target absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="h-4 w-4 text-gray-400 dark:text-blue-300" />
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 dark:text-blue-300" />
                   ) : (
-                    <EyeIcon className="h-4 w-4 text-gray-400 dark:text-blue-300" />
+                    <EyeIcon className="h-5 w-5 text-gray-400 dark:text-blue-300" />
                   )}
                 </button>
               </div>
@@ -360,7 +362,7 @@ export default function GeneralSettingsPage() {
                 type={showPassword ? "text" : "password"}
                 value={passwordData.confirm}
                 onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="input-mobile"
                 placeholder="Confirm new password"
               />
             </div>
@@ -368,7 +370,7 @@ export default function GeneralSettingsPage() {
             <button 
               onClick={updatePassword}
               disabled={saving || !passwordData.new || !passwordData.confirm}
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              className="button-danger w-full sm:w-auto"
             >
               {saving ? 'Updating...' : 'Update Password'}
             </button>
@@ -399,13 +401,14 @@ export default function GeneralSettingsPage() {
               </div>
               <button
                 onClick={toggleTheme}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`touch-target relative inline-flex h-7 w-12 sm:h-6 sm:w-11 items-center rounded-full transition-colors ${
                   darkMode ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
+                aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    darkMode ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-5 w-5 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform shadow-md ${
+                    darkMode ? 'translate-x-6 sm:translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -500,6 +503,9 @@ export default function GeneralSettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* PWA Status */}
+        <PWAStatus />
         
         {/* Settings Navigation */}
         <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
@@ -510,8 +516,8 @@ export default function GeneralSettingsPage() {
             <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Settings</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="/settings/preferences" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <a href="/settings/preferences" className="touch-target flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] active:scale-[0.98] transition-all">
               <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <CogIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
@@ -521,7 +527,7 @@ export default function GeneralSettingsPage() {
               </div>
             </a>
 
-            <a href="/settings/notifications" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+            <a href="/settings/notifications" className="touch-target flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] active:scale-[0.98] transition-all">
               <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                 <BellIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
@@ -531,7 +537,7 @@ export default function GeneralSettingsPage() {
               </div>
             </a>
 
-            <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+            <a href="/settings/notifications/templates" className="touch-target flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] active:scale-[0.98] transition-all">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                 <DocumentTextIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
@@ -541,7 +547,7 @@ export default function GeneralSettingsPage() {
               </div>
             </a>
 
-            <a href="/settings/notifications/scheduler" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+            <a href="/settings/notifications/scheduler" className="touch-target flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] active:scale-[0.98] transition-all">
               <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
                 <ClockIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               </div>
@@ -551,7 +557,7 @@ export default function GeneralSettingsPage() {
               </div>
             </a>
 
-            <a href="/settings/backup-restore" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+            <a href="/settings/backup-restore" className="touch-target flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] active:scale-[0.98] transition-all">
               <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
                 <ArrowPathIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
               </div>
@@ -593,7 +599,7 @@ export default function GeneralSettingsPage() {
                 <div className="font-medium text-gray-900 dark:text-white">Export Data</div>
                 <div className="text-sm text-gray-500 dark:text-blue-300">Download all your account data</div>
               </div>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+              <button className="button-primary w-full sm:w-auto">
                 Request Export
               </button>
             </div>
@@ -603,7 +609,7 @@ export default function GeneralSettingsPage() {
                 <div className="font-medium text-red-900 dark:text-red-200">Delete Account</div>
                 <div className="text-sm text-red-700 dark:text-red-300">Permanently delete your account and all data</div>
               </div>
-              <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+              <button className="button-danger w-full sm:w-auto">
                 Delete Account
               </button>
             </div>

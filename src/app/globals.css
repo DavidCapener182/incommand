@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-first form input styling */
+@layer components {
+  .input-mobile {
+    @apply w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 sm:py-2 text-base sm:text-sm;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+    @apply placeholder:text-gray-400 dark:placeholder:text-gray-500;
+    @apply transition-all duration-200;
+    min-height: 48px; /* iOS minimum for preventing zoom */
+  }
+
+  .input-mobile:focus {
+    @apply ring-2 ring-blue-500 border-blue-500 shadow-lg;
+  }
+
+  .textarea-mobile {
+    @apply input-mobile resize-none;
+    min-height: 80px;
+  }
+
+  .select-mobile {
+    @apply input-mobile appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25rem;
+    padding-right: 2.75rem;
+  }
+
+  .button-mobile {
+    @apply touch-target px-6 py-3 sm:py-2.5 rounded-lg font-semibold text-sm sm:text-base;
+    @apply transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
+  }
+
+  .button-primary {
+    @apply button-mobile bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+    @apply focus:ring-blue-500 shadow-md hover:shadow-lg;
+  }
+
+  .button-secondary {
+    @apply button-mobile bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white;
+    @apply hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-500;
+  }
+
+  .button-danger {
+    @apply button-mobile bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
+    @apply focus:ring-red-500 shadow-md hover:shadow-lg;
+  }
+
+  .card-mobile {
+    @apply bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700;
+    @apply shadow-sm hover:shadow-md transition-all duration-200;
+    @apply p-4 sm:p-6;
+  }
+}
+
 @keyframes scroll {
   0% {
     transform: translateX(100%);

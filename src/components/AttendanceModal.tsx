@@ -311,7 +311,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
 
   return (
     <Transition.Root show={isOpen} as={React.Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-[60]" onClose={onClose}>
         <Transition.Child
           as={React.Fragment}
           enter="ease-out duration-300"
@@ -324,7 +324,7 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
         
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
             <Transition.Child
               as={React.Fragment}

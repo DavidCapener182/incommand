@@ -275,12 +275,15 @@ export async function calculatePerformanceMetrics(
       }
     }
 
-    // Calculate response times
-    const responseTimes = logs
+    // Filter out Attendance incidents from operational metrics
+    const operationalLogs = logs.filter(log => log.incident_type !== 'Attendance')
+
+    // Calculate response times (excluding Attendance incidents)
+    const responseTimes = operationalLogs
       .map(log => calculateResponseTime(log))
       .filter((time): time is number => time !== null)
     
-    const resolutionTimes = logs
+    const resolutionTimes = operationalLogs
       .map(log => calculateResolutionTime(log))
       .filter((time): time is number => time !== null)
 
@@ -295,18 +298,18 @@ export async function calculatePerformanceMetrics(
     const medianResponseTime = calculateMedian(responseTimes)
     const medianResolutionTime = calculateMedian(resolutionTimes)
 
-    // Calculate other metrics
-    const peakIncidentHours = getPeakIncidentHours(logs)
+    // Calculate other metrics (using operational logs for operational metrics)
+    const peakIncidentHours = getPeakIncidentHours(operationalLogs)
     
     const periodHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)
-    const staffUtilization = calculateStaffUtilization(logs, periodHours)
+    const staffUtilization = calculateStaffUtilization(operationalLogs, periodHours)
     
-    const responseQuality = calculateResponseQuality(logs)
-    const incidentVolumeByType = getIncidentVolumeByType(logs)
-    const incidentVolumeByPriority = getIncidentVolumeByPriority(logs)
+    const responseQuality = calculateResponseQuality(operationalLogs)
+    const incidentVolumeByType = getIncidentVolumeByType(operationalLogs)
+    const incidentVolumeByPriority = getIncidentVolumeByPriority(operationalLogs)
     
-    const closedIncidents = logs.filter(log => log.is_closed).length
-    const averageIncidentsPerHour = logs.length / Math.max(periodHours, 1)
+    const closedIncidents = operationalLogs.filter(log => log.is_closed).length
+    const averageIncidentsPerHour = operationalLogs.length / Math.max(periodHours, 1)
 
     return {
       averageResponseTime: Math.round(averageResponseTime),
@@ -318,7 +321,7 @@ export async function calculatePerformanceMetrics(
       responseQuality: Math.round(responseQuality),
       incidentVolumeByType,
       incidentVolumeByPriority,
-      totalIncidents: logs.length,
+      totalIncidents: operationalLogs.length,
       closedIncidents,
       averageIncidentsPerHour: Math.round(averageIncidentsPerHour * 10) / 10,
       periodStart: startDate.toISOString(),

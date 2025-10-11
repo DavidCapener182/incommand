@@ -71,10 +71,10 @@ export default function RealtimeStatusIndicator({
         })}
       </div>
 
-      {/* Update Count */}
-      <div className="text-xs text-gray-400 dark:text-gray-500">
+      {/* Update Count - Hidden per user request */}
+      {/* <div className="text-xs text-gray-400 dark:text-gray-500">
         #{updateCount}
-      </div>
+      </div> */}
 
       {/* Refresh Button */}
       <button

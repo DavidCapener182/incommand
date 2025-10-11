@@ -108,7 +108,13 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
         role="navigation" 
         aria-label="Primary" 
         className="fixed inset-x-0 z-50 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
-        style={{ bottom: '36px', backdropFilter: 'blur(8px)' }}
+        style={{ 
+          bottom: '36px',
+          backdropFilter: 'blur(8px)',
+          paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)',
+          paddingRight: 'max(env(safe-area-inset-right), 0.5rem)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+        }}
         initial={{ y: 100 }}
         animate={{ y: isVisible ? 0 : 100 }}
         transition={{ 
@@ -118,8 +124,8 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
           duration: 0.3
         }}
       >
-        <div className="mx-auto px-2 sm:px-4">
-          <div className="flex items-center justify-between">
+        <div className="mx-auto px-2 sm:px-4 py-1">
+          <div className="flex items-center justify-between gap-2">
             {/* Home (left) */}
             <motion.button
               type="button"
@@ -127,18 +133,18 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-label="Navigate to Home"
               aria-current={isActive('/incidents') ? 'page' : undefined}
               onClick={() => go('/incidents')}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60'}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className={`touch-target flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : 'text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60'}`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <motion.div
-                animate={isActive('/incidents') ? { rotate: 0 } : { rotate: 0 }}
+                animate={isActive('/incidents') ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
                 <HomeIcon className="w-6 h-6" />
               </motion.div>
-              <span className="text-sm font-medium">Home</span>
+              <span className="text-sm font-semibold">Home</span>
             </motion.button>
 
             {/* Incident Summary with Enhanced Scrolling Ticker (center) */}
@@ -150,18 +156,18 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3 }}
-                  className="flex-1 mx-4 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 overflow-hidden shadow-sm"
+                  className="flex-1 mx-2 sm:mx-4 px-2 sm:px-3 py-1 sm:py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 overflow-hidden shadow-sm"
                 >
                   <div className="flex items-center">
                     <motion.span 
-                      className="text-red-500 mr-2 text-xs font-bold flex items-center"
+                      className="text-red-500 mr-1.5 text-[10px] sm:text-xs font-bold flex items-center flex-shrink-0"
                       animate={{ opacity: [1, 0.5, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >
-                      <span className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse"></span>
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full mr-1 animate-pulse"></span>
                       LIVE
                     </motion.span>
-                    <div className="text-xs text-blue-700 dark:text-blue-200 font-medium mr-4 truncate">
+                    <div className="hidden sm:block text-xs text-blue-700 dark:text-blue-200 font-medium mr-4 truncate">
                       {displaySummary}
                     </div>
                     {/* Enhanced Scrolling Incident Summary */}
@@ -229,18 +235,18 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-disabled={chatDisabled}
               title={chatDisabled ? 'Chat unavailable' : 'Open Help Center'}
               onClick={() => { if (onOpenHelpCenter) onOpenHelpCenter(); }}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent ${isHelpCenterOpen ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : ''}`}
-              whileHover={!chatDisabled ? { scale: 1.05 } : {}}
-              whileTap={!chatDisabled ? { scale: 0.95 } : {}}
+              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent ${isHelpCenterOpen ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : ''}`}
+              whileHover={!chatDisabled ? { scale: 1.02 } : {}}
+              whileTap={!chatDisabled ? { scale: 0.98 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <motion.div
-                animate={isHelpCenterOpen ? { rotate: 0 } : { rotate: 0 }}
+                animate={isHelpCenterOpen ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChatBubbleLeftRightIcon className="w-6 h-6" />
+                <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               </motion.div>
-              <span className="text-sm font-medium">Chat</span>
+              <span className="text-xs sm:text-sm font-semibold hidden sm:inline">Chat</span>
             </motion.button>
           </div>
         </div>

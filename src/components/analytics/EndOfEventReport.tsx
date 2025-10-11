@@ -81,6 +81,15 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   })
   const [isSendingEmail, setIsSendingEmail] = useState(false)
 
+  useEffect(() => {
+    if (eventId && eventId !== '') {
+      fetchEventData()
+    } else {
+      setLoading(false)
+      setEventData(null)
+    }
+  }, [eventId, fetchEventData])
+
   // If no eventId provided, show message to select an event
   if (!eventId || eventId === '') {
     return (
@@ -95,15 +104,6 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       </div>
     )
   }
-
-  useEffect(() => {
-    if (eventId && eventId !== '') {
-      fetchEventData()
-    } else {
-      setLoading(false)
-      setEventData(null)
-    }
-  }, [eventId])
 
   const fetchEventData = async () => {
     setLoading(true)
@@ -401,10 +401,10 @@ Focus on operational effectiveness, key metrics, and overall success.`
 
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}

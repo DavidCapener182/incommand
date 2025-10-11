@@ -445,7 +445,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex items-center justify-center p-4">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
@@ -906,7 +906,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                     </div>
                     
                     {showFullImage && (
-                      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" onClick={() => setShowFullImage(false)}>
+                      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70]" onClick={() => setShowFullImage(false)}>
                         <div className="relative max-h-[90vh] max-w-[90vw]">
                           <Image
                             src={photoUrl}

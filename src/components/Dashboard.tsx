@@ -49,12 +49,11 @@ import { logger } from '../lib/logger'
 import IncidentSummaryBar, { type SummaryStatus } from './IncidentSummaryBar'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
-import TrainingModeModal from './TrainingModeModal'
+import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
 import AnalyticsKPICards from './analytics/AnalyticsKPICards'
 import MiniTrendChart from './MiniTrendChart'
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
-import QuickActionBar from './QuickActionBar'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 const EVENT_TYPES = [
@@ -319,31 +318,31 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   const baseClasses = `
-    relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
-    p-2 md:p-3 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-105
-    ${isFilterable ? 'cursor-pointer' : ''}
-    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-105' : 'hover:shadow-xl'}
+    relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-xl md:rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
+    p-3 md:p-4 transition-all duration-300 md:hover:shadow-2xl md:hover:-translate-y-1 md:hover:scale-105
+    ${isFilterable ? 'cursor-pointer touch-target' : ''}
+    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-[1.02] md:scale-105' : 'hover:shadow-xl active:scale-[0.98]'}
     ${pulse ? 'animate-pulse' : ''}
     ${className || ''}
   `;
 
   const content = (
-    <div className="flex flex-row items-center justify-between w-full">
+    <div className="flex flex-row items-center justify-between w-full min-h-[60px] sm:min-h-[68px]">
       <div className="flex flex-col items-start flex-1">
         <motion.div 
           key={value}
           initial={{ scale: 1.1, opacity: 0.8 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-0.5"
+          className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1"
         >
           {value}
         </motion.div>
-        <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
+        <div className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight">
           {title}
         </div>
         {trendData && trendData.length > 0 && (
-          <div className="mt-1">
+          <div className="mt-1.5 hidden sm:block">
             <MiniTrendChart data={trendData} height={20} width={60} />
           </div>
         )}
@@ -544,6 +543,13 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 export default function Dashboard() {
   const { user } = useAuth();
   const { updateCounts } = useIncidentSummary()
+  
+  // Performance monitoring
+  const { isSlowDevice } = usePerformanceMonitor('Dashboard', {
+    trackRenderTime: true,
+    trackMemory: true,
+    trackFPS: true
+  })
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({ types: [], statuses: [], priorities: [], query: '' })
@@ -564,7 +570,6 @@ export default function Dashboard() {
   }, [filters.statuses])
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
-  const [isTrainingModeOpen, setIsTrainingModeOpen] = useState(false)
   const [initialIncidentType, setInitialIncidentType] = useState<
     string | undefined
   >(undefined)
@@ -657,6 +662,13 @@ export default function Dashboard() {
     const summary = list.reduce(
       (acc: { open: number; in_progress: number; closed: number }, incident: any) => {
         const status = String(incident?.status ?? '').toLowerCase()
+        const incidentType = String(incident?.incident_type ?? '').toLowerCase()
+        
+        // Skip Attendance incidents from status counting - they only count in total
+        if (incidentType === 'attendance') {
+          return acc
+        }
+        
         const isClosed = Boolean(incident?.is_closed) || status === 'closed' || status === 'resolved'
         const isInProgress = status === 'in_progress' || status === 'in progress'
 
@@ -1095,7 +1107,7 @@ export default function Dashboard() {
       ];
       const highPriorityIncidents = countableIncidents.filter(i => highPriorityIncidentTypes.includes(i.incident_type));
       
-      const total = countableIncidents.length;
+      const total = incidents.length; // Include all incidents (including Attendance) in total
       const high = highPriorityIncidents.length;
       const hasOpenHighPrio = highPriorityIncidents.some(i => !i.is_closed);
       const open = countableIncidents.filter(i => !i.is_closed).length;
@@ -1204,9 +1216,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-6 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-3 sm:p-6 md:p-8">
       {/* Event Header - Sticky */}
-      <div className="md:bg-transparent md:shadow-none -mx-6 md:-mx-8 px-6 md:px-8 pt-0 pb-2 md:py-0 mb-8">
+      <div className="md:bg-transparent md:shadow-none -mx-3 sm:-mx-6 md:-mx-8 px-3 sm:px-6 md:px-8 pt-0 pb-2 md:py-0 mb-6 md:mb-8">
         {/* Desktop view */}
         <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           <CurrentEvent
@@ -1339,8 +1351,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3 mb-6">
+        {/* Stats Grid - Desktop Only (Hidden on Mobile) */}
+        <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 mb-6 md:mb-8">
           {loadingCurrentEvent ? (
             // Show skeleton loading states
             Array.from({ length: 8 }).map((_, index) => (
@@ -1451,12 +1463,14 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Analytics KPI Cards */}
+        {/* Analytics KPI Cards - Desktop Only */}
         {currentEvent && (
-          <AnalyticsKPICards 
-            eventId={currentEvent.id}
-            className="mb-6"
-          />
+          <div className="hidden md:block">
+            <AnalyticsKPICards 
+              eventId={currentEvent.id}
+              className="mb-6"
+            />
+          </div>
         )}
 
         {/* Stats Grid - Second Row */}
@@ -1478,8 +1492,8 @@ export default function Dashboard() {
               </motion.div>
             )}
           </div>
-          {/* Mobile: W3W and Top 3 side by side */}
-          <div className="block md:hidden grid grid-cols-2 gap-4 mb-8">
+          {/* Mobile: W3W and Top 3 - HIDDEN ON MOBILE */}
+          <div className="hidden md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {loadingCurrentEvent ? (
               <>
                 <CardSkeleton />
@@ -1520,10 +1534,10 @@ export default function Dashboard() {
               </>
             )}
           </div>
-          {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in a single row */}
-          <div className="hidden md:grid grid-cols-4 gap-4 mb-8">
+          {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in responsive grid */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {loadingCurrentEvent ? (
-              Array.from({ length: 5 }).map((_, index) => (
+              Array.from({ length: 4 }).map((_, index) => (
                 <CardSkeleton key={index} />
               ))
             ) : (
@@ -1620,24 +1634,7 @@ export default function Dashboard() {
       {/* Venue Occupancy Modal */}
       <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
       
-      {/* Training Mode Modal */}
-      <TrainingModeModal isOpen={isTrainingModeOpen} onClose={() => setIsTrainingModeOpen(false)} />
       
-      {/* Quick Action Bar */}
-      {currentEvent && (
-        <QuickActionBar
-          variant="floating"
-          onActionSelect={(action) => {
-            if (action.action === 'create-incident') {
-              setInitialIncidentType(action.incidentType)
-              setIsIncidentModalOpen(true)
-            } else if (action.action === 'broadcast') {
-              // Handle broadcast action
-              console.log('Broadcast action')
-            }
-          }}
-        />
-      )}
       
       {/* Toast Notifications */}
       <Toast messages={messages} onRemove={removeToast} />
@@ -1646,18 +1643,8 @@ export default function Dashboard() {
       {!isIncidentModalOpen && (
         <div className="fixed bottom-20 right-6 z-50">
           <div className="relative flex flex-col gap-3">
-            {/* Training Mode Button */}
-            <button 
-              type="button"
-              onClick={() => setIsTrainingModeOpen(true)}
-              className="inline-flex items-center px-4 py-3 rounded-full text-sm font-medium text-white shadow-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 dark:from-green-500 dark:to-green-600 dark:hover:from-green-600 dark:hover:to-green-700 focus:z-10 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <AcademicCapIcon className="h-5 w-5 mr-2" />
-              <span className="hidden sm:inline">Training</span>
-              <span className="sm:hidden">📚</span>
-            </button>
 
-            {/* New Incident Button */}
+            {/* New Incident FAB */}
             <button 
               type="button"
               onClick={() => {
@@ -1665,22 +1652,22 @@ export default function Dashboard() {
                 setIsIncidentModalOpen(true)
               }}
               disabled={!hasCurrentEvent}
-              className={`relative inline-flex items-center px-4 py-3 text-sm font-semibold text-white rounded-full shadow-lg ${
+              className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 hover:shadow-3xl transform hover:scale-110 active:scale-95 focus:outline-none ${
                 hasCurrentEvent 
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              } focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-xl transform hover:-translate-y-0.5`}
+                  ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:scale-100'
+              }`}
+              aria-label="Create new incident"
             >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              <span className="hidden sm:inline">New Incident</span>
-              <span className="sm:hidden">+</span>
+              <PlusIcon className="h-7 w-7 text-white" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Log Review Reminder for Silver Commanders */}
-      <LogReviewReminder />
-    </div>
-  )
-} 
+        {/* Log Review Reminder for Silver Commanders */}
+        <LogReviewReminder />
+
+      </div>
+    )
+  }
