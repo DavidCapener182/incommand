@@ -39,11 +39,11 @@ export default function BenchmarkingDashboard({
   const fetchBenchmarkingData = async () => {
     setData(prev => ({ ...prev, loading: true, error: null }))
     
-    if (!eventId) {
+    if (!eventId || eventId === '') {
       setData(prev => ({ 
         ...prev, 
         loading: false, 
-        error: 'No event ID provided' 
+        error: 'No event selected' 
       }))
       return
     }

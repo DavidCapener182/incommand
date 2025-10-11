@@ -12,6 +12,8 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { metricBuilder, type CustomMetric, type MetricCalculation } from '@/lib/customMetrics/metricBuilder'
+import { supabase } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
 
 interface DashboardLayout {
   id: string
@@ -52,6 +54,7 @@ export default function CustomDashboardBuilder({
   onDashboardCreated, 
   className = '' 
 }: CustomDashboardBuilderProps) {
+  const { addToast } = useToast()
   const [dashboards, setDashboards] = useState<DashboardLayout[]>([])
   const [metrics, setMetrics] = useState<CustomMetric[]>([])
   const [isBuilderOpen, setIsBuilderOpen] = useState(false)
@@ -59,6 +62,8 @@ export default function CustomDashboardBuilder({
   const [selectedMetric, setSelectedMetric] = useState<CustomMetric | null>(null)
   const [draggedWidget, setDraggedWidget] = useState<DashboardWidget | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -73,29 +78,46 @@ export default function CustomDashboardBuilder({
     loadMetrics()
   }, [])
 
-  const loadDashboards = () => {
-    // In a real app, this would load from a database
-    const mockDashboards: DashboardLayout[] = [
-      {
-        id: 'dashboard-1',
-        name: 'Operations Overview',
-        description: 'Key operational metrics for daily monitoring',
-        widgets: [
-          {
-            id: 'widget-1',
-            metricId: 'metric-1',
-            position: { x: 0, y: 0 },
-            size: { width: 2, height: 1 },
-            title: 'Response Time'
-          }
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'current-user',
-        isPublic: false
+  const loadDashboards = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('custom_dashboards')
+        .select('*')
+        .order('updated_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading dashboards:', error)
+        addToast({
+          type: 'error',
+          message: 'Failed to load dashboards',
+          duration: 4000
+        })
+        return
       }
-    ]
-    setDashboards(mockDashboards)
+
+      const parsedDashboards: DashboardLayout[] = (data || []).map(d => ({
+        id: d.id,
+        name: d.name,
+        description: d.description,
+        widgets: d.widgets || [],
+        createdAt: d.created_at,
+        updatedAt: d.updated_at,
+        createdBy: d.created_by,
+        isPublic: d.is_public
+      }))
+
+      setDashboards(parsedDashboards)
+    } catch (error) {
+      console.error('Error loading dashboards:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to load dashboards',
+        duration: 4000
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loadMetrics = () => {
@@ -103,32 +125,97 @@ export default function CustomDashboardBuilder({
     setMetrics(allMetrics)
   }
 
-  const handleCreateDashboard = () => {
-    const newDashboard: DashboardLayout = {
-      id: `dashboard-${Date.now()}`,
-      name: formData.name,
-      description: formData.description,
-      widgets: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: 'current-user',
-      isPublic: formData.isPublic
+  const handleCreateDashboard = async () => {
+    if (!formData.name.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Dashboard name is required',
+        duration: 4000
+      })
+      return
     }
 
-    setDashboards(prev => [...prev, newDashboard])
-    setCurrentDashboard(newDashboard)
-    setIsBuilderOpen(true)
-    setFormData({ name: '', description: '', isPublic: false })
-    onDashboardCreated?.(newDashboard)
+    setSaving(true)
+    try {
+      const { data, error } = await supabase
+        .from('custom_dashboards')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          widgets: [],
+          is_public: formData.isPublic,
+          created_by: 'current-user' // TODO: Get from auth context
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      const newDashboard: DashboardLayout = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        widgets: data.widgets || [],
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        createdBy: data.created_by,
+        isPublic: data.is_public
+      }
+
+      setDashboards(prev => [...prev, newDashboard])
+      setCurrentDashboard(newDashboard)
+      setIsBuilderOpen(true)
+      setFormData({ name: '', description: '', isPublic: false })
+      onDashboardCreated?.(newDashboard)
+
+      addToast({
+        type: 'success',
+        message: 'Dashboard created successfully',
+        duration: 4000
+      })
+
+    } catch (error) {
+      console.error('Error creating dashboard:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to create dashboard',
+        duration: 4000
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleDeleteDashboard = (dashboardId: string) => {
-    if (confirm('Are you sure you want to delete this dashboard?')) {
+  const handleDeleteDashboard = async (dashboardId: string) => {
+    if (!confirm('Are you sure you want to delete this dashboard?')) return
+
+    try {
+      const { error } = await supabase
+        .from('custom_dashboards')
+        .delete()
+        .eq('id', dashboardId)
+
+      if (error) throw error
+
       setDashboards(prev => prev.filter(d => d.id !== dashboardId))
       if (currentDashboard?.id === dashboardId) {
         setCurrentDashboard(null)
         setIsBuilderOpen(false)
       }
+
+      addToast({
+        type: 'success',
+        message: 'Dashboard deleted successfully',
+        duration: 4000
+      })
+
+    } catch (error) {
+      console.error('Error deleting dashboard:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to delete dashboard',
+        duration: 4000
+      })
     }
   }
 
@@ -137,7 +224,7 @@ export default function CustomDashboardBuilder({
     setIsBuilderOpen(true)
   }
 
-  const addWidget = (metric: CustomMetric, size: typeof WIDGET_SIZES[0]) => {
+  const addWidget = async (metric: CustomMetric, size: typeof WIDGET_SIZES[0]) => {
     if (!currentDashboard) return
 
     const newWidget: DashboardWidget = {
@@ -148,42 +235,108 @@ export default function CustomDashboardBuilder({
       title: metric.name
     }
 
-    const updatedDashboard = {
-      ...currentDashboard,
-      widgets: [...currentDashboard.widgets, newWidget],
-      updatedAt: new Date().toISOString()
-    }
+    const updatedWidgets = [...currentDashboard.widgets, newWidget]
+    
+    try {
+      const { error } = await supabase
+        .from('custom_dashboards')
+        .update({
+          widgets: updatedWidgets,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentDashboard.id)
 
-    setCurrentDashboard(updatedDashboard)
-    setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+      if (error) throw error
+
+      const updatedDashboard = {
+        ...currentDashboard,
+        widgets: updatedWidgets,
+        updatedAt: new Date().toISOString()
+      }
+
+      setCurrentDashboard(updatedDashboard)
+      setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+
+    } catch (error) {
+      console.error('Error adding widget:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to add widget',
+        duration: 4000
+      })
+    }
   }
 
-  const removeWidget = (widgetId: string) => {
+  const removeWidget = async (widgetId: string) => {
     if (!currentDashboard) return
 
-    const updatedDashboard = {
-      ...currentDashboard,
-      widgets: currentDashboard.widgets.filter(w => w.id !== widgetId),
-      updatedAt: new Date().toISOString()
-    }
+    const updatedWidgets = currentDashboard.widgets.filter(w => w.id !== widgetId)
 
-    setCurrentDashboard(updatedDashboard)
-    setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+    try {
+      const { error } = await supabase
+        .from('custom_dashboards')
+        .update({
+          widgets: updatedWidgets,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentDashboard.id)
+
+      if (error) throw error
+
+      const updatedDashboard = {
+        ...currentDashboard,
+        widgets: updatedWidgets,
+        updatedAt: new Date().toISOString()
+      }
+
+      setCurrentDashboard(updatedDashboard)
+      setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+
+    } catch (error) {
+      console.error('Error removing widget:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to remove widget',
+        duration: 4000
+      })
+    }
   }
 
-  const updateWidgetPosition = (widgetId: string, position: { x: number; y: number }) => {
+  const updateWidgetPosition = async (widgetId: string, position: { x: number; y: number }) => {
     if (!currentDashboard) return
 
-    const updatedDashboard = {
-      ...currentDashboard,
-      widgets: currentDashboard.widgets.map(w => 
-        w.id === widgetId ? { ...w, position } : w
-      ),
-      updatedAt: new Date().toISOString()
-    }
+    const updatedWidgets = currentDashboard.widgets.map(w => 
+      w.id === widgetId ? { ...w, position } : w
+    )
 
-    setCurrentDashboard(updatedDashboard)
-    setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+    try {
+      const { error } = await supabase
+        .from('custom_dashboards')
+        .update({
+          widgets: updatedWidgets,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentDashboard.id)
+
+      if (error) throw error
+
+      const updatedDashboard = {
+        ...currentDashboard,
+        widgets: updatedWidgets,
+        updatedAt: new Date().toISOString()
+      }
+
+      setCurrentDashboard(updatedDashboard)
+      setDashboards(prev => prev.map(d => d.id === currentDashboard.id ? updatedDashboard : d))
+
+    } catch (error) {
+      console.error('Error updating widget position:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to update widget position',
+        duration: 4000
+      })
+    }
   }
 
   const handleDragStart = (widget: DashboardWidget, event: React.DragEvent) => {
@@ -277,7 +430,12 @@ export default function CustomDashboardBuilder({
       {/* Dashboard List */}
       {!isBuilderOpen && (
         <div className="space-y-4">
-          {dashboards.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading dashboards...</p>
+            </div>
+          ) : dashboards.length === 0 ? (
             <div className="text-center py-12">
               <Squares2X2Icon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No custom dashboards</h3>
@@ -392,10 +550,10 @@ export default function CustomDashboardBuilder({
                 </div>
                 <button
                   onClick={handleCreateDashboard}
-                  disabled={!formData.name.trim()}
+                  disabled={!formData.name.trim() || saving}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg font-medium transition-colors"
                 >
-                  Create Dashboard
+                  {saving ? 'Creating...' : 'Create Dashboard'}
                 </button>
               </div>
             </div>

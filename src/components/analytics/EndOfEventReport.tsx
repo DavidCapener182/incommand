@@ -71,6 +71,14 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [lessonsLearned, setLessonsLearned] = useState<LessonsLearned | null>(null)
   const [aiInsights, setAiInsights] = useState<string>('')
   const [showPreview, setShowPreview] = useState(false)
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
+  const [emailForm, setEmailForm] = useState({
+    recipients: '',
+    subject: '',
+    message: '',
+    includeAttachment: true
+  })
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
 
   // If no eventId provided, show message to select an event
   if (!eventId) {
@@ -244,7 +252,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
     }
   }
 
-  const generateReport = async () => {
+  const generateReport = async (format: 'pdf' | 'csv' = 'pdf') => {
     if (!eventData || !incidentSummary || !staffPerformance || !lessonsLearned) {
       addToast({
         type: 'error',
@@ -256,38 +264,25 @@ Focus on operational effectiveness, key metrics, and overall success.`
 
     setGenerating(true)
     try {
-      const reportData: EventReportData = {
-        event: eventData,
-        incidents: incidentSummary,
-        staff: staffPerformance,
-        lessonsLearned,
-        aiInsights
-      }
-
-      const options: EventReportOptions = {
-        format: 'pdf',
-        includeCharts: true,
-        includeRecommendations: true,
-        branding: {
-          companyName: 'Your Organization'
-        }
-      }
-
-      const reportContent = await generateEventReport(reportData, options)
-      
       const timestamp = new Date().toISOString().split('T')[0]
-      const filename = `event-report-${eventData.name.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.pdf`
+      const filename = `event-report-${eventData.name.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.${format}`
       
-      // Download the report
-      const blob = new Blob([reportContent], { type: 'application/pdf' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      if (format === 'csv') {
+        // Generate CSV report
+        const csvContent = generateCSVReport()
+        const blob = new Blob([csvContent], { type: 'text/csv' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        // For PDF, create a print-friendly version
+        window.print()
+      }
 
       addToast({
         type: 'success',
@@ -304,6 +299,98 @@ Focus on operational effectiveness, key metrics, and overall success.`
       })
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const generateCSVReport = (): string => {
+    const rows = [
+      ['Event Report', eventData?.name || ''],
+      ['Date', eventData ? new Date(eventData.event_date).toLocaleDateString() : ''],
+      ['Venue', eventData?.venue_name || ''],
+      [''],
+      ['INCIDENT SUMMARY'],
+      ['Total Incidents', incidentSummary?.total || 0],
+      ['Resolved', incidentSummary?.resolved || 0],
+      ['Open', incidentSummary?.open || 0],
+      ['Average Response Time (min)', incidentSummary?.avgResponseTime.toFixed(1) || 'N/A'],
+      [''],
+      ['STAFF PERFORMANCE'],
+      ['Assigned Positions', staffPerformance?.assignedPositions || 0],
+      ['Radio Sign-outs', staffPerformance?.radioSignouts || 0],
+      ['Efficiency Score (%)', staffPerformance?.efficiencyScore.toFixed(0) || 0],
+      [''],
+      ['LESSONS LEARNED - STRENGTHS'],
+      ...((lessonsLearned?.strengths || []).map(s => ['', s])),
+      [''],
+      ['LESSONS LEARNED - IMPROVEMENTS'],
+      ...((lessonsLearned?.improvements || []).map(i => ['', i])),
+      [''],
+      ['LESSONS LEARNED - RECOMMENDATIONS'],
+      ...((lessonsLearned?.recommendations || []).map(r => ['', r])),
+      [''],
+      ['AI INSIGHTS'],
+      ['', aiInsights]
+    ]
+    return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+  }
+
+  const sendEmailReport = async () => {
+    if (!emailForm.recipients.trim()) {
+      addToast({
+        type: 'error',
+        message: 'Please enter at least one recipient email',
+        duration: 4000
+      })
+      return
+    }
+
+    setIsSendingEmail(true)
+    try {
+      const response = await fetch('/api/v1/reports/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: eventData?.id,
+          eventName: eventData?.name,
+          recipients: emailForm.recipients.split(',').map(e => e.trim()),
+          subject: emailForm.subject || `Event Report: ${eventData?.name}`,
+          message: emailForm.message,
+          reportData: {
+            event: eventData,
+            incidents: incidentSummary,
+            staff: staffPerformance,
+            lessonsLearned,
+            aiInsights
+          },
+          includeAttachment: emailForm.includeAttachment
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to send email')
+
+      addToast({
+        type: 'success',
+        message: 'Report sent successfully!',
+        duration: 4000
+      })
+
+      setIsEmailModalOpen(false)
+      setEmailForm({
+        recipients: '',
+        subject: '',
+        message: '',
+        includeAttachment: true
+      })
+
+    } catch (error) {
+      console.error('Error sending email:', error)
+      addToast({
+        type: 'error',
+        message: 'Failed to send email. Please try again.',
+        duration: 4000
+      })
+    } finally {
+      setIsSendingEmail(false)
     }
   }
 
@@ -351,23 +438,41 @@ Focus on operational effectiveness, key metrics, and overall success.`
             <p className="text-gray-600 dark:text-gray-400">Comprehensive analysis for {eventData.name}</p>
           </div>
         </div>
-        <button
-          onClick={generateReport}
-          disabled={generating}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-        >
-          {generating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Generating...</span>
-            </>
-          ) : (
-            <>
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              <span>Generate PDF Report</span>
-            </>
-          )}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsEmailModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span>Email Report</span>
+          </button>
+          <button
+            onClick={() => generateReport('pdf')}
+            disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+          >
+            {generating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <ArrowDownTrayIcon className="h-5 w-5" />
+                <span>Print/PDF</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => generateReport('csv')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+          >
+            <ArrowDownTrayIcon className="h-5 w-5" />
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Event Overview */}
@@ -563,6 +668,110 @@ Focus on operational effectiveness, key metrics, and overall success.`
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Email Event Report
+                </h3>
+                <button
+                  onClick={() => setIsEmailModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Recipients (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={emailForm.recipients}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, recipients: e.target.value }))}
+                    placeholder="email1@example.com, email2@example.com"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
+                    placeholder={`Event Report: ${eventData?.name}`}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Message
+                  </label>
+                  <textarea
+                    value={emailForm.message}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, message: e.target.value }))}
+                    rows={4}
+                    placeholder="Add a personal message..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="includeAttachment"
+                    checked={emailForm.includeAttachment}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, includeAttachment: e.target.checked }))}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <label htmlFor="includeAttachment" className="text-sm text-gray-700 dark:text-gray-300">
+                    Include CSV attachment
+                  </label>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Preview:</strong> The report will include all metrics, AI insights, and lessons learned from this event.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setIsEmailModalOpen(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendEmailReport}
+                  disabled={isSendingEmail || !emailForm.recipients.trim()}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+                >
+                  {isSendingEmail ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Report'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
