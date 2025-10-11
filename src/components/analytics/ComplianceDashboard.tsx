@@ -67,11 +67,13 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
       setError(null)
       
       try {
+        console.log('ComplianceDashboard - Fetching data for:', { startDate, endDate, eventId })
         const [metricsData, trendData] = await Promise.all([
           calculateComplianceMetrics(startDate, endDate, eventId),
           getComplianceTrend(startDate, endDate, eventId, 'day')
         ])
         
+        console.log('ComplianceDashboard - Received metrics:', metricsData)
         setMetrics(metricsData)
         setTrend(trendData)
       } catch (err) {

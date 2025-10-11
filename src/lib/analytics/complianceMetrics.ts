@@ -311,16 +311,21 @@ export async function calculateComplianceMetrics(
 
     const { data: logs, error } = await query
 
-    if (error) throw error
+    if (error) {
+      console.error('Compliance metrics query error:', error)
+      throw error
+    }
+    
+    console.log('Compliance metrics - Found logs:', logs?.length || 0, 'for period:', startDate.toISOString(), 'to', endDate.toISOString())
     if (!logs || logs.length === 0) {
       return {
-        overallCompliance: 100,
-        auditTrailCompleteness: 100,
-        immutabilityScore: 100,
-        timestampAccuracy: 100,
-        amendmentJustificationRate: 100,
-        legalReadinessScore: 'A',
-        recommendations: ['No incidents in this period'],
+        overallCompliance: 0,
+        auditTrailCompleteness: 0,
+        immutabilityScore: 0,
+        timestampAccuracy: 0,
+        amendmentJustificationRate: 0,
+        legalReadinessScore: 'F',
+        recommendations: ['No incident logs found in this period - compliance cannot be assessed'],
         totalIncidents: 0,
         periodStart: startDate.toISOString(),
         periodEnd: endDate.toISOString(),
