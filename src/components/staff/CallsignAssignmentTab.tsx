@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/components/Toast'
 import { 
   PlusIcon, 
@@ -384,10 +383,8 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {deptPositions.map(position => (
-              <motion.div
+              <div
                 key={position.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
                 className={`p-4 rounded-lg border-2 ${
                   position.assigned_staff_id 
                     ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
@@ -443,31 +440,24 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                     )}
                   </div>
                 )}
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
       ))}
 
       {/* Add Position Modal */}
-      <AnimatePresence>
-        {showAddPositionModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-screen items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black bg-opacity-50"
-                onClick={() => setShowAddPositionModal(false)}
-              />
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-              >
+      {showAddPositionModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setShowAddPositionModal(false)}
+            />
+            
+            <div
+              className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+            >
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Position</h3>
                   <button
@@ -537,11 +527,10 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                     Add Position
                   </button>
                 </div>
-              </motion.div>
             </div>
           </div>
         )}
-      </AnimatePresence>
+      )}
     </div>
   )
 }
