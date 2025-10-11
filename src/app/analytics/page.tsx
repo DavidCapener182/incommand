@@ -124,15 +124,32 @@ export default function AnalyticsPage() {
       if (attendanceError) console.warn('Attendance data error:', attendanceError)
       setAttendanceData(attendance || [])
 
-      // Fetch current event
-      const { data: event, error: eventError } = await supabase
+      // Fetch current event (try is_current first, then fallback to most recent)
+      let { data: event, error: eventError } = await supabase
         .from('events')
         .select('id, name, start_time, end_time, max_capacity')
         .eq('is_current', true)
         .single()
 
-      if (eventError) console.warn('Event data error:', eventError)
-      setEventData(event || null)
+      if (eventError) {
+        console.warn('No current event found, trying most recent event:', eventError)
+        // Fallback to most recent event if no current event
+        const { data: recentEvent, error: recentError } = await supabase
+          .from('events')
+          .select('id, name, start_time, end_time, max_capacity')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+        
+        if (recentError) {
+          console.warn('No events found:', recentError)
+          setEventData(null)
+        } else {
+          setEventData(recentEvent)
+        }
+      } else {
+        setEventData(event)
+      }
 
     } catch (err) {
       console.error('Error fetching analytics data:', err)
