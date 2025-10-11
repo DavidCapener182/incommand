@@ -147,6 +147,16 @@ export async function POST(request: NextRequest) {
       .or(`position_id.eq.${position_id},staff_id.eq.${staff_id}`)
       .eq('event_id', event_id)
 
+    // Find the staff record that corresponds to the authenticated user
+    const { data: userStaff, error: userStaffError } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('company_id', profile.company_id)
+      .or(`full_name.ilike.%${user.email}%,email.eq.${user.email}`)
+      .single()
+
+    console.log('User staff record:', userStaff, userStaffError)
+
     // Create new assignment
     const { data: assignment, error: insertError } = await supabase
       .from('position_assignments')
@@ -157,7 +167,7 @@ export async function POST(request: NextRequest) {
         callsign,
         position_name,
         department,
-        assigned_by: user.id
+        assigned_by: userStaff?.id || null // Use staff ID or null if not found
       })
       .select()
       .single()
