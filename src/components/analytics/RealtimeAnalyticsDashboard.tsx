@@ -112,12 +112,12 @@ export default function RealtimeAnalyticsDashboard({
 
   const toggleLive = () => {
     setIsLive(!isLive)
-    triggerHaptic('light')
+    triggerHaptic.light()
   }
 
   const refresh = () => {
     fetchAnalytics()
-    triggerHaptic('medium')
+    triggerHaptic.medium()
   }
 
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
