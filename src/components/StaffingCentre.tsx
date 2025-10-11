@@ -9,10 +9,18 @@ import {
   Clock,
   RefreshCcw,
   Lightbulb,
+  UserCheck,
+  BarChart3,
+  Radio,
+  GraduationCap,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import StaffSkillsMatrix from '@/components/staff/StaffSkillsMatrix'
+import StaffAvailabilityToggle from '@/components/staff/StaffAvailabilityToggle'
+import StaffPerformanceDashboard from '@/components/staff/StaffPerformanceDashboard'
+import RadioSignOutSystem from '@/components/radio/RadioSignOutSystem'
 
 interface StaffMember {
   id: string
@@ -173,6 +181,10 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   const [searchTerm, setSearchTerm] = useState('')
   const [announcement, setAnnouncement] = useState('')
   const undoShortcutRef = useRef<(event: KeyboardEvent) => void>()
+  
+  // New Week 3 features state
+  const [activeTab, setActiveTab] = useState<'staff' | 'callsign' | 'radio' | 'skills' | 'performance'>('staff')
+  const [currentEvent, setCurrentEvent] = useState<any>(null)
 
   useEffect(() => {
     const registerShortcuts = (event: KeyboardEvent) => {
@@ -189,6 +201,28 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       }
     }
   }, [assignmentHistory])
+
+  // Fetch current event for Week 3 features
+  useEffect(() => {
+    const fetchCurrentEvent = async () => {
+      try {
+        const { data: events } = await supabase
+          .from('events')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (events && events.length > 0) {
+          setCurrentEvent(events[0])
+        }
+      } catch (error) {
+        console.error('Error fetching current event:', error)
+      }
+    }
+
+    fetchCurrentEvent()
+  }, [])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -512,7 +546,46 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         </div>
       </header>
 
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          {[
+            { id: 'staff', name: 'Staff Management', icon: Users },
+            { id: 'callsign', name: 'Callsign Assignment', icon: UserCheck },
+            { id: 'radio', name: 'Radio Sign Out', icon: Radio },
+            { id: 'skills', name: 'Skills Matrix', icon: GraduationCap },
+            { id: 'performance', name: 'Performance', icon: BarChart3 },
+          ].map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                <Icon
+                  className={`mr-2 h-5 w-5 ${
+                    isActive
+                      ? 'text-blue-500'
+                      : 'text-gray-400 group-hover:text-gray-500'
+                  }`}
+                />
+                {tab.name}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'staff' && (
+        <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
           <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
             <header className="mb-3 flex items-center justify-between">
@@ -677,6 +750,65 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           )}
         </article>
       </section>
+      </DragDropContext>
+      )}
+
+      {activeTab === 'callsign' && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Callsign Assignment
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            This is the existing callsign assignment interface. The original drag-and-drop functionality is preserved in the Staff Management tab.
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'radio' && (
+        currentEvent ? (
+          <RadioSignOutSystem 
+            eventId={currentEvent.id}
+            className="mb-8"
+          />
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <Radio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              No Active Event
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please create or activate an event to manage radio sign-outs.
+            </p>
+          </div>
+        )
+      )}
+
+      {activeTab === 'skills' && (
+        <StaffSkillsMatrix 
+          eventId={currentEvent?.id}
+          className="mb-8"
+        />
+      )}
+
+      {activeTab === 'performance' && (
+        currentEvent ? (
+          <StaffPerformanceDashboard 
+            eventId={currentEvent.id}
+            className="mb-8"
+          />
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              No Active Event
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please create or activate an event to view performance metrics.
+            </p>
+          </div>
+        )
+      )}
 
       <div className="sr-only" aria-live="polite">
         {announcement}
