@@ -323,18 +323,12 @@ export default function Navigation() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    if (!hasCurrentEvent) {
-                      setShowNoEventModal(true);
-                      return;
-                    }
-                    window.location.href = '/callsign-assignment';
-                  }}
-                  className={`${isActive('/callsign-assignment')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium bg-transparent border-none ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                <Link 
+                  href="/staffing" 
+                  className={`${isActive('/staffing')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${!hasCurrentEvent ? 'opacity-50' : ''}`}
                 >
                   Staff
-                </button>
+                </Link>
                 <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                   Help & Glossary
                 </Link>
@@ -485,18 +479,12 @@ export default function Navigation() {
             </div>
           )}
 
-          <button
-            onClick={() => {
-              if (!hasCurrentEvent) {
-                setShowNoEventModal(true);
-                return;
-              }
-              window.location.href = '/callsign-assignment';
-            }}
-            className={`block w-full text-left py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+          <Link 
+            href="/staffing" 
+            className={`${isActive('/staffing')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b] ${!hasCurrentEvent ? 'opacity-50' : ''}`}
           >
             Staff
-          </button>
+          </Link>
           <Link href="/help" className={`${isActive('/help')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Help & Glossary</Link>
           <Link href="/settings" className={`${isActive('/settings')} block py-3 px-4 rounded-md text-lg font-medium text-white hover:bg-[#3b4a9b]`}>Settings</Link>
           {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
