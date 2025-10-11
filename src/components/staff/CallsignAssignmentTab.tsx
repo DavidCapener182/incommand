@@ -529,7 +529,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                 </div>
             </div>
           </div>
-        )}
+        </div>
       )}
     </div>
   )
