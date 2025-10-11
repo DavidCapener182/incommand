@@ -1530,7 +1530,7 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
     if (!formData.callsign) {
       setFormData(prev => ({ ...prev, callsign: `${prefix}${nextNum}` }));
     }
-  }, [formData.categoryId, categories]);
+  }, [formData.categoryId, categories, formData.callsign]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

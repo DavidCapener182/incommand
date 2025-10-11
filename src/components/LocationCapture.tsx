@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import {
   MapPinIcon,
   CheckCircleIcon,
@@ -304,7 +305,7 @@ export default function LocationCapture({
                 )}
                 {what3words && (
                   <div className="flex items-center gap-2">
-                    <img src="/w3w.png" alt="what3words" className="h-4 w-4" />
+                    <Image src="/w3w.png" alt="what3words" width={16} height={16} className="h-4 w-4" />
                     <code className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded">
                       {what3words}
                     </code>
@@ -317,9 +318,11 @@ export default function LocationCapture({
           {/* Map Preview */}
           {showMap && (
             <div className="mt-3 rounded-lg overflow-hidden border border-green-300 dark:border-green-700">
-              <img
+              <Image
                 src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+3b82f6(${location.longitude},${location.latitude})/${location.longitude},${location.latitude},15,0/400x200@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw`}
                 alt="Location map"
+                width={400}
+                height={200}
                 className="w-full h-auto"
                 loading="lazy"
               />

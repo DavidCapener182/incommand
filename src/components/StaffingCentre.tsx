@@ -227,7 +227,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         }
       }
     }
-  }, [assignmentHistory])
+  }, [assignmentHistory, handleUndo])
 
   useEffect(() => {
     const fetchProfile = async () => {

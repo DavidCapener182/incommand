@@ -3850,7 +3850,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         setFormData(prev => ({ ...prev, occurrence: appended }));
       }
     }
-  }, [ejectionDetails.location, ejectionDetails.description, ejectionDetails.reason, formData.incident_type]);
+  }, [ejectionDetails.location, ejectionDetails.description, ejectionDetails.reason, formData.incident_type, formData.occurrence]);
 
   if (!isOpen) {
     return null;

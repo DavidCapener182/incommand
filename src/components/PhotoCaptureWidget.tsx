@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import {
   CameraIcon,
   PhotoIcon,
@@ -203,9 +204,11 @@ export default function PhotoCaptureWidget({
               className="relative aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden group"
             >
               {/* Photo */}
-              <img
+              <Image
                 src={photo.url}
                 alt={`Photo ${photo.id}`}
+                width={200}
+                height={150}
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setSelectedPhoto(photo)}
               />
@@ -267,9 +270,11 @@ export default function PhotoCaptureWidget({
               </button>
 
               {/* Photo */}
-              <img
+              <Image
                 src={selectedPhoto.url}
                 alt="Full size photo"
+                width={800}
+                height={600}
                 className="w-full h-auto rounded-lg shadow-2xl"
               />
 

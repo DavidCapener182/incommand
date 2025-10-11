@@ -322,7 +322,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
     if (incidentData.length > 0 && !aiSummary && !isGeneratingSummary) {
       generateAISummary()
     }
-  }, [incidentData, aiSummary, isGeneratingSummary])
+  }, [incidentData, aiSummary, isGeneratingSummary, generateAISummary])
 
   // Calculate metrics and chart data
   const metrics = useMemo(() => {

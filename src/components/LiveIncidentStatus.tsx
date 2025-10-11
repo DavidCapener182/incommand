@@ -271,7 +271,7 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       }
       clearInterval(interval);
     };
-  }, [eventId, isConnected, isReconnecting, setupSubscription]);
+  }, [eventId, isConnected, isReconnecting, setupSubscription, fetchLatestIncidentDirect]);
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {

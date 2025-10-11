@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import {
   UserCircleIcon,
   CheckCircleIcon,
@@ -177,7 +178,7 @@ export default function CommandHierarchy({
               {/* Avatar */}
               <div className={`relative flex-shrink-0 w-12 h-12 ${levelConfig.bgColor} rounded-full flex items-center justify-center`}>
                 {member.avatar ? (
-                  <img src={member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
+                  <Image src={member.avatar} alt={member.name} width={48} height={48} className="w-full h-full rounded-full object-cover" />
                 ) : (
                   <UserCircleIcon className={`h-8 w-8 ${levelConfig.color}`} />
                 )}
