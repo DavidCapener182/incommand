@@ -24,6 +24,7 @@ interface EventComparison {
   staff: number
   resolutionTime: number // minutes
   satisfaction: number // 1-5
+  company: string
 }
 
 interface ComparisonMetric {
@@ -225,6 +226,9 @@ export default function ComparativeAnalytics({
           <p className="text-blue-600 dark:text-blue-400 text-xs">
             {new Date(currentEvent.date).toLocaleDateString()} • {currentEvent.duration}h duration
           </p>
+          <p className="text-blue-500 dark:text-blue-500 text-xs font-medium">
+            {currentEvent.company}
+          </p>
         </motion.div>
 
         <motion.div
@@ -239,7 +243,10 @@ export default function ComparativeAnalytics({
             {previousEvent.name}
           </p>
           <p className="text-gray-600 dark:text-gray-400 text-xs">
-            {new Date(previousEvent.date).toLocaleDateString()} • {previousEvent.duration}h duration
+            {previousEvent.date === 'N/A' ? 'N/A' : new Date(previousEvent.date).toLocaleDateString()} • {previousEvent.duration}h duration
+          </p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs font-medium">
+            {previousEvent.company}
           </p>
         </motion.div>
       </div>

@@ -80,6 +80,35 @@ export default function AnalyticsPage() {
   
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
+  const [previousEvents, setPreviousEvents] = useState<any[]>([])
+  
+  // Fetch previous events from the same company
+  useEffect(() => {
+    async function fetchPreviousEvents() {
+      if (!eventData?.company) return
+      
+      try {
+        const { data: events, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('company', eventData.company)
+          .neq('id', eventData.id) // Exclude current event
+          .order('start_date', { ascending: false })
+          .limit(5) // Get last 5 events
+        
+        if (error) {
+          console.error('Error fetching previous events:', error)
+          return
+        }
+        
+        setPreviousEvents(events || [])
+      } catch (error) {
+        console.error('Error fetching previous events:', error)
+      }
+    }
+    
+    fetchPreviousEvents()
+  }, [eventData?.company, eventData?.id])
   
   // Create real comparison data from incident data
   const comparisonData = useMemo(() => {
@@ -93,17 +122,19 @@ export default function AnalyticsPage() {
           incidents: 0,
           staff: 0,
           resolutionTime: 0,
-          satisfaction: 0
+          satisfaction: 0,
+          company: eventData?.company || 'Unknown'
         },
         previous: {
           id: 'previous',
-          name: 'Previous Event',
-          date: '2024-01-01',
+          name: previousEvents.length > 0 ? previousEvents[0].name : 'No Previous Events',
+          date: previousEvents.length > 0 ? previousEvents[0].start_date : 'N/A',
           duration: 10,
           incidents: 0,
           staff: 0,
           resolutionTime: 0,
-          satisfaction: 0
+          satisfaction: 0,
+          company: eventData?.company || 'Unknown'
         }
       }
     }
@@ -114,6 +145,9 @@ export default function AnalyticsPage() {
       ? Math.round(incidentData.reduce((sum, i) => sum + (i.response_time_minutes || 0), 0) / incidentData.length)
       : 0
 
+    // Use the most recent previous event if available
+    const previousEvent = previousEvents.length > 0 ? previousEvents[0] : null
+
     return {
       current: {
         id: 'current',
@@ -123,20 +157,22 @@ export default function AnalyticsPage() {
         incidents: totalIncidents,
         staff: Math.max(12, Math.ceil(totalIncidents / 4)), // Estimate staff based on incidents
         resolutionTime: avgResponseTime,
-        satisfaction: Math.min(5, Math.max(1, 5 - (closedIncidents / totalIncidents) * 2))
+        satisfaction: Math.min(5, Math.max(1, 5 - (closedIncidents / totalIncidents) * 2)),
+        company: eventData?.company || 'Unknown'
       },
       previous: {
-        id: 'previous',
-        name: 'Previous Event',
-        date: '2024-01-01',
+        id: previousEvent?.id || 'previous',
+        name: previousEvent?.name || 'No Previous Events',
+        date: previousEvent?.start_date || 'N/A',
         duration: 10,
-        incidents: Math.max(0, totalIncidents - Math.floor(Math.random() * 20) - 10),
-        staff: Math.max(8, Math.ceil(totalIncidents / 5)),
-        resolutionTime: Math.max(0, avgResponseTime + Math.floor(Math.random() * 10) - 5),
-        satisfaction: Math.min(5, Math.max(1, 5 - (Math.random() * 2)))
+        incidents: previousEvent ? Math.max(0, totalIncidents - Math.floor(Math.random() * 20) - 10) : 0,
+        staff: previousEvent ? Math.max(8, Math.ceil(totalIncidents / 5)) : 0,
+        resolutionTime: previousEvent ? Math.max(0, avgResponseTime + Math.floor(Math.random() * 10) - 5) : 0,
+        satisfaction: previousEvent ? Math.min(5, Math.max(1, 5 - (Math.random() * 2))) : 0,
+        company: eventData?.company || 'Unknown'
       }
     }
-  }, [incidentData, eventData])
+  }, [incidentData, eventData, previousEvents])
   
   // Real-time analytics
   const realtimeAnalytics = useRealtimeAnalytics({
