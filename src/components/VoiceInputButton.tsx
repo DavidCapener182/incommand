@@ -312,7 +312,7 @@ export default function VoiceInputButton({
                           className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-300"
                         >
                           <MicrophoneIcon className="h-4 w-4 inline-block mr-2 text-blue-500" />
-                          "{example}"
+                          &quot;{example}&quot;
                         </div>
                       ))}
                     </div>

@@ -4709,7 +4709,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       </div>
                       {/* Debug info */}
                       <div className="text-xs text-gray-400 mt-1">
-                        Debug: headline="{formData.headline || ''}" wordCount={getHeadlineWordCount(formData.headline || '')}
+                        Debug: headline=&quot;{formData.headline || ''}&quot; wordCount={getHeadlineWordCount(formData.headline || '')}
                       </div>
                     </div>
 

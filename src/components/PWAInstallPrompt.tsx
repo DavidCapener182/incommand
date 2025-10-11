@@ -137,11 +137,11 @@ export default function PWAInstallPrompt() {
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                  <span>Scroll down and tap <strong>"Add to Home Screen"</strong></span>
+                  <span>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                  <span>Tap <strong>"Add"</strong> in the top right</span>
+                  <span>Tap <strong>&quot;Add&quot;</strong> in the top right</span>
                 </li>
               </ol>
 

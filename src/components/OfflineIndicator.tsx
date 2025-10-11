@@ -68,7 +68,7 @@ export default function OfflineIndicator() {
             ) : (
               <>
                 <SignalSlashIcon className="w-4 h-4" />
-                <span>You're offline. Some features may be limited.</span>
+                <span>You&apos;re offline. Some features may be limited.</span>
               </>
             )}
           </div>
