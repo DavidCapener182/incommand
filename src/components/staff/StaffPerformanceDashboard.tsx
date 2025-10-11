@@ -255,16 +255,16 @@ export default function StaffPerformanceDashboard({
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
                             <span className="text-white font-medium">
-                              {performance.profile.first_name[0]}{performance.profile.last_name[0]}
+                              {performance.full_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                             </span>
                           </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {performance.profile.first_name} {performance.profile.last_name}
+                            {performance.full_name}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {performance.profile.callsign || performance.profile.email}
+                            {performance.callsign || performance.email}
                           </div>
                         </div>
                       </div>
@@ -339,7 +339,7 @@ export default function StaffPerformanceDashboard({
                       Performance Details
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedStaff.profile.first_name} {selectedStaff.profile.last_name}
+                      {selectedStaff.full_name}
                     </p>
                   </div>
                   <button
