@@ -35,6 +35,9 @@ import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
 import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
 import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
 import EndOfEventReport from '@/components/analytics/EndOfEventReport'
+import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
+import RealtimeAnalyticsDashboard from '@/components/analytics/RealtimeAnalyticsDashboard'
+import ComparativeAnalytics, { createSampleEvents } from '@/components/analytics/ComparativeAnalytics'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 interface IncidentRecord {
@@ -74,6 +77,10 @@ export default function AnalyticsPage() {
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
   const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event'>('operational')
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  
+  // Mobile analytics state
+  const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
+  const [sampleEvents] = useState(createSampleEvents())
   
   // Real-time analytics
   const realtimeAnalytics = useRealtimeAnalytics({
@@ -347,22 +354,80 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Mobile Notice - Analytics Hidden on Mobile */}
-      <div className="block md:hidden bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+      {/* Mobile Analytics */}
+      <div className="block md:hidden">
+        <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Analytics</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Swipe through insights</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-                Analytics Dashboard
-              </h1>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Full analytics available on desktop. Use desktop for detailed insights.
-              </p>
+            
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setSelectedMobileView('dashboard')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  selectedMobileView === 'dashboard'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setSelectedMobileView('comparison')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  selectedMobileView === 'comparison'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Compare
+              </button>
+              <button
+                onClick={() => setSelectedMobileView('realtime')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  selectedMobileView === 'realtime'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Live
+              </button>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="p-4">
+          {selectedMobileView === 'dashboard' && (
+            <MobileAnalyticsCarousel
+              cards={createAnalyticsCards()}
+              autoSwipe={false}
+              className="mb-6"
+            />
+          )}
+
+          {selectedMobileView === 'comparison' && (
+            <ComparativeAnalytics
+              currentEvent={sampleEvents[0]}
+              previousEvent={sampleEvents[1]}
+              className="mb-6"
+            />
+          )}
+
+          {selectedMobileView === 'realtime' && (
+            <RealtimeAnalyticsDashboard
+              eventId={eventData?.id || 'current'}
+              className="mb-6"
+            />
+          )}
         </div>
       </div>
 
@@ -593,9 +658,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
                 {activeTab === 'custom-dashboards' && (
                   <CustomDashboardBuilder
-                    eventId={eventData?.id}
-                    onDashboardCreated={(dashboard) => {
-                      console.log('New dashboard created:', dashboard)
+                    eventId={eventData?.id || ''}
+                    onSave={(dashboard) => {
+                      console.log('Dashboard saved:', dashboard)
+                    }}
+                    onCancel={() => {
+                      console.log('Dashboard creation cancelled')
                     }}
                   />
                 )}
