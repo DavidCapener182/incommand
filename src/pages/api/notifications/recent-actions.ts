@@ -97,9 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           table_name,
           record_id,
           created_at,
-          profiles!audit_logs_user_id_fkey (
-            full_name
-          )
+          performed_by
         `)
         .gt('created_at', lastViewedDate.toISOString())
         .order('created_at', { ascending: false })
@@ -117,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             title: `${log.action} ${log.table_name}`,
             description: `Record ID: ${log.record_id}`,
             timestamp: log.created_at,
-            userName: (log.profiles as any)?.full_name || 'System',
+            userName: 'System', // TODO: Look up user name from performed_by if needed
             priority: 'low',
           });
         });

@@ -168,12 +168,6 @@
       "url": "/?action=%s"
     }
   ],
-  "scope_extensions": [
-    {
-      "origin": "https://incommand.app",
-      "type": "include"
-    }
-  ],
   "iarc_rating_id": "",
   "share_target": {
     "action": "/share",
