@@ -28,7 +28,7 @@ export function NightModeProvider({ children }: { children: React.ReactNode }) {
 
   // Monitor system dark mode preference when not in always-on mode
   useEffect(() => {
-    if (!isNightModeAlwaysOn) {
+    if (!isNightModeAlwaysOn && typeof window !== 'undefined') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       const handleChange = (e: MediaQueryListEvent) => {
         setIsNightModeActive(e.matches)
@@ -65,7 +65,7 @@ export function NightModeProvider({ children }: { children: React.ReactNode }) {
       setIsNightModeActive(true)
       document.documentElement.classList.add('dark')
       document.documentElement.setAttribute('data-theme', 'dark')
-    } else {
+    } else if (typeof window !== 'undefined') {
       // Revert to system preference
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       setIsNightModeActive(mediaQuery.matches)

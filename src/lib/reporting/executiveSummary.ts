@@ -3,7 +3,6 @@
  * AI-powered 1-page executive summaries
  */
 
-import { generateAISummary } from '@/lib/ai/summaryGenerator'
 
 export interface ExecutiveSummaryData {
   eventName: string

@@ -1,5 +1,8 @@
 "use client"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { 
   Sparkles, RefreshCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock, 
@@ -39,6 +42,7 @@ import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/anal
 import ComparativeAnalytics from '@/components/analytics/ComparativeAnalytics'
 import MobileOptimizedChart from '@/components/MobileOptimizedChart'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 interface IncidentRecord {
   id: string
@@ -60,10 +64,12 @@ interface EventData {
   id: string
   name?: string
   venue_name?: string
-  start_time: string
-  end_time: string
+  start_date?: string
+  start_time?: string
+  end_time?: string
   max_capacity?: number
   expected_attendance?: number
+  company?: string
 }
 
 export default function AnalyticsPage() {
@@ -77,6 +83,7 @@ export default function AnalyticsPage() {
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
   const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event'>('operational')
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const isDesktop = useMediaQuery('(min-width: 768px)')
   
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
@@ -140,7 +147,7 @@ export default function AnalyticsPage() {
     }
 
     const totalIncidents = incidentData.length
-    const closedIncidents = incidentData.filter(i => i.is_closed || i.status === 'closed').length
+    const closedIncidents = incidentData.filter(i => i.status === 'closed').length
     const avgResponseTime = incidentData.length > 0 
       ? Math.round(incidentData.reduce((sum, i) => sum + (i.response_time_minutes || 0), 0) / incidentData.length)
       : 0
@@ -447,7 +454,8 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile Analytics */}
-      <div className="block md:hidden">
+      {!isDesktop && (
+        <div className="block md:hidden">
         <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -570,7 +578,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Active Incidents</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => !i.is_closed && i.status !== 'closed').length}
+                      {incidentData.filter(i => i.status !== 'closed').length}
                     </div>
                     <div className="text-xs text-green-600 dark:text-green-400">Real-time data</div>
                   </div>
@@ -592,7 +600,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.is_closed || i.status === 'closed').length}
+                      {incidentData.filter(i => i.status === 'closed').length}
                     </div>
                     <div className="text-xs text-green-600 dark:text-green-400">Resolved incidents</div>
                   </div>
@@ -633,7 +641,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Active Incidents</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => !i.is_closed && i.status !== 'closed').length}
+                      {incidentData.filter(i => i.status !== 'closed').length}
                     </div>
                     <div className="text-xs text-green-600 dark:text-green-400">Real-time data</div>
                   </div>
@@ -655,7 +663,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.is_closed || i.status === 'closed').length}
+                      {incidentData.filter(i => i.status === 'closed').length}
                     </div>
                     <div className="text-xs text-green-600 dark:text-green-400">Resolved incidents</div>
                   </div>
@@ -677,10 +685,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Desktop Analytics - Hidden on Mobile */}
-      <div className="hidden md:block">
+      {isDesktop && (
+        <div className="hidden md:block">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
                 {/* Header - Mobile Optimized */}
                 <div className="mb-4 sm:mb-6">
@@ -1205,7 +1215,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }: { name: string; percent?: number }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                        outerRadius={window.innerWidth < 640 ? 60 : 80}
+                        outerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 80}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -1364,7 +1374,8 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </>
         )}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Export Report Modal */}
       <ExportReportModal

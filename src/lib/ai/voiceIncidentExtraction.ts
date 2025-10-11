@@ -8,8 +8,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  compatibility: 'strict'
+  apiKey: process.env.OPENAI_API_KEY || ''
 })
 
 const anthropic = createAnthropic({
@@ -145,7 +144,7 @@ export async function extractIncidentFromVoice(
       system: VOICE_EXTRACTION_SYSTEM,
       prompt: buildVoiceExtractionPrompt(transcript),
       temperature: 0.3,
-      maxTokens: 1000
+      maxOutputTokens: 1000
     })
 
     // Parse the JSON response
@@ -223,7 +222,7 @@ Rules:
 
 Return ONLY JSON.`,
       temperature: 0.2,
-      maxTokens: 200
+      maxOutputTokens: 200
     })
 
     const cleaned = text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '')
@@ -237,4 +236,3 @@ Return ONLY JSON.`,
     }
   }
 }
-

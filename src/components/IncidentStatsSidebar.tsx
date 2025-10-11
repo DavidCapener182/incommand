@@ -167,7 +167,10 @@ export default function IncidentStatsSidebar({ incidents, onExport }: IncidentSt
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => {
+                  const percentage = typeof percent === 'number' ? percent * 100 : 0
+                  return `${name}: ${percentage.toFixed(0)}%`
+                }}
                 outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
@@ -209,4 +212,3 @@ export default function IncidentStatsSidebar({ incidents, onExport }: IncidentSt
     </div>
   )
 }
-

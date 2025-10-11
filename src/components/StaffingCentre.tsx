@@ -219,10 +219,12 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       }
     }
     undoShortcutRef.current = registerShortcuts
-    window.addEventListener('keydown', registerShortcuts)
-    return () => {
-      if (undoShortcutRef.current) {
-        window.removeEventListener('keydown', undoShortcutRef.current)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', registerShortcuts)
+      return () => {
+        if (undoShortcutRef.current) {
+          window.removeEventListener('keydown', undoShortcutRef.current)
+        }
       }
     }
   }, [assignmentHistory])

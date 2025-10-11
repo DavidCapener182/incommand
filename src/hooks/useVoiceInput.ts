@@ -220,8 +220,16 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     }))
   }, [])
 
+  type SpeechOptions = {
+    lang?: string
+    rate?: number
+    pitch?: number
+    volume?: number
+    voice?: SpeechSynthesisVoice | null
+  }
+
   // Speak text (text-to-speech)
-  const speak = useCallback((text: string, options: SpeechSynthesisUtteranceInit = {}) => {
+  const speak = useCallback((text: string, options: SpeechOptions = {}) => {
     if (!synthRef.current) {
       console.error('Speech synthesis not supported')
       return

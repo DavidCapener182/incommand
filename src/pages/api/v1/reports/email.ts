@@ -193,6 +193,6 @@ function generateCSVAttachment(reportData: any): string {
     ['', aiInsights]
   ]
 
-  return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+  return rows.map(row => row.map((cell: any) => `"${cell}"`).join(',')).join('\n')
 }
 

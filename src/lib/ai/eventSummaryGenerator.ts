@@ -8,8 +8,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  compatibility: 'strict'
+  apiKey: process.env.OPENAI_API_KEY || ''
 })
 
 const anthropic = createAnthropic({
@@ -185,8 +184,8 @@ export async function calculateEventMetrics(
     return acc
   }, {} as Record<number, number>)
   
-  const peakHour = Object.entries(hourCounts)
-    .sort(([,a], [,b]) => b - a)[0]
+  const peakHour = (Object.entries(hourCounts) as Array<[string, number]>)
+    .sort(([, a], [, b]) => b - a)[0]
   const peakIncidentHour = peakHour ? `${peakHour[0]}:00 (${peakHour[1]} incidents)` : 'N/A'
 
   // Group incidents by type
@@ -196,7 +195,7 @@ export async function calculateEventMetrics(
     return acc
   }, {} as Record<string, number>)
 
-  const incidentTypes = Object.entries(typeCounts)
+  const incidentTypes = (Object.entries(typeCounts) as Array<[string, number]>)
     .map(([type, count]) => ({
       type,
       count,
@@ -258,7 +257,7 @@ export async function generateAIInsights(
       system: SUMMARY_GENERATION_SYSTEM,
       prompt: generateAIInsightsPrompt(data),
       temperature: 0.3,
-      maxTokens: 1000
+      maxOutputTokens: 1000
     })
 
     const cleaned = text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '')
@@ -298,7 +297,7 @@ export async function generateLessonsLearned(
       system: SUMMARY_GENERATION_SYSTEM,
       prompt: generateLessonsLearnedPrompt(data),
       temperature: 0.3,
-      maxTokens: 800
+      maxOutputTokens: 800
     })
 
     const cleaned = text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '')
@@ -354,7 +353,7 @@ export function calculateStaffPerformance(incidents: any[], staff: any[]): Staff
     return acc
   }, {} as Record<string, { count: number; totalResponseTime: number }>)
 
-  const topPerformers = Object.entries(staffIncidents)
+  const topPerformers = (Object.entries(staffIncidents) as Array<[string, { count: number; totalResponseTime: number }]>)
     .map(([callsign, stats]) => ({
       callsign,
       incidentsHandled: stats.count,

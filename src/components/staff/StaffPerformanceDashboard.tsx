@@ -5,7 +5,6 @@ import {
   ClockIcon,
   CheckCircleIcon,
   StarIcon,
-  TrendingUpIcon,
   UserGroupIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
@@ -30,6 +29,7 @@ interface StaffPerformance {
   overall_score: number
   experience_level: string
   active_assignments: number
+  supervisor_notes?: string | null
 }
 
 interface StaffPerformanceDashboardProps {

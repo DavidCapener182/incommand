@@ -26,10 +26,11 @@ class SmartCache {
     this.maxSize = maxSize
     
     // Load cache from localStorage if available
-    this.loadFromStorage()
-    
-    // Periodic cleanup
-    this.startCleanup()
+    if (typeof window !== 'undefined') {
+      this.loadFromStorage()
+      // Periodic cleanup only in browser
+      this.startCleanup()
+    }
   }
 
   /**

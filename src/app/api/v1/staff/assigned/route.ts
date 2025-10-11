@@ -69,18 +69,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match the expected format
-    const assignedStaff = (assignments || []).map(assignment => ({
-      id: assignment.staff?.id,
-      full_name: assignment.staff?.full_name,
-      email: assignment.staff?.email,
-      contact_number: assignment.staff?.contact_number,
-      callsign: assignment.callsign,
-      position: assignment.position_name,
-      department: assignment.department,
-      position_id: assignment.position_id,
-      assigned_at: assignment.assigned_at,
-      skill_tags: assignment.staff?.skill_tags || []
-    }))
+    const assignedStaff = (assignments || []).map(assignment => {
+      const staffData = Array.isArray(assignment.staff) ? assignment.staff[0] : assignment.staff
+      return {
+        id: staffData?.id,
+        full_name: staffData?.full_name,
+        email: staffData?.email,
+        contact_number: staffData?.contact_number,
+        callsign: assignment.callsign,
+        position: assignment.position_name,
+        department: assignment.department,
+        position_id: assignment.position_id,
+        assigned_at: assignment.assigned_at,
+        skill_tags: staffData?.skill_tags || []
+      }
+    })
 
     return NextResponse.json({
       success: true,

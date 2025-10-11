@@ -165,7 +165,7 @@ export default function SemanticSearchBar({
             <button
               onClick={() => setShowFiltersPanel(!showFiltersPanel)}
               className={`p-1 rounded transition-colors ${
-                Object.keys(filters).length > 0
+                Object.keys(filters ?? {}).length > 0
                   ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`}

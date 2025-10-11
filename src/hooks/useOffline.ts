@@ -135,6 +135,18 @@ export function useOffline() {
     }
   }, [])
 
+  const countStoreItems = (store: IDBObjectStore) => new Promise<number>((resolve, reject) => {
+    const request = store.count()
+    request.onsuccess = () => resolve(request.result || 0)
+    request.onerror = () => reject(request.error)
+  })
+
+  const getAllStoreItems = <T>(store: IDBObjectStore) => new Promise<T[]>((resolve, reject) => {
+    const request = store.getAll()
+    request.onsuccess = () => resolve((request.result || []) as T[])
+    request.onerror = () => reject(request.error)
+  })
+
   // Get pending sync items count
   const getPendingSyncCount = useCallback(async () => {
     try {
@@ -142,11 +154,11 @@ export function useOffline() {
       
       const incidentsTx = db.transaction('pendingIncidents', 'readonly')
       const incidentsStore = incidentsTx.objectStore('pendingIncidents')
-      const incidentsCount = await incidentsStore.count()
+      const incidentsCount = await countStoreItems(incidentsStore)
       
       const logsTx = db.transaction('pendingLogs', 'readonly')
       const logsStore = logsTx.objectStore('pendingLogs')
-      const logsCount = await logsStore.count()
+      const logsCount = await countStoreItems(logsStore)
       
       return incidentsCount + logsCount
     } catch (error) {
@@ -191,7 +203,7 @@ export function useOffline() {
       // Sync incidents
       const incidentsTx = db.transaction('pendingIncidents', 'readwrite')
       const incidentsStore = incidentsTx.objectStore('pendingIncidents')
-      const incidents = await incidentsStore.getAll()
+      const incidents = await getAllStoreItems<any>(incidentsStore)
       
       for (const incident of incidents) {
         const response = await fetch('/api/incidents/create', {
@@ -208,7 +220,7 @@ export function useOffline() {
       // Sync logs
       const logsTx = db.transaction('pendingLogs', 'readwrite')
       const logsStore = logsTx.objectStore('pendingLogs')
-      const logs = await logsStore.getAll()
+      const logs = await getAllStoreItems<any>(logsStore)
       
       for (const log of logs) {
         const response = await fetch('/api/logs/create', {

@@ -107,7 +107,7 @@ class PerformanceMonitor {
           this.recordMetric({
             type: 'userInteraction',
             name: 'First Input Delay',
-            duration: entry.processingStart - entry.startTime,
+            duration: (entry as any).processingStart - entry.startTime,
             metadata: { name: entry.name }
           })
         }

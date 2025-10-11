@@ -18,6 +18,7 @@ interface LazyImageProps {
   style?: React.CSSProperties
   onLoad?: () => void
   onError?: () => void
+  onClick?: () => void
 }
 
 export default function LazyImage({
@@ -34,7 +35,8 @@ export default function LazyImage({
   fill = false,
   style,
   onLoad,
-  onError
+  onError,
+  onClick
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isInView, setIsInView] = useState(priority)
@@ -94,6 +96,7 @@ export default function LazyImage({
     <div
       ref={imgRef}
       className={`relative overflow-hidden ${className}`}
+      onClick={onClick}
       style={{
         ...style,
         minHeight: height ? `${height}px` : undefined,

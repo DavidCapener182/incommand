@@ -67,18 +67,19 @@ class OptimizedRealtimeSync {
     const channel = supabase
       .channel(channelId)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: config.event || '*',
           schema: config.schema || 'public',
           table: config.table,
           filter: config.filter
         },
-        (payload) => {
+        (payload: any) => {
+          const typedPayload = payload as RealtimePostgresChangesPayload<any>
           if (enableBatching) {
-            this.addToBatch(channelId, payload, callbacks, batchDelay, batchSize)
+            this.addToBatch(channelId, typedPayload, callbacks, batchDelay, batchSize)
           } else {
-            this.handlePayload(payload, callbacks)
+            this.handlePayload(typedPayload, callbacks)
           }
         }
       )

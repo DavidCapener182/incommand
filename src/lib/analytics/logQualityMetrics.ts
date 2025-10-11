@@ -210,7 +210,7 @@ function getFieldBreakdown(logs: IncidentLog[]): LogQualityMetrics['breakdown'] 
       if (hasValue) {
         totalScore += 100
       } else {
-        issues.push(`Missing in log ${log.id.substring(0, 8)}`)
+        issues.push(`Missing in log ${String(log.id).substring(0, 8)}`)
       }
     })
 

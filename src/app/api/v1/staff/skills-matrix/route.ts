@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       })) || []
       
       // Also include skill_tags from staff table as basic skills
-      const skillTagSkills = (member.skill_tags || []).map((tag, index) => ({
+      const skillTagSkills = (member.skill_tags || []).map((tag: string, index: number) => ({
         id: `tag-${member.id}-${index}`,
         profile_id: member.id,
         skill_name: tag,

@@ -41,6 +41,68 @@ export interface StaffPerformance {
 }
 
 /**
+ * Generate AI summary for shift handoff reports
+ */
+export function generateAISummary(data: {
+  eventName: string
+  incidents: any[]
+  staffActivity: any[]
+  startDate: Date
+  endDate: Date
+}): { executiveSummary: string } {
+  const { incidents, staffActivity, eventName } = data
+  
+  const totalIncidents = incidents.length
+  const openIncidents = incidents.filter(inc => !inc.is_closed).length
+  const highPriorityIncidents = incidents.filter(inc => inc.priority === 'high' || inc.priority === 'urgent').length
+  
+  // Calculate basic metrics
+  const avgResponseTime = incidents
+    .filter(inc => inc.response_time_minutes)
+    .reduce((acc, inc) => acc + (inc.response_time_minutes || 0), 0) / 
+    incidents.filter(inc => inc.response_time_minutes).length || 0
+  
+  const qualityScore = incidents.length > 0 ? 
+    incidents.filter(inc => inc.entry_type === 'contemporaneous').length / incidents.length * 100 : 0
+  
+  // Generate summary
+  let summary = `Shift Summary for ${eventName}:\n\n`
+  summary += `• Total incidents handled: ${totalIncidents}\n`
+  summary += `• Open incidents: ${openIncidents}\n`
+  summary += `• High priority incidents: ${highPriorityIncidents}\n`
+  summary += `• Average response time: ${avgResponseTime.toFixed(1)} minutes\n`
+  summary += `• Log quality score: ${qualityScore.toFixed(1)}%\n\n`
+  
+  if (staffActivity.length > 0) {
+    summary += `Staff Activity:\n`
+    staffActivity.forEach(staff => {
+      summary += `• ${staff.callsign}: ${staff.logCount} incidents logged\n`
+    })
+    summary += `\n`
+  }
+  
+  // Add recommendations
+  if (openIncidents > 0) {
+    summary += `Recommendations:\n`
+    summary += `• ${openIncidents} incident(s) require follow-up by next shift\n`
+  }
+  
+  if (highPriorityIncidents > totalIncidents * 0.3) {
+    summary += `• High incident volume - consider additional staffing\n`
+  }
+  
+  if (avgResponseTime > 10) {
+    summary += `• Response times above target - review procedures\n`
+  }
+  
+  if (qualityScore < 75) {
+    summary += `• Log quality below standard - provide training\n`
+  }
+  
+  return { executiveSummary: summary }
+}
+
+/**
  * Generate comprehensive event summary with AI insights
  */
 export function generateEventSummary(

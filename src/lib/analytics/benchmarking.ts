@@ -8,8 +8,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  compatibility: 'strict'
+  apiKey: process.env.OPENAI_API_KEY || ''
 })
 
 const anthropic = createAnthropic({
@@ -305,7 +304,7 @@ export async function generateBenchmarkingAnalysis(
       system: BENCHMARKING_SYSTEM,
       prompt: generateBenchmarkingPrompt(currentEvent, venueBenchmark),
       temperature: 0.3,
-      maxTokens: 1000
+      maxOutputTokens: 1000
     })
 
     const cleaned = text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '')

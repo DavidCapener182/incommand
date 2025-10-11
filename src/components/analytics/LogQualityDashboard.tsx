@@ -328,7 +328,10 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
+                label={({ name, value }) => {
+                  const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
+                  return `${name}: ${numericValue.toFixed(1)}%`
+                }}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
@@ -337,7 +340,12 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                formatter={(value: number | string) => {
+                  const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
+                  return `${numericValue.toFixed(1)}%`
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -447,4 +455,3 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
     </div>
   )
 }
-

@@ -4,7 +4,7 @@
  */
 
 import { emailService } from '@/lib/notifications/emailService'
-import { generateAISummary } from '@/lib/ai/summaryGenerator'
+import * as summaryGenerator from '@/lib/ai/summaryGenerator'
 
 export interface ShiftHandoffReport {
   shiftId: string
@@ -136,11 +136,11 @@ export class ShiftHandoffAutomation {
       }).filter(Boolean) || []
 
       const averageResponseTime = responseTimes.length > 0
-        ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+        ? responseTimes.filter(time => time !== null && time !== undefined).reduce((sum, time) => sum + time, 0) / responseTimes.length
         : 0
 
       const averageResolutionTime = resolutionTimes.length > 0
-        ? resolutionTimes.reduce((sum, time) => sum + time, 0) / resolutionTimes.length
+        ? resolutionTimes.filter(time => time !== null && time !== undefined).reduce((sum, time) => sum + time, 0) / resolutionTimes.length
         : 0
 
       // Quality metrics
@@ -172,7 +172,7 @@ export class ShiftHandoffAutomation {
             amendmentRate: 0
           }))
 
-          const summary = generateAISummary({
+          const summary = summaryGenerator.generateAISummary({
             eventName: 'Shift Event',
             incidents: incidents.map(inc => ({
               ...inc,

@@ -324,11 +324,10 @@ export default function ComparativeAnalytics({
         </div>
 
         <MobileOptimizedChart
-          data={chartData}
+          data={chartData.map(d => ({ x: d.x, y: d.y1, label: d.label }))}
           title=""
           type="line"
           height={300}
-          showLegend={false}
         />
       </motion.div>
 
@@ -375,7 +374,8 @@ export function createSampleEvents(): EventComparison[] {
       incidents: 87,
       staff: 45,
       resolutionTime: 8.5,
-      satisfaction: 4.2
+      satisfaction: 4.2,
+      company: 'Sample Company'
     },
     {
       id: 'previous',
@@ -385,7 +385,8 @@ export function createSampleEvents(): EventComparison[] {
       incidents: 92,
       staff: 42,
       resolutionTime: 12.3,
-      satisfaction: 3.8
+      satisfaction: 3.8,
+      company: 'Sample Company'
     }
   ]
 }

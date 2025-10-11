@@ -166,27 +166,31 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       const complianceScore = (contemporaneousRate * 0.4 + (100 - amendmentRate) * 0.3 + factualLanguageRate * 0.3)
 
       // Calculate performance metrics
-      const responseTimes = incidents?.map(i => {
-        if (i.responded_at && i.timestamp) {
-          const created = new Date(i.timestamp).getTime()
-          const responded = new Date(i.responded_at).getTime()
-          return (responded - created) / (1000 * 60) // minutes
-        }
-        return null
-      }).filter(Boolean) || []
+      const responseTimes = (incidents ?? [])
+        .map(i => {
+          if (i.responded_at && i.timestamp) {
+            const created = new Date(i.timestamp).getTime()
+            const responded = new Date(i.responded_at).getTime()
+            return (responded - created) / (1000 * 60) // minutes
+          }
+          return null
+        })
+        .filter((time): time is number => typeof time === 'number')
 
       const averageResponseTime = responseTimes.length > 0 
         ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length 
         : 0
 
-      const resolutionTimes = incidents?.map(i => {
-        if (i.resolved_at && i.timestamp) {
-          const created = new Date(i.timestamp).getTime()
-          const resolved = new Date(i.resolved_at).getTime()
-          return (resolved - created) / (1000 * 60) // minutes
-        }
-        return null
-      }).filter(Boolean) || []
+      const resolutionTimes = (incidents ?? [])
+        .map(i => {
+          if (i.resolved_at && i.timestamp) {
+            const created = new Date(i.timestamp).getTime()
+            const resolved = new Date(i.resolved_at).getTime()
+            return (resolved - created) / (1000 * 60) // minutes
+          }
+          return null
+        })
+        .filter((time): time is number => typeof time === 'number')
 
       const averageResolutionTime = resolutionTimes.length > 0 
         ? resolutionTimes.reduce((sum, time) => sum + time, 0) / resolutionTimes.length 

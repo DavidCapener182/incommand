@@ -60,6 +60,7 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
     if (!formData.full_name.trim()) {
       addToast({
         type: 'error',
+        title: 'Missing Name',
         message: 'Full name is required',
         duration: 4000
       })
@@ -87,6 +88,7 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
 
       addToast({
         type: 'success',
+        title: 'Staff Added',
         message: 'Staff member added successfully!',
         duration: 4000
       })
@@ -105,6 +107,7 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
       console.error('Error adding staff member:', error)
       addToast({
         type: 'error',
+        title: 'Add Failed',
         message: 'Failed to add staff member: ' + error.message,
         duration: 6000
       })

@@ -20,7 +20,7 @@ const nextConfig = {
   
   // Bundle optimization
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizePackageImports: ['@heroicons/react', 'framer-motion'],
   },
   async headers() {

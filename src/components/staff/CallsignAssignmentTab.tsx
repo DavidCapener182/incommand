@@ -162,6 +162,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
       console.error('Error loading positions:', error)
       addToast({
         type: 'error',
+        title: 'Load Failed',
         message: 'Failed to load positions',
         duration: 4000
       })
@@ -204,6 +205,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
 
         addToast({
           type: 'success',
+          title: 'Assignment Saved',
           message: `${staffMember.name} assigned to ${position.callsign}`,
           duration: 4000
         })
@@ -215,6 +217,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
       console.error('Failed to assign staff:', error)
       addToast({
         type: 'error',
+        title: 'Assignment Failed',
         message: 'Failed to save assignment',
         duration: 4000
       })
@@ -252,6 +255,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
 
             addToast({
               type: 'success',
+              title: 'Staff Unassigned',
               message: `Staff unassigned from ${position.callsign}`,
               duration: 4000
             })
@@ -267,6 +271,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
       console.error('Failed to unassign staff:', error)
       addToast({
         type: 'error',
+        title: 'Unassign Failed',
         message: 'Failed to unassign staff',
         duration: 4000
       })
@@ -277,6 +282,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     if (!newPosition.callsign || !newPosition.position) {
       addToast({
         type: 'error',
+        title: 'Missing Details',
         message: 'Callsign and position are required',
         duration: 4000
       })
@@ -301,6 +307,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     setShowAddPositionModal(false)
     addToast({
       type: 'success',
+      title: 'Position Added',
       message: 'Position added successfully',
       duration: 4000
     })
@@ -321,6 +328,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     if (!editPosition.callsign || !editPosition.position || !selectedPosition) {
       addToast({
         type: 'error',
+        title: 'Missing Details',
         message: 'Callsign and position are required',
         duration: 4000
       })
@@ -343,6 +351,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     setSelectedPosition(null)
     addToast({
       type: 'success',
+      title: 'Position Updated',
       message: 'Position updated successfully',
       duration: 4000
     })
@@ -364,6 +373,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     setPositions(prev => prev.filter(p => p.id !== positionId))
     addToast({
       type: 'success',
+      title: 'Position Removed',
       message: 'Position deleted',
       duration: 4000
     })

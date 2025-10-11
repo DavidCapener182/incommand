@@ -87,7 +87,8 @@ export async function POST(
     const { data: similarEvents, error: similarEventsError } = await supabase
       .from('events')
       .select(`
-        id, event_date, expected_attendance, doors_open_time, venue_clear_time, venue_type, venue_name,
+        id, name, event_date, expected_attendance, doors_open_time, venue_clear_time, venue_type, venue_name,
+        start_time, end_time,
         incident_logs(*)
       `)
       .eq('venue_type', venueType)
@@ -184,7 +185,12 @@ export async function POST(
 
     // Calculate percentile rankings for current event
     const percentileRankings = calculatePercentileRankings(currentMetrics, venueData)
-    venueBenchmark.percentileRankings = percentileRankings
+    venueBenchmark.percentileRankings = percentileRankings as {
+      incidentsPerHour: number
+      responseTime: number
+      resolutionRate: number
+      staffEfficiency: number
+    }
 
     // Generate AI analysis
     const benchmarkingResult = await generateBenchmarkingAnalysis(

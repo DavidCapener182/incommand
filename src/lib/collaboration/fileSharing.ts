@@ -265,9 +265,9 @@ export class FileSharing {
       let files = data as SharedFile[]
       if (filters.userId) {
         files = files.filter(file =>
-          file.is_public ||
-          file.uploaded_by === filters.userId ||
-          file.shared_with.includes(filters.userId)
+          file.isPublic ||
+          file.uploadedBy === filters.userId ||
+          filters.userId && file.sharedWith.includes(filters.userId)
         )
       }
 

@@ -5,7 +5,7 @@ import { SparklesIcon, PaperAirplaneIcon, MicrophoneIcon } from '@heroicons/reac
 import { motion } from 'framer-motion'
 import { conversationalAI, type ChatMessage } from '@/lib/ai/assistant/conversationalAI'
 
-export default function AIChat({ className = '' }: { className?: string }) {
+export default function AIChat({ className = '', isVisible = true }: { className?: string; isVisible?: boolean }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -25,6 +25,8 @@ export default function AIChat({ className = '' }: { className?: string }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  if (!isVisible) return null
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl border ${className}`}>

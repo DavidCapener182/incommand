@@ -300,10 +300,16 @@ const StatCard: React.FC<StatCardProps> = ({
   const cardRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const checkScreen = () => setIsDesktop(window.innerWidth >= 768);
+    const checkScreen = () => {
+      if (typeof window !== 'undefined') {
+        setIsDesktop(window.innerWidth >= 768);
+      }
+    };
     checkScreen();
-    window.addEventListener('resize', checkScreen);
-    return () => window.removeEventListener('resize', checkScreen);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkScreen);
+      return () => window.removeEventListener('resize', checkScreen);
+    }
   }, []);
 
   const handleMouseEnter = () => {
@@ -891,16 +897,22 @@ export default function Dashboard() {
             ? `${totalIncidents} open incidents • Latest: ${recentType}`
             : `${openIncidents} open / ${totalIncidents} total • Latest: ${recentType}`;
 
-      window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: summary }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: summary }));
+      }
       
       // Dispatch recent incidents for scrolling ticker
       const recentForTicker = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type)).slice(0, 5).reverse(); // Get 5 most recent and reverse for logical order (oldest first)
-      window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: recentForTicker }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: recentForTicker }));
+      }
     } else {
       setTimeSinceLastIncident('No incidents');
       setRecentIncidents([]);
-      window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: 'No incidents' }));
-      window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: [] }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('updateIncidentSummary', { detail: 'No incidents' }));
+        window.dispatchEvent(new CustomEvent('updateRecentIncidents', { detail: [] }));
+      }
     }
   }, [incidents]);
 

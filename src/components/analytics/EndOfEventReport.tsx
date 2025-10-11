@@ -81,30 +81,6 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   })
   const [isSendingEmail, setIsSendingEmail] = useState(false)
 
-  useEffect(() => {
-    if (eventId && eventId !== '') {
-      fetchEventData()
-    } else {
-      setLoading(false)
-      setEventData(null)
-    }
-  }, [eventId, fetchEventData])
-
-  // If no eventId provided, show message to select an event
-  if (!eventId || eventId === '') {
-    return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center ${className}`}>
-        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          No Event Selected
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Please select an event to generate the end-of-event report.
-        </p>
-      </div>
-    )
-  }
-
   const fetchEventData = async () => {
     setLoading(true)
     try {
@@ -171,18 +147,43 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       }
 
       // Generate AI insights and lessons learned
-      await generateAIInsights(event, incidents, staffAssignments)
+      await generateAIInsights(event, incidents || [], staffAssignments || [])
 
     } catch (error) {
       console.error('Error fetching event data:', error)
       addToast({
         type: 'error',
+        title: 'Event Data Error',
         message: 'Failed to load event data',
         duration: 4000
       })
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    if (eventId && eventId !== '') {
+      fetchEventData()
+    } else {
+      setLoading(false)
+      setEventData(null)
+    }
+  }, [eventId, fetchEventData])
+
+  // If no eventId provided, show message to select an event
+  if (!eventId || eventId === '') {
+    return (
+      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center ${className}`}>
+        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          No Event Selected
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Please select an event to generate the end-of-event report.
+        </p>
+      </div>
+    )
   }
 
   const generateAIInsights = async (event: EventData, incidents: any[], staffAssignments: any[]) => {
@@ -260,6 +261,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
     if (!eventData || !incidentSummary || !staffPerformance || !lessonsLearned) {
       addToast({
         type: 'error',
+        title: 'Cannot Generate Report',
         message: 'Missing data for report generation',
         duration: 4000
       })
@@ -291,6 +293,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
 
       addToast({
         type: 'success',
+        title: 'Report Ready',
         message: 'Event report generated successfully!',
         duration: 4000
       })
@@ -299,6 +302,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
       console.error('Error generating report:', error)
       addToast({
         type: 'error',
+        title: 'Report Failed',
         message: 'Failed to generate report',
         duration: 4000
       })
@@ -343,6 +347,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
     if (!emailForm.recipients.trim()) {
       addToast({
         type: 'error',
+        title: 'Missing Recipients',
         message: 'Please enter at least one recipient email',
         duration: 4000
       })
@@ -375,6 +380,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
 
       addToast({
         type: 'success',
+        title: 'Email Sent',
         message: 'Report sent successfully!',
         duration: 4000
       })
@@ -391,6 +397,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
       console.error('Error sending email:', error)
       addToast({
         type: 'error',
+        title: 'Email Failed',
         message: 'Failed to send email. Please try again.',
         duration: 4000
       })

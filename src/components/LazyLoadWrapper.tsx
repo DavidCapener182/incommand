@@ -120,9 +120,10 @@ export function withLazyLoad<P extends object>(
   const LazyComponent = lazy(importFunc)
   
   return function LazyLoadedComponent(props: P) {
+    const Component = LazyComponent as unknown as React.ComponentType<P>
     return (
       <Suspense fallback={fallback || <LoadingSkeleton />}>
-        <LazyComponent {...props} />
+        <Component {...props} />
       </Suspense>
     )
   }

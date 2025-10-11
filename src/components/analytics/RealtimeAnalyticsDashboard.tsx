@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  ChartBarIcon, 
-  ClockIcon, 
+import {
+  ChartBarIcon,
+  ClockIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   ArrowPathIcon,
   PauseIcon,
   PlayIcon
@@ -123,9 +123,9 @@ export default function RealtimeAnalyticsDashboard({
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
-        return TrendingUpIcon
+        return ArrowTrendingUpIcon
       case 'down':
-        return TrendingDownIcon
+        return ArrowTrendingDownIcon
       default:
         return ChartBarIcon
     }

@@ -51,7 +51,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Skill not found' }, { status: 404 })
     }
 
-    if (existingSkill.profiles.organization_id !== userProfile.organization_id) {
+    const profileData = Array.isArray(existingSkill.profiles) ? existingSkill.profiles[0] : existingSkill.profiles
+    if (profileData?.organization_id !== userProfile.organization_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -154,7 +155,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Skill not found' }, { status: 404 })
     }
 
-    if (existingSkill.profiles.organization_id !== userProfile.organization_id) {
+    const profileDataDelete = Array.isArray(existingSkill.profiles) ? existingSkill.profiles[0] : existingSkill.profiles
+    if (profileDataDelete?.organization_id !== userProfile.organization_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
