@@ -36,8 +36,8 @@ export async function GET(
 
     // Get all staff in the company
     const { data: staff, error: staffError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, callsign, skill_tags, experience_level, active_assignments')
+      .from('staff')
+      .select('id, full_name, email, contact_number, skill_tags, active')
       .eq('company_id', userProfile.company_id)
 
     if (staffError) {
@@ -67,11 +67,10 @@ export async function GET(
       const avgResponseTime = Math.floor(Math.random() * 15) + 1 // 1-15 minutes (dummy data)
       const logQualityScore = Math.floor(Math.random() * 40) + 60 // 60-100%
       
-      // Calculate overall score based on incidents logged, response time, and experience
-      const experienceMultiplier = member.experience_level === 'senior' ? 1.2 : 
-                                   member.experience_level === 'intermediate' ? 1.0 : 0.8
+      // Calculate overall score based on incidents logged, response time, and active status
+      const activeMultiplier = member.active ? 1.1 : 0.9
       const overallScore = Math.floor(
-        (incidentsCount * 10 * experienceMultiplier) + 
+        (incidentsCount * 10 * activeMultiplier) + 
         (Math.max(0, 15 - avgResponseTime) * 2) + 
         (logQualityScore * 0.5)
       )
@@ -80,13 +79,13 @@ export async function GET(
         profile_id: member.id,
         full_name: member.full_name,
         email: member.email,
-        callsign: member.callsign || member.full_name,
+        callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
         incidents_logged: incidentsCount,
         avg_response_time: avgResponseTime,
         log_quality_score: logQualityScore,
         overall_score: Math.min(100, Math.max(0, overallScore)),
-        experience_level: member.experience_level || 'junior',
-        active_assignments: member.active_assignments || 0
+        experience_level: 'intermediate', // Default since staff table doesn't have experience_level
+        active_assignments: member.active ? 1 : 0
       })
     }
 

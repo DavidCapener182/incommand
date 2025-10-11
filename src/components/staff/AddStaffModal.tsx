@@ -70,19 +70,15 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
     try {
       // Generate a UUID for the staff member
       const { data, error } = await supabase
-        .from('profiles')
+        .from('staff')
         .insert({
           full_name: formData.full_name.trim(),
           email: formData.email?.trim() || null,
-          phone: formData.phone?.trim() || null,
-          callsign: formData.callsign?.trim() || null,
-          experience_level: formData.experience_level,
-          staff_role: formData.staff_role?.trim() || null,
+          contact_number: formData.phone?.trim() || null,
           skill_tags: formData.skill_tags,
+          notes: formData.staff_role?.trim() || null,
           company_id: companyId,
-          company: 'Compact Security Services', // Set company name
-          active_assignments: 0,
-          is_available: true
+          active: true
         })
         .select()
         .single()
