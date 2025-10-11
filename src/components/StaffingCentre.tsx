@@ -211,6 +211,59 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     fetchCurrentEvent()
   }, [])
 
+  const handleUndo = useCallback(() => {
+    setAssignmentHistory((previous) => {
+      if (previous.length === 0) return previous
+      const historyCopy = [...previous]
+      const lastEntry = historyCopy.pop()
+      if (!lastEntry) return previous
+
+      setColumns((prevColumns) => {
+        const next = { ...prevColumns }
+        let updatedAvailable = [...availableStaff]
+
+        const removeFromDestination = (columnId: string, staffId: string): StaffMember | null => {
+          if (columnId === 'available') {
+            const index = updatedAvailable.findIndex((staff) => staff.id === staffId)
+            if (index === -1) return null
+            const [removed] = updatedAvailable.splice(index, 1)
+            setAvailableStaff(updatedAvailable)
+            return removed
+          }
+          const column = next[columnId]
+          if (!column) return null
+          const index = column.staff.findIndex((staff) => staff.id === staffId)
+          if (index === -1) return null
+          const updated = [...column.staff]
+          const [removed] = updated.splice(index, 1)
+          next[columnId] = { ...column, staff: updated }
+          return removed
+        }
+
+        const staff = removeFromDestination(lastEntry.to_department, lastEntry.staff_id)
+        if (!staff) return prevColumns
+
+        if (lastEntry.from_department === 'available') {
+          updatedAvailable = [...updatedAvailable, staff]
+          setAvailableStaff(updatedAvailable)
+        } else {
+          const column = next[lastEntry.from_department]
+          if (column) {
+            next[lastEntry.from_department] = {
+              ...column,
+              staff: [...column.staff, staff],
+            }
+          }
+        }
+
+        setAnnouncement(`${staff.name} moved back to ${lastEntry.from_department === 'available' ? 'Available pool' : next[lastEntry.from_department]?.name}`)
+        return next
+      })
+
+      return historyCopy
+    })
+  }, [availableStaff])
+
   useEffect(() => {
     const registerShortcuts = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
@@ -395,58 +448,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     [availableStaff, columns]
   )
 
-  const handleUndo = useCallback(() => {
-    setAssignmentHistory((previous) => {
-      if (previous.length === 0) return previous
-      const historyCopy = [...previous]
-      const lastEntry = historyCopy.pop()
-      if (!lastEntry) return previous
-
-      setColumns((prevColumns) => {
-        const next = { ...prevColumns }
-        let updatedAvailable = [...availableStaff]
-
-        const removeFromDestination = (columnId: string, staffId: string): StaffMember | null => {
-          if (columnId === 'available') {
-            const index = updatedAvailable.findIndex((staff) => staff.id === staffId)
-            if (index === -1) return null
-            const [removed] = updatedAvailable.splice(index, 1)
-            setAvailableStaff(updatedAvailable)
-            return removed
-          }
-          const column = next[columnId]
-          if (!column) return null
-          const index = column.staff.findIndex((staff) => staff.id === staffId)
-          if (index === -1) return null
-          const updated = [...column.staff]
-          const [removed] = updated.splice(index, 1)
-          next[columnId] = { ...column, staff: updated }
-          return removed
-        }
-
-        const staff = removeFromDestination(lastEntry.to_department, lastEntry.staff_id)
-        if (!staff) return prevColumns
-
-        if (lastEntry.from_department === 'available') {
-          updatedAvailable = [...updatedAvailable, staff]
-          setAvailableStaff(updatedAvailable)
-        } else {
-          const column = next[lastEntry.from_department]
-          if (column) {
-            next[lastEntry.from_department] = {
-              ...column,
-              staff: [...column.staff, staff],
-            }
-          }
-        }
-
-        setAnnouncement(`${staff.name} moved back to ${lastEntry.from_department === 'available' ? 'Available pool' : next[lastEntry.from_department]?.name}`)
-        return next
-      })
-
-      return historyCopy
-    })
-  }, [availableStaff])
 
   const filteredAvailableStaff = useMemo(() => {
     if (!searchTerm) return availableStaff
