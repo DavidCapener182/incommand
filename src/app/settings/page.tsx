@@ -105,7 +105,7 @@ export default function GeneralSettingsPage() {
     };
 
     fetchUserData();
-  }, [user, preferences.theme]);
+  }, [user, preferences?.theme]);
 
   const updateProfile = async (field: string, value: any) => {
     if (!profile) return;

@@ -40,37 +40,6 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
     }
   };
 
-  // Auto-rotate cards every 30 seconds
-  useEffect(() => {
-    if (!autoRotate || !aiSummary) return;
-
-    const interval = setInterval(() => {
-      setCurrentCardIndex(prev => (prev + 1) % getCards().length);
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [autoRotate, aiSummary, getCards]);
-
-  // Fetch data on mount
-  useEffect(() => {
-    fetchAISummary();
-  }, []);
-
-  // Manual navigation
-  const goToPrevious = () => {
-    setAutoRotate(false);
-    setCurrentCardIndex(prev => prev === 0 ? getCards().length - 1 : prev - 1);
-    // Re-enable auto-rotate after 2 minutes
-    setTimeout(() => setAutoRotate(true), 120000);
-  };
-
-  const goToNext = () => {
-    setAutoRotate(false);
-    setCurrentCardIndex(prev => (prev + 1) % getCards().length);
-    // Re-enable auto-rotate after 2 minutes
-    setTimeout(() => setAutoRotate(true), 120000);
-  };
-
   // Generate cards from AI data
   const getCards = useCallback(() => {
     if (!aiSummary) return [];
@@ -156,6 +125,37 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
 
     return cards;
   }, [aiSummary]);
+
+  // Auto-rotate cards every 30 seconds
+  useEffect(() => {
+    if (!autoRotate || !aiSummary) return;
+
+    const interval = setInterval(() => {
+      setCurrentCardIndex(prev => (prev + 1) % getCards().length);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [autoRotate, aiSummary, getCards]);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchAISummary();
+  }, []);
+
+  // Manual navigation
+  const goToPrevious = () => {
+    setAutoRotate(false);
+    setCurrentCardIndex(prev => prev === 0 ? getCards().length - 1 : prev - 1);
+    // Re-enable auto-rotate after 2 minutes
+    setTimeout(() => setAutoRotate(true), 120000);
+  };
+
+  const goToNext = () => {
+    setAutoRotate(false);
+    setCurrentCardIndex(prev => (prev + 1) % getCards().length);
+    // Re-enable auto-rotate after 2 minutes
+    setTimeout(() => setAutoRotate(true), 120000);
+  };
 
   const cards = getCards();
 

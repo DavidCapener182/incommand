@@ -137,12 +137,6 @@ export default function SupportPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchUserTickets();
-    }
-  }, [currentUser, fetchUserTickets]);
-
   const checkUser = async () => {
     try {
       setIsLoading(true);
@@ -191,6 +185,12 @@ export default function SupportPage() {
       console.error('Error fetching user tickets:', error);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserTickets();
+    }
+  }, [currentUser, fetchUserTickets]);
 
   const fetchSupportMessages = async (ticketId: string) => {
     try {
