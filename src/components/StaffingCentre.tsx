@@ -193,7 +193,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         const { data: events } = await supabase
           .from('events')
           .select('*')
-          .eq('is_active', true)
+          .eq('is_current', true)
           .order('created_at', { ascending: false })
           .limit(1)
 
@@ -247,8 +247,8 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     if (!companyId) return
     const fetchStaff = async () => {
       const { data, error } = await supabase
-        .from('staff')
-        .select('id, full_name, callsign, skill_tags, experience_level, previous_events, current_role, active_assignments, company_id')
+        .from('profiles')
+        .select('id, full_name, callsign, skill_tags, experience_level, previous_events, staff_role, active_assignments, company_id')
         .eq('company_id', companyId)
         .order('full_name', { ascending: true })
 
@@ -281,7 +281,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       qualifications,
       experience_level: experience,
       previous_events: Array.isArray(record.previous_events) ? record.previous_events : [],
-      current_role: record.current_role ?? undefined,
+      current_role: record.staff_role ?? undefined,
       active_assignments: typeof record.active_assignments === 'number' ? record.active_assignments : undefined,
     }
   }, [])
