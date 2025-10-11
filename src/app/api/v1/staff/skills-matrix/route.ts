@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organization_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -25,21 +25,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get skills matrix data using the database function
-    const { data: skillsMatrix, error: matrixError } = await supabase
-      .rpc('get_skills_matrix', { p_organization_id: profile.organization_id })
+    // Get all staff in the company
+    const { data: staff, error: staffError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, callsign, experience_level, staff_role, company_id')
+      .eq('company_id', profile.company_id)
 
-    if (matrixError) {
-      console.error('Skills matrix error:', matrixError)
+    if (staffError) {
+      console.error('Staff fetch error:', staffError)
       return NextResponse.json(
-        { error: 'Failed to fetch skills matrix' },
+        { error: 'Failed to fetch staff' },
         { status: 500 }
       )
     }
 
+    // Get skills for all staff
+    const { data: skills, error: skillsError } = await supabase
+      .from('staff_skills')
+      .select('*')
+
+    if (skillsError) {
+      console.error('Skills fetch error:', skillsError)
+      // Continue without skills if table doesn't exist
+    }
+
+    // Get certifications for all staff
+    const { data: certifications, error: certificationsError } = await supabase
+      .from('staff_certifications')
+      .select('*')
+
+    if (certificationsError) {
+      console.error('Certifications fetch error:', certificationsError)
+      // Continue without certifications if table doesn't exist
+    }
+
+    // Combine staff with their skills and certifications
+    const staffWithDetails = staff.map(member => ({
+      ...member,
+      skills: skills?.filter(skill => skill.profile_id === member.id) || [],
+      certifications: certifications?.filter(cert => cert.profile_id === member.id) || []
+    }))
+
     return NextResponse.json({
       success: true,
-      staff: skillsMatrix || []
+      staff: staffWithDetails
     })
   } catch (error) {
     console.error('Skills matrix API error:', error)
@@ -76,17 +105,17 @@ export async function POST(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('profiles')
-      .select('organization_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
     const { data: targetProfile } = await supabase
       .from('profiles')
-      .select('organization_id')
+      .select('company_id')
       .eq('id', profile_id)
       .single()
 
-    if (!userProfile || !targetProfile || userProfile.organization_id !== targetProfile.organization_id) {
+    if (!userProfile || !targetProfile || userProfile.company_id !== targetProfile.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
