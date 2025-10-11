@@ -507,19 +507,22 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Staff</h3>
           <div className="flex flex-wrap gap-2">
-            {staff.map(staffMember => (
-              <span
-                key={staffMember.id}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-              >
-                {staffMember.name}
-                {staffMember.callsign && (
-                  <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 px-2 py-0.5 rounded">
-                    {staffMember.callsign}
-                  </span>
-                )}
-              </span>
-            ))}
+            {staff.map((staffMember, index) => {
+              console.log(`Rendering staff ${index}:`, staffMember.id, staffMember.name)
+              return (
+                <span
+                  key={`${staffMember.id}-${index}`}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                >
+                  {staffMember.name}
+                  {staffMember.callsign && (
+                    <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 px-2 py-0.5 rounded">
+                      {staffMember.callsign}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
           </div>
         </div>
       )}

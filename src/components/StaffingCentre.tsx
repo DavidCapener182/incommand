@@ -263,6 +263,8 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       }
 
       const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+      console.log('StaffingCentre: Loaded staff data:', data)
+      console.log('StaffingCentre: Normalized staff:', normalized)
       distributeStaff(normalized)
     }
 
@@ -571,7 +573,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             )
           })}
         </nav>
-      </div>
+          </div>
 
       {/* Tab Content */}
              {activeTab === 'callsign' && (
@@ -617,7 +619,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             <p className="text-gray-600 dark:text-gray-400">
               Create an event to enable radio sign-out functionality
             </p>
-          </div>
+                  </div>
         )
       )}
 
@@ -643,7 +645,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             <p className="text-gray-600 dark:text-gray-400">
               Create an event to view performance metrics
             </p>
-          </div>
+                    </div>
         )
       )}
 
