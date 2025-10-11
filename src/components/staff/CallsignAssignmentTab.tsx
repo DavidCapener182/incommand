@@ -10,7 +10,8 @@ import {
   XMarkIcon,
   UserGroupIcon,
   MagnifyingGlassIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  PencilIcon
 } from '@heroicons/react/24/outline'
 
 interface StaffMember {
@@ -83,7 +84,16 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
   const [showAddPositionModal, setShowAddPositionModal] = useState(false)
+  const [showEditPositionModal, setShowEditPositionModal] = useState(false)
+  const [showAssignStaffModal, setShowAssignStaffModal] = useState(false)
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null)
   const [newPosition, setNewPosition] = useState({
+    callsign: '',
+    position: '',
+    department: 'Internal',
+    required_skills: [] as string[]
+  })
+  const [editPosition, setEditPosition] = useState({
     callsign: '',
     position: '',
     department: 'Internal',
@@ -217,6 +227,53 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
       message: 'Position added successfully',
       duration: 4000
     })
+  }
+
+  const openEditModal = (position: Position) => {
+    setSelectedPosition(position)
+    setEditPosition({
+      callsign: position.callsign,
+      position: position.position,
+      department: position.department,
+      required_skills: position.required_skills || []
+    })
+    setShowEditPositionModal(true)
+  }
+
+  const saveEditedPosition = () => {
+    if (!editPosition.callsign || !editPosition.position || !selectedPosition) {
+      addToast({
+        type: 'error',
+        message: 'Callsign and position are required',
+        duration: 4000
+      })
+      return
+    }
+
+    setPositions(prev => prev.map(pos =>
+      pos.id === selectedPosition.id
+        ? {
+            ...pos,
+            callsign: editPosition.callsign.toUpperCase(),
+            position: editPosition.position,
+            department: editPosition.department,
+            required_skills: editPosition.required_skills
+          }
+        : pos
+    ))
+
+    setShowEditPositionModal(false)
+    setSelectedPosition(null)
+    addToast({
+      type: 'success',
+      message: 'Position updated successfully',
+      duration: 4000
+    })
+  }
+
+  const openAssignStaffModal = (position: Position) => {
+    setSelectedPosition(position)
+    setShowAssignStaffModal(true)
   }
 
   const deletePosition = (positionId: string) => {
@@ -398,8 +455,16 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                   </div>
                   <div className="flex gap-1">
                     <button
+                      onClick={() => openEditModal(position)}
+                      className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
+                      title="Edit position"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => deletePosition(position.id)}
                       className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                      title="Delete position"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -424,6 +489,12 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-gray-500 dark:text-gray-400">Available for assignment</p>
+                    <button
+                      onClick={() => openAssignStaffModal(position)}
+                      className="w-full text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                    >
+                      Assign Staff
+                    </button>
                     {getStaffSuggestions(position).length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Suggested staff:</p>
@@ -527,6 +598,156 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                     Add Position
                   </button>
                 </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Position Modal */}
+      {showEditPositionModal && selectedPosition && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setShowEditPositionModal(false)}
+            />
+            
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Position</h3>
+                <button
+                  onClick={() => setShowEditPositionModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Callsign
+                  </label>
+                  <input
+                    type="text"
+                    value={editPosition.callsign}
+                    onChange={(e) => setEditPosition({ ...editPosition, callsign: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., SIERRA 1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Position Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editPosition.position}
+                    onChange={(e) => setEditPosition({ ...editPosition, position: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., Queue Management"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={editPosition.department}
+                    onChange={(e) => setEditPosition({ ...editPosition, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="Management">Management</option>
+                    <option value="External">External</option>
+                    <option value="Internal">Internal</option>
+                    <option value="Control">Control</option>
+                    <option value="Medical">Medical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowEditPositionModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEditedPosition}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Staff Modal */}
+      {showAssignStaffModal && selectedPosition && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setShowAssignStaffModal(false)}
+            />
+            
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Assign Staff to {selectedPosition.callsign}
+                </h3>
+                <button
+                  onClick={() => setShowAssignStaffModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Position: {selectedPosition.position}
+                </p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {availableStaff.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                      No available staff members
+                    </p>
+                  ) : (
+                    availableStaff.map(staffMember => (
+                      <button
+                        key={staffMember.id}
+                        onClick={() => {
+                          assignStaffToPosition(selectedPosition.id, staffMember.id)
+                          setShowAssignStaffModal(false)
+                        }}
+                        className="w-full text-left px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {staffMember.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {staffMember.qualifications.join(', ')}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowAssignStaffModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

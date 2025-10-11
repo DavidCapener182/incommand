@@ -61,17 +61,47 @@ export async function GET(request: NextRequest) {
     }
 
     // Combine staff with their skills and certifications
-    const staffWithDetails = staff.map(member => ({
-      profile_id: member.id, // Keep profile_id for compatibility with component
-      full_name: member.full_name,
-      email: member.email,
-      callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
-      skills: skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id) || [],
-      certifications: certifications?.filter(cert => cert.staff_id === member.id || cert.profile_id === member.id) || [],
-      certifications_expiring_30_days: 0, // Calculate if needed
-      verified_skills_count: skills?.filter(skill => (skill.staff_id === member.id || skill.profile_id === member.id) && skill.verified).length || 0,
-      total_skills_count: skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id).length || 0
-    }))
+    const staffWithDetails = staff.map(member => {
+      // Get skills from both staff_skills table and skill_tags array
+      const staffSkills = skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id).map(skill => ({
+        ...skill,
+        profile_id: member.id // Ensure profile_id is set for component compatibility
+      })) || []
+      
+      // Also include skill_tags from staff table as basic skills
+      const skillTagSkills = (member.skill_tags || []).map((tag, index) => ({
+        id: `tag-${member.id}-${index}`,
+        profile_id: member.id,
+        skill_name: tag,
+        certification_date: null,
+        expiry_date: null,
+        verified: false,
+        verified_by: null,
+        verified_at: null,
+        certification_number: null,
+        issuing_authority: null,
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+      
+      const allSkills = [...staffSkills, ...skillTagSkills]
+      
+      return {
+        profile_id: member.id, // Keep profile_id for compatibility with component
+        full_name: member.full_name,
+        email: member.email,
+        callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
+        skills: allSkills,
+        certifications: certifications?.filter(cert => cert.staff_id === member.id || cert.profile_id === member.id).map(cert => ({
+          ...cert,
+          profile_id: member.id // Ensure profile_id is set
+        })) || [],
+        certifications_expiring_30_days: 0, // Calculate if needed
+        verified_skills_count: allSkills.filter(skill => skill.verified).length,
+        total_skills_count: allSkills.length
+      }
+    })
 
     return NextResponse.json({
       success: true,
