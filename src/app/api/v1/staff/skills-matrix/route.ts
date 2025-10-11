@@ -27,9 +27,10 @@ export async function GET(request: NextRequest) {
 
     // Get all staff in the company
     const { data: staff, error: staffError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, callsign, experience_level, staff_role, company_id')
+      .from('staff')
+      .select('id, full_name, email, contact_number, skill_tags, notes, active, company_id')
       .eq('company_id', profile.company_id)
+      .order('full_name', { ascending: true })
 
     if (staffError) {
       console.error('Staff fetch error:', staffError)
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get skills for all staff
+    // Get skills for all staff (using staff_id instead of profile_id)
     const { data: skills, error: skillsError } = await supabase
       .from('staff_skills')
       .select('*')
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       // Continue without skills if table doesn't exist
     }
 
-    // Get certifications for all staff
+    // Get certifications for all staff (using staff_id instead of profile_id)
     const { data: certifications, error: certificationsError } = await supabase
       .from('staff_certifications')
       .select('*')
@@ -61,9 +62,15 @@ export async function GET(request: NextRequest) {
 
     // Combine staff with their skills and certifications
     const staffWithDetails = staff.map(member => ({
-      ...member,
-      skills: skills?.filter(skill => skill.profile_id === member.id) || [],
-      certifications: certifications?.filter(cert => cert.profile_id === member.id) || []
+      profile_id: member.id, // Keep profile_id for compatibility with component
+      full_name: member.full_name,
+      email: member.email,
+      callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
+      skills: skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id) || [],
+      certifications: certifications?.filter(cert => cert.staff_id === member.id || cert.profile_id === member.id) || [],
+      certifications_expiring_30_days: 0, // Calculate if needed
+      verified_skills_count: skills?.filter(skill => (skill.staff_id === member.id || skill.profile_id === member.id) && skill.verified).length || 0,
+      total_skills_count: skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id).length || 0
     }))
 
     return NextResponse.json({
@@ -109,13 +116,13 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const { data: targetProfile } = await supabase
-      .from('profiles')
+    const { data: targetStaff } = await supabase
+      .from('staff')
       .select('company_id')
       .eq('id', profile_id)
       .single()
 
-    if (!userProfile || !targetProfile || userProfile.company_id !== targetProfile.company_id) {
+    if (!userProfile || !targetStaff || userProfile.company_id !== targetStaff.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -123,7 +130,7 @@ export async function POST(request: NextRequest) {
     const { data: newSkill, error: insertError } = await supabase
       .from('staff_skills')
       .insert({
-        profile_id,
+        staff_id: profile_id, // Using staff_id to reference staff table
         skill_name,
         certification_date,
         expiry_date,
