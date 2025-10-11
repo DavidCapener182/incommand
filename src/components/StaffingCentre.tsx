@@ -760,9 +760,16 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Callsign Assignment
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            This is the existing callsign assignment interface. The original drag-and-drop functionality is preserved in the Staff Management tab.
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Access the full callsign assignment interface with drag-and-drop functionality, templates, and role management.
           </p>
+          <a 
+            href="/callsign-assignment" 
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <UserCheck className="h-5 w-5 mr-2" />
+            Open Callsign Assignment
+          </a>
         </div>
       )}
 
