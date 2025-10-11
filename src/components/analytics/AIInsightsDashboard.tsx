@@ -36,6 +36,21 @@ interface IncidentData {
   compliance_rate: number
 }
 
+interface PatternAnalysis {
+  type: 'trend' | 'anomaly' | 'seasonal' | 'correlation'
+  description: string
+  confidence: number
+  impact: 'low' | 'medium' | 'high' | 'critical'
+  recommendation: string
+}
+
+interface ConfidenceMetrics {
+  overall: number
+  trends: number
+  predictions: number
+  patterns: number
+}
+
 const SEVERITY_COLORS = {
   low: 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30',
   medium: 'text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30',
@@ -49,6 +64,13 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
   const [trends, setTrends] = useState<Record<string, TrendAnalysis>>({})
   const [anomalies, setAnomalies] = useState<AnomalyDetection[]>([])
   const [forecasts, setForecasts] = useState<Record<string, PredictiveForecast>>({})
+  const [patterns, setPatterns] = useState<PatternAnalysis[]>([])
+  const [confidence, setConfidence] = useState<ConfidenceMetrics>({
+    overall: 0,
+    trends: 0,
+    predictions: 0,
+    patterns: 0
+  })
 
   // Fetch incident data
   useEffect(() => {
@@ -100,6 +122,21 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           incident_count: incidentForecast
         })
 
+        // Detect patterns and calculate confidence
+        const detectedPatterns = await detectAdvancedPatterns(mockData)
+        setPatterns(detectedPatterns)
+
+        // Calculate confidence metrics
+        const confidenceMetrics = calculateConfidenceMetrics(
+          incidentTrend, 
+          responseTimeTrend, 
+          qualityTrend, 
+          detectedAnomalies, 
+          incidentForecast,
+          detectedPatterns
+        )
+        setConfidence(confidenceMetrics)
+
       } catch (error) {
         console.error('Error fetching AI insights data:', error)
       } finally {
@@ -148,6 +185,32 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">AI Insights</h2>
           <p className="text-gray-600 dark:text-gray-400">Intelligent pattern analysis and predictions</p>
+        </div>
+      </div>
+
+      {/* Confidence Metrics */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <TrophyIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Confidence Metrics</h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{confidence.overall}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Overall</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{confidence.trends}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Trends</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{confidence.predictions}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Predictions</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{confidence.patterns}%</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Patterns</div>
+          </div>
         </div>
       </div>
 
@@ -237,6 +300,39 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           </div>
         </div>
       </div>
+
+      {/* Pattern Analysis Section */}
+      {patterns.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <LightBulbIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pattern Analysis</h3>
+            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 text-xs font-medium rounded-full">
+              {patterns.length}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {patterns.map((pattern, index) => (
+              <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${SEVERITY_COLORS[pattern.impact]}`}>
+                  {pattern.type.toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {pattern.description}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Confidence: {pattern.confidence.toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    {pattern.recommendation}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Anomalies Section */}
       {anomalies.length > 0 && (
@@ -366,6 +462,131 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
       </div>
     </div>
   )
+}
+
+// Advanced pattern detection
+async function detectAdvancedPatterns(data: IncidentData[]): Promise<PatternAnalysis[]> {
+  const patterns: PatternAnalysis[] = []
+  
+  // Detect correlation between incident count and response time
+  const correlation = calculateCorrelation(
+    data.map(d => d.incident_count),
+    data.map(d => d.response_time)
+  )
+  
+  if (Math.abs(correlation) > 0.7) {
+    patterns.push({
+      type: 'correlation',
+      description: `Strong ${correlation > 0 ? 'positive' : 'negative'} correlation between incident volume and response time`,
+      confidence: Math.abs(correlation) * 100,
+      impact: Math.abs(correlation) > 0.8 ? 'high' : 'medium',
+      recommendation: correlation > 0 
+        ? 'Consider increasing staff during high-incident periods'
+        : 'Review incident handling procedures during low-volume periods'
+    })
+  }
+
+  // Detect seasonal patterns (hourly)
+  const hourlyPattern = detectSeasonalPattern(data, 'hour')
+  if (hourlyPattern.strength > 0.6) {
+    patterns.push({
+      type: 'seasonal',
+      description: `Strong hourly pattern detected with ${(hourlyPattern.strength * 100).toFixed(0)}% consistency`,
+      confidence: hourlyPattern.strength * 100,
+      impact: 'medium',
+      recommendation: 'Adjust staffing levels based on hourly incident patterns'
+    })
+  }
+
+  // Detect quality score trends
+  const qualityTrend = calculateTrend(data.map(d => d.quality_score))
+  if (Math.abs(qualityTrend) > 0.1) {
+    patterns.push({
+      type: 'trend',
+      description: `Quality score is ${qualityTrend > 0 ? 'improving' : 'declining'} over time`,
+      confidence: Math.min(Math.abs(qualityTrend) * 500, 100),
+      impact: 'medium',
+      recommendation: qualityTrend > 0 
+        ? 'Maintain current quality practices'
+        : 'Review and improve incident documentation processes'
+    })
+  }
+
+  return patterns
+}
+
+// Calculate confidence metrics
+function calculateConfidenceMetrics(
+  incidentTrend: TrendAnalysis,
+  responseTimeTrend: TrendAnalysis,
+  qualityTrend: TrendAnalysis,
+  anomalies: AnomalyDetection[],
+  forecast: PredictiveForecast,
+  patterns: PatternAnalysis[]
+): ConfidenceMetrics {
+  const trendsConfidence = (incidentTrend.confidence + responseTimeTrend.confidence + qualityTrend.confidence) / 3
+  const predictionsConfidence = forecast.confidence
+  const patternsConfidence = patterns.length > 0 
+    ? patterns.reduce((acc, p) => acc + p.confidence, 0) / patterns.length
+    : 0
+  
+  const overallConfidence = (trendsConfidence + predictionsConfidence + patternsConfidence) / 3
+
+  return {
+    overall: Math.round(overallConfidence),
+    trends: Math.round(trendsConfidence),
+    predictions: Math.round(predictionsConfidence),
+    patterns: Math.round(patternsConfidence)
+  }
+}
+
+// Helper functions
+function calculateCorrelation(x: number[], y: number[]): number {
+  const n = x.length
+  const sumX = x.reduce((a, b) => a + b, 0)
+  const sumY = y.reduce((a, b) => a + b, 0)
+  const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0)
+  const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0)
+  const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0)
+  
+  return (n * sumXY - sumX * sumY) / 
+    Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY))
+}
+
+function detectSeasonalPattern(data: IncidentData[], period: string): { strength: number; pattern: any } {
+  // Simplified seasonal pattern detection
+  const hourlyData: Record<number, number[]> = {}
+  
+  data.forEach(d => {
+    const hour = new Date(d.timestamp).getHours()
+    if (!hourlyData[hour]) hourlyData[hour] = []
+    hourlyData[hour].push(d.incident_count)
+  })
+  
+  const hourlyAverages = Object.entries(hourlyData).map(([hour, values]) => ({
+    hour: parseInt(hour),
+    average: values.reduce((a, b) => a + b, 0) / values.length
+  }))
+  
+  // Calculate variance to determine pattern strength
+  const overallAvg = hourlyAverages.reduce((a, b) => a + b.average, 0) / hourlyAverages.length
+  const variance = hourlyAverages.reduce((acc, h) => acc + Math.pow(h.average - overallAvg, 2), 0) / hourlyAverages.length
+  const strength = Math.min(variance / overallAvg, 1)
+  
+  return { strength, pattern: hourlyAverages }
+}
+
+function calculateTrend(values: number[]): number {
+  if (values.length < 2) return 0
+  
+  const n = values.length
+  const x = Array.from({ length: n }, (_, i) => i)
+  const sumX = x.reduce((a, b) => a + b, 0)
+  const sumY = values.reduce((a, b) => a + b, 0)
+  const sumXY = x.reduce((acc, xi, i) => acc + xi * values[i], 0)
+  const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0)
+  
+  return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
 }
 
 // Mock data generator for development

@@ -34,6 +34,7 @@ import RealtimeStatusIndicator from '@/components/analytics/RealtimeStatusIndica
 import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
 import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
 import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
+import EndOfEventReport from '@/components/analytics/EndOfEventReport'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 
 interface IncidentRecord {
@@ -69,7 +70,7 @@ export default function AnalyticsPage() {
   const [aiSummary, setAiSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
-  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking'>('operational')
+  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event'>('operational')
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   
   // Real-time analytics
@@ -464,6 +465,21 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         <span>Benchmarking</span>
                       </div>
                     </button>
+                    <button
+                      onClick={() => setActiveTab('end-of-event')}
+                      className={`${
+                        activeTab === 'end-of-event'
+                          ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } flex-1 rounded-lg px-4 py-3 border-2 font-medium text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>End-of-Event Report</span>
+                      </div>
+                    </button>
           </nav>
         </div>
 
@@ -523,20 +539,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
                 {activeTab === 'benchmarking' && (
                   <BenchmarkingDashboard
-                    organizationName="Your Organization"
-                    eventName={eventData?.name || 'Current Event'}
-                    industry="security"
-                    eventType="concert"
-                    metrics={{
-                      response_time: realtimeAnalytics.data.averageResponseTime,
-                      resolution_time: realtimeAnalytics.data.averageResolutionTime,
-                      quality_score: realtimeAnalytics.data.averageQualityScore,
-                      compliance_rate: realtimeAnalytics.data.complianceScore,
-                      staff_utilization: realtimeAnalytics.data.staffUtilization,
-                      incident_rate: realtimeAnalytics.data.totalIncidents / Math.max(1, 10) // mock incidents per 1000 attendees
-                    }}
-                    period={{ start: dateRange.startDate, end: dateRange.endDate }}
+                    eventId={eventData?.id || ''}
                   />
+                )}
+
+                {activeTab === 'end-of-event' && (
+                  <EndOfEventReport eventId={eventData?.id} />
                 )}
 
         {/* Operational Tab Content (existing charts) */}
