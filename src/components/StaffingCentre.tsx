@@ -586,7 +586,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       {/* Tab Content */}
       {activeTab === 'staff' && (
         <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
+          <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
           <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
             <header className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Available</h2>
@@ -750,7 +750,8 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           )}
         </article>
       </section>
-      </DragDropContext>
+          </div>
+        </DragDropContext>
       )}
 
       {activeTab === 'callsign' && (
