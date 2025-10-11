@@ -12,32 +12,24 @@ import {
 import { Line, Bar } from 'recharts'
 
 interface PerformanceMetrics {
-  performance_score: number
-  incidents_handled: number
-  avg_response_time_minutes: number
+  overall_score: number
+  incidents_logged: number
+  avg_response_time: number
   log_quality_score: number
-  resolution_rate: number
+  experience_level: string
 }
 
 interface StaffPerformance {
-  id: number
   profile_id: string
-  event_id: string
-  performance_score: number
-  incidents_handled: number
-  avg_response_time_minutes: number
+  full_name: string
+  email: string
+  callsign: string | null
+  incidents_logged: number
+  avg_response_time: number
   log_quality_score: number
-  resolution_rate: number
-  supervisor_rating: number | null
-  supervisor_notes: string | null
-  calculated_at: string
-  profile: {
-    id: string
-    first_name: string
-    last_name: string
-    callsign: string | null
-    email: string
-  }
+  overall_score: number
+  experience_level: string
+  active_assignments: number
 }
 
 interface StaffPerformanceDashboardProps {
@@ -148,11 +140,11 @@ export default function StaffPerformanceDashboard({
   }
 
   const averageScore = performances.length > 0 
-    ? performances.reduce((sum, p) => sum + p.performance_score, 0) / performances.length 
+    ? performances.reduce((sum, p) => sum + p.overall_score, 0) / performances.length 
     : 0
 
   const topPerformers = performances
-    .sort((a, b) => b.performance_score - a.performance_score)
+    .sort((a, b) => b.overall_score - a.overall_score)
     .slice(0, 3)
 
   return (
@@ -205,15 +197,15 @@ export default function StaffPerformanceDashboard({
                       </div>
                       <StarIcon className="h-5 w-5 text-yellow-500" />
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(performer.performance_score)}`}>
-                      {performer.performance_score}%
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(performer.overall_score)}`}>
+                      {performer.overall_score}%
                     </div>
                   </div>
                   <div className="font-medium text-gray-900 dark:text-white">
-                    {performer.profile.first_name} {performer.profile.last_name}
+                    {performer.full_name}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {performer.profile.callsign || performer.profile.email}
+                    {performer.callsign || performer.email}
                   </div>
                 </motion.div>
               ))}
@@ -279,20 +271,20 @@ export default function StaffPerformanceDashboard({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(performance.performance_score)}`}>
-                          {getPerformanceIcon(performance.performance_score)}
-                          {performance.performance_score}%
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(performance.overall_score)}`}>
+                          {getPerformanceIcon(performance.overall_score)}
+                          {performance.overall_score}%
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {getPerformanceLabel(performance.performance_score)}
+                        {getPerformanceLabel(performance.overall_score)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {performance.incidents_handled}
+                      {performance.incidents_logged}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatResponseTime(performance.avg_response_time_minutes)}
+                      {formatResponseTime(performance.avg_response_time)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {performance.log_quality_score}%
@@ -366,22 +358,22 @@ export default function StaffPerformanceDashboard({
                   <div className="space-y-4">
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                       <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {selectedStaff.performance_score}%
+                        {selectedStaff.overall_score}%
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Overall Performance Score
                       </div>
                       <div className="mt-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(selectedStaff.performance_score)}`}>
-                          {getPerformanceIcon(selectedStaff.performance_score)}
-                          {getPerformanceLabel(selectedStaff.performance_score)}
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(selectedStaff.overall_score)}`}>
+                          {getPerformanceIcon(selectedStaff.overall_score)}
+                          {getPerformanceLabel(selectedStaff.overall_score)}
                         </span>
                       </div>
                     </div>
 
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {selectedStaff.incidents_handled}
+                        {selectedStaff.incidents_logged}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Incidents Handled
@@ -392,7 +384,7 @@ export default function StaffPerformanceDashboard({
                   <div className="space-y-4">
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {formatResponseTime(selectedStaff.avg_response_time_minutes)}
+                        {formatResponseTime(selectedStaff.avg_response_time)}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Average Response Time
