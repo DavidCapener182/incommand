@@ -370,6 +370,10 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   }
 
   const getStaffSuggestions = (position: Position) => {
+    // First, filter out assigned staff
+    const assignedStaffIds = positions.filter(p => p.assigned_staff_id).map(p => p.assigned_staff_id)
+    const unassignedStaff = staff.filter(staffMember => !assignedStaffIds.includes(staffMember.id))
+    
     // Management and Event Control positions require specific skills
     const restrictedSkills = ['Head of Security (HOS)', 'Deputy Head of Security', 'Security Manager', 'Event Control Manager', 'Control Room Operator']
     
@@ -380,24 +384,24 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     
     // If position has restricted skills, only show staff with those skills
     if (hasRestrictedSkills) {
-      return staff.filter(staffMember =>
+      return unassignedStaff.filter(staffMember =>
         position.required_skills?.some(skill =>
           restrictedSkills.includes(skill) && staffMember.qualifications.includes(skill)
         )
       )
     }
     
-    // For non-restricted positions, show all staff (prefer those with matching skills)
-    if (!position.required_skills?.length) return staff
+    // For non-restricted positions, show all unassigned staff (prefer those with matching skills)
+    if (!position.required_skills?.length) return unassignedStaff
     
-    // Return all staff, but prioritize those with matching skills
-    const staffWithSkills = staff.filter(staffMember =>
+    // Return unassigned staff, but prioritize those with matching skills
+    const staffWithSkills = unassignedStaff.filter(staffMember =>
       position.required_skills?.some(skill =>
         staffMember.qualifications.includes(skill)
       )
     )
     
-    const staffWithoutSkills = staff.filter(staffMember =>
+    const staffWithoutSkills = unassignedStaff.filter(staffMember =>
       !position.required_skills?.some(skill =>
         staffMember.qualifications.includes(skill)
       )
@@ -503,29 +507,35 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
       </div>
 
       {/* Available Staff */}
-      {staff.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Staff</h3>
-          <div className="flex flex-wrap gap-2">
-            {staff.map((staffMember, index) => {
-              console.log(`Rendering staff ${index}:`, staffMember.id, staffMember.name)
-              return (
-                <span
-                  key={staffMember.id}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                >
-                  {staffMember.name}
-                  {staffMember.callsign && (
-                    <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 px-2 py-0.5 rounded">
-                      {staffMember.callsign}
-                    </span>
-                  )}
-                </span>
-              )
-            })}
+      {(() => {
+        // Filter out assigned staff
+        const assignedStaffIds = positions.filter(p => p.assigned_staff_id).map(p => p.assigned_staff_id)
+        const availableStaff = staff.filter(staffMember => !assignedStaffIds.includes(staffMember.id))
+        
+        return availableStaff.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Staff</h3>
+            <div className="flex flex-wrap gap-2">
+              {availableStaff.map((staffMember, index) => {
+                console.log(`Rendering available staff ${index}:`, staffMember.id, staffMember.name)
+                return (
+                  <span
+                    key={staffMember.id}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                  >
+                    {staffMember.name}
+                    {staffMember.callsign && (
+                      <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 px-2 py-0.5 rounded">
+                        {staffMember.callsign}
+                      </span>
+                    )}
+                  </span>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Positions by Department */}
       {Object.entries(

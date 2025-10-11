@@ -32,16 +32,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get radio signouts with staff information
+    // Get radio signouts with staff information from profiles table
     const { data: signOuts, error: signOutsError } = await supabase
       .from('radio_signouts')
       .select(`
         *,
-        staff:user_id (
+        profile:user_id (
           id,
           full_name,
-          email,
-          contact_number
+          email
         )
       `)
       .eq('event_id', eventId)
@@ -55,20 +54,52 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get assigned staff for this event (for radio assignment)
+    const { data: assignedStaff, error: assignedStaffError } = await supabase
+      .from('position_assignments')
+      .select(`
+        *,
+        staff:staff_id (
+          id,
+          full_name,
+          email,
+          contact_number
+        )
+      `)
+      .eq('event_id', eventId)
+      .order('assigned_at', { ascending: false })
+
+    if (assignedStaffError) {
+      console.error('Assigned staff fetch error:', assignedStaffError)
+      // Continue without assigned staff data
+    }
+
     // Transform the data to match the expected interface
     const transformedSignOuts = signOuts.map(signOut => ({
       ...signOut,
       profile: {
-        id: signOut.staff?.id || signOut.user_id,
-        full_name: signOut.staff?.full_name || 'Unknown Staff',
-        email: signOut.staff?.email || '',
-        callsign: null // Staff table doesn't have callsign
+        id: signOut.profile?.id || signOut.user_id,
+        full_name: signOut.profile?.full_name || 'Unknown Staff',
+        email: signOut.profile?.email || '',
+        callsign: null
       }
     }))
 
+    // Transform assigned staff data
+    const transformedAssignedStaff = assignedStaff?.map(assignment => ({
+      ...assignment,
+      profile: {
+        id: assignment.staff?.id || assignment.staff_id,
+        full_name: assignment.staff?.full_name || 'Unknown Staff',
+        email: assignment.staff?.email || '',
+        callsign: assignment.callsign
+      }
+    })) || []
+
     return NextResponse.json({
       success: true,
-      signOuts: transformedSignOuts
+      signOuts: transformedSignOuts,
+      assignedStaff: transformedAssignedStaff
     })
   } catch (error) {
     console.error('Radio signouts API error:', error)
@@ -87,12 +118,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    const { radio_number, event_id, signed_out_signature, signed_out_notes } = body
+    const { radio_number, event_id, staff_id, signed_out_signature, signed_out_notes } = body
 
     // Validate required fields
-    if (!radio_number || !event_id || !signed_out_signature) {
+    if (!radio_number || !event_id || !staff_id || !signed_out_signature) {
       return NextResponse.json(
-        { error: 'radio_number, event_id, and signed_out_signature are required' },
+        { error: 'radio_number, event_id, staff_id, and signed_out_signature are required' },
         { status: 400 }
       )
     }
@@ -109,7 +140,7 @@ export async function POST(request: NextRequest) {
       .insert({
         radio_number,
         event_id,
-        user_id: user.id,
+        user_id: staff_id, // Use staff_id instead of user.id
         signed_out_signature,
         signed_out_notes: signed_out_notes || null,
         status: 'out'

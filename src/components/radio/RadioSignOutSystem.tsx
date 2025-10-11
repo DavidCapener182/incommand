@@ -53,6 +53,7 @@ export default function RadioSignOutSystem({
   // Sign-out form
   const [radioNumber, setRadioNumber] = useState('')
   const [signOutNotes, setSignOutNotes] = useState('')
+  const [selectedStaffId, setSelectedStaffId] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   
@@ -78,6 +79,7 @@ export default function RadioSignOutSystem({
       
       const data = await response.json()
       setSignOuts(data.signOuts || [])
+      setAssignedStaff(data.assignedStaff || []) // Get assigned staff from the same API call
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -85,28 +87,9 @@ export default function RadioSignOutSystem({
     }
   }
 
-  const fetchAssignedStaff = async () => {
-    try {
-      const response = await fetch(`/api/v1/staff/assigned?event_id=${eventId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch assigned staff')
-      }
-      
-      const data = await response.json()
-      setAssignedStaff(data.assignedStaff || [])
-    } catch (err) {
-      console.error('Failed to fetch assigned staff:', err)
-    }
-  }
-
   useEffect(() => {
     if (eventId) {
       fetchSignOuts()
-      fetchAssignedStaff()
     }
   }, [eventId])
 
@@ -156,8 +139,8 @@ export default function RadioSignOutSystem({
 
   const handleSignOut = async () => {
     const canvas = canvasRef.current
-    if (!canvas || !radioNumber) {
-      setError('Please enter a radio number and provide a signature')
+    if (!canvas || !radioNumber || !selectedStaffId) {
+      setError('Please enter a radio number, select a staff member, and provide a signature')
       return
     }
     
@@ -170,6 +153,7 @@ export default function RadioSignOutSystem({
         body: JSON.stringify({
           radio_number: radioNumber,
           event_id: eventId,
+          staff_id: selectedStaffId,
           signed_out_signature: signature,
           signed_out_notes: signOutNotes
         })
@@ -182,6 +166,7 @@ export default function RadioSignOutSystem({
       // Reset form and refresh list
       setRadioNumber('')
       setSignOutNotes('')
+      setSelectedStaffId('')
       clearSignature()
       setShowSignOutModal(false)
       fetchSignOuts()
@@ -284,6 +269,33 @@ export default function RadioSignOutSystem({
           </div>
         </div>
       </div>
+
+      {/* Assigned Staff */}
+      {assignedStaff.length > 0 && (
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Assigned Staff Available for Radio Assignment
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {assignedStaff.map((staff) => (
+              <span
+                key={staff.profile.id}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+              >
+                {staff.profile.full_name}
+                {staff.profile.callsign && (
+                  <span className="ml-2 text-xs bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded">
+                    {staff.profile.callsign}
+                  </span>
+                )}
+                <span className="ml-2 text-xs bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded">
+                  {staff.position_name}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 p-6 border-b border-gray-200 dark:border-gray-700">
@@ -389,6 +401,24 @@ export default function RadioSignOutSystem({
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     placeholder="e.g., R-001"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Assign to Staff Member
+                  </label>
+                  <select
+                    value={selectedStaffId}
+                    onChange={(e) => setSelectedStaffId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Select staff member...</option>
+                    {assignedStaff.map((staff) => (
+                      <option key={staff.profile.id} value={staff.profile.id}>
+                        {staff.profile.full_name} {staff.profile.callsign && `(${staff.profile.callsign})`} - {staff.position_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
