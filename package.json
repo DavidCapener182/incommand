@@ -10,6 +10,8 @@
     "backfill:auditable-logs": "ts-node scripts/backfill-auditable-logs.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.27",
+    "@ai-sdk/openai": "^2.0.49",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@headlessui/react": "^2.2.4",
@@ -26,6 +28,7 @@
     "@upstash/redis": "^1.34.3",
     "@vercel/analytics": "^1.5.0",
     "@what3words/react-components": "^5.0.4",
+    "ai": "^5.0.68",
     "axios": "^1.10.0",
     "browser-image-compression": "^2.0.2",
     "buffer": "^6.0.3",
