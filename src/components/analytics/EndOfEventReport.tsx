@@ -72,6 +72,21 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [aiInsights, setAiInsights] = useState<string>('')
   const [showPreview, setShowPreview] = useState(false)
 
+  // If no eventId provided, show message to select an event
+  if (!eventId) {
+    return (
+      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center ${className}`}>
+        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          No Event Selected
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Please select an event to generate the end-of-event report.
+        </p>
+      </div>
+    )
+  }
+
   useEffect(() => {
     if (eventId) {
       fetchEventData()

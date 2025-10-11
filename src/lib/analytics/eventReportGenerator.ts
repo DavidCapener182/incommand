@@ -212,4 +212,4 @@ function downloadFile(data: string, filename: string, mimeType: string): void {
 }
 
 // Export placeholder for PDF component (will be restored later)
-export const EventReportPDF = 'PDF generation temporarily disabled due to dependency issues'
+export const EventReportPDF = null
