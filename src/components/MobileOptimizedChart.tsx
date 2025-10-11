@@ -13,7 +13,7 @@ interface ChartDataPoint {
 
 interface MobileOptimizedChartProps {
   data: ChartDataPoint[]
-  title: string
+  title?: string
   type?: 'line' | 'bar' | 'area'
   height?: number
   showTooltip?: boolean
@@ -23,7 +23,7 @@ interface MobileOptimizedChartProps {
 
 export default function MobileOptimizedChart({
   data,
-  title,
+  title = '',
   type = 'line',
   height = 200,
   showTooltip = true,

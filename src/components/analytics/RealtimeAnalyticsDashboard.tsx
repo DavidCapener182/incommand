@@ -195,6 +195,7 @@ export default function RealtimeAnalyticsDashboard({
         {metrics.map((metric, index) => {
           const TrendIcon = getTrendIcon(metric.trend)
           const trendColor = getTrendColor(metric.trend)
+          const MetricIcon = metric.icon
           
           return (
             <motion.div
@@ -205,7 +206,7 @@ export default function RealtimeAnalyticsDashboard({
               className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3"
             >
               <div className="flex items-center justify-between mb-2">
-                <metric.icon className={`h-5 w-5 ${metric.color}`} />
+                <MetricIcon className={`h-5 w-5 ${metric.color}`} />
                 <TrendIcon className={`h-4 w-4 ${trendColor}`} />
               </div>
               
