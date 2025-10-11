@@ -505,11 +505,13 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
 
   // Chart data for capacity trend
   const chartData = {
-    labels: attendanceHistory.map(record => new Date(record.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })),
     datasets: [
       {
         label: 'Actual Occupancy',
-        data: attendanceHistory.map(record => record.count),
+        data: attendanceHistory.map(record => ({
+          x: new Date(record.timestamp).getTime(),
+          y: record.count
+        })),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4,
@@ -517,7 +519,10 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       },
       {
         label: 'Capacity Limit',
-        data: attendanceHistory.map(() => maxCapacity),
+        data: attendanceHistory.map(record => ({
+          x: new Date(record.timestamp).getTime(),
+          y: maxCapacity
+        })),
         borderColor: 'rgb(239, 68, 68)',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         borderDash: [5, 5],
@@ -526,8 +531,11 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       ...(predictions.length > 0 ? [{
         label: 'Predicted Occupancy',
         data: [
-          ...attendanceHistory.map(() => null),
-          ...predictions.map(pred => pred.predictedOccupancy)
+          ...attendanceHistory.map(() => ({ x: null, y: null })),
+          ...predictions.map(pred => ({
+            x: new Date(pred.time).getTime(),
+            y: pred.predictedOccupancy
+          }))
         ],
         borderColor: 'rgb(168, 85, 247)',
         backgroundColor: 'rgba(168, 85, 247, 0.1)',
@@ -556,12 +564,25 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
     },
     scales: {
       x: {
+        type: 'time' as const,
+        time: {
+          displayFormats: {
+            hour: 'HH:mm',
+            minute: 'HH:mm'
+          },
+          tooltipFormat: 'MMM dd HH:mm'
+        },
         title: {
           display: true,
           text: 'Time',
           font: { weight: 'bold' as 'bold' },
         },
         grid: { display: false },
+        ticks: {
+          maxTicksLimit: 8,
+          autoSkip: true,
+          maxRotation: 45
+        }
       },
       y: {
         title: {
