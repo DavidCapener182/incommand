@@ -39,7 +39,17 @@ export default function BenchmarkingDashboard({
   const fetchBenchmarkingData = async () => {
     setData(prev => ({ ...prev, loading: true, error: null }))
     
+    if (!eventId) {
+      setData(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: 'No event ID provided' 
+      }))
+      return
+    }
+    
     try {
+      console.log('Fetching benchmarking data for event:', eventId)
       const response = await fetch(`/api/v1/events/${eventId}/benchmarking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +72,17 @@ export default function BenchmarkingDashboard({
   }
 
   useEffect(() => {
-    fetchBenchmarkingData()
+    console.log('BenchmarkingDashboard mounted with eventId:', eventId)
+    if (eventId && eventId.trim() !== '') {
+      fetchBenchmarkingData()
+    } else {
+      console.log('No valid eventId provided, skipping benchmarking fetch')
+      setData(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: 'No event selected for benchmarking' 
+      }))
+    }
   }, [eventId])
 
   const getMetricIcon = (metric: string) => {
@@ -150,15 +170,17 @@ export default function BenchmarkingDashboard({
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Benchmarking Error
+            {data.error.includes('No event') ? 'No Event Selected' : 'Benchmarking Error'}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{data.error}</p>
-          <button
-            onClick={fetchBenchmarkingData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Retry Analysis
-          </button>
+          {!data.error.includes('No event') && (
+            <button
+              onClick={fetchBenchmarkingData}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry Analysis
+            </button>
+          )}
         </div>
       </div>
     )
@@ -180,25 +202,25 @@ export default function BenchmarkingDashboard({
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Venue Benchmarking
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Performance vs {benchmark.totalEvents} similar {currentEvent.venueType} events
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="text-center">
-              <div className={`text-3xl font-bold ${getPerformanceColor(result.percentileRanking)}`}>
+              <div className={`text-2xl font-bold ${getPerformanceColor(result.percentileRanking)}`}>
                 {result.percentileRanking}th
               </div>
               <div className="text-xs text-gray-500">Percentile</div>
             </div>
             <div className="text-right">
-              <div className={`text-lg font-semibold ${getPerformanceColor(result.percentileRanking)}`}>
+              <div className={`text-sm font-semibold ${getPerformanceColor(result.percentileRanking)}`}>
                 {getPerformanceLabel(result.percentileRanking)}
               </div>
               <div className="text-xs text-gray-500">Performance</div>
@@ -208,23 +230,23 @@ export default function BenchmarkingDashboard({
       </div>
 
       {/* Performance Summary */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-start gap-3">
-          <TrophyIcon className="h-6 w-6 text-yellow-500 mt-1" />
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-start gap-2">
+          <TrophyIcon className="h-5 w-5 text-yellow-500 mt-1" />
           <div>
-            <h4 className="font-medium text-gray-900 dark:text-white mb-2">Performance Summary</h4>
-            <p className="text-gray-700 dark:text-gray-300">{result.comparison}</p>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Performance Summary</h4>
+            <p className="text-xs text-gray-700 dark:text-gray-300">{result.comparison}</p>
           </div>
         </div>
       </div>
 
       {/* Metrics Comparison */}
-      <div className="p-6">
-        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="p-4">
+        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
           Metrics Comparison
         </h4>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {Object.entries(currentEvent.metrics).map(([metric, value]) => {
             if (typeof value !== 'number' || metric === 'crowdDensityScore') return null
             
@@ -236,9 +258,9 @@ export default function BenchmarkingDashboard({
                 key={metric}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {getMetricIcon(metric)}
                     <span className="font-medium text-gray-900 dark:text-white">
@@ -250,7 +272,7 @@ export default function BenchmarkingDashboard({
                   </div>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Current</span>
                     <span className="font-semibold text-gray-900 dark:text-white">
@@ -283,14 +305,14 @@ export default function BenchmarkingDashboard({
 
       {/* Strengths */}
       {result.strengths && result.strengths.length > 0 && (
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
-          <h4 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-3 flex items-center gap-2">
-            <TrophyIcon className="h-5 w-5" />
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
+          <h4 className="text-sm font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+            <TrophyIcon className="h-4 w-4" />
             Performance Strengths
           </h4>
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {result.strengths.map((strength, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-green-700 dark:text-green-300">
+              <li key={index} className="flex items-start gap-2 text-xs text-green-700 dark:text-green-300">
                 <span className="text-green-600 dark:text-green-400 mt-1">•</span>
                 {strength}
               </li>
@@ -301,14 +323,14 @@ export default function BenchmarkingDashboard({
 
       {/* Areas for Improvement */}
       {result.improvements && result.improvements.length > 0 && (
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
-          <h4 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3 flex items-center gap-2">
-            <ExclamationTriangleIcon className="h-5 w-5" />
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+          <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
+            <ExclamationTriangleIcon className="h-4 w-4" />
             Areas for Improvement
           </h4>
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {result.improvements.map((improvement, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+              <li key={index} className="flex items-start gap-2 text-xs text-yellow-700 dark:text-yellow-300">
                 <span className="text-yellow-600 dark:text-yellow-400 mt-1">•</span>
                 {improvement}
               </li>
@@ -319,14 +341,14 @@ export default function BenchmarkingDashboard({
 
       {/* Recommendations */}
       {result.recommendations && result.recommendations.length > 0 && (
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
-          <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
-            <LightBulbIcon className="h-5 w-5" />
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
+          <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
+            <LightBulbIcon className="h-4 w-4" />
             Recommendations
           </h4>
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {result.recommendations.map((recommendation, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300">
+              <li key={index} className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300">
                 <span className="text-blue-600 dark:text-blue-400 mt-1">•</span>
                 {recommendation}
               </li>

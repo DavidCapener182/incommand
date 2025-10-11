@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
       // Fetch current event (try is_current first, then fallback to most recent)
       let { data: event, error: eventError } = await supabase
         .from('events')
-        .select('id, name, start_time, end_time, max_capacity')
+        .select('*')
         .eq('is_current', true)
         .single()
 
@@ -136,18 +136,34 @@ export default function AnalyticsPage() {
         // Fallback to most recent event if no current event
         const { data: recentEvent, error: recentError } = await supabase
           .from('events')
-          .select('id, name, start_time, end_time, max_capacity')
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
         
         if (recentError) {
-          console.warn('No events found:', recentError)
-          setEventData(null)
+          console.warn('No events found via Supabase, trying get-current-event API:', recentError)
+          // Final fallback: use the get-current-event API
+          try {
+            const response = await fetch('/api/get-current-event')
+            if (response.ok) {
+              const apiEvent = await response.json()
+              console.log('Found event via API:', apiEvent)
+              setEventData(apiEvent)
+            } else {
+              console.warn('No events found via API either')
+              setEventData(null)
+            }
+          } catch (apiError) {
+            console.warn('API fallback failed:', apiError)
+            setEventData(null)
+          }
         } else {
+          console.log('Found recent event:', recentEvent)
           setEventData(recentEvent)
         }
       } else {
+        console.log('Found current event:', event)
         setEventData(event)
       }
 
@@ -555,9 +571,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 )}
 
                 {activeTab === 'benchmarking' && (
-                  <BenchmarkingDashboard
-                    eventId={eventData?.id || ''}
-                  />
+                  <>
+                    {console.log('Rendering BenchmarkingDashboard with eventData:', eventData, 'eventId:', eventData?.id)}
+                    <BenchmarkingDashboard
+                      eventId={eventData?.id || ''}
+                    />
+                  </>
                 )}
 
                 {activeTab === 'end-of-event' && (
