@@ -105,7 +105,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   // Load positions from database or create default ones
   useEffect(() => {
     loadPositions()
-  }, [])
+  }, [eventId])
 
 
   const loadPositions = async () => {

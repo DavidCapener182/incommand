@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // Get assignments with staff details
     const { data: assignments, error } = await supabase
-      .from('staff_assignments')
+      .from('position_assignments')
       .select(`
         id,
         position_id,
@@ -91,8 +91,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { event_id, staff_id, position_id, callsign, position_name, department } = body
 
+    console.log('POST /api/v1/staff/assignments - Request:', { event_id, staff_id, position_id, callsign, position_name, department })
+
     // Validate required fields
     if (!event_id || !staff_id || !position_id || !callsign || !position_name || !department) {
+      console.error('Missing required fields:', { event_id, staff_id, position_id, callsign, position_name, department })
       return NextResponse.json(
         { error: 'All fields are required: event_id, staff_id, position_id, callsign, position_name, department' },
         { status: 400 }
@@ -139,14 +142,14 @@ export async function POST(request: NextRequest) {
 
     // Remove any existing assignments for this position or staff member
     await supabase
-      .from('staff_assignments')
+      .from('position_assignments')
       .delete()
       .or(`position_id.eq.${position_id},staff_id.eq.${staff_id}`)
       .eq('event_id', event_id)
 
     // Create new assignment
     const { data: assignment, error: insertError } = await supabase
-      .from('staff_assignments')
+      .from('position_assignments')
       .insert({
         event_id,
         staff_id,
@@ -178,10 +181,12 @@ export async function POST(request: NextRequest) {
         })
       }
       return NextResponse.json(
-        { error: 'Failed to create assignment' },
+        { error: 'Failed to create assignment', details: insertError.message },
         { status: 500 }
       )
     }
+
+    console.log('Assignment created successfully:', assignment)
 
     return NextResponse.json({
       success: true,
@@ -189,6 +194,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Create assignment API error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
       { 
         error: 'Failed to create assignment',
@@ -245,7 +251,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete assignment
     const { error: deleteError } = await supabase
-      .from('staff_assignments')
+      .from('position_assignments')
       .delete()
       .eq('id', assignmentId)
 
