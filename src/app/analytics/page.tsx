@@ -55,10 +55,12 @@ interface AttendanceRecord {
 
 interface EventData {
   id: string
-  name: string
+  name?: string
+  venue_name?: string
   start_time: string
   end_time: string
-  max_capacity: number
+  max_capacity?: number
+  expected_attendance?: number
 }
 
 export default function AnalyticsPage() {
@@ -571,12 +573,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 )}
 
                 {activeTab === 'benchmarking' && (
-                  <>
-                    {console.log('Rendering BenchmarkingDashboard with eventData:', eventData, 'eventId:', eventData?.id)}
-                    <BenchmarkingDashboard
-                      eventId={eventData?.id || ''}
-                    />
-                  </>
+                  <BenchmarkingDashboard
+                    eventId={eventData?.id || ''}
+                  />
                 )}
 
                 {activeTab === 'end-of-event' && (

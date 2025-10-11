@@ -250,8 +250,10 @@ export default function BenchmarkingDashboard({
           {Object.entries(currentEvent.metrics).map(([metric, value]) => {
             if (typeof value !== 'number' || metric === 'crowdDensityScore') return null
             
+            // Map metric names to percentile ranking keys
+            const percentileKey = metric === 'averageResponseTime' ? 'responseTime' : metric as keyof typeof benchmark.percentileRankings
             const benchmarkValue = benchmark.averageMetrics[metric as keyof BenchmarkingMetrics] as number
-            const percentile = benchmark.percentileRankings[metric] || 50
+            const percentile = benchmark.percentileRankings[percentileKey] || 50
             
             return (
               <motion.div

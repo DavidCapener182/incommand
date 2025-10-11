@@ -78,17 +78,21 @@ function CompanyFooter() {
   if (!showFooter) return null;
 
   return (
-    <footer className="fixed bottom-0 left-0 w-full z-30 px-4 py-3 flex justify-between items-center text-xs text-white dark:text-gray-100"
+    <footer 
+      className="fixed bottom-0 left-0 w-full z-30 px-4 py-3 flex justify-between items-center text-xs text-white dark:text-gray-100"
       style={{
         background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
         boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
-        backdropFilter: 'blur(2px)'
+        backdropFilter: 'blur(2px)',
+        paddingLeft: 'max(env(safe-area-inset-left), 1rem)',
+        paddingRight: 'max(env(safe-area-inset-right), 1rem)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
       }}
     >
-      <span>
+      <span className="text-xs md:text-sm truncate">
         v0.1.0{companyName && ` Build for ${companyName}`}
       </span>
-      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
+      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block truncate">
         support@incommandapp.com
       </span>
     </footer>
@@ -140,7 +144,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <>
         <AuthGate>
           {showNav && <Navigation />}
-          <main className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24">{children}</main>
+          <main 
+            className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24 md:pb-20"
+            style={{
+              paddingLeft: 'max(env(safe-area-inset-left), 0px)',
+              paddingRight: 'max(env(safe-area-inset-right), 0px)',
+              paddingBottom: 'max(env(safe-area-inset-bottom), 6rem)',
+            }}
+          >
+            {children}
+          </main>
           {showNav && (
             <BottomNav
               onOpenHelpCenter={() => {
@@ -159,7 +172,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 onClick={() => setIsHelpCenterOpen(false)}
               />
               {/* Floating panel */}
-              <div className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]">
+              <div 
+                className="fixed right-4 bottom-24 md:bottom-8 z-50 w-[min(92vw,28rem)] h-[80vh]"
+                style={{
+                  right: 'max(env(safe-area-inset-right), 1rem)',
+                  bottom: 'max(env(safe-area-inset-bottom) + 6rem, 6rem)',
+                }}
+              >
                 <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
               </div>
             </>

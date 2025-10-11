@@ -87,7 +87,7 @@ export async function POST(
     const { data: similarEvents, error: similarEventsError } = await supabase
       .from('events')
       .select(`
-        id, name, event_date, expected_attendance, doors_open_time, venue_clear_time, venue_type,
+        id, event_date, expected_attendance, doors_open_time, venue_clear_time, venue_type, venue_name,
         incident_logs(*)
       `)
       .eq('venue_type', venueType)
@@ -151,7 +151,7 @@ export async function POST(
 
       const benchmarkingResult = {
         eventId,
-        eventName: event.name,
+        eventName: event.name || event.venue_name || `Event ${event.id.slice(0, 8)}`,
         venueName: event.venue_name,
         eventDate: event.event_date,
         currentMetrics: currentMetrics,

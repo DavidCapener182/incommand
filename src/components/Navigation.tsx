@@ -363,10 +363,11 @@ export default function Navigation() {
                       return '';
                     })()}
                   </span>
-                  {/* Profile Photo */}
+                  {/* Profile Photo - Mobile optimized touch target */}
                   <button
-                    className="flex items-center focus:outline-none"
+                    className="flex items-center focus:outline-none touch-target p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors"
                     onClick={() => setShowProfileCard(true)}
+                    aria-label="Open profile"
                   >
                     {profile && profile.avatar_url ? (
                       <Image
@@ -374,20 +375,20 @@ export default function Navigation() {
                         alt="Profile"
                         width={36}
                         height={36}
-                        className="w-9 h-9 rounded-full object-cover border-2 border-blue-500"
+                        className="w-10 h-10 md:w-9 md:h-9 rounded-full object-cover border-2 border-blue-500"
                         unoptimized
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
+                      <div className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
                         {getInitials(profile?.full_name ? profile.full_name : user.email)}
                       </div>
                     )}
                   </button>
 
-                  {/* Notification Bell - now on the right side of profile */}
+                  {/* Notification Bell - Mobile optimized touch target */}
                   <button
                     onClick={() => setNotificationDrawerOpen(true)}
-                    className="relative p-2 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-md transition-colors duration-150"
+                    className="relative touch-target p-3 md:p-2 text-white hover:text-gray-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-lg transition-colors duration-150"
                     aria-label="Open notifications"
                   >
                     {/* Bell Icon */}
@@ -396,7 +397,7 @@ export default function Navigation() {
                     </svg>
                     {/* Notification Badge */}
                     {unreadNotifications > 0 && (
-                      <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full min-w-[20px] h-5 animate-pulse">
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 animate-pulse shadow-lg">
                         {unreadNotifications > 99 ? '99+' : unreadNotifications}
                       </span>
                     )}
@@ -404,15 +405,15 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            {/* Hamburger for mobile */}
-            <div className="xl:hidden flex items-center">
+            {/* Hamburger for mobile - Enhanced touch target */}
+            <div className="xl:hidden flex items-center ml-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-white hover:text-gray-200 focus:outline-none"
-                aria-label="Open main menu"
+                className="touch-target inline-flex items-center justify-center p-3 rounded-lg text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] transition-colors"
+                aria-label={mobileMenuOpen ? "Close main menu" : "Open main menu"}
                 aria-expanded={mobileMenuOpen}
               >
-                <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   ) : (
@@ -424,27 +425,44 @@ export default function Navigation() {
           </div>
         </div>
       </nav>
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <motion.div 
-          ref={mobileMenuRef} 
-          className="xl:hidden fixed top-0 right-0 w-80 h-full bg-[#2A3990] shadow-2xl z-50 flex flex-col p-6"
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
-          <motion.button
-            onClick={() => setMobileMenuOpen(false)}
-            className="self-end p-2 mb-4 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
-            aria-label="Close menu"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </motion.button>
+      {/* Mobile Menu Dropdown - Enhanced for mobile */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop overlay */}
+            <motion.div
+              className="xl:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.div 
+              ref={mobileMenuRef} 
+              className="xl:hidden fixed top-0 right-0 w-full sm:w-80 h-full bg-[#2A3990] shadow-2xl z-50 flex flex-col"
+              style={{
+                paddingLeft: 'max(env(safe-area-inset-left), 1.5rem)',
+                paddingRight: 'max(env(safe-area-inset-right), 1.5rem)',
+                paddingTop: 'max(env(safe-area-inset-top), 1.5rem)',
+                paddingBottom: 'max(env(safe-area-inset-bottom), 1.5rem)',
+              }}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <motion.button
+                onClick={() => setMobileMenuOpen(false)}
+                className="self-end touch-target p-3 mb-4 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
+                aria-label="Close menu"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </motion.button>
           
           <motion.div
             initial={{ opacity: 0, x: 20 }}

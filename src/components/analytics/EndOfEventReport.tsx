@@ -27,12 +27,13 @@ interface EndOfEventReportProps {
 
 interface EventData {
   id: string
-  name: string
+  name?: string
+  venue_name?: string
   event_date: string
   start_time: string
   end_time: string
-  venue_name: string
-  max_capacity: number
+  max_capacity?: number
+  expected_attendance?: number
   actual_attendance?: number
   status: string
 }
@@ -81,7 +82,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [isSendingEmail, setIsSendingEmail] = useState(false)
 
   // If no eventId provided, show message to select an event
-  if (!eventId) {
+  if (!eventId || eventId === '') {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center ${className}`}>
         <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -96,8 +97,11 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   }
 
   useEffect(() => {
-    if (eventId) {
+    if (eventId && eventId !== '') {
       fetchEventData()
+    } else {
+      setLoading(false)
+      setEventData(null)
     }
   }, [eventId])
 
@@ -265,7 +269,8 @@ Focus on operational effectiveness, key metrics, and overall success.`
     setGenerating(true)
     try {
       const timestamp = new Date().toISOString().split('T')[0]
-      const filename = `event-report-${eventData.name.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.${format}`
+      const eventName = eventData.name || eventData.venue_name || `Event-${eventData.id.slice(0, 8)}`
+      const filename = `event-report-${eventName.replace(/\s+/g, '-').toLowerCase()}-${timestamp}.${format}`
       
       if (format === 'csv') {
         // Generate CSV report
@@ -409,7 +414,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
     )
   }
 
-  if (!eventData) {
+  if (!eventData || !eventId || eventId === '') {
     return (
       <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
         <div className="text-center">
@@ -435,7 +440,7 @@ Focus on operational effectiveness, key metrics, and overall success.`
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">End-of-Event Report</h2>
-            <p className="text-gray-600 dark:text-gray-400">Comprehensive analysis for {eventData.name}</p>
+            <p className="text-gray-600 dark:text-gray-400">Comprehensive analysis for {eventData.name || eventData.venue_name || `Event ${eventData.id.slice(0, 8)}`}</p>
           </div>
         </div>
         <div className="flex gap-2">
