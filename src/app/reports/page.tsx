@@ -166,7 +166,7 @@ export default function ReportsPage() {
       setLoadingSummary(false);
     };
     fetchAiSummary();
-  }, [eventDate, venueName, allLogs]);
+  }, [eventDate, venueName, allLogs, incidents]);
 
   // Extract times and details from logs or incidents
   const getLogTime = (keyword: string) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 interface AISummaryData {
@@ -49,7 +49,7 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [autoRotate, aiSummary]);
+  }, [autoRotate, aiSummary, getCards]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
   };
 
   // Generate cards from AI data
-  const getCards = () => {
+  const getCards = useCallback(() => {
     if (!aiSummary) return [];
 
     const cards = [];
@@ -155,7 +155,7 @@ export default function AIInsightsCarousel({ className = "" }: AIInsightsCarouse
     }
 
     return cards;
-  };
+  }, [aiSummary]);
 
   const cards = getCards();
 

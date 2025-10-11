@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   QuestionMarkCircleIcon, 
@@ -141,7 +141,7 @@ export default function SupportPage() {
     if (currentUser) {
       fetchUserTickets();
     }
-  }, [currentUser]);
+  }, [currentUser, fetchUserTickets]);
 
   const checkUser = async () => {
     try {
@@ -175,7 +175,7 @@ export default function SupportPage() {
     }
   };
 
-  const fetchUserTickets = async () => {
+  const fetchUserTickets = useCallback(async () => {
     if (!currentUser) return;
     
     try {
@@ -190,7 +190,7 @@ export default function SupportPage() {
     } catch (error) {
       console.error('Error fetching user tickets:', error);
     }
-  };
+  }, [currentUser]);
 
   const fetchSupportMessages = async (ticketId: string) => {
     try {

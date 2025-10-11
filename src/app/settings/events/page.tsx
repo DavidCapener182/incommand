@@ -84,7 +84,7 @@ export default function EventsSettingsPage() {
   useEffect(() => {
     logger.debug('useEffect for events/logs ran', { component: 'EventsSettingsPage', action: 'useEffect', currentEvent, selectedEvent });
     fetchEvents(false);
-  }, []);
+  }, [currentEvent, selectedEvent]);
 
   useEffect(() => {
     if (selectedEvent) {

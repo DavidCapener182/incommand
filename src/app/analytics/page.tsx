@@ -284,7 +284,7 @@ export default function AnalyticsPage() {
   }, [])
 
   // Generate AI summary
-  const generateAISummary = async () => {
+  const generateAISummary = useCallback(async () => {
     setIsGeneratingSummary(true)
     try {
       const prompt = `Analyze this incident data and provide a brief operational summary:
@@ -311,7 +311,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
     } finally {
       setIsGeneratingSummary(false)
     }
-  }
+  }, [incidentData])
 
   useEffect(() => {
     fetchAnalyticsData()
