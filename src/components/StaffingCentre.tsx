@@ -620,174 +620,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         />
       )}
 
-      {/* Old drag-and-drop interface removed */}
-      {false && (
-        <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
-          <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
-            <header className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Available</h2>
-              <span className="text-xs text-gray-400">{filteredAvailableStaff.length} ready</span>
-            </header>
-            <Droppable droppableId="available">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`space-y-3 rounded-xl border border-dashed border-gray-300 p-3 text-sm transition ${
-                    snapshot.isDraggingOver ? 'border-blue-400 bg-blue-50/60 dark:border-blue-500 dark:bg-blue-900/30' : 'bg-transparent'
-                  }`}
-                >
-                  {filteredAvailableStaff.length === 0 && (
-                    <p className="text-xs text-gray-500">No unassigned staff. Drag team members here to free them up.</p>
-                  )}
-                  {filteredAvailableStaff.map((staff, index) => (
-                    <Draggable key={staff.id} draggableId={staff.id} index={index}>
-                      {(draggableProvided, draggableSnapshot) => (
-                        <div
-                          ref={draggableProvided.innerRef}
-                          {...draggableProvided.draggableProps}
-                          {...draggableProvided.dragHandleProps}
-                        >
-                          <StaffCard staff={staff} isDragging={draggableSnapshot.isDragging} onSelect={handleStaffSelect} />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </div>
-
-          {DEPARTMENTS.map((department) => (
-            <div
-              key={department.id}
-              className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70"
-              aria-label={`${department.name} column`}
-            >
-              <header className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{department.name}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{department.description}</p>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                  {columns[department.id]?.staff.length || 0} / {department.capacity}
-                </span>
-              </header>
-              <Droppable droppableId={department.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[180px] space-y-3 rounded-xl border border-dashed p-3 text-sm transition ${
-                      snapshot.isDraggingOver
-                        ? `${department.colorClass} ring-1 ring-blue-400`
-                        : 'border-gray-300 bg-transparent'
-                    }`}
-                  >
-                    {columns[department.id]?.staff.length ? (
-                      columns[department.id].staff.map((staff, index) => (
-                        <Draggable key={staff.id} draggableId={staff.id} index={index}>
-                          {(draggableProvided, draggableSnapshot) => (
-                            <div
-                              ref={draggableProvided.innerRef}
-                              {...draggableProvided.draggableProps}
-                              {...draggableProvided.dragHandleProps}
-                            >
-                              <StaffCard staff={staff} isDragging={draggableSnapshot.isDragging} onSelect={handleStaffSelect} />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))
-                    ) : (
-                      <p className="text-xs text-gray-500">Drop staff here to assign them to {department.name.toLowerCase()}.</p>
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-          ))}
-        </div>
-      </DragDropContext>
-
-      <section className="grid gap-4 lg:grid-cols-2" aria-label="Role recommendation and recent changes">
-        <article className="rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70">
-          <header className="mb-3 flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-indigo-500" aria-hidden />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Role Recommendation</h2>
-          </header>
-          {selectedStaff ? (
-            <div className="space-y-3">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Recommendation for <span className="font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</span>
-              </p>
-              {loadingRecommendation ? (
-                <p className="text-sm text-gray-500">Analyzing skills and experience…</p>
-              ) : roleRecommendation ? (
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800/60 dark:bg-green-900/30 dark:text-green-200">
-                    <p className="text-xs uppercase tracking-wide">Recommended role</p>
-                    <p className="mt-1 text-lg font-semibold">{roleRecommendation.recommended_role}</p>
-                    <p className="text-xs text-green-700 dark:text-green-300">Confidence: {(roleRecommendation.confidence * 100).toFixed(0)}%</p>
-                    <p className="mt-2 text-sm">{roleRecommendation.justification}</p>
-                  </div>
-                  {roleRecommendation.alternative_roles?.length > 0 && (
-                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Alternative roles</p>
-                      <ul className="mt-2 space-y-1">
-                        {roleRecommendation.alternative_roles.map((role) => (
-                          <li key={role.role} className="flex items-center justify-between">
-                            <span>{role.role}</span>
-                            <span className="text-xs text-gray-500">
-                              {(role.confidence * 100).toFixed(0)}%
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Unable to generate a recommendation. Try again later.</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">Select a staff member to request a tailored placement recommendation.</p>
-          )}
-        </article>
-
-        <article className="rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70">
-          <header className="mb-3 flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-500" aria-hidden />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent changes</h2>
-          </header>
-          {assignmentHistory.length === 0 ? (
-            <p className="text-sm text-gray-500">Adjust assignments to see a change log.</p>
-          ) : (
-            <ol className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
-              {assignmentHistory
-                .slice(-5)
-                .reverse()
-                .map((entry) => (
-                  <li key={`${entry.staff_id}-${entry.timestamp}`} className="flex items-start gap-2">
-                    <Clock className="mt-0.5 h-4 w-4 text-gray-400" aria-hidden />
-                    <div>
-                      <p>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">{entry.staff_name}</span> moved from{' '}
-                        <span className="text-gray-800 dark:text-gray-200">{formatColumnLabel(entry.from_department)}</span> to{' '}
-                        <span className="text-gray-800 dark:text-gray-200">{formatColumnLabel(entry.to_department)}</span>
-                      </p>
-                      <p className="text-xs text-gray-400">{new Date(entry.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  </li>
-                ))}
-            </ol>
-          )}
-        </article>
-      </section>
-      )}
-
       {activeTab === 'radio' && (
         currentEvent ? (
           <RadioSignOutSystem 
@@ -801,7 +633,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               No Active Event
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Please create or activate an event to manage radio sign-outs.
+              Create an event to enable radio sign-out functionality
             </p>
           </div>
         )
@@ -816,7 +648,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
 
       {activeTab === 'performance' && (
         currentEvent ? (
-          <StaffPerformanceDashboard 
+          <StaffPerformanceDashboard
             eventId={currentEvent.id}
             className="mb-8"
           />
@@ -827,15 +659,11 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               No Active Event
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Please create or activate an event to view performance metrics.
+              Create an event to view performance metrics
             </p>
           </div>
         )
       )}
-
-      <div className="sr-only" aria-live="polite">
-        {announcement}
-      </div>
 
       {/* Add Staff Modal */}
       <AddStaffModal
