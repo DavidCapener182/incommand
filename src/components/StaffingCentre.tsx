@@ -21,6 +21,8 @@ import StaffSkillsMatrix from '@/components/staff/StaffSkillsMatrix'
 import StaffAvailabilityToggle from '@/components/staff/StaffAvailabilityToggle'
 import StaffPerformanceDashboard from '@/components/staff/StaffPerformanceDashboard'
 import RadioSignOutSystem from '@/components/radio/RadioSignOutSystem'
+import AddStaffModal from '@/components/staff/AddStaffModal'
+import CallsignAssignmentTab from '@/components/staff/CallsignAssignmentTab'
 
 interface StaffMember {
   id: string
@@ -185,6 +187,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   // New Week 3 features state
   const [activeTab, setActiveTab] = useState<'staff' | 'callsign' | 'radio' | 'skills' | 'performance'>('staff')
   const [currentEvent, setCurrentEvent] = useState<any>(null)
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false)
 
   // Fetch current event for Week 3 features
   useEffect(() => {
@@ -543,6 +546,14 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             <RotateCcw className="h-4 w-4" aria-hidden />
             Undo
           </button>
+          <button
+            type="button"
+            onClick={() => setShowAddStaffModal(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            <Users className="h-4 w-4" aria-hidden />
+            Add Staff
+          </button>
         </div>
       </header>
 
@@ -755,22 +766,30 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       )}
 
       {activeTab === 'callsign' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
-          <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Callsign Assignment
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Access the full callsign assignment interface with drag-and-drop functionality, templates, and role management.
-          </p>
-          <a 
-            href="/callsign-assignment" 
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <UserCheck className="h-5 w-5 mr-2" />
-            Open Callsign Assignment
-          </a>
-        </div>
+        <CallsignAssignmentTab 
+          staff={availableStaff}
+          onStaffUpdate={() => {
+            // Refresh staff data when assignments change
+            if (companyId) {
+              const fetchStaff = async () => {
+                const { data, error } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, callsign, skill_tags, experience_level, previous_events, staff_role, active_assignments, company_id')
+                  .eq('company_id', companyId)
+                  .order('full_name', { ascending: true })
+
+                if (error) {
+                  console.error('Failed to load staff roster', error)
+                  return
+                }
+
+                const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+                distributeStaff(normalized)
+              }
+              fetchStaff()
+            }
+          }}
+        />
       )}
 
       {activeTab === 'radio' && (
@@ -821,6 +840,34 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       <div className="sr-only" aria-live="polite">
         {announcement}
       </div>
+
+      {/* Add Staff Modal */}
+      <AddStaffModal
+        isOpen={showAddStaffModal}
+        onClose={() => setShowAddStaffModal(false)}
+        onStaffAdded={() => {
+          // Refresh staff data
+          if (companyId) {
+            const fetchStaff = async () => {
+              const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, callsign, skill_tags, experience_level, previous_events, staff_role, active_assignments, company_id')
+                .eq('company_id', companyId)
+                .order('full_name', { ascending: true })
+
+              if (error) {
+                console.error('Failed to load staff roster', error)
+                return
+              }
+
+              const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+              distributeStaff(normalized)
+            }
+            fetchStaff()
+          }
+        }}
+        companyId={companyId || ''}
+      />
     </div>
   )
 }
