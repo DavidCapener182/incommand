@@ -247,12 +247,8 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   }, [])
 
   useEffect(() => {
-    if (!companyId) {
-      console.log('No companyId available for staff loading')
-      return
-    }
+    if (!companyId) return
     
-    console.log('Loading staff for companyId:', companyId)
     const fetchStaff = async () => {
       const { data, error } = await supabase
         .from('staff')
@@ -266,9 +262,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         return
       }
 
-      console.log('Loaded staff data:', data)
       const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-      console.log('Normalized staff:', normalized)
       distributeStaff(normalized)
     }
 
@@ -296,11 +290,9 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   }, [])
 
   const distributeStaff = useCallback((staffList: StaffMember[]) => {
-    console.log('Distributing staff:', staffList)
     // For the new callsign assignment system, put all staff in available
     // The old drag-and-drop distribution is no longer used
     setAvailableStaff(staffList)
-    console.log('Set availableStaff to:', staffList)
     
     // Still maintain the columns structure for any remaining drag-and-drop functionality
     const nextColumns: Record<string, DepartmentState> = {}

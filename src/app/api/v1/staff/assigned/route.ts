@@ -55,6 +55,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Failed to fetch assigned staff:', error)
+      // If table doesn't exist, return empty assigned staff
+      if (error.message.includes('does not exist')) {
+        return NextResponse.json({
+          success: true,
+          assignedStaff: []
+        })
+      }
       return NextResponse.json(
         { error: 'Failed to fetch assigned staff' },
         { status: 500 }

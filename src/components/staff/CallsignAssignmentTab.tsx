@@ -81,7 +81,7 @@ const POSITION_TEMPLATES = {
 export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }: CallsignAssignmentTabProps) {
   const { addToast } = useToast()
   const [positions, setPositions] = useState<Position[]>([])
-  const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([])
+  // Remove availableStaff state - use staff prop directly
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all')
   const [showAddPositionModal, setShowAddPositionModal] = useState(false)
@@ -105,9 +105,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   // Load positions from database or create default ones
   useEffect(() => {
     loadPositions()
-    // Use staff prop instead of fetching from database
-    setAvailableStaff(staff)
-  }, [staff])
+  }, [])
 
 
   const loadPositions = async () => {
@@ -173,7 +171,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   }
 
   const assignStaffToPosition = async (positionId: string, staffId: string) => {
-    const staffMember = availableStaff.find(s => s.id === staffId)
+    const staffMember = staff.find(s => s.id === staffId)
     const position = positions.find(p => p.id === positionId)
     if (!staffMember || !position || !eventId) return
 
@@ -240,11 +238,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
           })
           
           if (deleteResponse.ok) {
-            const staffMember = staff.find(s => s.id === position.assigned_staff_id)
-            if (staffMember) {
-              // Add staff back to available list
-              setAvailableStaff(prev => [...prev, staffMember])
-            }
+            // Staff is already available in the staff prop, no need to add back
 
             setPositions(prev => prev.map(pos => 
               pos.id === positionId 
@@ -386,7 +380,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     
     // If position has restricted skills, only show staff with those skills
     if (hasRestrictedSkills) {
-      return availableStaff.filter(staffMember =>
+      return staff.filter(staffMember =>
         position.required_skills?.some(skill =>
           restrictedSkills.includes(skill) && staffMember.qualifications.includes(skill)
         )
@@ -394,16 +388,16 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     }
     
     // For non-restricted positions, show all staff (prefer those with matching skills)
-    if (!position.required_skills?.length) return availableStaff
+    if (!position.required_skills?.length) return staff
     
     // Return all staff, but prioritize those with matching skills
-    const staffWithSkills = availableStaff.filter(staffMember =>
+    const staffWithSkills = staff.filter(staffMember =>
       position.required_skills?.some(skill =>
         staffMember.qualifications.includes(skill)
       )
     )
     
-    const staffWithoutSkills = availableStaff.filter(staffMember =>
+    const staffWithoutSkills = staff.filter(staffMember =>
       !position.required_skills?.some(skill =>
         staffMember.qualifications.includes(skill)
       )
@@ -502,18 +496,18 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
             <UserGroupIcon className="h-8 w-8 text-purple-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Staff</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{availableStaff.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{staff.length}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Available Staff */}
-      {availableStaff.length > 0 && (
+      {staff.length > 0 && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Staff</h3>
           <div className="flex flex-wrap gap-2">
-            {availableStaff.map(staffMember => (
+            {staff.map(staffMember => (
               <span
                 key={staffMember.id}
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
