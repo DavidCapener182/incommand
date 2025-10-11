@@ -145,7 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUserPreferences = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .rpc('get_user_preferences', { user_uuid: userId })
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (error) {
