@@ -186,22 +186,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   const [activeTab, setActiveTab] = useState<'staff' | 'callsign' | 'radio' | 'skills' | 'performance'>('staff')
   const [currentEvent, setCurrentEvent] = useState<any>(null)
 
-  useEffect(() => {
-    const registerShortcuts = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
-        event.preventDefault()
-        handleUndo()
-      }
-    }
-    undoShortcutRef.current = registerShortcuts
-    window.addEventListener('keydown', registerShortcuts)
-    return () => {
-      if (undoShortcutRef.current) {
-        window.removeEventListener('keydown', undoShortcutRef.current)
-      }
-    }
-  }, [assignmentHistory])
-
   // Fetch current event for Week 3 features
   useEffect(() => {
     const fetchCurrentEvent = async () => {
@@ -223,6 +207,22 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
 
     fetchCurrentEvent()
   }, [])
+
+  useEffect(() => {
+    const registerShortcuts = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        handleUndo()
+      }
+    }
+    undoShortcutRef.current = registerShortcuts
+    window.addEventListener('keydown', registerShortcuts)
+    return () => {
+      if (undoShortcutRef.current) {
+        window.removeEventListener('keydown', undoShortcutRef.current)
+      }
+    }
+  }, [assignmentHistory])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -585,8 +585,9 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
 
       {/* Tab Content */}
       {activeTab === 'staff' && (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
+      <>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
           <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
             <header className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Available</h2>
@@ -750,8 +751,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           )}
         </article>
       </section>
-          </div>
-        </DragDropContext>
+      </>
       )}
 
       {activeTab === 'callsign' && (
