@@ -185,7 +185,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   const undoShortcutRef = useRef<(event: KeyboardEvent) => void>()
   
   // New Week 3 features state
-  const [activeTab, setActiveTab] = useState<'staff' | 'callsign' | 'radio' | 'skills' | 'performance'>('staff')
+  const [activeTab, setActiveTab] = useState<'callsign' | 'radio' | 'skills' | 'performance'>('callsign')
   const [currentEvent, setCurrentEvent] = useState<any>(null)
   const [showAddStaffModal, setShowAddStaffModal] = useState(false)
 
@@ -560,7 +560,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           {[
-            { id: 'staff', name: 'Staff Management', icon: Users },
             { id: 'callsign', name: 'Callsign Assignment', icon: UserCheck },
             { id: 'radio', name: 'Radio Sign Out', icon: Radio },
             { id: 'skills', name: 'Skills Matrix', icon: GraduationCap },
@@ -594,9 +593,35 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'staff' && (
-      <>
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {activeTab === 'callsign' && (
+        <CallsignAssignmentTab 
+          staff={availableStaff}
+          onStaffUpdate={() => {
+            // Refresh staff data when assignments change
+            if (companyId) {
+              const fetchStaff = async () => {
+                const { data, error } = await supabase
+                  .from('staff')
+                  .select('id, full_name, contact_number, email, skill_tags, notes, active')
+                  .eq('company_id', companyId)
+                  .order('full_name', { ascending: true })
+
+                if (error) {
+                  console.error('Failed to load staff roster', error)
+                  return
+                }
+
+                const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+                distributeStaff(normalized)
+              }
+              fetchStaff()
+            }
+          }}
+        />
+      )}
+
+      {/* Old drag-and-drop interface removed */}
+      {false && (
         <div className="grid gap-4 lg:grid-cols-4" aria-label="Staff assignment board">
           <div className="rounded-2xl border border-gray-200/70 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70" aria-label="Available staff">
             <header className="mb-3 flex items-center justify-between">
@@ -762,33 +787,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
         </article>
       </section>
       </>
-      )}
-
-      {activeTab === 'callsign' && (
-        <CallsignAssignmentTab 
-          staff={availableStaff}
-          onStaffUpdate={() => {
-            // Refresh staff data when assignments change
-            if (companyId) {
-              const fetchStaff = async () => {
-                const { data, error } = await supabase
-                  .from('staff')
-                  .select('id, full_name, contact_number, email, skill_tags, notes, active')
-                  .eq('company_id', companyId)
-                  .order('full_name', { ascending: true })
-
-                if (error) {
-                  console.error('Failed to load staff roster', error)
-                  return
-                }
-
-                const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-                distributeStaff(normalized)
-              }
-              fetchStaff()
-            }
-          }}
-        />
       )}
 
       {activeTab === 'radio' && (

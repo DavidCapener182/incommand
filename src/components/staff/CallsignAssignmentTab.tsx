@@ -104,12 +104,49 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
   // Load positions from database or create default ones
   useEffect(() => {
     loadPositions()
+    fetchStaffFromDatabase()
   }, [])
 
-  // Update available staff when staff prop changes
-  useEffect(() => {
-    setAvailableStaff(staff)
-  }, [staff])
+  const fetchStaffFromDatabase = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!userProfile) return
+
+      const { data: staffData, error } = await supabase
+        .from('staff')
+        .select('id, full_name, skill_tags, active')
+        .eq('company_id', userProfile.company_id)
+        .eq('active', true)
+        .order('full_name', { ascending: true })
+
+      if (error) {
+        console.error('Failed to fetch staff:', error)
+        return
+      }
+
+      const normalizedStaff = staffData.map(member => ({
+        id: member.id,
+        name: member.full_name,
+        callsign: member.full_name,
+        qualifications: member.skill_tags || [],
+        experience_level: 'intermediate' as const,
+        previous_events: [],
+        active_assignments: 0
+      }))
+
+      setAvailableStaff(normalizedStaff)
+    } catch (error) {
+      console.error('Error fetching staff:', error)
+    }
+  }
 
   const loadPositions = async () => {
     setLoading(true)
@@ -713,13 +750,22 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Position: {selectedPosition.position}
                 </p>
+                {selectedPosition.required_skills && selectedPosition.required_skills.length > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Required skills: {selectedPosition.required_skills.join(', ')}
+                  </p>
+                )}
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {availableStaff.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                      No available staff members
-                    </p>
-                  ) : (
-                    availableStaff.map(staffMember => (
+                  {(() => {
+                    const qualifiedStaff = getStaffSuggestions(selectedPosition)
+                    if (qualifiedStaff.length === 0) {
+                      return (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                          No qualified staff members available
+                        </p>
+                      )
+                    }
+                    return qualifiedStaff.map(staffMember => (
                       <button
                         key={staffMember.id}
                         onClick={() => {
@@ -736,7 +782,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
                         </div>
                       </button>
                     ))
-                  )}
+                  })()}
                 </div>
               </div>
 
