@@ -5,15 +5,12 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/components/Toast'
 import { 
-  UserCheck, 
   PlusIcon, 
-  PencilIcon, 
   TrashIcon, 
   CheckIcon, 
   XMarkIcon,
   Users,
   Search,
-  FilterIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline'
 
