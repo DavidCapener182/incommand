@@ -786,7 +786,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           )}
         </article>
       </section>
-      </>
       )}
 
       {activeTab === 'radio' && (

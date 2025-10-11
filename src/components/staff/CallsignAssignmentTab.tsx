@@ -330,13 +330,40 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate }: Callsign
   }
 
   const getStaffSuggestions = (position: Position) => {
+    // Management and Event Control positions require specific skills
+    const restrictedSkills = ['Head of Security (HOS)', 'Deputy Head of Security', 'Security Manager', 'Event Control Manager', 'Control Room Operator']
+    
+    // Check if position requires restricted skills
+    const hasRestrictedSkills = position.required_skills?.some(skill => 
+      restrictedSkills.includes(skill)
+    )
+    
+    // If position has restricted skills, only show staff with those skills
+    if (hasRestrictedSkills) {
+      return availableStaff.filter(staffMember =>
+        position.required_skills?.some(skill =>
+          restrictedSkills.includes(skill) && staffMember.qualifications.includes(skill)
+        )
+      )
+    }
+    
+    // For non-restricted positions, show all staff (prefer those with matching skills)
     if (!position.required_skills?.length) return availableStaff
-
-    return availableStaff.filter(staffMember =>
+    
+    // Return all staff, but prioritize those with matching skills
+    const staffWithSkills = availableStaff.filter(staffMember =>
       position.required_skills?.some(skill =>
         staffMember.qualifications.includes(skill)
       )
     )
+    
+    const staffWithoutSkills = availableStaff.filter(staffMember =>
+      !position.required_skills?.some(skill =>
+        staffMember.qualifications.includes(skill)
+      )
+    )
+    
+    return [...staffWithSkills, ...staffWithoutSkills]
   }
 
   const filteredPositions = positions.filter(position => {
