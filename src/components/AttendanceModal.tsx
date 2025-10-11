@@ -222,9 +222,11 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
       x: {
         type: 'time' as const,
         time: { 
-          unit: 'minute' as const, 
-          tooltipFormat: 'HH:mm', 
-          displayFormats: { minute: 'HH:mm' } 
+          displayFormats: {
+            hour: 'HH:mm',
+            minute: 'HH:mm'
+          },
+          tooltipFormat: 'MMM dd HH:mm'
         },
         title: { 
           display: true, 
@@ -239,7 +241,10 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
           color: '#6B7280',
           font: {
             size: 11
-          }
+          },
+          maxTicksLimit: 8,
+          autoSkip: true,
+          maxRotation: 45
         }
       },
       y: {
