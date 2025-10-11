@@ -265,7 +265,14 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
       console.log('StaffingCentre: Loaded staff data:', data)
       console.log('StaffingCentre: Normalized staff:', normalized)
-      distributeStaff(normalized)
+      
+      // Remove duplicates based on ID
+      const uniqueStaff = normalized.filter((staff, index, self) => 
+        index === self.findIndex(s => s.id === staff.id)
+      )
+      console.log('StaffingCentre: Unique staff after deduplication:', uniqueStaff)
+      
+      distributeStaff(uniqueStaff)
     }
 
     void fetchStaff()

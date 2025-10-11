@@ -511,7 +511,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
               console.log(`Rendering staff ${index}:`, staffMember.id, staffMember.name)
               return (
                 <span
-                  key={`${staffMember.id}-${index}`}
+                  key={staffMember.id}
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
                 >
                   {staffMember.name}
