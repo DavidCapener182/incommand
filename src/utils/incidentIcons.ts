@@ -24,8 +24,8 @@ import {
   LuUserCheck,
   LuSettings,
   LuAlertCircle,
-  LuPhone,
-  LuRadio,
+  LuPhoneCall,
+  LuRadioReceiver,
 } from 'react-icons/lu';
 
 export interface IncidentIconConfig {
@@ -89,7 +89,7 @@ const INCIDENT_ICON_MAPPINGS: Array<{ test: RegExp; config: IncidentIconConfig }
   
   // Reports & Updates
   { test: /^attendance$/i, config: { icon: LuUsers, label: 'Attendance' } },
-  { test: /^sit\s*rep$/i, config: { icon: LuRadio, label: 'Sit Rep' } },
+  { test: /^sit\s*rep$/i, config: { icon: LuRadioReceiver, label: 'Sit Rep' } },
   { test: /^weather\s*disruption$/i, config: { icon: LuCloud, label: 'Weather Disruption' } },
   { test: /^noise\s*complaint$/i, config: { icon: LuMic, label: 'Noise Complaint' } },
   { test: /^crowd\s*density\/overcrowding$/i, config: { icon: LuUsers, label: 'Crowd Density/Overcrowding' } },
