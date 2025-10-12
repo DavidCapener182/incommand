@@ -3959,30 +3959,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     showParseButton={true}
                     className="w-full"
                   />
-                  <div className="flex gap-2">
-                    <VoiceInputCompact
-                      onTranscript={(transcript) => {
-                        setFormData(prev => ({ ...prev, occurrence: prev.occurrence + (prev.occurrence ? ' ' : '') + transcript }));
-                      }}
-                      className="flex-1"
-                    />
-                    <motion.button
-                      type="button"
-                      onClick={() => {
-                        // Simple AI assist - just clear the form for now
-                        setFormData(prev => ({ ...prev, occurrence: '', action_taken: '' }));
-                      }}
-                      disabled={loading}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target min-h-[44px]"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <CloudArrowUpIcon className="h-5 w-5" />
-                      <span className="text-sm font-medium">
-                        Clear Form
-                      </span>
-                    </motion.button>
-                  </div>
+                  {/* Voice input is now integrated into QuickAddInput */}
                 </div>
               </div>
               

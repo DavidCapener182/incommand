@@ -4,9 +4,8 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   UserGroupIcon, 
-  CloudIcon, 
-  SpeakerWaveIcon, 
-  ArrowsRightLeftIcon,
+  HeartIcon, 
+  DocumentTextIcon,
   CheckCircleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline'
@@ -20,7 +19,7 @@ interface QuickTabsProps {
   availableCallsigns?: Array<{ short_code: string; callsign: string }>
 }
 
-type QuickTabType = 'attendance' | 'weather' | 'noise' | 'crowd' | null
+type QuickTabType = 'attendance' | 'medical' | 'sitrep' | null
 
 interface QuickLogData {
   type: QuickTabType
@@ -41,26 +40,22 @@ export default function QuickTabs({
   
   // Form states for each quick tab
   const [attendanceNumber, setAttendanceNumber] = useState('')
-  const [weatherCondition, setWeatherCondition] = useState('')
-  const [weatherTemp, setWeatherTemp] = useState('')
-  const [noiseLocation, setNoiseLocation] = useState('')
-  const [noiseDescription, setNoiseDescription] = useState('')
-  const [crowdLocation, setCrowdLocation] = useState('')
-  const [crowdDensity, setCrowdDensity] = useState<'low' | 'medium' | 'high' | 'very-high'>('medium')
-  const [crowdDirection, setCrowdDirection] = useState('')
+  const [medicalLocation, setMedicalLocation] = useState('')
+  const [medicalDescription, setMedicalDescription] = useState('')
+  const [medicalSeverity, setMedicalSeverity] = useState<'minor' | 'moderate' | 'serious' | 'critical'>('moderate')
+  const [sitrepLocation, setSitrepLocation] = useState('')
+  const [sitrepDescription, setSitrepDescription] = useState('')
 
   // Get event capacity for attendance calculations
   const [eventCapacity] = useState(24000) // This should come from event data
 
   const resetForm = () => {
     setAttendanceNumber('')
-    setWeatherCondition('')
-    setWeatherTemp('')
-    setNoiseLocation('')
-    setNoiseDescription('')
-    setCrowdLocation('')
-    setCrowdDensity('medium')
-    setCrowdDirection('')
+    setMedicalLocation('')
+    setMedicalDescription('')
+    setMedicalSeverity('moderate')
+    setSitrepLocation('')
+    setSitrepDescription('')
   }
 
   const handleQuickLog = async () => {
@@ -84,40 +79,30 @@ export default function QuickTabs({
         }
         break
 
-      case 'weather':
-        if (!weatherCondition) return
-        logData = {
-          type: 'weather',
-          occurrence: `Weather update: ${weatherCondition}${weatherTemp ? `, ${weatherTemp}°C` : ''}`,
-          action: `Weather conditions logged. ${weatherCondition}${weatherTemp ? ` at ${weatherTemp}°C` : ''}.`,
-          incidentType: 'Environmental'
-        }
-        break
-
-      case 'noise':
-        if (!noiseLocation) return
-        logData = {
-          type: 'noise',
-          occurrence: `Noise complaint at ${noiseLocation}${noiseDescription ? `: ${noiseDescription}` : ''}`,
-          action: `Noise complaint logged. Location: ${noiseLocation}. ${noiseDescription || 'Monitoring situation.'}`,
-          incidentType: 'Noise Complaint'
-        }
-        break
-
-      case 'crowd':
-        if (!crowdLocation) return
-        const densityText = {
-          'low': 'Low density',
-          'medium': 'Medium density',
-          'high': 'High density',
-          'very-high': 'Very high density - monitoring closely'
-        }[crowdDensity]
+      case 'medical':
+        if (!medicalLocation) return
+        const severityText = {
+          'minor': 'Minor medical incident',
+          'moderate': 'Moderate medical incident',
+          'serious': 'Serious medical incident',
+          'critical': 'Critical medical incident'
+        }[medicalSeverity]
         
         logData = {
-          type: 'crowd',
-          occurrence: `Crowd movement at ${crowdLocation}. ${densityText}.${crowdDirection ? ` Moving ${crowdDirection}.` : ''}`,
-          action: `Crowd situation logged. ${densityText} at ${crowdLocation}. ${crowdDirection ? `Movement direction: ${crowdDirection}.` : 'Monitoring situation.'}`,
-          incidentType: 'Crowd Management'
+          type: 'medical',
+          occurrence: `${severityText} at ${medicalLocation}${medicalDescription ? `: ${medicalDescription}` : ''}`,
+          action: `Medical incident logged. ${severityText} at ${medicalLocation}. ${medicalDescription || 'Medical team notified.'}`,
+          incidentType: 'Medical'
+        }
+        break
+
+      case 'sitrep':
+        if (!sitrepLocation) return
+        logData = {
+          type: 'sitrep',
+          occurrence: `Situation report from ${sitrepLocation}${sitrepDescription ? `: ${sitrepDescription}` : ''}`,
+          action: `Situation report logged. Location: ${sitrepLocation}. ${sitrepDescription || 'General status update.'}`,
+          incidentType: 'Sit Rep'
         }
         break
 
@@ -204,21 +189,18 @@ export default function QuickTabs({
           setAttendanceNumber(numbers[0])
         }
         break
-      case 'weather':
-        setWeatherCondition(text)
-        break
-      case 'noise':
-        if (!noiseLocation) {
-          setNoiseLocation(text)
+      case 'medical':
+        if (!medicalLocation) {
+          setMedicalLocation(text)
         } else {
-          setNoiseDescription(text)
+          setMedicalDescription(text)
         }
         break
-      case 'crowd':
-        if (!crowdLocation) {
-          setCrowdLocation(text)
+      case 'sitrep':
+        if (!sitrepLocation) {
+          setSitrepLocation(text)
         } else {
-          setCrowdDirection(text)
+          setSitrepDescription(text)
         }
         break
     }
@@ -226,16 +208,14 @@ export default function QuickTabs({
 
   const tabs = [
     { id: 'attendance' as QuickTabType, label: 'Attendance', icon: UserGroupIcon, color: 'blue' },
-    { id: 'weather' as QuickTabType, label: 'Weather', icon: CloudIcon, color: 'cyan' },
-    { id: 'noise' as QuickTabType, label: 'Noise', icon: SpeakerWaveIcon, color: 'orange' },
-    { id: 'crowd' as QuickTabType, label: 'Crowd', icon: ArrowsRightLeftIcon, color: 'purple' }
+    { id: 'medical' as QuickTabType, label: 'Medical', icon: HeartIcon, color: 'red' },
+    { id: 'sitrep' as QuickTabType, label: 'Sit Rep', icon: DocumentTextIcon, color: 'green' }
   ]
 
   const colorClasses = {
     blue: 'bg-blue-500 hover:bg-blue-600 text-white',
-    cyan: 'bg-cyan-500 hover:bg-cyan-600 text-white',
-    orange: 'bg-orange-500 hover:bg-orange-600 text-white',
-    purple: 'bg-purple-500 hover:bg-purple-600 text-white'
+    red: 'bg-red-500 hover:bg-red-600 text-white',
+    green: 'bg-green-500 hover:bg-green-600 text-white'
   }
 
   return (
@@ -349,48 +329,8 @@ export default function QuickTabs({
                 </div>
               )}
 
-              {/* Weather Form */}
-              {activeTab === 'weather' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Weather Conditions
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={weatherCondition}
-                        onChange={(e) => setWeatherCondition(e.target.value)}
-                        placeholder="e.g., Sunny, Cloudy, Light rain"
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
-                        autoFocus
-                      />
-                      <VoiceInputButton
-                        onTranscript={handleVoiceTranscript}
-                        size="medium"
-                        variant="secondary"
-                        showTranscript={false}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Temperature (Optional)
-                    </label>
-                    <input
-                      type="number"
-                      value={weatherTemp}
-                      onChange={(e) => setWeatherTemp(e.target.value)}
-                      placeholder="e.g., 22"
-                      className="w-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 dark:bg-gray-700 dark:text-white"
-                    />
-                    <span className="ml-2 text-gray-600 dark:text-gray-400">°C</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Noise Complaint Form */}
-              {activeTab === 'noise' && (
+              {/* Medical Form */}
+              {activeTab === 'medical' && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -399,10 +339,10 @@ export default function QuickTabs({
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        value={noiseLocation}
-                        onChange={(e) => setNoiseLocation(e.target.value)}
-                        placeholder="e.g., Main Stage, Gate 3"
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                        value={medicalLocation}
+                        onChange={(e) => setMedicalLocation(e.target.value)}
+                        placeholder="e.g., Main Stage, Gate 3, Medical Tent"
+                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
                         autoFocus
                       />
                       <VoiceInputButton
@@ -412,24 +352,39 @@ export default function QuickTabs({
                         showTranscript={false}
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Severity
+                    </label>
+                    <select
+                      value={medicalSeverity}
+                      onChange={(e) => setMedicalSeverity(e.target.value as any)}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="minor">Minor</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="serious">Serious</option>
+                      <option value="critical">Critical</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Description (Optional)
                     </label>
                     <textarea
-                      value={noiseDescription}
-                      onChange={(e) => setNoiseDescription(e.target.value)}
-                      placeholder="Additional details..."
+                      value={medicalDescription}
+                      onChange={(e) => setMedicalDescription(e.target.value)}
+                      placeholder="e.g., Person collapsed, injury, medical assistance needed"
                       rows={2}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
                 </div>
               )}
 
-              {/* Crowd Movement Form */}
-              {activeTab === 'crowd' && (
+              {/* Sit Rep Form */}
+              {activeTab === 'sitrep' && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -438,10 +393,10 @@ export default function QuickTabs({
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        value={crowdLocation}
-                        onChange={(e) => setCrowdLocation(e.target.value)}
-                        placeholder="e.g., Main Arena, North Gate"
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                        value={sitrepLocation}
+                        onChange={(e) => setSitrepLocation(e.target.value)}
+                        placeholder="e.g., Main Stage, Gate Area, Overall Site"
+                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         autoFocus
                       />
                       <VoiceInputButton
@@ -454,29 +409,14 @@ export default function QuickTabs({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Crowd Density
+                      Description
                     </label>
-                    <select
-                      value={crowdDensity}
-                      onChange={(e) => setCrowdDensity(e.target.value as any)}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="very-high">Very High</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Movement Direction (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={crowdDirection}
-                      onChange={(e) => setCrowdDirection(e.target.value)}
-                      placeholder="e.g., towards main stage, towards exits"
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                    <textarea
+                      value={sitrepDescription}
+                      onChange={(e) => setSitrepDescription(e.target.value)}
+                      placeholder="e.g., All clear, crowd flowing well, no issues"
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
                 </div>
