@@ -8,7 +8,7 @@ import {
   LuWrench,
   LuUserX,
   LuBan,
-  LuAlertTriangle,
+  LuTriangle,
   LuZap,
   LuEye,
   LuShield,
@@ -23,7 +23,7 @@ import {
   LuPackage,
   LuUserCheck,
   LuSettings,
-  LuAlertCircle,
+  LuCircleAlert,
   LuPhoneCall,
   LuRadioReceiver,
 } from 'react-icons/lu';
@@ -37,23 +37,23 @@ const INCIDENT_ICON_MAPPINGS: Array<{ test: RegExp; config: IncidentIconConfig }
   // Security & Safety
   { test: /^ejection$/i, config: { icon: LuUserX, label: 'Ejection' } },
   { test: /^refusal$/i, config: { icon: LuBan, label: 'Refusal' } },
-  { test: /^aggressive\s*behaviour$/i, config: { icon: LuAlertTriangle, label: 'Aggressive Behaviour' } },
+  { test: /^aggressive\s*behaviour$/i, config: { icon: LuTriangle, label: 'Aggressive Behaviour' } },
   { test: /^suspicious\s*behaviour$/i, config: { icon: LuEye, label: 'Suspicious Behaviour' } },
   { test: /^hostile\s*act$/i, config: { icon: LuShieldX, label: 'Hostile Act' } },
   { test: /^counter.*terror.*alert$/i, config: { icon: LuShield, label: 'Counter-Terror Alert' } },
-  { test: /^sexual\s*misconduct$/i, config: { icon: LuAlertCircle, label: 'Sexual Misconduct' } },
+  { test: /^sexual\s*misconduct$/i, config: { icon: LuCircleAlert, label: 'Sexual Misconduct' } },
   { test: /^fight$/i, config: { icon: LuSword, label: 'Fight' } },
   { test: /^theft$/i, config: { icon: LuPackage, label: 'Theft' } },
   { test: /^entry\s*breach$/i, config: { icon: LuShieldX, label: 'Entry Breach' } },
   { test: /^weapon\s*related$/i, config: { icon: LuSword, label: 'Weapon Related' } },
-  { test: /^emergency\s*show\s*stop$/i, config: { icon: LuAlertTriangle, label: 'Emergency Show Stop' } },
+  { test: /^emergency\s*show\s*stop$/i, config: { icon: LuTriangle, label: 'Emergency Show Stop' } },
   { test: /^missing\s*child\/person$/i, config: { icon: LuUserCheck, label: 'Missing Child/Person' } },
   { test: /^unattended\s*bag$/i, config: { icon: LuPackage, label: 'Unattended Bag' } },
   
   // Medical & Welfare
   { test: /^medical$/i, config: { icon: LuHeart, label: 'Medical' } },
   { test: /^welfare$/i, config: { icon: LuHeart, label: 'Welfare' } },
-  { test: /^alcohol.*drug.*related$/i, config: { icon: LuAlertCircle, label: 'Alcohol / Drug Related' } },
+  { test: /^alcohol.*drug.*related$/i, config: { icon: LuCircleAlert, label: 'Alcohol / Drug Related' } },
   { test: /^self.*harm.*mental.*health$/i, config: { icon: LuHeart, label: 'Self-Harm/Mental Health' } },
   
   // Fire & Emergency
@@ -65,7 +65,7 @@ const INCIDENT_ICON_MAPPINGS: Array<{ test: RegExp; config: IncidentIconConfig }
   // Crowd & Safety
   { test: /^crowd\s*management$/i, config: { icon: LuUsers, label: 'Crowd Management' } },
   { test: /^queue\s*build.*up$/i, config: { icon: LuUsers, label: 'Queue Build-Up' } },
-  { test: /^showdown$/i, config: { icon: LuAlertTriangle, label: 'Showdown' } },
+  { test: /^showdown$/i, config: { icon: LuTriangle, label: 'Showdown' } },
   
   // Operations
   { test: /^site\s*issue$/i, config: { icon: LuWrench, label: 'Site Issue' } },
