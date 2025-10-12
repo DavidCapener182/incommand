@@ -28,7 +28,7 @@ export default function VoiceInputButton({
   onTranscript,
   onFinalTranscript,
   language = 'en-GB',
-  continuous = false,
+  continuous = true, // Changed default to true for better UX
   className = '',
   size = 'medium',
   variant = 'primary',
@@ -37,6 +37,7 @@ export default function VoiceInputButton({
 }: VoiceInputButtonProps) {
   const [showHelp, setShowHelp] = useState(false)
   const [parsedCommand, setParsedCommand] = useState<ReturnType<typeof parseVoiceCommand> | null>(null)
+  const [transcriptCharCount, setTranscriptCharCount] = useState(0)
 
   const {
     isListening,
@@ -58,6 +59,7 @@ export default function VoiceInputButton({
       const parsed = parseVoiceCommand(text)
       setParsedCommand(parsed)
       onTranscript(text, parsed)
+      setTranscriptCharCount((transcript + text).length)
       
       if (isFinal) {
         onFinalTranscript?.(text)
@@ -203,19 +205,43 @@ export default function VoiceInputButton({
               {transcript && (
                 <div className="text-gray-900 dark:text-white">
                   {transcript}
+                  <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                    ({transcript.length} chars)
+                  </span>
                 </div>
               )}
               {interimTranscript && (
-                <div className="text-gray-500 dark:text-gray-400 italic">
+                <div className="text-gray-500 dark:text-gray-400 italic flex items-center gap-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
                   {interimTranscript}
                 </div>
               )}
               {!transcript && !interimTranscript && isListening && (
-                <div className="text-gray-400 dark:text-gray-500 text-center py-2">
-                  Start speaking...
+                <div className="text-gray-400 dark:text-gray-500 text-center py-4 flex flex-col items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-sm">Start speaking...</span>
+                  <span className="text-xs">Auto-stops after 3s of silence</span>
                 </div>
               )}
             </div>
+            
+            {/* Manual Stop Button */}
+            {isListening && (
+              <motion.button
+                type="button"
+                onClick={stopListening}
+                className="mt-4 w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <StopIcon className="h-5 w-5" />
+                Stop Recording
+              </motion.button>
+            )}
 
             {/* Parsed Command */}
             {parsedCommand && parsedCommand.action !== 'unknown' && (

@@ -47,6 +47,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Initialize speech recognition
   useEffect(() => {
@@ -83,6 +84,21 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     recognition.onresult = (event: any) => {
       let interimTranscriptText = ''
       let finalTranscriptText = ''
+
+      // Reset silence timer on each result
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current)
+      }
+
+      // Start new silence timer (3 seconds of silence will stop recording)
+      if (continuous) {
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current && state.isListening) {
+            console.log('Stopping due to silence detection')
+            recognition.stop()
+          }
+        }, 3000) // 3 seconds of silence
+      }
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript
@@ -195,6 +211,9 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     try {
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current)
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current)
       }
       recognitionRef.current.stop()
     } catch (error) {

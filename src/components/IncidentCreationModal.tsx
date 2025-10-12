@@ -11,7 +11,7 @@ import { ensureBrowserLLM, isBrowserLLMAvailable, parseIncidentWithBrowserLLM, r
 import type { EnhancedIncidentParsingResponse } from '../types/ai'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
-import { QuickAddInput } from '@/components/ui/QuickAddInput'
+import { QuickAddInput, ParsedIncidentData } from '@/components/ui/QuickAddInput'
 import VoiceInputButton, { VoiceInputCompact } from '@/components/VoiceInputButton'
 import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
@@ -28,6 +28,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
 import { EntryType } from '@/types/auditableLog'
+import QuickTabs from './QuickTabs'
+import IncidentTypeCategories from './IncidentTypeCategories'
 
 interface Props {
   isOpen: boolean
@@ -2060,6 +2062,20 @@ export default function IncidentCreationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [entryTypeWarnings, setEntryTypeWarnings] = useState<string[]>([])
+  
+  // New state for tabbed interface and AI parsing
+  const [currentTab, setCurrentTab] = useState<'quick' | 'details' | 'people' | 'priority' | 'additional'>('quick')
+  const [incidentTypeUsageStats, setIncidentTypeUsageStats] = useState<Record<string, number>>({})
+  
+  // Load usage stats on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('incidentTypeUsageStats')
+      if (saved) {
+        setIncidentTypeUsageStats(JSON.parse(saved))
+      }
+    } catch {}
+  }, [])
   const [showAdvancedTimestamps, setShowAdvancedTimestamps] = useState(false)
   const [factualValidationWarnings, setFactualValidationWarnings] = useState<string[]>([])
   const [nextLogNumber, setNextLogNumber] = useState<string>('')
@@ -2768,6 +2784,33 @@ export default function IncidentCreationModal({
     } catch {}
     return { data: null, source: null };
   }
+  // Handler for parsed AI data from QuickAddInput
+  const handleParsedData = (data: ParsedIncidentData) => {
+    setFormData(prev => ({
+      ...prev,
+      incident_type: data.incidentType || prev.incident_type,
+      location_name: data.location || prev.location_name,
+      callsign_from: data.callsignFrom || prev.callsign_from,
+      callsign_to: data.callsignTo || prev.callsign_to,
+      priority: data.priority || prev.priority,
+      occurrence: data.occurrence || prev.occurrence,
+      action_taken: data.actionTaken || prev.action_taken
+    }));
+    
+    // Switch to details tab after applying parsed data
+    setCurrentTab('details');
+    
+    // Update usage stats for the incident type
+    if (data.incidentType) {
+      const newStats = { ...incidentTypeUsageStats };
+      newStats[data.incidentType] = (newStats[data.incidentType] || 0) + 1;
+      setIncidentTypeUsageStats(newStats);
+      try {
+        localStorage.setItem('incidentTypeUsageStats', JSON.stringify(newStats));
+      } catch {}
+    }
+  };
+
   const handleQuickAdd = async (value: string) => {
     setIsQuickAddProcessing(true);
     setQuickAddAISource(null);
