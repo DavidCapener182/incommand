@@ -131,9 +131,15 @@ export default function QuickTabs({
 
       const logNumber = `LOG-${String(nextLogNumber).padStart(4, '0')}`
 
-      // Determine callsigns
-      const callsignFrom = currentUser?.callsign || 'Control'
-      const callsignTo = 'All'
+      // Determine callsigns based on incident type
+      let callsignFrom = currentUser?.callsign || 'Control'
+      let callsignTo = 'All'
+      
+      // Special handling for attendance logs
+      if (logData.type === 'attendance') {
+        callsignFrom = 'Attendance'
+        callsignTo = 'All'
+      }
 
       // Insert the incident
       const { error } = await supabase
