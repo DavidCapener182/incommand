@@ -3935,11 +3935,28 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             {/* Mobile Form Content */}
             <div className="space-y-6">
               {/* Quick Add Section - Mobile Optimized */}
-              <div className="bg-gray-50 dark:bg-[#1a2f6b] rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Add</h3>
+              <div className="bg-gray-50 dark:bg-[#1a2f6b] rounded-xl p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Entry</h3>
+                
+                <QuickTabs
+                  eventId={selectedEventId || ''}
+                  onIncidentLogged={async () => {
+                    await onIncidentCreated();
+                  }}
+                  currentUser={user}
+                />
+                
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">OR</span>
+                  <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                
                 <div className="space-y-3">
                   <QuickAddInput
                     onQuickAdd={handleQuickAdd}
+                    onParsedData={handleParsedData}
+                    showParseButton={true}
                     className="w-full"
                   />
                   <div className="flex gap-2">
@@ -4155,12 +4172,31 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </header>
 
                 {/* Quick Add Bar - Full Width */}
-        <div className="px-6 py-4 border-b bg-gray-50">
+        <div className="px-6 py-4 border-b bg-gray-50 dark:bg-[#1a2a57] space-y-4">
+          {/* Quick Tabs for Common Logs */}
+          <QuickTabs
+            eventId={selectedEventId || ''}
+            onIncidentLogged={async () => {
+              await onIncidentCreated();
+            }}
+            currentUser={user}
+          />
+          
+          {/* Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">OR use natural language</span>
+            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+          
           <div className="relative">
             <QuickAddInput 
               aiSource={quickAddAISource} 
               onQuickAdd={async (val) => { await handleQuickAdd(val); }} 
+              onParsedData={handleParsedData}
               isProcessing={isQuickAddProcessing} 
+              showParseButton={true}
+              autoParseOnEnter={false}
               onChangeValue={(txt) => {
                 if (!txt || !txt.trim()) {
                   setFormData(prev => ({
@@ -4412,37 +4448,12 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
-                  {incidentTypes
-                    .filter(type => 
-                      typeSearchQuery === '' || 
-                      type.toLowerCase().includes(typeSearchQuery.toLowerCase())
-                    )
-                    .map((type) => {
-                      const getTypeColor = (type: string) => {
-                        if (type.includes('Medical') || type.includes('Code Green') || type.includes('Code Purple')) return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200';
-                        if (type.includes('Crowd') || type.includes('Queue') || type.includes('Ejection')) return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
-                        if (type.includes('Suspicious') || type.includes('Hostile') || type.includes('Weapon')) return 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200';
-                        if (type.includes('Tech') || type.includes('Environmental')) return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200';
-                        if (type.includes('Attendance') || type.includes('Sit Rep')) return 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200';
-                        return 'bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200';
-                      };
-                      
-                      return (
-                  <button
-                    key={type}
-                          onClick={() => handleIncidentTypeSelect(type)}
-                          className={`w-full text-left px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
-                      formData.incident_type === type
-                              ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 text-blue-900 border-blue-300'
-                              : getTypeColor(type)
-                    }`}
-                          aria-pressed={formData.incident_type === type}
-                  >
-                    {type}
-                  </button>
-                      );
-                    })}
+                <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+                  <IncidentTypeCategories
+                    selectedType={formData.incident_type}
+                    onTypeSelect={handleIncidentTypeSelect}
+                    usageStats={incidentTypeUsageStats}
+                  />
               </div>
             </div>
             </section>
