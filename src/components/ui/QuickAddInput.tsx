@@ -70,7 +70,7 @@ export default function QuickAddInput({
             * "Artist Movement" - for artist/band movement, escorting, transportation
             * "Attendance" - for attendance updates, headcounts
             * "Other" - only if none of the above match
-          - location: The location mentioned (e.g., "main stage", "north gate", "parking area", "entrance")
+          - location: The location mentioned (e.g., "Main Stage", "North Gate", "Parking Area", "Entrance"). Always capitalize the first letter of each word.
           - callsign: Any callsign mentioned (e.g., "A1", "R3", "S1", "Security Team", "Medical Team")
           - priority: Priority level based on severity ("low", "medium", "high", "urgent")
           - description: A detailed, factual description of what happened, including:
@@ -84,9 +84,14 @@ export default function QuickAddInput({
           - urgent: Fights, medical emergencies, fires, weapon incidents, security threats
           - high: Theft, entry breaches, major crowd issues
           - medium: Minor medical, suspicious behavior, technical failures
-          - low: Routine updates, attendance, minor issues, artist events (on/off stage, movement)
+          - low: Routine updates, attendance, minor issues, artist events (on/off stage, movement, performing, main act)
           
-          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". If it mentions "artist", "band", "main act", "on stage", "off stage", "performing", "set finished", use the appropriate Artist type. Match the most specific type possible.
+          Examples:
+          - "Main act on stage" → incidentType: "Artist On Stage", priority: "low", location: "Stage"
+          - "Artist performing" → incidentType: "Artist On Stage", priority: "low", location: "Stage"
+          - "Set finished" → incidentType: "Artist Off Stage", priority: "low", location: "Stage"
+          
+          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". If it mentions "artist", "band", "main act", "on stage", "off stage", "performing", "set finished", use the appropriate Artist type with "low" priority. Match the most specific type possible.
           
           If a field is not mentioned, omit it from the response.
           Return only valid JSON, no other text.`,
