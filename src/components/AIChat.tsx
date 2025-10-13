@@ -48,7 +48,13 @@ export default function AIChat({ className = '', isVisible = true }: { className
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
             }`}>
-              {msg.content}
+              <div>{msg.content}</div>
+              {/* Render simple [GG p.X] citations as a footer */}
+              {msg.role === 'assistant' && /\[GG p\./.test(msg.content) && (
+                <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  Sources: Green Guide citations were used. See /green-guide.
+                </div>
+              )}
             </div>
           </motion.div>
         ))}
