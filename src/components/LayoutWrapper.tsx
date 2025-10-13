@@ -15,6 +15,7 @@ import OfflineIndicator from './OfflineIndicator'
 import PWAUpdateNotification from './PWAUpdateNotification'
 import PWASplashScreen from './PWASplashScreen'
 import FloatingActionButton from './FloatingActionButton'
+import OnboardingTooltips from './OnboardingTooltips'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -170,6 +171,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             />
           )}
           {showNav && <FloatingActionButton />}
+          {showNav && <OnboardingTooltips />}
           {isHelpCenterOpen && (
             <>
               {/* Click-outside overlay (no dim) */}

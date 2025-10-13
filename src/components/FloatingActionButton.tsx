@@ -35,6 +35,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
         <motion.button
           onClick={handleCreateIncident}
           className="w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors touch-target"
+          data-tour="log-incident"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >

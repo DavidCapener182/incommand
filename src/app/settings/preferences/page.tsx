@@ -30,6 +30,7 @@ import {
   ArrowPathIcon,
   CheckIcon
 } from '@heroicons/react/24/outline'
+import { useTooltipOnboarding } from '@/hooks/useTooltipOnboarding'
 
 const PreferencesPage: React.FC = () => {
   const { preferences, isLoading } = useUserPreferences()
@@ -40,6 +41,7 @@ const PreferencesPage: React.FC = () => {
   const { privacySettings, updatePrivacySetting } = usePrivacySettings()
   const { dashboardLayout } = useDashboardLayout()
   const { syncPreferences, lastSyncTime } = useSyncPreferences()
+  const { restartTour, skipTour } = useTooltipOnboarding()
   
   const [isSyncing, setIsSyncing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -551,6 +553,23 @@ const PreferencesPage: React.FC = () => {
                   Customize your dashboard layout from the main dashboard page
                 </p>
               </div>
+            </div>
+          </div>
+          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Help & Onboarding</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={restartTour}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Restart tour
+              </button>
+              <button
+                onClick={skipTour}
+                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm font-medium rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Don’t show again
+              </button>
             </div>
           </div>
         </div>

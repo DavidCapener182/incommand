@@ -1422,7 +1422,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
           <div className="flex-1">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center mb-2">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center mb-2" data-tour="dashboard">
               <div className="h-8 w-1 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3"></div>
               Incident Dashboard
               {isRefreshing && (
@@ -1578,10 +1578,12 @@ export default function Dashboard() {
         {/* Analytics KPI Cards - Desktop Only */}
         {currentEvent && (
           <div className="hidden md:block">
+            <div data-tour="analytics">
             <AnalyticsKPICards 
               eventId={currentEvent.id}
               className="mb-6"
             />
+            </div>
           </div>
         )}
 

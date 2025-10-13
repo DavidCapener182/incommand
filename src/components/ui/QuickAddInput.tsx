@@ -239,7 +239,7 @@ export default function QuickAddInput({
 
   return (
     <div className="space-y-3">
-      <div className="relative">
+      <div className="relative" data-tour="quick-add-ai">
         <input
           ref={inputRef}
           type="text"
