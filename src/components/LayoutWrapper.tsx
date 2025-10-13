@@ -149,11 +149,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <AuthGate>
           {showNav && <Navigation />}
           <main 
-            className="min-h-screen bg-gray-50 dark:bg-[#15192c] pb-24"
+            className="min-h-screen bg-gray-50 dark:bg-[#15192c]"
             style={{
               paddingTop: 'max(env(safe-area-inset-top), 0px)',
               paddingLeft: 'max(env(safe-area-inset-left), 0px)',
               paddingRight: 'max(env(safe-area-inset-right), 0px)',
+              paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
               minHeight: '100dvh', // Dynamic viewport height for mobile
             }}
           >

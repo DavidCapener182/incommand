@@ -19,9 +19,12 @@ export interface VoiceInputOptions {
   continuous?: boolean
   interimResults?: boolean
   maxAlternatives?: number
-  onResult?: (transcript: string, isFinal: boolean) => void
+  silenceTimeout?: number // Customizable silence timeout
+  noiseThreshold?: number // Minimum confidence for results
+  onResult?: (transcript: string, isFinal: boolean, confidence?: number) => void
   onEnd?: () => void
   onError?: (error: string) => void
+  onSilenceDetected?: () => void
 }
 
 export function useVoiceInput(options: VoiceInputOptions = {}) {
@@ -30,9 +33,12 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     continuous = false,
     interimResults = true,
     maxAlternatives = 1,
+    silenceTimeout = 3000, // Default 3 seconds
+    noiseThreshold = 0.5, // Default confidence threshold
     onResult,
     onEnd,
-    onError
+    onError,
+    onSilenceDetected
   } = options
 
   const [state, setState] = useState<VoiceInputState>({
@@ -84,45 +90,60 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
     recognition.onresult = (event: any) => {
       let interimTranscriptText = ''
       let finalTranscriptText = ''
+      let hasValidResult = false
 
       // Reset silence timer on each result
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current)
       }
 
-      // Start new silence timer (3 seconds of silence will stop recording)
+      // Start new silence timer with customizable timeout
       if (continuous) {
         silenceTimerRef.current = setTimeout(() => {
           if (recognitionRef.current && state.isListening) {
             console.log('Stopping due to silence detection')
+            onSilenceDetected?.()
             recognition.stop()
           }
-        }, 3000) // 3 seconds of silence
+        }, silenceTimeout)
       }
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
+        const result = event.results[i]
+        const transcript = result[0].transcript
+        const confidence = result[0].confidence || 1.0
         
-        if (event.results[i].isFinal) {
+        // Filter out low-confidence results (likely noise)
+        if (confidence < noiseThreshold) {
+          console.log('Filtered low-confidence result:', transcript, 'confidence:', confidence)
+          continue
+        }
+        
+        hasValidResult = true
+        
+        if (result.isFinal) {
           finalTranscriptText += transcript + ' '
         } else {
           interimTranscriptText += transcript
         }
       }
 
-      if (finalTranscriptText) {
-        setState(prev => ({
-          ...prev,
-          transcript: prev.transcript + finalTranscriptText,
-          interimTranscript: ''
-        }))
-        onResult?.(finalTranscriptText.trim(), true)
-      } else if (interimTranscriptText) {
-        setState(prev => ({
-          ...prev,
-          interimTranscript: interimTranscriptText
-        }))
-        onResult?.(interimTranscriptText, false)
+      // Only process results if we have valid (high-confidence) speech
+      if (hasValidResult) {
+        if (finalTranscriptText) {
+          setState(prev => ({
+            ...prev,
+            transcript: prev.transcript + finalTranscriptText,
+            interimTranscript: ''
+          }))
+          onResult?.(finalTranscriptText.trim(), true, confidence)
+        } else if (interimTranscriptText) {
+          setState(prev => ({
+            ...prev,
+            interimTranscript: interimTranscriptText
+          }))
+          onResult?.(interimTranscriptText, false, confidence)
+        }
       }
     }
 
@@ -182,11 +203,14 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current)
       }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current)
+      }
       if (recognitionRef.current) {
         recognitionRef.current.stop()
       }
     }
-  }, [language, continuous, interimResults, maxAlternatives, onResult, onEnd, onError])
+  }, [language, continuous, interimResults, maxAlternatives, silenceTimeout, noiseThreshold, onResult, onEnd, onError, onSilenceDetected])
 
   // Start listening
   const startListening = useCallback(() => {

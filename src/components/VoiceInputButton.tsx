@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   MicrophoneIcon,
   StopIcon,
@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useVoiceInput, parseVoiceCommand, VOICE_COMMAND_EXAMPLES } from '@/hooks/useVoiceInput'
+import { useVoiceFeedback } from '@/hooks/useVoiceFeedback'
 
 interface VoiceInputButtonProps {
   onTranscript: (transcript: string, parsed: ReturnType<typeof parseVoiceCommand>) => void
@@ -22,6 +23,9 @@ interface VoiceInputButtonProps {
   variant?: 'primary' | 'secondary' | 'floating'
   showTranscript?: boolean
   autoSubmit?: boolean
+  silenceTimeout?: number // Customizable silence timeout
+  noiseThreshold?: number // Minimum confidence threshold
+  onSilenceDetected?: () => void // Callback when silence is detected
 }
 
 export default function VoiceInputButton({
@@ -33,11 +37,24 @@ export default function VoiceInputButton({
   size = 'medium',
   variant = 'primary',
   showTranscript = true,
-  autoSubmit = false
+  autoSubmit = false,
+  silenceTimeout = 4000, // 4 seconds for better user experience
+  noiseThreshold = 0.6, // Higher threshold for better accuracy
+  onSilenceDetected
 }: VoiceInputButtonProps) {
   const [showHelp, setShowHelp] = useState(false)
   const [parsedCommand, setParsedCommand] = useState<ReturnType<typeof parseVoiceCommand> | null>(null)
   const [transcriptCharCount, setTranscriptCharCount] = useState(0)
+
+  // Voice feedback integration
+  const voiceFeedback = useVoiceFeedback({
+    enableAudioCues: true,
+    enableAnnouncements: true,
+    enableHapticFeedback: true,
+    volume: 0.6,
+    speechRate: 1.0,
+    speechPitch: 1.0
+  })
 
   const {
     isListening,
@@ -48,24 +65,32 @@ export default function VoiceInputButton({
     isSpeaking,
     startListening,
     stopListening,
-    toggleListening,
+    toggleListening: originalToggleListening,
     resetTranscript,
     speak
   } = useVoiceInput({
     language,
     continuous,
     interimResults: true,
-    onResult: (text, isFinal) => {
+    silenceTimeout,
+    noiseThreshold,
+    onResult: (text, isFinal, confidence) => {
       const parsed = parseVoiceCommand(text)
       setParsedCommand(parsed)
       onTranscript(text, parsed)
       setTranscriptCharCount((transcript + text).length)
+      
+      // Voice feedback for transcript
+      if (isFinal && text.trim()) {
+        voiceFeedback.announceTranscript(text)
+      }
       
       if (isFinal) {
         onFinalTranscript?.(text)
         
         // Auto-submit if enabled and command is recognized
         if (autoSubmit && parsed.action !== 'unknown') {
+          voiceFeedback.announceSuccess(`Command recognized: ${parsed.action}`)
           setTimeout(() => {
             stopListening()
           }, 500)
@@ -74,9 +99,25 @@ export default function VoiceInputButton({
     },
     onError: (errorMessage) => {
       console.error('Voice input error:', errorMessage)
-      speak('Voice input error. Please try again.')
+      voiceFeedback.announceError(errorMessage)
+    },
+    onSilenceDetected: () => {
+      console.log('Silence detected, stopping recording')
+      voiceFeedback.announceTranscript('Recording stopped due to silence.')
+      onSilenceDetected?.()
     }
   })
+
+  // Enhanced toggle listening with voice feedback
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      voiceFeedback.stopListening()
+      stopListening()
+    } else {
+      voiceFeedback.startListening()
+      startListening()
+    }
+  }, [isListening, voiceFeedback, startListening, stopListening])
 
   // Button size classes
   const sizeClasses = {
@@ -112,44 +153,14 @@ export default function VoiceInputButton({
       {/* Main Voice Button */}
       <motion.button
         onClick={toggleListening}
-        className={`${sizeClasses[size]} ${variantClasses[variant]} rounded-full flex items-center justify-center transition-all duration-200 relative overflow-hidden`}
+        className={`${sizeClasses[size]} ${isListening ? 'bg-red-500 hover:bg-red-600' : variantClasses[variant]} rounded-full flex items-center justify-center transition-all duration-200 relative overflow-hidden`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         disabled={isSpeaking}
       >
-        {/* Pulse animation when listening */}
-        {isListening && (
-          <>
-            <motion.div
-              className="absolute inset-0 bg-red-500 rounded-full"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 0.2, 0.5]
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-            <motion.div
-              className="absolute inset-0 bg-red-400 rounded-full"
-              animate={{
-                scale: [1, 1.4, 1],
-                opacity: [0.3, 0, 0.3]
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.2
-              }}
-            />
-          </>
-        )}
 
         {/* Icon */}
-        <div className="relative z-10">
+        <div className="relative z-20 flex items-center justify-center w-full h-full">
           {isSpeaking ? (
             <SpeakerWaveIcon className={`${iconSizeClasses[size]} animate-pulse`} />
           ) : isListening ? (
@@ -224,7 +235,11 @@ export default function VoiceInputButton({
                     <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
                   </div>
                   <span className="text-sm">Start speaking...</span>
-                  <span className="text-xs">Auto-stops after 3s of silence</span>
+                  <span className="text-xs">Auto-stops after {silenceTimeout / 1000}s of silence</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-green-600 dark:text-green-400">High accuracy mode</span>
+                  </div>
                 </div>
               )}
             </div>

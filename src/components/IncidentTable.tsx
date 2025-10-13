@@ -26,6 +26,9 @@ import { getIncidentTypeIcon } from '../utils/incidentIcons'
 import IncidentStatsSidebar from './IncidentStatsSidebar'
 import VirtualizedList from './VirtualizedList'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
+import { SkeletonIncidentTable, LoadingSpinner } from './ui/LoadingStates'
+// import VirtualizedIncidentTable from './VirtualizedIncidentTable'
+import EnhancedSearch from './EnhancedSearch'
 
 interface Incident {
   id: number
@@ -156,6 +159,14 @@ export default function IncidentTable({
   const [pullToRefreshDistance, setPullToRefreshDistance] = useState(0)
   const [swipedIncidentId, setSwipedIncidentId] = useState<number | null>(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
+  
+  // Performance monitoring
+  const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
+    onThresholdExceeded: (metric, value, threshold) => {
+      console.warn(`[IncidentTable] Performance threshold exceeded:`, { metric, value, threshold })
+    }
+  })
+  
 
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
@@ -182,10 +193,11 @@ export default function IncidentTable({
     } catch (err) {
       logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: currentEventId || undefined });
       setError('Failed to fetch incidents');
+      trackError(err instanceof Error ? err : new Error('Failed to fetch incidents'), 'fetchIncidents');
     } finally {
       setLoading(false);
     }
-  }, [currentEventId, onDataLoaded]);
+  }, [currentEventId, onDataLoaded, trackError]);
   
   // Keep refs in sync with state/props
   useEffect(() => {
@@ -678,6 +690,11 @@ export default function IncidentTable({
     return aIsHighPriorityOpen ? -1 : 1;
   });
 
+  // Determine if we should use virtualized table (for large datasets)
+  const shouldUseVirtualized = useMemo(() => {
+    return sortedIncidents.length > 100 // Use virtualized table for 100+ incidents
+  }, [sortedIncidents.length])
+
   const chronologicalIncidents = useMemo(() => {
     return [...filteredIncidents].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -710,6 +727,15 @@ export default function IncidentTable({
     onFiltersChange({ ...filters, priorities: [] });
   }, [filters, onFiltersChange]);
 
+  // Performance monitoring - measure render time
+  useEffect(() => {
+    startRenderMeasurement()
+    
+    return () => {
+      endRenderMeasurement('IncidentTable')
+    }
+  }, [incidents.length, sortedIncidents.length, startRenderMeasurement, endRenderMeasurement])
+
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {
     const handleScroll = () => {
@@ -725,82 +751,36 @@ export default function IncidentTable({
   }, [incidents.length, sortedIncidents.length]);
 
   if (loading) {
-    return (
-      <div className="mt-4 bg-white dark:bg-[#23408e] shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-colors duration-300">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    )
+    return <SkeletonIncidentTable rows={8} />
   }
 
   return (
-    <>
+    <div className="flex flex-col h-full overflow-hidden mb-0">
       {/* Enhanced Search Bar and Last Updated */}
-      <div className="mb-6 relative">
-        {/* Mobile: Search Bar Above Everything */}
-        <div className="block md:hidden mb-4">
-          <div className="relative max-w-2xl mx-auto">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-300" aria-hidden="true" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search incidents by type, callsign, or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-12 pr-12 py-4 border-2 border-gray-200 dark:border-[#2d437a] rounded-2xl leading-5 bg-white dark:bg-[#182447] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-gray-100 shadow-lg hover:shadow-xl transition-all duration-200 touch-target"
-            />
-            {searchQuery && (
-              <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-                <motion.button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-200 touch-target"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-                </motion.button>
-              </div>
-            )}
-          </div>
+      <div className="mb-2 relative">
+        {/* Mobile: Enhanced Search Bar Above Everything */}
+        <div className="block md:hidden mb-2">
+          <EnhancedSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onFilterChange={onFiltersChange}
+            placeholder="Search incidents by type, callsign, or description..."
+            showSuggestions={true}
+          />
         </div>
 
-        {/* Desktop: Original Layout - Search Bar, View Toggle, and Last Updated */}
-        <div className="hidden md:flex items-center justify-between gap-4 mb-4">
-          {/* Desktop Search Bar - Left */}
+        {/* Desktop: Enhanced Search Bar, View Toggle, and Last Updated */}
+        <div className="hidden md:flex items-center justify-between gap-4 mb-2">
+          {/* Desktop Enhanced Search Bar - Left */}
           <div className="flex-1 max-w-md">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" aria-hidden="true" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search incidents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-[#2d437a] rounded-lg text-sm bg-white dark:bg-[#182447] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
-              />
-              {searchQuery && (
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <motion.button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-200"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <XMarkIcon className="h-4 w-4" aria-hidden="true" />
-                  </motion.button>
-                </div>
-              )}
-            </div>
+            <EnhancedSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onFilterChange={onFiltersChange}
+              placeholder="Search incidents..."
+              showSuggestions={true}
+              className="text-sm"
+            />
           </div>
 
           {/* View Toggle - Center */}
@@ -859,7 +839,7 @@ export default function IncidentTable({
         </div>
 
         {/* Mobile: View Toggle and Last Updated */}
-        <div className="block md:hidden flex items-center justify-between gap-4 mb-4">
+        <div className="block md:hidden flex items-center justify-between gap-4 mb-2">
           {/* View Toggle - Left */}
           {onViewModeChange && (
             <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
@@ -915,8 +895,8 @@ export default function IncidentTable({
         </div>
         
         {onFiltersChange && (
-          <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Filter incidents by priority">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300">Priority</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Filter incidents by priority">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Priority</span>
             {PRIORITY_FILTER_OPTIONS.map((priorityOption) => {
               const isActive = normalizedSelectedPriorities.includes(priorityOption);
               const config = getPriorityDisplayConfig(priorityOption);
@@ -957,7 +937,7 @@ export default function IncidentTable({
         {/* Removed extra filters block since Types moved inline above */}
 
         {searchQuery && (
-          <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-2">
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl px-4 py-2">
             <span className="font-medium text-blue-700 dark:text-blue-200">
               {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} found
             </span>
@@ -980,15 +960,78 @@ export default function IncidentTable({
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No incidents to display</h3>
               <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
             </div>
+          ) : shouldUseVirtualized ? (
+            /* Virtualized Table for Large Datasets */
+            <div className="flex flex-col lg:flex-row gap-6 mt-2 overflow-hidden lg:items-start">
+              <div className="w-full lg:flex-1">
+                {/* Regular Incident List for Desktop */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="max-h-[600px] overflow-y-auto">
+                    {sortedIncidents.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="text-gray-400 dark:text-gray-500 mb-4">
+                          <ClockIcon className="h-12 w-12 mx-auto" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No incidents yet</h3>
+                        <p className="text-gray-500 dark:text-gray-400">Incidents will appear here as they&apos;re logged</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {sortedIncidents.map((incident) => (
+                          <div
+                            key={incident.id}
+                            className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                            onClick={() => handleIncidentClick(incident)}
+                          >
+                            <div className="flex items-start gap-4">
+                              <div className="flex-shrink-0">
+                                {(() => {
+                                  const iconConfig = getIncidentTypeIcon(incident.incident_type)
+                                  const IconComponent = iconConfig.icon
+                                  return <IconComponent className="w-5 h-5 text-gray-400" />
+                                })()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                    {incident.log_number}
+                                  </span>
+                                  <PriorityBadge priority={incident.priority} />
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">
+                                  {incident.occurrence.length > 100 
+                                    ? `${incident.occurrence.substring(0, 100)}...` 
+                                    : incident.occurrence
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Stats Sidebar */}
+              <div className="hidden lg:block w-64 flex-shrink-0">
+                <IncidentStatsSidebar 
+                  incidents={sortedIncidents}
+                />
+              </div>
+            </div>
           ) : (
-        <div className="flex gap-6 mt-6">
+        <div className="flex flex-col lg:flex-row gap-6 mt-2 overflow-hidden lg:items-start">
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="w-full lg:flex-1">
           {/* Enhanced Mobile Card Layout with Pull-to-Refresh */}
           <div 
-            ref={tableContainerRef} 
-            className="md:hidden mt-4 space-y-3 px-1 border border-gray-200 dark:border-[#2d437a] rounded-xl overflow-hidden scroll-smooth relative" 
-            style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}
+            className="md:hidden mt-4 space-y-3 px-1 border border-gray-200 dark:border-[#2d437a] rounded-xl overflow-y-auto scroll-smooth relative flex-1"
+            style={{ height: 'calc(100vh - 200px)' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -1097,7 +1140,7 @@ export default function IncidentTable({
                         <MapPinIcon className="h-4 w-4 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
                       <span className="text-sm">
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -1126,7 +1169,7 @@ export default function IncidentTable({
                   </div>
                   
                   {/* Compact Occurrence Section */}
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">
+                  <div className="text-xs uppercase tracking-wide text-gray-600 mb-0.5">
                     Occurrence
                   </div>
                   <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">
@@ -1139,20 +1182,20 @@ export default function IncidentTable({
                   {expandedIncidentId === incident.id && (
                     <div className="space-y-2 border-t border-gray-200 dark:border-[#2d437a] pt-2">
                       <div>
-                        <span className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Full Occurrence</span>
+                        <span className="text-xs uppercase tracking-wide text-gray-600 mb-0.5">Full Occurrence</span>
                         <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">{incident.occurrence}</p>
                       </div>
                       <div>
-                        <span className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Action Taken</span>
+                        <span className="text-xs uppercase tracking-wide text-gray-600 mb-0.5">Action Taken</span>
                         <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">{incident.action_taken}</p>
                       </div>
                       <div className="flex gap-4">
                         <div className="flex-1">
-                          <span className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">From</span>
+                          <span className="text-xs uppercase tracking-wide text-gray-600 mb-0.5">From</span>
                           <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{incident.callsign_from}</p>
                         </div>
                         <div className="flex-1">
-                          <span className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">To</span>
+                          <span className="text-xs uppercase tracking-wide text-gray-600 mb-0.5">To</span>
                           <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{incident.callsign_to}</p>
                         </div>
                       </div>
@@ -1167,7 +1210,13 @@ export default function IncidentTable({
           </div>
 
           {/* Enhanced Desktop Table Layout */}
-          <div ref={tableContainerRef} className="hidden md:flex flex-col mt-6 border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-hidden scroll-smooth" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+          <div
+            ref={tableContainerRef}
+            className="hidden md:flex flex-col border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-y-auto scroll-smooth"
+            style={{
+              maxHeight: 'calc(100vh - 260px)'
+            }}
+          >
             {/* Enhanced Desktop Table Header */}
           <div className="sticky top-0 z-20 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
               <div className="grid items-center w-full" style={{ gridTemplateColumns: '6% 6% 6% 25% 15% 35% 7%' }}>
@@ -1221,7 +1270,7 @@ export default function IncidentTable({
                           })()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
@@ -1404,6 +1453,6 @@ export default function IncidentTable({
         )}
       </>
     )}
-    </>
+    </div>
   )
 } 

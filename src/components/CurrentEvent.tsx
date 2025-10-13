@@ -1,9 +1,21 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import EventCreationModal from './EventCreationModal'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline'
+
+// Shared card base styling for consistency
+const cardBase = `
+  bg-white/90 dark:bg-[#1e2a78]/90
+  backdrop-blur-lg
+  shadow-md hover:shadow-lg
+  transition-all duration-300
+  border border-gray-200/60 dark:border-[#2d437a]/50
+  rounded-2xl
+  p-5 sm:p-6
+`
 
 interface Event {
   id: string
@@ -209,85 +221,91 @@ export default function CurrentEvent({
   }
 
   return (
-    <div className="h-full">
-      <div className="h-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 w-full relative transition-colors duration-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col">
-        <div className="px-5 py-4 flex-1">
-          {currentEvent ? (
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-              <div className="flex items-start">
-                  <span className="text-sm font-medium text-gray-500 w-24 pt-1 md:hidden">Event</span>
-                  <span className="hidden md:inline text-sm font-medium text-gray-500 w-24 pt-1">Current Event</span>
+    <motion.div 
+      className="h-full"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+    >
+      <div className={`${cardBase} h-full flex flex-col justify-between relative`}>
+        {currentEvent ? (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start gap-3">
+                <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 mt-1" />
                 <div>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white ml-2">
-                    {currentEvent.event_name}
-                  </span>
-                    <div className="hidden md:inline">
-                  {currentEvent.support_acts && (() => {
-                    let acts = currentEvent.support_acts;
-                    if (typeof acts === 'string') {
-                      try {
-                        acts = JSON.parse(acts);
-                      } catch {
-                        acts = [];
-                      }
-                    }
-                    return Array.isArray(acts) && acts.length > 0 ? (
-                    <span className="text-sm font-normal text-gray-500 dark:text-white ml-2">
-                        {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Current Event</h2>
+                  <div className="mt-1">
+                    <span className="text-base font-semibold text-gray-900 dark:text-white">
+                      {currentEvent.event_name}
                     </span>
-                    ) : null;
-                  })()}
+                    {currentEvent.support_acts && (() => {
+                      let acts = currentEvent.support_acts;
+                      if (typeof acts === 'string') {
+                        try {
+                          acts = JSON.parse(acts);
+                        } catch {
+                          acts = [];
+                        }
+                      }
+                      return Array.isArray(acts) && acts.length > 0 ? (
+                        <span className="text-sm font-normal text-gray-500 dark:text-gray-300 ml-2">
+                          {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
                 </div>
               </div>
-                </div>
-                <div className="md:hidden">
-                  {currentTime && (
-                    <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
-                  )}
-                </div>
+              <div className="md:hidden">
+                {currentTime && (
+                  <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
+                )}
               </div>
-              <div className="hidden md:block">
-                <>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Venue</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-500 dark:text-white w-24">Type</span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.event_type}</span>
+            </div>
+            
+            <div className="hidden md:block">
+              {/* Visual divider */}
+              <hr className="my-4 border-gray-200/60 dark:border-[#2d437a]/50" />
+              
+              <div className="flex items-center gap-3">
+                <MapPinIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
+                <div>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-300">Venue</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
+                </div>
               </div>
               
-              {/* AI Insights - with navigation positioned at bottom of card */}
+              {/* AI Insights - modernized with better styling */}
               {aiInsights.length > 0 && (
-                <div className="mt-1 pt-1 border-t border-gray-100 pb-1">
-                  <div className="min-h-[115px] max-h-[115px] overflow-hidden">
+                <div className="mt-4 pt-4 border-t border-gray-200/60 dark:border-[#2d437a]/50">
+                  <div className="min-h-[100px] max-h-[100px] overflow-hidden">
                     {aiLoading ? (
                       <div className="animate-pulse space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                        <div className="h-3 bg-gray-200 rounded w-full"></div>
-                        <div className="h-3 bg-gray-200 rounded w-4/5"></div>
-                        <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
                       </div>
                     ) : aiError ? (
-                      <div className="pb-8">
-                        <h4 className="text-sm font-bold text-red-800 mb-2">System Error</h4>
-                        <div className="text-sm text-red-600 leading-relaxed">
+                      <div className="pb-4">
+                        <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
+                        <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
                           {aiError}
                           <button 
                             onClick={fetchAiInsights}
-                            className="ml-2 text-red-800 hover:text-red-900 underline"
+                            className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
                           >
                             Retry
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="pb-8">
+                      <div className="pb-4">
                         <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
                           {aiInsights[currentInsightIndex]?.title}
                         </h4>
-                        <div className="text-sm text-gray-700 dark:text-white leading-relaxed pr-1">
+                        <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pr-1">
                           {aiInsights[currentInsightIndex]?.content}
                         </div>
                       </div>
@@ -331,28 +349,29 @@ export default function CurrentEvent({
                   </div>
                 </div>
               )}
-                </>
-              </div>
+              
+              {/* Subtle gradient accent at bottom */}
+              <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
             </div>
-          ) : (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-gray-900">
-                No Current Event
-              </h3>
-              <p className="text-sm text-gray-500">
-                No event is currently selected. Create a new event to get started.
-              </p>
-              <div>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-[#2A3990] hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
-                >
-                  Create Event
-                </button>
-              </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-900">
+              No Current Event
+            </h3>
+            <p className="text-sm text-gray-500">
+              No event is currently selected. Create a new event to get started.
+            </p>
+            <div>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-[#2A3990] hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
+              >
+                Create Event
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <EventCreationModal
@@ -360,6 +379,6 @@ export default function CurrentEvent({
         onClose={handleCloseModal}
         onEventCreated={handleEventCreated}
       />
-    </div>
+    </motion.div>
   )
 }

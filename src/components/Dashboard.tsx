@@ -18,6 +18,7 @@ import {
   ClockIcon,
   CheckCircleIcon,
   UserGroupIcon,
+  CalendarIcon,
   HeartIcon,
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
@@ -25,7 +26,6 @@ import {
   AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
-import LiveRiskPulse from './LiveRiskPulse'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter } from 'next/navigation'
@@ -55,6 +55,11 @@ import MiniTrendChart from './MiniTrendChart'
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
+// Accessibility imports
+import SkipLinks from './SkipLinks'
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useScreenReader } from '@/hooks/useScreenReader'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -149,13 +154,24 @@ interface TimeCardProps {
   timeSinceLastIncident: string;
 }
 
+// Shared card base styling for consistency
+const cardBase = `
+  bg-white/90 dark:bg-[#1e2a78]/90
+  backdrop-blur-lg
+  shadow-md hover:shadow-lg
+  transition-all duration-300
+  border border-gray-200/60 dark:border-[#2d437a]/50
+  rounded-2xl
+  p-5 sm:p-6
+`
+
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="relative h-full bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] flex flex-col"
+      className={`${cardBase} h-full flex flex-col relative`}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative flex-1">
         <div className="md:block relative">
@@ -164,7 +180,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+              className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
             >
               Current Time
             </motion.h2>
@@ -172,7 +188,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4"
+              className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-4"
             >
               {currentTime}
             </motion.p>
@@ -182,7 +198,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               transition={{ delay: 0.4 }}
               className="mt-2 mb-4"
             >
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time Since Last Incident</h3>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time Since Last Incident</h3>
               <p className="text-lg font-bold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
             </motion.div>
             {nextEvent && (
@@ -192,8 +208,8 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                 transition={{ delay: 0.5 }}
                 className="mt-2"
               >
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-100">Time until {nextEvent.title}</h3>
-                <p className="text-lg font-bold text-blue-600 dark:text-gray-100">{countdown}</p>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time until {nextEvent.title}</h3>
+                <p className="text-lg font-bold text-blue-600 dark:text-blue-300">{countdown}</p>
               </motion.div>
             )}
           </div>
@@ -218,7 +234,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
         </div>
         <div>
           <div className='hidden md:block'>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Event Schedule</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Event Schedule</h2>
           </div>
           <div className="space-y-2 mt-2">
             {eventTimings.map((timing, index) => (
@@ -227,17 +243,23 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6 + index * 0.1 }}
-                className={`flex justify-between items-center p-2 rounded transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                        timing.isNext ? 'md:bg-blue-50 md:border md:border-blue-200' : ''
-                      } `}
+                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 hover:shadow-sm ${
+                  timing.isNext 
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30' 
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                }`}
               >
-                <span className={`text-sm font-medium ${timing.isNext ? 'md:text-blue-600' : 'text-gray-500 dark:text-gray-100'}`}>{timing.title}</span>
-                <span className={`text-sm font-bold ${timing.isNext ? 'md:text-blue-700' : 'text-gray-900 dark:text-gray-100'}`}>{timing.time}</span>
+                <span className={`text-sm font-medium ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300'}`}>
+                  {timing.title}
+                </span>
+                <span className={`text-sm font-bold ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                  {timing.time}
+                </span>
               </motion.div>
             ))}
           </div>
           {eventTimings.length === 0 && !nextEvent && (
-            <p className="text-sm text-gray-500 dark:text-gray-100">No upcoming event timings</p>
+            <p className="text-sm text-gray-400 dark:text-gray-400">No upcoming event timings</p>
           )}
         </div>
       </div>
@@ -248,7 +270,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
-          className="hidden md:block absolute bottom-4 left-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md transition-all duration-200"
+          className="hidden md:block absolute bottom-4 left-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-blue-200/50 dark:border-blue-700/30 shadow-sm hover:shadow-md transition-all duration-200"
         >
           <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
             {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
@@ -257,6 +279,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
         </motion.div>
       )}
+      
+      {/* Subtle gradient accent at bottom */}
+      <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
     </motion.div>
   );
 }
@@ -325,7 +350,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const baseClasses = `
     relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-xl md:rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
-    p-3 md:p-4 transition-all duration-300 md:hover:shadow-2xl md:hover:-translate-y-1 md:hover:scale-105
+    px-3 py-2.5 md:px-4 md:py-3 transition-all duration-300 md:hover:shadow-2xl md:hover:-translate-y-1 md:hover:scale-105
     ${isFilterable ? 'cursor-pointer touch-target' : ''}
     ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-[1.02] md:scale-105' : 'hover:shadow-xl active:scale-[0.98]'}
     ${pulse ? 'animate-pulse' : ''}
@@ -333,22 +358,24 @@ const StatCard: React.FC<StatCardProps> = ({
   `;
 
   const content = (
-    <div className="flex flex-row items-center justify-between w-full min-h-[60px] sm:min-h-[68px]">
-      <div className="flex flex-col items-start flex-1">
-        <motion.div 
-          key={value}
-          initial={{ scale: 1.1, opacity: 0.8 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1"
-        >
-          {value}
-        </motion.div>
-        <div className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight">
-          {title}
+    <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
+      <div className="flex flex-col flex-1 gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <motion.div 
+            key={value}
+            initial={{ scale: 1.1, opacity: 0.8 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+          >
+            {value}
+          </motion.div>
+          <span className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight whitespace-nowrap">
+            {title}
+          </span>
         </div>
         {trendData && trendData.length > 0 && (
-          <div className="mt-1.5 hidden sm:block">
+          <div className="mt-1 hidden sm:block">
             <MiniTrendChart data={trendData} height={20} width={60} />
           </div>
         )}
@@ -551,10 +578,10 @@ export default function Dashboard() {
   const { updateCounts } = useIncidentSummary()
   
   // Performance monitoring
-  const { isSlowDevice } = usePerformanceMonitor('Dashboard', {
-    trackRenderTime: true,
-    trackMemory: true,
-    trackFPS: true
+  const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
+    onThresholdExceeded: (metric, value, threshold) => {
+      console.warn(`[Dashboard] Performance threshold exceeded:`, { metric, value, threshold })
+    }
   })
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -621,6 +648,73 @@ export default function Dashboard() {
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  
+  // Accessibility: Screen reader announcements
+  const { announce } = useScreenReader({ politeness: 'polite' });
+
+  // Accessibility: Global keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: 'n',
+        description: 'Create new incident',
+        action: () => {
+          if (!isIncidentModalOpen) {
+            setIsIncidentModalOpen(true)
+            announce('Opening new incident form')
+          }
+        },
+        disabled: !hasCurrentEvent
+      },
+      {
+        key: '/',
+        description: 'Focus search',
+        action: () => {
+          const searchInput = document.getElementById('search-input') as HTMLInputElement
+          if (searchInput) {
+            searchInput.focus()
+            announce('Search focused')
+          }
+        }
+      },
+      {
+        key: 'Escape',
+        description: 'Close modal',
+        action: () => {
+          if (isIncidentModalOpen) {
+            setIsIncidentModalOpen(false)
+            announce('Incident form closed')
+          } else if (isEventModalOpen) {
+            setIsEventModalOpen(false)
+            announce('Event form closed')
+          } else if (showKeyboardShortcuts) {
+            setShowKeyboardShortcuts(false)
+            announce('Keyboard shortcuts closed')
+          }
+        }
+      },
+      {
+        key: '?',
+        shift: true,
+        description: 'Show keyboard shortcuts',
+        action: () => {
+          setShowKeyboardShortcuts(!showKeyboardShortcuts)
+          announce(showKeyboardShortcuts ? 'Keyboard shortcuts closed' : 'Keyboard shortcuts opened')
+        }
+      },
+      {
+        key: 'f',
+        description: 'Toggle filters',
+        action: () => {
+          // This will be handled by IncidentTable's filter toggle
+          announce('Filters toggled')
+        }
+      }
+    ],
+    enabled: true,
+    preventDefault: true
+  });
   const [timeSinceLastIncident, setTimeSinceLastIncident] = useState<string>('');
   const [eventTimings, setEventTimings] = useState<EventTiming[]>([]);
   const [countdown, setCountdown] = useState<string>('');
@@ -1229,6 +1323,15 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-3 sm:p-6 md:p-8">
+      {/* Accessibility: Skip Links */}
+      <SkipLinks />
+      
+      {/* Accessibility: Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp 
+        isOpen={showKeyboardShortcuts} 
+        onClose={() => setShowKeyboardShortcuts(false)} 
+      />
+      
       {/* Event Header - Sticky */}
       <div className="md:bg-transparent md:shadow-none -mx-3 sm:-mx-6 md:-mx-8 px-3 sm:px-6 md:px-8 pt-0 pb-2 md:py-0 mb-6 md:mb-8">
         {/* Desktop view */}
@@ -1253,7 +1356,11 @@ export default function Dashboard() {
               timeSinceLastIncident={timeSinceLastIncident}
             />
           )}
-          <LiveRiskPulse className="h-full" />
+          <IncidentSummaryBar
+            onFilter={handleSummaryFilter}
+            activeStatus={activeSummaryStatus}
+            className="h-full"
+          />
         </div>
 
         {/* Mobile view */}
@@ -1354,13 +1461,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="flex-shrink-0">
-            <IncidentSummaryBar
-              onFilter={handleSummaryFilter}
-              activeStatus={activeSummaryStatus}
-              className=""
-            />
-          </div>
         </div>
 
         {/* Stats Grid - Desktop Only (Hidden on Mobile) */}
@@ -1618,22 +1718,30 @@ export default function Dashboard() {
         </div>
 
         {/* Incident Table and Staff Deployment */}
-        <div className="pb-24">
-          <IncidentTable
-            key={refreshKey}
-            filters={filters}
-            onFiltersChange={setFilters}
-            onDataLoaded={handleIncidentsLoaded}
-            onToast={addToast}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            currentUser={user}
-            currentEventId={currentEventId || undefined}
-            currentEvent={currentEvent}
-          />
+        <main 
+          id="main-content" 
+          className=""
+          role="main"
+          aria-label="Incident logs"
+          tabIndex={-1}
+        >
+          <div id="incidents-table" className="-mb-6 md:-mb-8">
+            <IncidentTable
+              key={refreshKey}
+              filters={filters}
+              onFiltersChange={setFilters}
+              onDataLoaded={handleIncidentsLoaded}
+              onToast={addToast}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              currentUser={user}
+              currentEventId={currentEventId || undefined}
+              currentEvent={currentEvent}
+            />
+          </div>
           
           {/* Staff Deployment Overview hidden intentionally */}
-        </div>
+        </main>
       </div>
 
       <IncidentCreationModal

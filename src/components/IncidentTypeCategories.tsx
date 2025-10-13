@@ -1,9 +1,7 @@
-'use client'
-
-import React, { useState, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
-import { getIncidentTypeIcon } from '../utils/incidentIcons'
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { getIncidentTypeIcon } from '@/utils/incidentIcons'
 
 interface IncidentTypeCategoriesProps {
   selectedType: string
@@ -11,204 +9,205 @@ interface IncidentTypeCategoriesProps {
   usageStats?: Record<string, number>
 }
 
-interface Category {
-  id: string
-  name: string
-  types: string[]
-  defaultExpanded?: boolean
-  color: string
-}
-
-const CATEGORIES: Category[] = [
-  {
-    id: 'security',
-    name: 'Security',
-    types: ['Ejection', 'Refusal', 'Hostile Act', 'Counter-Terror Alert', 'Entry Breach', 'Theft', 'Fight', 'Weapon Related'],
-    defaultExpanded: true,
-    color: 'red'
+const INCIDENT_CATEGORIES = {
+  'Security': {
+    icon: '🛡️',
+    types: [
+      'Ejection', 'Refusal', 'Hostile Act', 'Counter-Terror Alert', 'Entry Breach', 
+      'Theft', 'Fight', 'Weapon Related', 'Suspicious Behaviour'
+    ],
+    defaultExpanded: true
   },
-  {
-    id: 'medical',
-    name: 'Medical & Welfare',
-    types: ['Medical', 'Welfare', 'Missing Child/Person', 'Sexual Misconduct'],
-    defaultExpanded: true,
-    color: 'pink'
+  'Medical & Welfare': {
+    icon: '🏥',
+    types: [
+      'Medical', 'Welfare', 'Missing Child/Person', 'Sexual Misconduct'
+    ],
+    defaultExpanded: true
   },
-  {
-    id: 'crowd',
-    name: 'Crowd & Safety',
-    types: ['Crowd Management', 'Evacuation', 'Fire Alarm', 'Suspected Fire', 'Fire', 'Queue Build-Up'],
-    defaultExpanded: false,
-    color: 'orange'
+  'Crowd & Safety': {
+    icon: '👥',
+    types: [
+      'Crowd Management', 'Evacuation', 'Fire', 'Fire Alarm', 'Suspected Fire', 
+      'Queue Build-Up'
+    ],
+    defaultExpanded: false
   },
-  {
-    id: 'operations',
-    name: 'Operations',
-    types: ['Attendance', 'Site Issue', 'Tech Issue', 'Environmental', 'Lost Property', 'Accreditation', 'Staffing', 'Accsessablity'],
-    defaultExpanded: false,
-    color: 'blue'
+  'Operations': {
+    icon: '⚙️',
+    types: [
+      'Attendance', 'Site Issue', 'Tech Issue', 'Environmental', 'Lost Property', 
+      'Accreditation', 'Staffing', 'Accsessablity'
+    ],
+    defaultExpanded: false
   },
-  {
-    id: 'event',
-    name: 'Event',
-    types: ['Artist Movement', 'Artist On Stage', 'Artist Off Stage', 'Event Timing', 'Timings', 'Sit Rep', 'Showdown', 'Emergency Show Stop'],
-    defaultExpanded: false,
-    color: 'purple'
+  'Event': {
+    icon: '🎵',
+    types: [
+      'Artist Movement', 'Artist On Stage', 'Artist Off Stage', 'Event Timing', 
+      'Timings', 'Sit Rep', 'Showdown', 'Emergency Show Stop'
+    ],
+    defaultExpanded: false
   },
-  {
-    id: 'environment',
-    name: 'Environment & Complaints',
-    types: ['Noise Complaint', 'Animal Incident'],
-    defaultExpanded: false,
-    color: 'green'
+  'Environment & Complaints': {
+    icon: '🌍',
+    types: [
+      'Noise Complaint', 'Animal Incident', 'Environmental'
+    ],
+    defaultExpanded: false
   },
-  {
-    id: 'substances',
-    name: 'Substances',
-    types: ['Alcohol / Drug Related'],
-    defaultExpanded: false,
-    color: 'yellow'
+  'Substances': {
+    icon: '🚫',
+    types: [
+      'Alcohol / Drug Related'
+    ],
+    defaultExpanded: false
   },
-  {
-    id: 'other',
-    name: 'Other',
-    types: ['Other'],
-    defaultExpanded: false,
-    color: 'gray'
+  'Other': {
+    icon: '📋',
+    types: [
+      'Other'
+    ],
+    defaultExpanded: false
   }
-]
+} as const
 
-const colorClasses = {
-  red: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10',
-  pink: 'border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/10',
-  orange: 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10',
-  blue: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10',
-  purple: 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/10',
-  green: 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10',
-  yellow: 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10',
-  gray: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
-}
-
-const headerColorClasses = {
-  red: 'text-red-800 dark:text-red-200',
-  pink: 'text-pink-800 dark:text-pink-200',
-  orange: 'text-orange-800 dark:text-orange-200',
-  blue: 'text-blue-800 dark:text-blue-200',
-  purple: 'text-purple-800 dark:text-purple-200',
-  green: 'text-green-800 dark:text-green-200',
-  yellow: 'text-yellow-800 dark:text-yellow-200',
-  gray: 'text-gray-800 dark:text-gray-200'
-}
-
-export default function IncidentTypeCategories({
-  selectedType,
-  onTypeSelect,
-  usageStats = {}
+export default function IncidentTypeCategories({ 
+  selectedType, 
+  onTypeSelect, 
+  usageStats = {} 
 }: IncidentTypeCategoriesProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(CATEGORIES.filter(c => c.defaultExpanded).map(c => c.id))
-  )
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    Object.keys(INCIDENT_CATEGORIES).forEach(category => {
+      initial[category] = INCIDENT_CATEGORIES[category as keyof typeof INCIDENT_CATEGORIES].defaultExpanded
+    })
+    return initial
+  })
 
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev)
-      if (next.has(categoryId)) {
-        next.delete(categoryId)
-      } else {
-        next.add(categoryId)
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }))
+  }
+
+  // Sort incident types within each category by usage stats
+  const sortedCategories = useMemo(() => {
+    return Object.entries(INCIDENT_CATEGORIES).map(([categoryName, categoryData]) => {
+      const sortedTypes = [...categoryData.types].sort((a, b) => {
+        const aUsage = usageStats[a] || 0
+        const bUsage = usageStats[b] || 0
+        return bUsage - aUsage // Sort by usage count descending
+      })
+      
+      return {
+        name: categoryName,
+        ...categoryData,
+        types: sortedTypes
       }
-      return next
     })
-  }
-
-  // Sort types within each category by usage
-  const getSortedTypes = (types: string[]) => {
-    return [...types].sort((a, b) => {
-      const usageA = usageStats[a] || 0
-      const usageB = usageStats[b] || 0
-      return usageB - usageA // Higher usage first
-    })
-  }
+  }, [usageStats])
 
   return (
     <div className="space-y-3">
-      {CATEGORIES.map((category) => {
-        const isExpanded = expandedCategories.has(category.id)
-        const sortedTypes = getSortedTypes(category.types)
-        
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Incident Type
+        </h3>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          {Object.keys(INCIDENT_CATEGORIES).length} categories
+        </div>
+      </div>
+
+      {sortedCategories.map((category) => {
+        const isExpanded = expandedCategories[category.name]
+        const hasSelectedType = category.types.includes(selectedType)
+
         return (
           <div
-            key={category.id}
-            className={`border-2 rounded-xl overflow-hidden transition-all ${
-              colorClasses[category.color as keyof typeof colorClasses]
+            key={category.name}
+            className={`border rounded-lg transition-all duration-200 ${
+              hasSelectedType 
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
             }`}
           >
             {/* Category Header */}
             <button
-              type="button"
-              onClick={() => toggleCategory(category.id)}
-              className={`w-full flex items-center justify-between px-4 py-3 font-semibold text-left transition-colors hover:opacity-80 ${
-                headerColorClasses[category.color as keyof typeof headerColorClasses]
-              }`}
+              onClick={() => toggleCategory(category.name)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <span className="flex items-center gap-2">
-                {category.name}
-                <span className="text-xs font-normal opacity-70">
-                  ({sortedTypes.length})
-                </span>
-              </span>
-              {isExpanded ? (
-                <ChevronUpIcon className="h-5 w-5" />
-              ) : (
-                <ChevronDownIcon className="h-5 w-5" />
-              )}
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{category.icon}</span>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    {category.name}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {category.types.length} types
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasSelectedType && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                )}
+                {isExpanded ? (
+                  <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
             </button>
 
-            {/* Category Types */}
-            <AnimatePresence initial={false}>
+            {/* Category Content */}
+            <AnimatePresence>
               {isExpanded && (
                 <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: 'auto' }}
-                  exit={{ height: 0 }}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-3 pt-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {sortedTypes.map((type) => {
-                      const { icon: Icon } = getIncidentTypeIcon(type)
-                      const isSelected = selectedType === type
-                      const usage = usageStats[type] || 0
-                      
-                      return (
-                        <motion.button
-                          key={type}
-                          type="button"
-                          onClick={() => onTypeSelect(type)}
-                          className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-500 text-white shadow-lg scale-105'
-                              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:border-blue-400 hover:shadow-md'
-                          }`}
-                          whileHover={{ scale: isSelected ? 1.05 : 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Icon className="h-6 w-6" />
-                          <span className="text-xs font-medium text-center leading-tight">
-                            {type}
-                          </span>
-                          {usage > 0 && (
-                            <span className={`absolute top-1 right-1 text-[10px] px-1.5 py-0.5 rounded-full ${
+                  <div className="px-4 pb-4">
+                    <div className="grid grid-cols-1 gap-2">
+                      {category.types.map((type) => {
+                        const iconConfig = getIncidentTypeIcon(type)
+                        const IconComponent = iconConfig.icon
+                        const isSelected = selectedType === type
+                        const usageCount = usageStats[type] || 0
+
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => onTypeSelect(type)}
+                            className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all duration-200 touch-target ${
                               isSelected
-                                ? 'bg-white text-blue-500'
-                                : 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                            }`}>
-                              {usage}
-                            </span>
-                          )}
-                        </motion.button>
-                      )
-                    })}
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            <div className="flex-shrink-0">
+                              <IconComponent className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">
+                                {type}
+                              </div>
+                              {usageCount > 0 && (
+                                <div className={`text-xs ${
+                                  isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                                }`}>
+                                  {usageCount} uses
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -216,7 +215,14 @@ export default function IncidentTypeCategories({
           </div>
         )
       })}
+
+      {/* Search/Filter (Future enhancement) */}
+      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          💡 <strong>Tip:</strong> Categories are sorted by your usage frequency. 
+          Expand categories to see all available incident types.
+        </p>
+      </div>
     </div>
   )
 }
-

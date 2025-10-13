@@ -10,7 +10,6 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { supabase } from '../lib/supabase'
-import VoiceInputButton from './VoiceInputButton'
 
 interface QuickTabsProps {
   eventId: string
@@ -273,11 +272,11 @@ export default function QuickTabs({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 shadow-lg">
-              {/* Close button */}
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+              {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {tabs.find(t => t.id === activeTab)?.label} Quick Log
+                <h3 className="text-md font-semibold text-gray-900 dark:text-white">
+                  {tabs.find(t => t.id === activeTab)?.label} Quick Entry
                 </h3>
                 <button
                   type="button"
@@ -285,9 +284,9 @@ export default function QuickTabs({
                     setActiveTab(null)
                     resetForm()
                   }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
                 >
-                  <XMarkIcon className="h-5 w-5" />
+                  <XMarkIcon className="h-4 w-4" />
                 </button>
               </div>
 
@@ -319,12 +318,6 @@ export default function QuickTabs({
                         className="flex-1 px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         autoFocus
                       />
-                      <VoiceInputButton
-                        onTranscript={handleVoiceTranscript}
-                        size="medium"
-                        variant="secondary"
-                        showTranscript={false}
-                      />
                     </div>
                     {attendanceNumber && (
                       <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -350,12 +343,6 @@ export default function QuickTabs({
                         placeholder="e.g., Main Stage, Gate 3, Medical Tent"
                         className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
                         autoFocus
-                      />
-                      <VoiceInputButton
-                        onTranscript={handleVoiceTranscript}
-                        size="medium"
-                        variant="secondary"
-                        showTranscript={false}
                       />
                     </div>
                   </div>
@@ -404,12 +391,6 @@ export default function QuickTabs({
                         placeholder="e.g., Main Stage, Gate Area, Overall Site"
                         className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                         autoFocus
-                      />
-                      <VoiceInputButton
-                        onTranscript={handleVoiceTranscript}
-                        size="medium"
-                        variant="secondary"
-                        showTranscript={false}
                       />
                     </div>
                   </div>

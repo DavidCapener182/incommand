@@ -11,8 +11,9 @@ import { ensureBrowserLLM, isBrowserLLMAvailable, parseIncidentWithBrowserLLM, r
 import type { EnhancedIncidentParsingResponse } from '../types/ai'
 import { CursorTracker } from '@/components/ui/CursorTracker'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
-import { QuickAddInput, ParsedIncidentData } from '@/components/ui/QuickAddInput'
+import QuickAddInput, { ParsedIncidentData } from '@/components/ui/QuickAddInput'
 import VoiceInputButton, { VoiceInputCompact } from '@/components/VoiceInputButton'
+import VoiceInputField from '@/components/VoiceInputField'
 import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
 import { detectIncidentFromText } from '@/utils/incidentLogic'
@@ -30,6 +31,8 @@ import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
 import { EntryType } from '@/types/auditableLog'
 import QuickTabs from './QuickTabs'
 import IncidentTypeCategories from './IncidentTypeCategories'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
+import { useScreenReader } from '@/hooks/useScreenReader'
 
 interface Props {
   isOpen: boolean
@@ -1915,6 +1918,12 @@ export default function IncidentCreationModal({
     { minSwipeDistance: 80 } // Require longer swipe for modal close
   );
 
+  // Accessibility: Focus trap for modal
+  const focusTrapRef = useFocusTrap({ enabled: isOpen, restoreFocus: true });
+  
+  // Accessibility: Screen reader announcements
+  const { announce } = useScreenReader({ politeness: 'assertive' });
+
   // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -1938,24 +1947,19 @@ export default function IncidentCreationModal({
 
     const parts = []
     
-    if (data.headline?.trim()) {
-      parts.push(`HEADLINE: ${data.headline.trim()}`)
-    }
-    
-    if (data.source?.trim()) {
-      parts.push(`SOURCE: ${data.source.trim()}`)
-    }
+    // Include raw content without labels - just the facts, actions, and outcome
+    // HEADLINE and SOURCE are kept separate in their own fields
     
     if (data.facts_observed?.trim()) {
-      parts.push(`FACTS: ${data.facts_observed.trim()}`)
+      parts.push(data.facts_observed.trim())
     }
     
     if (data.actions_taken?.trim()) {
-      parts.push(`ACTIONS: ${data.actions_taken.trim()}`)
+      parts.push(data.actions_taken.trim())
     }
     
     if (data.outcome?.trim()) {
-      parts.push(`OUTCOME: ${data.outcome.trim()}`)
+      parts.push(data.outcome.trim())
     }
 
     return parts.length > 0 ? parts.join('\n\n') : data.occurrence || ''
@@ -1964,6 +1968,21 @@ export default function IncidentCreationModal({
   // Helper function to count words in headline
   const getHeadlineWordCount = (text: string): number => {
     return text.trim() ? text.trim().split(/\s+/).length : 0
+  }
+
+  // Helper function to append amendments to actions_taken
+  const appendAmendment = (amendment: string) => {
+    const timestamp = new Date().toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    const amendmentText = `\n\n[${timestamp}] AMENDMENT: ${amendment}`;
+    
+    setFormData(prev => ({
+      ...prev,
+      actions_taken: (prev.actions_taken || '') + amendmentText
+    }));
   }
 
   // AI validation for factual language
@@ -2786,15 +2805,92 @@ export default function IncidentCreationModal({
   }
   // Handler for parsed AI data from QuickAddInput
   const handleParsedData = (data: ParsedIncidentData) => {
+    console.log('handleParsedData called with:', data); // Debug log
+    
+    // Generate structured template fields from parsed data
+    const generateStructuredFields = (parsedData: ParsedIncidentData) => {
+      const incidentType = parsedData.incidentType || 'Incident'
+      const location = parsedData.location || 'venue'
+      const callsign = parsedData.callsign || 'staff'
+      const description = parsedData.description || ''
+      
+      // Generate headline (≤15 words)
+      const headline = `${incidentType} at ${location}${callsign ? ` - ${callsign} responding` : ''}`
+      
+      // Generate source
+      const source = callsign || 'Staff member'
+      
+      // Generate facts observed
+      const factsObserved = description || `A ${incidentType.toLowerCase()} incident occurred at ${location}.`
+      
+      // Generate actions taken based on incident type
+      const getActionsTaken = (type: string, desc: string) => {
+        const lowerType = type.toLowerCase()
+        const lowerDesc = desc.toLowerCase()
+        
+        if (lowerType.includes('fight') || lowerType.includes('altercation')) {
+          return '1. Dispatched security to de-escalate situation. 2. Separated involved parties. 3. Checked for injuries and called medical if needed. 4. Identified witnesses and reviewed CCTV. 5. Considered removals or arrests.'
+        } else if (lowerType.includes('medical')) {
+          return '1. Assessed the situation and provided first aid. 2. Called for medical assistance. 3. Established crowd control. 4. Documented incident details.'
+        } else if (lowerType.includes('security')) {
+          return '1. Dispatched security team to location. 2. Assessed threat level. 3. Implemented crowd control measures. 4. Documented incident details.'
+        } else if (lowerType.includes('fire')) {
+          return '1. Activated fire safety protocols. 2. Initiated evacuation procedures. 3. Contacted emergency services. 4. Secured area and documented incident.'
+        } else if (lowerType.includes('theft')) {
+          return '1. Secured the area and preserved evidence. 2. Identified witnesses and obtained statements. 3. Contacted police if necessary. 4. Documented stolen items and circumstances.'
+        } else if (lowerType.includes('weapon')) {
+          return '1. Immediately evacuated area for safety. 2. Contacted police and emergency services. 3. Isolated threat if possible. 4. Documented all details for investigation.'
+        } else {
+          return '1. Assessed the situation. 2. Dispatched appropriate resources. 3. Implemented necessary safety measures. 4. Documented incident details.'
+        }
+      }
+      
+      // Generate outcome
+      const getOutcome = (type: string) => {
+        const lowerType = type.toLowerCase()
+        
+        if (lowerType.includes('fight') || lowerType.includes('altercation')) {
+          return 'Security team on scene. Parties separated. Incident contained. Investigation ongoing.'
+        } else if (lowerType.includes('medical')) {
+          return 'Medical team dispatched. Incident ongoing. Situation being monitored.'
+        } else if (lowerType.includes('security')) {
+          return 'Security team on scene. Situation contained. Monitoring ongoing.'
+        } else if (lowerType.includes('fire')) {
+          return 'Emergency services contacted. Evacuation procedures activated. Situation being assessed.'
+        } else if (lowerType.includes('theft')) {
+          return 'Area secured. Police contacted if necessary. Investigation ongoing.'
+        } else if (lowerType.includes('weapon')) {
+          return 'Area evacuated. Police and emergency services contacted. Situation being assessed.'
+        } else {
+          return 'Incident reported and logged. Appropriate response initiated. Monitoring ongoing.'
+        }
+      }
+      
+      return {
+        headline,
+        source,
+        facts_observed: factsObserved,
+        actions_taken: getActionsTaken(incidentType, description),
+        outcome: getOutcome(incidentType)
+      }
+    }
+    
+    const structuredFields = generateStructuredFields(data)
+    
     setFormData(prev => ({
       ...prev,
       incident_type: data.incidentType || prev.incident_type,
-      location_name: data.location || prev.location_name,
-      callsign_from: data.callsignFrom || prev.callsign_from,
-      callsign_to: data.callsignTo || prev.callsign_to,
+      what3words: data.location || prev.what3words,
+      callsign_from: data.callsign || prev.callsign_from,
       priority: data.priority || prev.priority,
-      occurrence: data.occurrence || prev.occurrence,
-      action_taken: data.actionTaken || prev.action_taken
+      // Populate structured template fields
+      headline: structuredFields.headline,
+      source: structuredFields.source,
+      facts_observed: structuredFields.facts_observed,
+      actions_taken: structuredFields.actions_taken,
+      outcome: structuredFields.outcome,
+      // Also populate legacy occurrence field for backward compatibility
+      occurrence: data.description || prev.occurrence
     }));
     
     // Switch to details tab after applying parsed data
@@ -3213,6 +3309,7 @@ export default function IncidentCreationModal({
       }
     }, 3000); // 3 second delay
   };
+
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -3903,6 +4000,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
     <div 
       ref={modalRef}
       className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-[60] ${isOpen ? '' : 'hidden'}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="incident-modal-title"
+      aria-describedby="incident-modal-description"
       style={{
         paddingLeft: 'max(env(safe-area-inset-left), 0px)',
         paddingRight: 'max(env(safe-area-inset-right), 0px)',
@@ -3915,12 +4016,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         }
       }}
     >
-      <div className="relative md:max-h-[85vh] h-full md:h-auto overflow-hidden mx-auto p-0 border w-full md:w-[95%] max-w-6xl shadow-2xl md:rounded-xl md:my-8 bg-white dark:bg-[#23408e] dark:border-[#2d437a] md:mx-auto md:my-8">
+      <div 
+        ref={focusTrapRef as React.RefObject<HTMLDivElement>}
+        className="relative h-full overflow-hidden mx-auto p-0 border w-full shadow-2xl bg-white dark:bg-[#23408e] dark:border-[#2d437a]"
+      >
         {/* Mobile: Full-screen modal */}
         <div className="block md:hidden h-full flex flex-col">
           {/* Mobile Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] sticky top-0 z-10">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Incident</h2>
+            <h2 id="incident-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Create Incident</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -3948,7 +4052,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 
                 <div className="flex items-center gap-2">
                   <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">OR</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">OR</span>
                   <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
                 </div>
                 
@@ -3957,6 +4061,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     onQuickAdd={handleQuickAdd}
                     onParsedData={handleParsedData}
                     showParseButton={true}
+                    autoParseOnEnter={true}
                     className="w-full"
                   />
                   {/* Voice input is now integrated into QuickAddInput */}
@@ -4094,7 +4199,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
               ))}
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600">
               {presenceUsers.filter(u => u.id !== user?.id).length} collaborating
             </span>
           </div>
@@ -4104,8 +4209,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         <CursorTracker users={presenceUsers} containerRef={modalRef} />
 
         {/* Header - Mobile Optimized */}
-        <header className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b sticky top-0 bg-white dark:bg-[#23408e] z-30" style={{
-          paddingTop: 'max(env(safe-area-inset-top), 1rem)',
+        <header className="px-4 sm:px-6 pt-3 sm:pt-4 pb-2 border-b sticky top-0 bg-white dark:bg-[#23408e] z-30" style={{
+          paddingTop: 'max(env(safe-area-inset-top), 0.75rem)',
         }}>
           <div className="flex justify-between items-center">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -4149,7 +4254,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </header>
 
                 {/* Quick Add Bar - Full Width */}
-        <div className="px-6 py-4 border-b bg-gray-50 dark:bg-[#1a2a57] space-y-4">
+        <div className="px-4 py-3 border-b bg-gray-50 dark:bg-[#1a2a57] space-y-3">
           {/* Quick Tabs for Common Logs */}
           <QuickTabs
             eventId={selectedEventId || ''}
@@ -4162,19 +4267,24 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">OR use natural language</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">OR use natural language</span>
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+          </div>
+          
+          {/* AI Parsing Instructions */}
+          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            💡 Type incident details and press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> or click <span className="text-blue-600">✨</span> to auto-fill structured fields
           </div>
           
           <div className="relative">
             <QuickAddInput 
               aiSource={quickAddAISource} 
-              onQuickAdd={async (val) => { await handleQuickAdd(val); }} 
+              onQuickAdd={async (val: string) => { await handleQuickAdd(val); }} 
               onParsedData={handleParsedData}
               isProcessing={isQuickAddProcessing} 
               showParseButton={true}
-              autoParseOnEnter={false}
-              onChangeValue={(txt) => {
+              autoParseOnEnter={true}
+              onChangeValue={(txt: string) => {
                 if (!txt || !txt.trim()) {
                   setFormData(prev => ({
                     ...prev,
@@ -4191,32 +4301,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
             </div>
             
-                         {/* Voice-to-Text Button */}
-             <motion.button
-               type="button"
-               onClick={toggleListening}
-               disabled={!recognition}
-               className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 touch-target-large ${
-                 isListening 
-                   ? 'bg-red-500 text-white shadow-lg shadow-red-500/50 animate-pulse' 
-                   : voiceError
-                   ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/50'
-                   : 'bg-blue-500 text-white hover:bg-blue-600 shadow-md hover:shadow-lg'
-               } ${!recognition ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
-               whileHover={{ scale: recognition ? 1.1 : 1 }}
-               whileTap={{ scale: 0.95 }}
-               title={
-                 recognition 
-                   ? (isListening 
-                       ? 'Stop recording (will process for 800ms)' 
-                       : voiceError 
-                         ? 'Voice recognition error - click to try again' 
-                         : 'Start voice recording')
-                   : 'Voice recognition not available'
-               }
-             >
-               <MicrophoneIcon className="h-5 w-5" />
-             </motion.button>
           </div>
 
           {/* Voice Transcript Display */}
@@ -4401,12 +4485,12 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </div>
 
         {/* Content scroll area */}
-        <div className="px-6 pb-24 overflow-auto h-[calc(85vh-120px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+        <div className="px-4 pb-20 overflow-auto h-[calc(100vh-100px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
             {/* Left Column - Incident Type (scrollable) */}
             <section className="lg:col-span-3 h-full">
-              <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
-                <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+              <div className="bg-white rounded-lg shadow-sm border p-3 h-full flex flex-col">
+                <div className="flex items-center gap-2 mb-3 flex-shrink-0">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -4415,15 +4499,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <h3 className="text-sm font-semibold text-gray-900">Incident Type</h3>
                 </div>
                 
-                <div className="mb-3 flex-shrink-0">
-                  <input
-                    type="text"
-                    placeholder="Search types..."
-                    value={typeSearchQuery}
-                    onChange={(e) => setTypeSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
 
                 <div className="flex-1 overflow-y-auto pr-1 min-h-0">
                   <IncidentTypeCategories
@@ -4436,10 +4511,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </section>
 
             {/* Middle Column - Callsign, Configuration, Detailed Info */}
-            <section className="lg:col-span-5 space-y-4 h-full">
+            <section className="lg:col-span-5 space-y-3 h-full">
               {/* Callsign Information Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-4" role="region" aria-labelledby="callsign-title">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="callsign-title">
+                <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -4652,8 +4727,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
 
               {/* Detailed Information Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-4" role="region" aria-labelledby="detailed-info-title">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="detailed-info-title">
+                <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -4661,40 +4736,9 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
                   <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900">Detailed Information</h3>
             </div>
-              <div className="space-y-4">
-                <div>
-                    <label htmlFor="incident-type" className="block text-sm font-medium text-gray-700 mb-1">Incident Type</label>
-                    <div className="relative">
-                  <select
-                        id="incident-type"
-                    value={formData.incident_type || ''}
-                    onChange={(e) => {
-                      const incidentType = e.target.value;
-                      setFormData({ 
-                        ...formData, 
-                        incident_type: incidentType,
-                        // Auto-set Attendance incidents to low priority
-                        priority: incidentType === 'Attendance' ? 'low' : formData.priority
-                      });
-                    }}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                  >
-                    <option value="">Select Type</option>
-                    {incidentTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </div>
-                </div>
+              <div className="space-y-3">
                 {/* Logging Template Toggle */}
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-blue-800">📝 Logging Template</span>
@@ -4716,7 +4760,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
 
                 {formData.use_structured_template ? (
                   /* Structured Template */
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Headline */}
                     <div>
                       <label htmlFor="headline" className="block text-sm font-medium text-gray-700 mb-1">
@@ -4818,6 +4862,45 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
                       />
                       <p className="text-xs text-gray-500 mt-1">What actions were taken and by whom</p>
+                      
+                      {/* Amendment Input */}
+                      <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <label htmlFor="amendment" className="block text-sm font-medium text-gray-700 mb-2">
+                          Add Amendment/Update
+                          <span className="ml-2 text-xs text-gray-500">(Optional)</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <VoiceInputField
+                            value=""
+                            onChange={(value) => {
+                              // This will be handled by the onKeyPress
+                            }}
+                            placeholder="e.g., Additional security deployed at 15:30"
+                            className="flex-1"
+                            onVoiceResult={(transcript, confidence) => {
+                              if (transcript.trim()) {
+                                appendAmendment(transcript.trim());
+                              }
+                            }}
+                            silenceTimeout={3000}
+                            noiseThreshold={0.7}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              const input = e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement;
+                              if (input && input.value.trim()) {
+                                appendAmendment(input.value.trim());
+                                input.value = '';
+                              }
+                            }}
+                            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            Add
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Press Enter or click Add to append to actions</p>
+                      </div>
                     </div>
 
                     {/* Outcome */}
@@ -4873,10 +4956,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </section>
 
             {/* Right Column - Location & Actions, Additional Options */}
-            <section className="lg:col-span-4 space-y-4 h-full">
+            <section className="lg:col-span-4 space-y-3 h-full">
               {/* Location & Actions Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-4" role="region" aria-labelledby="location-actions-title">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="location-actions-title">
+                <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -4885,7 +4968,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                   <h3 id="location-actions-title" className="text-sm font-semibold text-gray-900">Location & Actions</h3>
                 </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                     <label htmlFor="w3w" className="block text-sm font-medium text-gray-700 mb-1">
                       What3Words Location
@@ -5012,8 +5095,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </div>
 
               {/* Additional Options Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-4" role="region" aria-labelledby="additional-options-title">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="additional-options-title">
+                <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -5021,7 +5104,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                   <h3 id="additional-options-title" className="text-sm font-semibold text-gray-900">Additional Options</h3>
                 </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"

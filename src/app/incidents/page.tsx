@@ -5,8 +5,8 @@ import Dashboard from '../../components/Dashboard'
 
 export default function IncidentsPage() {
   return (
-    <main className="pb-24">
+    <section aria-label="Incident dashboard">
       <Dashboard />
-    </main>
+    </section>
   )
-} 
+}

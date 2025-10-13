@@ -2,10 +2,28 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import { motion } from 'framer-motion'
+import { 
+  ExclamationTriangleIcon, 
+  ClockIcon, 
+  CheckCircleIcon, 
+  FolderOpenIcon 
+} from '@heroicons/react/24/outline'
 
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 
 export type SummaryStatus = 'open' | 'in_progress' | 'closed'
+
+// Shared card base styling for consistency
+const cardBase = `
+  bg-white/90 dark:bg-[#1e2a78]/90
+  backdrop-blur-lg
+  shadow-md hover:shadow-lg
+  transition-all duration-300
+  border border-gray-200/60 dark:border-[#2d437a]/50
+  rounded-2xl
+  p-5 sm:p-6
+`
 
 interface IncidentSummaryBarProps {
   onFilter?: (status: SummaryStatus | null) => void
@@ -27,25 +45,25 @@ const STATUS_CONFIG: StatusConfig[] = [
     key: 'open',
     label: 'Open',
     description: 'Incidents awaiting action',
-    color: 'text-red-600 dark:text-red-300',
-    accent: 'bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800/60',
+    color: 'text-red-700 dark:text-red-300',
+    accent: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
     dot: 'bg-red-500',
   },
   {
     key: 'in_progress',
     label: 'In Progress',
     description: 'Actively being resolved',
-    color: 'text-amber-600 dark:text-amber-300',
-    accent: 'bg-amber-50 dark:bg-amber-900/30 border-amber-100 dark:border-amber-800/60',
-    dot: 'bg-amber-500',
+    color: 'text-yellow-700 dark:text-yellow-300',
+    accent: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+    dot: 'bg-yellow-500',
   },
   {
     key: 'closed',
     label: 'Closed',
     description: 'Resolved & verified',
-    color: 'text-emerald-600 dark:text-emerald-300',
-    accent: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800/60',
-    dot: 'bg-emerald-500',
+    color: 'text-green-700 dark:text-green-300',
+    accent: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    dot: 'bg-green-500',
   },
 ]
 
@@ -96,52 +114,87 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
     }
   }, [lastUpdated])
 
-  return (
-    <div className={classes('sticky top-20 z-40', className)}>
-      <div className="rounded-2xl border border-gray-200/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-[#1a2549]/80">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Incident Summary</h2>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{formattedUpdated}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2 justify-end">
-            {STATUS_CONFIG.map((status) => {
-              const value = statusCounts[status.key]
-              const isActive = activeStatus === status.key
-              const isChanged = changedStatuses.has(status.key)
+  const statusItems = [
+    { 
+      label: 'Open', 
+      value: statusCounts.open, 
+      color: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300', 
+      icon: <ExclamationTriangleIcon className="h-4 w-4" />,
+      key: 'open' as SummaryStatus | 'total'
+    },
+    { 
+      label: 'In Progress', 
+      value: statusCounts.in_progress, 
+      color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', 
+      icon: <ClockIcon className="h-4 w-4" />,
+      key: 'in_progress' as SummaryStatus | 'total'
+    },
+    { 
+      label: 'Closed', 
+      value: statusCounts.closed, 
+      color: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300', 
+      icon: <CheckCircleIcon className="h-4 w-4" />,
+      key: 'closed' as SummaryStatus | 'total'
+    },
+    { 
+      label: 'Total', 
+      value: counts.total, 
+      color: 'bg-gray-50 text-gray-700 dark:bg-gray-800/60 dark:text-gray-100', 
+      icon: <FolderOpenIcon className="h-4 w-4" />,
+      key: 'total' as SummaryStatus | 'total'
+    },
+  ]
 
-              return (
-                <button
-                  key={status.key}
-                  type="button"
-                  onClick={() => onFilter?.(isActive ? null : status.key)}
-                  className={classes(
-                    'group flex min-w-[70px] sm:min-w-[80px] flex-col rounded-lg border px-1.5 sm:px-2 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
-                    status.accent,
-                    isActive && 'border-blue-400 ring-2 ring-blue-200 dark:ring-blue-500/40',
-                    isChanged && 'animate-pulse motion-reduce:animate-none'
-                  )}
-                  aria-pressed={isActive}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={classes('text-[10px] font-semibold uppercase tracking-wide', status.color)}>
-                      {status.label}
-                    </span>
-                    <span className={classes('h-1.5 w-1.5 rounded-full', status.dot)} aria-hidden />
-                  </div>
-                  <span className="mt-0.5 text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</span>
-                  <span className="mt-0.5 text-[9px] text-gray-500 dark:text-gray-400">{status.description}</span>
-                </button>
-              )
-            })}
-            <div className="flex flex-col justify-center rounded-lg border border-gray-200/80 bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-600 dark:border-white/10 dark:bg-[#111832] dark:text-gray-300 min-w-[70px] sm:min-w-[80px]">
-              <span className="uppercase tracking-wide text-[9px] text-gray-500 dark:text-gray-400">Total</span>
-              <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{counts.total}</span>
-            </div>
-          </div>
+  return (
+    <motion.div 
+      className={classes('h-full flex flex-col', className)}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+    >
+      <div className={`${cardBase} flex flex-col justify-between h-full`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Summary</h2>
+          <span className="text-xs text-gray-400 dark:text-gray-300">{formattedUpdated}</span>
         </div>
+        
+        <div className="grid grid-cols-2 gap-4 mt-2">
+          {statusItems.map(({ label, value, color, icon, key }) => {
+            const isActive = key !== 'total' && activeStatus === key
+            const isChanged = key !== 'total' && changedStatuses.has(key as SummaryStatus)
+            const isTotal = key === 'total'
+            
+            return (
+              <motion.button
+                key={label}
+                type="button"
+                onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
+                className={`
+                  flex items-center justify-between px-4 py-3 rounded-xl shadow-sm transition-all duration-200 
+                  hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
+                  ${color}
+                  ${isActive ? 'ring-2 ring-blue-400/50 shadow-md' : ''}
+                  ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
+                  ${isTotal ? 'cursor-default' : 'cursor-pointer'}
+                `}
+                aria-pressed={isActive}
+                whileHover={!isTotal ? { scale: 1.02 } : {}}
+                whileTap={!isTotal ? { scale: 0.98 } : {}}
+              >
+                <div className="flex items-center gap-2 font-medium">
+                  {icon} 
+                  <span className="text-sm">{label}</span>
+                </div>
+                <span className="text-lg font-bold">{value}</span>
+              </motion.button>
+            )
+          })}
+        </div>
+        
+        {/* Subtle gradient accent at bottom */}
+        <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
       </div>
-    </div>
+    </motion.div>
   )
 }
 

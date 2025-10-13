@@ -1,304 +1,314 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { TypingIndicator } from '@/components/ui/TypingIndicator';
-import { usePresence } from '@/hooks/usePresence';
-import { ensureBrowserLLM, isBrowserLLMAvailable, getBrowserLLMStatus, cleanupBrowserLLM } from '@/services/browserLLMService';
-import { SparklesIcon } from '@heroicons/react/24/outline';
-import VoiceInputButton from '@/components/VoiceInputButton';
-import ParsedFieldsPreview from '@/components/ParsedFieldsPreview';
-
-interface QuickAddInputProps {
-  onQuickAdd: (value: string) => void;
-  isProcessing?: boolean;
-  placeholder?: string;
-  className?: string;
-  onChangeValue?: (value: string) => void; // new: notify parent of input changes
-  aiSource?: 'local' | 'cloud' | 'browser' | null;
-  onParsedData?: (data: ParsedIncidentData) => void;
-  showParseButton?: boolean;
-  autoParseOnEnter?: boolean;
-}
+import React, { useState, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import VoiceInputButton from '../VoiceInputButton'
+import ParsedFieldsPreview from './ParsedFieldsPreview'
 
 export interface ParsedIncidentData {
-  incidentType?: string;
-  location?: string;
-  callsignFrom?: string;
-  callsignTo?: string;
-  priority?: string;
-  occurrence?: string;
-  actionTaken?: string;
-  confidence?: number;
+  incidentType?: string
+  location?: string
+  callsign?: string
+  priority?: 'low' | 'medium' | 'high' | 'urgent'
+  description?: string
+  confidence?: number
 }
 
-export const QuickAddInput: React.FC<QuickAddInputProps> = ({
+interface QuickAddInputProps {
+  aiSource?: 'local' | 'cloud' | 'browser' | null
+  onQuickAdd: (value: string) => Promise<void>
+  onParsedData?: (data: ParsedIncidentData) => void
+  isProcessing?: boolean
+  showParseButton?: boolean
+  autoParseOnEnter?: boolean
+  onChangeValue?: (value: string) => void
+  className?: string
+}
+
+export default function QuickAddInput({
+  aiSource,
   onQuickAdd,
-  isProcessing = false,
-  placeholder = 'Quick add: Medical at main stage, A1 responding...',
-  className,
-  onChangeValue,
-  aiSource = null,
   onParsedData,
+  isProcessing = false,
   showParseButton = true,
-  autoParseOnEnter = false
-}) => {
-  const { users: presenceUsers, updateTyping, updateFocus } = usePresence('incident-quick-add');
-  const [value, setValue] = useState('');
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [justDone, setJustDone] = useState(false);
-  const prevProcessingRef = useRef<boolean>(false);
-  const autoTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSubmittedRef = useRef<string>('');
-  const [browserLLMReady, setBrowserLLMReady] = useState(false);
-  const [progress, setProgress] = useState<number>(0);
-  const initTriggeredRef = useRef<boolean>(false);
-  const [localAIError, setLocalAIError] = useState<null | 'unsupported' | 'failed'>(null);
-  const [isParsing, setIsParsing] = useState(false);
-  const [parsedData, setParsedData] = useState<ParsedIncidentData | null>(null);
-  const [showParsedPreview, setShowParsedPreview] = useState(false);
+  autoParseOnEnter = false,
+  onChangeValue,
+  className = ""
+}: QuickAddInputProps) {
+  const [value, setValue] = useState('')
+  const [isParsing, setIsParsing] = useState(false)
+  const [parsedData, setParsedData] = useState<ParsedIncidentData | null>(null)
+  const [showParsedPreview, setShowParsedPreview] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const parseIncident = useCallback(async () => {
-    if (!value.trim() || isParsing) return;
+  const parseIncident = async (text: string) => {
+    if (!text.trim()) return
 
-    setIsParsing(true);
-    setParsedData(null);
-
+    console.log('parseIncident called with:', text); // Debug log
+    setIsParsing(true)
     try {
       const response = await fetch('/api/ai-insights', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          description: value.trim(),
-          action: 'parse'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: `Parse this incident description into structured data: "${text}"
+          
+          Extract and return a JSON object with these fields:
+          - incidentType: The type of incident. Look for these specific types:
+            * "Fight" - for fights, altercations, physical confrontations
+            * "Medical" - for medical emergencies, injuries, health issues
+            * "Security" - for security breaches, suspicious behavior, threats
+            * "Theft" - for stolen items, property crimes
+            * "Entry Breach" - for unauthorized access, gate violations
+            * "Weapon Related" - for weapons, dangerous objects
+            * "Crowd Control" - for crowd issues, overcrowding
+            * "Fire Safety" - for fire alarms, smoke, fire incidents
+            * "Technical" - for equipment failures, technical issues
+            * "Attendance" - for attendance updates, headcounts
+            * "Other" - only if none of the above match
+          - location: The location mentioned (e.g., "main stage", "north gate", "parking area", "entrance")
+          - callsign: Any callsign mentioned (e.g., "A1", "R3", "S1", "Security Team", "Medical Team")
+          - priority: Priority level based on severity ("low", "medium", "high", "urgent")
+          - description: A detailed, factual description of what happened, including:
+            * What was observed
+            * Who was involved
+            * When it occurred (if mentioned)
+            * Current status
+          - confidence: Confidence score 0-100
+          
+          Priority guidelines:
+          - urgent: Fights, medical emergencies, fires, weapon incidents, security threats
+          - high: Theft, entry breaches, major crowd issues
+          - medium: Minor medical, suspicious behavior, technical failures
+          - low: Routine updates, attendance, minor issues
+          
+          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". Match the most specific type possible.
+          
+          If a field is not mentioned, omit it from the response.
+          Return only valid JSON, no other text.`,
+          context: 'incident_parsing'
         })
-      });
+      })
 
-      if (!response.ok) throw new Error('Parsing failed');
+      if (!response.ok) {
+        throw new Error('Failed to parse incident')
+      }
 
-      const result = await response.json();
+      const result = await response.json()
+      const parsed = result.response || result.content || result
+
+      // Try to parse the JSON response
+      let incidentData: ParsedIncidentData
+      try {
+        incidentData = JSON.parse(parsed)
+      } catch {
+        // If parsing fails, try to extract JSON from the response
+        const jsonMatch = parsed.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          incidentData = JSON.parse(jsonMatch[0])
+        } else {
+          throw new Error('Could not parse AI response')
+        }
+      }
+
+      setParsedData(incidentData)
+      setShowParsedPreview(true)
       
-      const parsed: ParsedIncidentData = {
-        incidentType: result.incidentType,
-        location: result.location,
-        callsignFrom: result.callsignFrom,
-        callsignTo: result.callsignTo,
-        priority: result.priority,
-        occurrence: result.occurrence || value.trim(),
-        actionTaken: result.actionTaken,
-        confidence: result.confidence || 0.8
-      };
-
-      setParsedData(parsed);
-      setShowParsedPreview(true);
+      if (onParsedData) {
+        onParsedData(incidentData)
+      }
     } catch (error) {
-      console.error('Error parsing incident:', error);
-      // Fallback: just submit as-is
-      onQuickAdd(value.trim());
+      console.error('Failed to parse incident:', error)
+      // Fallback to basic parsing
+      const fallbackData = parseIncidentFallback(text)
+      setParsedData(fallbackData)
+      setShowParsedPreview(true)
     } finally {
-      setIsParsing(false);
+      setIsParsing(false)
     }
-  }, [value, isParsing, onQuickAdd]);
+  }
 
-  const submit = useCallback(() => {
-    if (!value.trim() || isProcessing) return;
+  const parseIncidentFallback = (text: string): ParsedIncidentData => {
+    const lowerText = text.toLowerCase()
     
-    // Cancel auto timer to prevent collision
-    if (autoTimerRef.current) {
-      clearTimeout(autoTimerRef.current);
-      autoTimerRef.current = null;
+    // Enhanced incident type detection with more specific patterns
+    let incidentType = 'Other'
+    
+    // Check for specific incident types in order of specificity
+    if (lowerText.includes('fight') || lowerText.includes('altercation') || lowerText.includes('confrontation') || lowerText.includes('brawl')) {
+      incidentType = 'Fight'
+    } else if (lowerText.includes('medical') || lowerText.includes('injury') || lowerText.includes('hurt') || lowerText.includes('illness')) {
+      incidentType = 'Medical'
+    } else if (lowerText.includes('theft') || lowerText.includes('stolen') || lowerText.includes('robbery') || lowerText.includes('pickpocket')) {
+      incidentType = 'Theft'
+    } else if (lowerText.includes('weapon') || lowerText.includes('knife') || lowerText.includes('gun') || lowerText.includes('blade')) {
+      incidentType = 'Weapon Related'
+    } else if (lowerText.includes('breach') || lowerText.includes('unauthorized') || lowerText.includes('gate') || lowerText.includes('entry')) {
+      incidentType = 'Entry Breach'
+    } else if (lowerText.includes('suspicious') || lowerText.includes('security') || lowerText.includes('threat')) {
+      incidentType = 'Security'
+    } else if (lowerText.includes('crowd') || lowerText.includes('overcrowd') || lowerText.includes('congestion')) {
+      incidentType = 'Crowd Control'
+    } else if (lowerText.includes('fire') || lowerText.includes('smoke') || lowerText.includes('alarm')) {
+      incidentType = 'Fire Safety'
+    } else if (lowerText.includes('technical') || lowerText.includes('equipment') || lowerText.includes('failure')) {
+      incidentType = 'Technical'
+    } else if (lowerText.includes('attendance') || lowerText.includes('headcount') || lowerText.includes('capacity')) {
+      incidentType = 'Attendance'
     }
-    
-    // Check for duplicate submission
-    if (lastSubmittedRef.current === value.trim()) {
-      return;
-    }
-    
-    lastSubmittedRef.current = value.trim();
-    
-    // If auto-parse is enabled, parse first
-    if (autoParseOnEnter && onParsedData) {
-      parseIncident();
-    } else {
-      onQuickAdd(value.trim());
-    }
-  }, [value, isProcessing, onQuickAdd, autoParseOnEnter, onParsedData, parseIncident]);
 
-  // Use React onKeyDown instead of manual event listeners
-
-  useEffect(() => {
-    if (prevProcessingRef.current && !isProcessing) {
-      setJustDone(true);
-      const t = setTimeout(() => setJustDone(false), 1500);
-      return () => clearTimeout(t);
+    // Enhanced priority detection based on incident type and keywords
+    let priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'
+    
+    // Urgent priority for serious incidents
+    if (lowerText.includes('urgent') || lowerText.includes('emergency') || 
+        incidentType === 'Fight' || incidentType === 'Weapon Related' ||
+        lowerText.includes('life') || lowerText.includes('danger')) {
+      priority = 'urgent'
+    } else if (lowerText.includes('high') || incidentType === 'Theft' || incidentType === 'Entry Breach') {
+      priority = 'high'
+    } else if (lowerText.includes('low') || incidentType === 'Attendance') {
+      priority = 'low'
     }
-    prevProcessingRef.current = isProcessing;
-  }, [isProcessing]);
 
-  // Lazy-init Browser LLM: first keystroke or explicit preload
-  const triggerInit = useCallback(async () => {
-    if (initTriggeredRef.current || isBrowserLLMAvailable()) return;
-    initTriggeredRef.current = true;
-    try {
-      await ensureBrowserLLM((p) => setProgress(Math.round(Math.max(0, Math.min(1, p)) * 100)));
-      setBrowserLLMReady(true);
-      setLocalAIError(null);
-    } catch (error) {
-      const status = getBrowserLLMStatus();
-      if (!status.supported) {
-        setLocalAIError('unsupported');
+    // Extract callsign (enhanced pattern matching)
+    const callsignMatch = text.match(/\b[A-Z]\d+\b|\b[A-Z]{2,3}\b/)
+    const callsign = callsignMatch ? callsignMatch[0] : undefined
+
+    // Extract location (enhanced location detection)
+    const locationMatch = text.match(/(main stage|north gate|south gate|east gate|west gate|parking|entrance|exit|pit|arena|stadium|bar|food court|restroom|toilet|stage|backstage)/i)
+    const location = locationMatch ? locationMatch[1] : undefined
+
+    return {
+      incidentType,
+      location,
+      callsign,
+      priority,
+      description: text,
+      confidence: 70 // Increased confidence for better fallback
+    }
+  }
+
+  const submit = async () => {
+    if (autoParseOnEnter && value.trim()) {
+      await parseIncident(value)
       } else {
-        setLocalAIError('failed');
-      }
-      console.log('Browser LLM not available, will use fallback');
-      setBrowserLLMReady(false);
-      initTriggeredRef.current = false;
+      await onQuickAdd(value)
     }
-  }, []);
+  }
 
-  // Auto-submit shortly after the user stops typing
-  useEffect(() => {
-    if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
-    if (!value.trim()) return;
-    autoTimerRef.current = setTimeout(() => {
-      if (!isProcessing && value.trim() && lastSubmittedRef.current !== value.trim()) {
-        submit();
-      }
-    }, 1200);
-    return () => {
-      if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
-    };
-  }, [value, isProcessing, submit]);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      submit()
+    }
+  }
 
-  // Cleanup resources on unmount if we triggered init
-  useEffect(() => {
-    return () => {
-      if (initTriggeredRef.current) {
-        try { cleanupBrowserLLM(); } catch {}
-      }
-    };
-  }, []);
+  const handleVoiceTranscript = (transcript: string) => {
+    setValue(transcript)
+    if (onChangeValue) {
+      onChangeValue(transcript)
+    }
+    if (autoParseOnEnter) {
+      parseIncident(transcript)
+    }
+  }
 
-  const handleVoiceTranscript = (text: string) => {
-    setValue(text);
-    onChangeValue?.(text);
-  };
-
-  const handleApplyParsed = () => {
+  const handleApplyParsedData = () => {
     if (parsedData && onParsedData) {
-      onParsedData(parsedData);
-      setShowParsedPreview(false);
-      setValue('');
-      setParsedData(null);
+      onParsedData(parsedData)
     }
-  };
+    setShowParsedPreview(false)
+    setParsedData(null)
+    setValue('')
+    if (onChangeValue) {
+      onChangeValue('')
+    }
+  }
 
-  const handleEditManually = () => {
-    setShowParsedPreview(false);
-    // Keep the value so user can edit
-  };
+  const handleEditParsedData = () => {
+    setShowParsedPreview(false)
+    // Keep the parsed data for manual editing
+  }
 
-  const handleCancelParsed = () => {
-    setShowParsedPreview(false);
-    setParsedData(null);
-  };
+  const handleCancelParsedData = () => {
+    setShowParsedPreview(false)
+    setParsedData(null)
+  }
 
   return (
-    <div className={`space-y-4 ${className || ''}`}>
+    <div className="space-y-3">
       <div className="relative">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                onChangeValue?.(e.target.value);
-                updateTyping('quick-add', true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
-                if (e.key === 'Escape') {
-                  setValue('');
-                  onChangeValue?.('');
-                }
-              }}
-              onFocus={() => updateFocus('quick-add')}
-              onBlur={() => updateTyping('quick-add', false)}
-              placeholder={placeholder}
-              className="w-full px-4 py-4 pr-12 rounded-xl border-2 border-green-300 dark:border-green-700 bg-white dark:bg-[#182447] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 shadow-sm text-base"
-            />
-            {value.trim() && showParseButton && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <button
-                  type="button"
-                  onClick={parseIncident}
-                  disabled={isParsing}
-                  className="p-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 disabled:opacity-50 transition-colors"
-                  title="Parse with AI"
-                >
-                  <SparklesIcon className={`h-5 w-5 ${isParsing ? 'animate-pulse' : ''}`} />
-                </button>
-              </div>
-            )}
-          </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+            if (onChangeValue) {
+              onChangeValue(e.target.value)
+            }
+          }}
+          onKeyPress={handleKeyPress}
+          placeholder="Type incident details and press Enter or click ✨ to parse... (e.g., Medical at main stage, A1 responding)"
+          className={`w-full px-4 py-3 pr-24 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base ${className}`}
+          disabled={isProcessing || isParsing}
+        />
+        
+        {/* Action buttons */}
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+          {/* Parse button */}
+          {showParseButton && value.trim() && (
+            <button
+              onClick={() => parseIncident(value)}
+              disabled={isParsing || isProcessing}
+              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
+              title={isParsing ? "Parsing with AI..." : "Parse with AI (or press Enter)"}
+            >
+              {isParsing ? (
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <SparklesIcon className="w-5 h-5" />
+              )}
+            </button>
+          )}
           
+          {/* Voice input button */}
           <VoiceInputButton
             onTranscript={handleVoiceTranscript}
-            size="medium"
-            variant="secondary"
-            showTranscript={false}
+            size="small"
+            continuous={true}
           />
         </div>
-        
-        {!browserLLMReady && initTriggeredRef.current && !localAIError && (
-          <div className="mt-2 h-1 w-24 bg-gray-200 dark:bg-gray-700 rounded">
-            <div
-              className="h-1 bg-green-500 rounded transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        )}
-        
-        <TypingIndicator users={presenceUsers} fieldName="quick-add" position="bottom" />
-        
-        {(isProcessing || isParsing) && (
-          <div className="mt-2 text-xs text-green-700 dark:text-green-300 flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            {isParsing ? 'Parsing with AI...' : (aiSource === 'local' || aiSource === 'browser' ? 'Analyzing with local AI…' : 'Analyzing with AI…')}
-          </div>
-        )}
-        
-        {!isProcessing && !isParsing && justDone && (
-          <div className="mt-2 text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
-            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-600 text-white">✓</span>
-            Processed
-          </div>
-        )}
       </div>
 
-      {/* Parsed Fields Preview */}
-      {showParsedPreview && parsedData && (
-        <ParsedFieldsPreview
-          fields={[
-            { label: 'Incident Type', value: parsedData.incidentType || '' },
-            { label: 'Location', value: parsedData.location || '' },
-            { label: 'From', value: parsedData.callsignFrom || '' },
-            { label: 'To', value: parsedData.callsignTo || '' },
-            { label: 'Priority', value: parsedData.priority || '' },
-            { label: 'Occurrence', value: parsedData.occurrence || '' }
-          ]}
-          onApply={handleApplyParsed}
-          onEdit={handleEditManually}
-          onCancel={handleCancelParsed}
-        />
-      )}
+      {/* Parsed data preview */}
+      <AnimatePresence>
+        {showParsedPreview && parsedData && (
+          <ParsedFieldsPreview
+            data={parsedData}
+            onApply={handleApplyParsedData}
+            onEdit={handleEditParsedData}
+            onCancel={handleCancelParsedData}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Processing indicator */}
+      <AnimatePresence>
+      {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400"
+          >
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            Processing incident...
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  );
-};
-
-
+  )
+}

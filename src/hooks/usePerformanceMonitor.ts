@@ -1,198 +1,337 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface PerformanceMetrics {
-  loadTime: number
   renderTime: number
-  memoryUsage?: number
-  networkLatency?: number
-  fps?: number
+  memoryUsage: number
+  networkLatency: number
+  errorCount: number
+  lastUpdate: Date
 }
 
-interface PerformanceMonitorOptions {
-  trackRenderTime?: boolean
-  trackMemory?: boolean
-  trackNetwork?: boolean
-  trackFPS?: boolean
-  reportInterval?: number
+interface PerformanceThresholds {
+  maxRenderTime: number // ms
+  maxMemoryUsage: number // MB
+  maxNetworkLatency: number // ms
+  maxErrorCount: number
 }
 
-export function usePerformanceMonitor(
-  componentName: string,
-  options: PerformanceMonitorOptions = {}
-) {
-  const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    loadTime: 0,
-    renderTime: 0
-  })
-  
-  const [isSlowDevice, setIsSlowDevice] = useState(false)
-  const [connectionSpeed, setConnectionSpeed] = useState<'slow' | 'medium' | 'fast'>('medium')
+interface UsePerformanceMonitorOptions {
+  enabled?: boolean
+  thresholds?: Partial<PerformanceThresholds>
+  onThresholdExceeded?: (metric: string, value: number, threshold: number) => void
+  sampleRate?: number // 0-1, percentage of operations to monitor
+}
 
+const DEFAULT_THRESHOLDS: PerformanceThresholds = {
+  maxRenderTime: 100, // 100ms
+  maxMemoryUsage: 100, // 100MB
+  maxNetworkLatency: 1000, // 1s
+  maxErrorCount: 5
+}
+
+export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}) {
   const {
-    trackRenderTime = true,
-    trackMemory = false,
-    trackNetwork = false,
-    trackFPS: shouldTrackFPS = false,
-    reportInterval = 5000
+    enabled = true,
+    thresholds = {},
+    onThresholdExceeded,
+    sampleRate = 1.0
   } = options
 
-  // Detect slow devices
-  useEffect(() => {
-    const checkDevicePerformance = () => {
-      // Check hardware concurrency (CPU cores)
-      const cores = navigator.hardwareConcurrency || 1
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({
+    renderTime: 0,
+    memoryUsage: 0,
+    networkLatency: 0,
+    errorCount: 0,
+    lastUpdate: new Date()
+  })
+
+  const [isMonitoring, setIsMonitoring] = useState(enabled)
+  const renderStartTime = useRef<number>(0)
+  const performanceObserver = useRef<PerformanceObserver | null>(null)
+  const errorCount = useRef(0)
+
+  const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds }
+
+  // Measure render time
+  const startRenderMeasurement = useCallback(() => {
+    if (!isMonitoring || Math.random() > sampleRate) return
+    renderStartTime.current = performance.now()
+  }, [isMonitoring, sampleRate])
+
+  const endRenderMeasurement = useCallback((componentName?: string) => {
+    if (!isMonitoring || !renderStartTime.current || Math.random() > sampleRate) return
+
+    const renderTime = performance.now() - renderStartTime.current
+    
+    setMetrics(prev => {
+      const newMetrics = { ...prev, renderTime, lastUpdate: new Date() }
       
-      // Check memory (if available)
-      const memory = (navigator as any).deviceMemory || 4
-      
-      // Check connection speed
-      const connection = (navigator as any).connection
-      if (connection) {
-        const effectiveType = connection.effectiveType
-        if (effectiveType === 'slow-2g' || effectiveType === '2g') {
-          setConnectionSpeed('slow')
-        } else if (effectiveType === '3g') {
-          setConnectionSpeed('medium')
-        } else {
-          setConnectionSpeed('fast')
-        }
-      }
-      
-      // Determine if device is slow
-      const slowDevice = cores < 4 || memory < 4 || connectionSpeed === 'slow'
-      setIsSlowDevice(slowDevice)
-      
-      if (slowDevice) {
-        console.warn(`[Performance] Slow device detected for ${componentName}:`, {
-          cores,
-          memory,
-          connection: connectionSpeed
+      if (renderTime > finalThresholds.maxRenderTime) {
+        onThresholdExceeded?.('renderTime', renderTime, finalThresholds.maxRenderTime)
+        console.warn(`[Performance] ${componentName || 'Component'} render time exceeded threshold:`, {
+          renderTime,
+          threshold: finalThresholds.maxRenderTime
         })
       }
-    }
-
-    checkDevicePerformance()
-  }, [componentName, connectionSpeed])
-
-  // Track render performance
-  const trackRender = useCallback((startTime: number) => {
-    if (!trackRenderTime) return
-
-    const endTime = performance.now()
-    const renderTime = endTime - startTime
-
-    setMetrics(prev => ({
-      ...prev,
-      renderTime
-    }))
-
-    if (renderTime > 16) { // More than one frame at 60fps
-      console.warn(`[Performance] Slow render for ${componentName}: ${renderTime.toFixed(2)}ms`)
-    }
-  }, [componentName, trackRenderTime])
-
-  // Track memory usage
-  const trackMemoryUsage = useCallback(() => {
-    if (!trackMemory || !('memory' in performance)) return
-
-    const memory = (performance as any).memory
-    if (memory) {
-      const memoryUsage = memory.usedJSHeapSize / memory.jsHeapSizeLimit
       
-      setMetrics(prev => ({
-        ...prev,
-        memoryUsage: memoryUsage * 100
-      }))
+      return newMetrics
+    })
+  }, [isMonitoring, sampleRate, finalThresholds.maxRenderTime, onThresholdExceeded])
 
-      if (memoryUsage > 0.8) {
-        console.warn(`[Performance] High memory usage for ${componentName}: ${(memoryUsage * 100).toFixed(1)}%`)
-      }
-    }
-  }, [componentName, trackMemory])
+  // Measure memory usage
+  const measureMemoryUsage = useCallback(() => {
+    if (!isMonitoring || Math.random() > sampleRate) return
 
-  // Track FPS
-  const trackFPS = useCallback(() => {
-    if (!shouldTrackFPS) return
-
-    let lastTime = performance.now()
-    let frameCount = 0
-    let fps = 0
-
-    const measureFPS = () => {
-      frameCount++
-      const currentTime = performance.now()
+    if ('memory' in performance) {
+      const memory = (performance as any).memory
+      const memoryUsage = memory.usedJSHeapSize / 1024 / 1024 // Convert to MB
       
-      if (currentTime - lastTime >= 1000) {
-        fps = Math.round((frameCount * 1000) / (currentTime - lastTime))
-        frameCount = 0
-        lastTime = currentTime
+      setMetrics(prev => {
+        const newMetrics = { ...prev, memoryUsage, lastUpdate: new Date() }
         
-        setMetrics(prev => ({
-          ...prev,
-          fps
-        }))
-
-        if (fps < 30) {
-          console.warn(`[Performance] Low FPS for ${componentName}: ${fps}`)
+        if (memoryUsage > finalThresholds.maxMemoryUsage) {
+          onThresholdExceeded?.('memoryUsage', memoryUsage, finalThresholds.maxMemoryUsage)
+          console.warn('[Performance] Memory usage exceeded threshold:', {
+            memoryUsage,
+            threshold: finalThresholds.maxMemoryUsage,
+            total: memory.totalJSHeapSize / 1024 / 1024,
+            limit: memory.jsHeapSizeLimit / 1024 / 1024
+          })
         }
-      }
-      
-      requestAnimationFrame(measureFPS)
+        
+        return newMetrics
+      })
     }
+  }, [isMonitoring, sampleRate, finalThresholds.maxMemoryUsage, onThresholdExceeded])
 
-    requestAnimationFrame(measureFPS)
-  }, [componentName, shouldTrackFPS])
-
-  // Track network latency
-  const trackNetworkLatency = useCallback(async () => {
-    if (!trackNetwork) return
+  // Measure network latency
+  const measureNetworkLatency = useCallback(async (url: string) => {
+    if (!isMonitoring || Math.random() > sampleRate) return Promise.resolve()
 
     const startTime = performance.now()
     
     try {
-      await fetch('/api/ping', { method: 'HEAD' })
+      const response = await fetch(url, { method: 'HEAD' })
       const latency = performance.now() - startTime
       
-      setMetrics(prev => ({
-        ...prev,
-        networkLatency: latency
-      }))
-
-      if (latency > 1000) {
-        console.warn(`[Performance] High network latency for ${componentName}: ${latency.toFixed(0)}ms`)
-      }
+      setMetrics(prev => {
+        const newMetrics = { ...prev, networkLatency: latency, lastUpdate: new Date() }
+        
+        if (latency > finalThresholds.maxNetworkLatency) {
+          onThresholdExceeded?.('networkLatency', latency, finalThresholds.maxNetworkLatency)
+          console.warn('[Performance] Network latency exceeded threshold:', {
+            latency,
+            threshold: finalThresholds.maxNetworkLatency,
+            url
+          })
+        }
+        
+        return newMetrics
+      })
+      
+      return latency
     } catch (error) {
-      console.warn(`[Performance] Network test failed for ${componentName}:`, error)
+      console.error('[Performance] Network latency measurement failed:', error)
+      return null
     }
-  }, [componentName, trackNetwork])
+  }, [isMonitoring, sampleRate, finalThresholds.maxNetworkLatency, onThresholdExceeded])
 
-  // Performance reporting
+  // Track errors
+  const trackError = useCallback((error: Error, context?: string) => {
+    if (!isMonitoring) return
+
+    errorCount.current += 1
+    
+    setMetrics(prev => {
+      const newMetrics = { ...prev, errorCount: errorCount.current, lastUpdate: new Date() }
+      
+      if (errorCount.current > finalThresholds.maxErrorCount) {
+        onThresholdExceeded?.('errorCount', errorCount.current, finalThresholds.maxErrorCount)
+        console.warn('[Performance] Error count exceeded threshold:', {
+          errorCount: errorCount.current,
+          threshold: finalThresholds.maxErrorCount,
+          context,
+          error: error.message
+        })
+      }
+      
+      return newMetrics
+    })
+  }, [isMonitoring, finalThresholds.maxErrorCount, onThresholdExceeded])
+
+  // Monitor long tasks
   useEffect(() => {
-    const reportMetrics = () => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[Performance] ${componentName} metrics:`, metrics)
+    if (!isMonitoring) return
+
+    try {
+      performanceObserver.current = new PerformanceObserver((list) => {
+        const entries = list.getEntries()
+        
+        entries.forEach((entry) => {
+          if (entry.entryType === 'longtask') {
+            console.warn('[Performance] Long task detected:', {
+              duration: entry.duration,
+              startTime: entry.startTime,
+              name: entry.name
+            })
+            
+            if (entry.duration > finalThresholds.maxRenderTime) {
+              onThresholdExceeded?.('longTask', entry.duration, finalThresholds.maxRenderTime)
+            }
+          }
+        })
+      })
+
+      performanceObserver.current.observe({ entryTypes: ['longtask'] })
+    } catch (error) {
+      console.warn('[Performance] Long task monitoring not supported:', error)
+    }
+
+    return () => {
+      if (performanceObserver.current) {
+        performanceObserver.current.disconnect()
       }
     }
+  }, [isMonitoring, finalThresholds.maxRenderTime, onThresholdExceeded])
 
-    const interval = setInterval(reportMetrics, reportInterval)
-    return () => clearInterval(interval)
-  }, [componentName, metrics, reportInterval])
-
-  // Initialize tracking
+  // Monitor memory usage periodically
   useEffect(() => {
-    trackMemoryUsage()
-    trackFPS()
-    trackNetworkLatency()
-  }, [trackMemoryUsage, trackFPS, trackNetworkLatency])
+    if (!isMonitoring) return
+
+    const interval = setInterval(measureMemoryUsage, 5000) // Every 5 seconds
+    return () => clearInterval(interval)
+  }, [isMonitoring, measureMemoryUsage])
+
+  // Monitor errors globally
+  useEffect(() => {
+    if (!isMonitoring) return
+
+    const handleError = (event: ErrorEvent) => {
+      trackError(new Error(event.message), 'Global error handler')
+    }
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      trackError(
+        event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
+        'Unhandled promise rejection'
+      )
+    }
+
+    window.addEventListener('error', handleError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener('error', handleError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [isMonitoring, trackError])
+
+  // Performance report
+  const getPerformanceReport = useCallback(() => {
+    const report = {
+      ...metrics,
+      thresholds: finalThresholds,
+      isHealthy: {
+        renderTime: metrics.renderTime <= finalThresholds.maxRenderTime,
+        memoryUsage: metrics.memoryUsage <= finalThresholds.maxMemoryUsage,
+        networkLatency: metrics.networkLatency <= finalThresholds.maxNetworkLatency,
+        errorCount: metrics.errorCount <= finalThresholds.maxErrorCount
+      },
+      recommendations: []
+    }
+
+    // Generate recommendations
+    if (!report.isHealthy.renderTime) {
+      report.recommendations.push('Consider optimizing component rendering or reducing complexity')
+    }
+    if (!report.isHealthy.memoryUsage) {
+      report.recommendations.push('Check for memory leaks or excessive object creation')
+    }
+    if (!report.isHealthy.networkLatency) {
+      report.recommendations.push('Optimize network requests or implement caching')
+    }
+    if (!report.isHealthy.errorCount) {
+      report.recommendations.push('Review error handling and fix underlying issues')
+    }
+
+    return report
+  }, [metrics, finalThresholds])
+
+  // Reset metrics
+  const resetMetrics = useCallback(() => {
+    setMetrics({
+      renderTime: 0,
+      memoryUsage: 0,
+      networkLatency: 0,
+      errorCount: 0,
+      lastUpdate: new Date()
+    })
+    errorCount.current = 0
+  }, [])
+
+  // Toggle monitoring
+  const toggleMonitoring = useCallback(() => {
+    setIsMonitoring(prev => !prev)
+  }, [])
 
   return {
     metrics,
-    isSlowDevice,
-    connectionSpeed,
-    trackRender,
-    trackMemoryUsage,
-    trackNetworkLatency
+    isMonitoring,
+    startRenderMeasurement,
+    endRenderMeasurement,
+    measureMemoryUsage,
+    measureNetworkLatency,
+    trackError,
+    getPerformanceReport,
+    resetMetrics,
+    toggleMonitoring
+  }
+}
+
+// Hook for measuring component render performance
+export function useRenderPerformance(componentName?: string, options?: UsePerformanceMonitorOptions) {
+  const performanceMonitor = usePerformanceMonitor(options)
+  
+  useEffect(() => {
+    performanceMonitor.startRenderMeasurement()
+    
+    return () => {
+      performanceMonitor.endRenderMeasurement(componentName)
+    }
+  }, [performanceMonitor, componentName])
+
+  return performanceMonitor
+}
+
+// Hook for measuring async operations
+export function useAsyncPerformance(options?: UsePerformanceMonitorOptions) {
+  const performanceMonitor = usePerformanceMonitor(options)
+  
+  const measureAsync = useCallback(async <T>(
+    asyncFn: () => Promise<T>,
+    operationName?: string
+  ): Promise<T> => {
+    const startTime = performance.now()
+    
+    try {
+      const result = await asyncFn()
+      const duration = performance.now() - startTime
+      
+      if (duration > (options?.thresholds?.maxRenderTime || DEFAULT_THRESHOLDS.maxRenderTime)) {
+        console.warn(`[Performance] Async operation ${operationName || 'unknown'} took ${duration}ms`)
+      }
+      
+      return result
+    } catch (error) {
+      performanceMonitor.trackError(error instanceof Error ? error : new Error(String(error)), operationName)
+      throw error
+    }
+  }, [performanceMonitor, options])
+
+  return {
+    measureAsync,
+    ...performanceMonitor
   }
 }
