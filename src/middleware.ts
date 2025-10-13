@@ -15,6 +15,11 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
+  // TEMP: bypass auth checks for green guide tools while we stabilize the route
+  if (req.nextUrl.pathname.startsWith('/admin/green-guide')) {
+    return res
+  }
+
   // Check if the route is an admin route
   if (req.nextUrl.pathname.startsWith('/admin')) {
     
