@@ -43,7 +43,7 @@ export default function QuickAddInput({
   const parseIncident = async (text: string) => {
     if (!text.trim()) return
 
-    console.log('parseIncident called with:', text); // Debug log
+    console.log('parseIncident called with:', text, 'v2.0'); // Debug log
     setIsParsing(true)
     try {
       const response = await fetch('/api/ai-insights', {
