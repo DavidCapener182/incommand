@@ -208,24 +208,24 @@ const INCIDENT_PATTERNS: Record<string, IncidentPattern> = {
   
   // Artist/Performance
   'Artist Movement': {
-    keywords: ['artist moving', 'escort artist', 'band move', 'artist escort'],
-    phrases: ['artist movement', 'escorting artist', 'band arriving'],
+    keywords: ['artist moving', 'escort artist', 'band move', 'artist escort', 'artist movement', 'artist arriving', 'artist leaving'],
+    phrases: ['artist movement', 'escorting artist', 'band arriving', 'artist en route'],
     priority: 'medium',
     weight: 0.8
   },
   
   'Artist On Stage': {
-    keywords: ['artist on stage', 'main act started', 'performance started'],
-    phrases: ['artist on stage', 'main act on', 'show started'],
+    keywords: ['artist on stage', 'main act started', 'performance started', 'on stage', 'onstage', 'taking stage', 'stage now', 'performing', 'started performing', 'band on'],
+    phrases: ['artist on stage', 'main act on', 'show started', 'taking the stage', 'now performing'],
     priority: 'low',
-    weight: 0.8
+    weight: 0.85
   },
   
   'Artist Off Stage': {
-    keywords: ['artist off stage', 'main act finished', 'performance ended'],
-    phrases: ['artist off stage', 'show ended', 'performance finished'],
+    keywords: ['artist off stage', 'main act finished', 'performance ended', 'off stage', 'offstage', 'left stage', 'finished performing', 'band off', 'set finished'],
+    phrases: ['artist off stage', 'show ended', 'performance finished', 'left the stage', 'finished set'],
     priority: 'low',
-    weight: 0.8
+    weight: 0.85
   },
   
   // Operational

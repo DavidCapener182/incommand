@@ -48,13 +48,13 @@ const LOGIC_MAP: IncidentLogicMap = {
     priority: 'high'
   },
   'Artist Movement': {
-    keywords: ['artist moving', 'escort artist', 'band move']
+    keywords: ['artist moving', 'escort artist', 'band move', 'artist movement']
   },
   'Artist On Stage': {
-    keywords: ['artist on stage', 'main act started']
+    keywords: ['artist on stage', 'main act started', 'on stage', 'onstage', 'taking stage', 'stage now', 'performing']
   },
   'Artist Off Stage': {
-    keywords: ['artist off stage', 'main act finished']
+    keywords: ['artist off stage', 'main act finished', 'off stage', 'offstage', 'left stage', 'finished performing']
   },
   'Sexual Misconduct': {
     keywords: [
