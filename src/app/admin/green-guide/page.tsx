@@ -7,6 +7,8 @@ export default function AdminGreenGuidePage() {
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reindexing, setReindexing] = useState(false)
+  const [reindexMsg, setReindexMsg] = useState<string | null>(null)
 
   const runSearch = async () => {
     setLoading(true)
@@ -33,6 +35,29 @@ export default function AdminGreenGuidePage() {
       <h1 className="text-2xl font-bold mb-4">Green Guide Tools</h1>
       <div className="mb-4">
         <a href="/green-guide" target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">Open Green Guide (PDF)</a>
+      </div>
+      <div className="mb-6">
+        <button
+          onClick={async () => {
+            setReindexing(true)
+            setReindexMsg(null)
+            try {
+              const resp = await fetch('/api/green-guide-reindex', { method: 'POST' })
+              const json = await resp.json()
+              if (!resp.ok) throw new Error(json?.error || 'Reindex failed')
+              setReindexMsg(`Reindex started: ${json.chunks} chunk(s). ${json.note || ''}`)
+            } catch (e: any) {
+              setReindexMsg(e?.message || 'Reindex failed')
+            } finally {
+              setReindexing(false)
+            }
+          }}
+          disabled={reindexing}
+          className="px-3 py-2 bg-blue-600 text-white rounded"
+        >
+          {reindexing ? 'Reindexing…' : 'Quick Reindex'}
+        </button>
+        {reindexMsg && <div className="text-xs text-gray-600 mt-2">{reindexMsg}</div>}
       </div>
       <div className="flex gap-2 mb-4">
         <input
