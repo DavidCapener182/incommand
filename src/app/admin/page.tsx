@@ -227,6 +227,15 @@ const AdminPage = () => {
               </div>
               <span className="text-sm font-medium">{user?.email || 'Not logged in'}</span>
             </div>
+            {/* Green Guide Tools link */}
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 text-gray-900 dark:text-gray-100 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4 flex flex-col items-start col-span-1">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="h-6 w-6 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="font-semibold text-lg">Green Guide Tools</span>
+              </div>
+              <p className="text-sm text-emerald-800 dark:text-emerald-300 mb-3">Search and reindex Green Guide. Open PDF, test queries.</p>
+              <a href="/admin/green-guide" className="px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700">Open</a>
+            </div>
           </div>
           
           {/* Simple User Info */}
