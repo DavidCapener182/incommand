@@ -1,0 +1,673 @@
+{
+  "Medical": {
+    "summary": [
+      "Use factual, objective language and record times clearly",
+      "Capture location precisely (GPS/what3words if available)",
+      "Record treatment given and whether ambulance required"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Medical incident at [location]. Patient [age/gender if known] presenting with [symptoms]. Time first observed: [HH:MM].",
+        "actions_taken": "Medics dispatched to [location]. Assessment underway. Consider ambulance if [criteria]."
+      },
+      {
+        "label": "Outcome follow-up",
+        "occurrence": "Update: patient condition [stable/improving/deteriorating].",
+        "actions_taken": "Treatment provided: [details]. Transported off-site: [yes/no]. Refused treatment: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Avoid subjective or speculative language",
+      "Do not include personally identifiable information unless required",
+      "Maintain audit trail; amend rather than overwrite"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  },
+  "Ejection": {
+    "summary": [
+      "Record reason for ejection and legal/venue basis",
+      "Capture time, location, and staff involved",
+      "Note if police informed and re-entry refused"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Ejection at [location] for [reason]. Time: [HH:MM].",
+        "actions_taken": "Individual escorted from site. Re-entry refused: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Stick to observed facts; avoid emotive descriptors",
+      "Include justification aligned to venue policy"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  },
+  "Refusal": {
+    "summary": [
+      "Capture refusal context and alternatives offered",
+      "Record safety considerations and communications",
+      "Note if police required"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Refusal at [location] related to [context]. Time: [HH:MM].",
+        "actions_taken": "Options explained. Safety monitored. Police required: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Avoid speculation about motives",
+      "Use neutral, professional tone"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  },
+  "Queue Build-Up": {
+    "summary": [
+      "State affected area and contributing factors",
+      "Record mitigation steps and timings",
+      "Monitor density and flow"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Queue build-up observed at [location]. Contributing factors: [factors]. Time: [HH:MM].",
+        "actions_taken": "Deployed additional staff/signage. Adjusted lanes. Monitoring density."
+      }
+    ],
+    "cautions": [
+      "Avoid vague terms; be specific on locations and actions"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  },
+  "Technical Issue": {
+    "summary": [
+      "Describe impact on safety/operations",
+      "Note affected systems and owner",
+      "Record remediation and status"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Technical issue affecting [system] at [location]. Impact: [brief]. Time: [HH:MM].",
+        "actions_taken": "Escalated to [team]. Workaround applied: [yes/no]. Monitoring in place."
+      }
+    ],
+    "cautions": [
+      "Avoid assigning blame in logs; keep factual"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  },
+  "Weather Disruption": {
+    "summary": [
+      "Record conditions and thresholds crossed",
+      "Note mitigations and comms",
+      "Track ongoing monitoring"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Weather disruption: [conditions] at [location]. Thresholds: [details]. Time: [HH:MM].",
+        "actions_taken": "Implemented weather plan step [x]. Communications sent to [groups]."
+      }
+    ],
+    "cautions": [
+      "Use measured values where possible (wind speed, precipitation)"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ]
+  }
+  ,
+  "Security": {
+    "summary": [
+      "Record time, location, and roles involved",
+      "Describe behavior and triggers factually",
+      "Note de-escalation steps and escalation criteria"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Security incident at [location]. Observed behavior: [facts]. Time: [HH:MM].",
+        "actions_taken": "De-escalation attempted. Supervisors informed. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Avoid emotive adjectives and speculation"
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Crowd Control": {
+    "summary": [
+      "State density/flow and affected areas",
+      "Capture mitigations and timings",
+      "Track trigger thresholds"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Crowd control issue at [location]. Density/flow: [details]. Time: [HH:MM].",
+        "actions_taken": "Barriers/lane changes deployed. PA/comms issued. Monitoring ongoing."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Fire Safety": {
+    "summary": [
+      "Describe hazard, alarm state, and area",
+      "Note evacuation/hold and responders",
+      "Record outcome and reset"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Fire safety: [alarm/smoke/heat] at [location]. Time: [HH:MM].",
+        "actions_taken": "Fire team dispatched. Area [evacuated/held]. Cause investigated."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Traffic": {
+    "summary": [
+      "State ingress/egress impact",
+      "Note coordination with authorities",
+      "Record mitigations"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Traffic issue at [road/junction]. Impact: [details]. Time: [HH:MM].",
+        "actions_taken": "Stewarding adjusted. Liaised with [police/council]. Signage updated."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Attendance": {
+    "summary": [
+      "Record counts and capacity %",
+      "State thresholds and trends",
+      "Note actions taken"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Attendance update: [count] at [location], [percent]% of capacity. Time: [HH:MM].",
+        "actions_taken": "Flows adjusted, comms to teams, monitoring ongoing."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Event Timing": {
+    "summary": [
+      "Log key show/movement milestones",
+      "Tie actions to timing",
+      "Note impacts on operations"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Event timing: [gate open/artist on/show stop/curfew] at [HH:MM].",
+        "actions_taken": "Teams briefed, plans updated, stakeholders informed."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Other": {
+    "summary": [
+      "Keep to who/what/where/when",
+      "Avoid opinions—facts only",
+      "Capture resolution/next steps"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "[Brief factual description] at [location]. Time: [HH:MM].",
+        "actions_taken": "[Actions by teams], escalation if needed, monitoring."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Generic": {
+    "summary": [
+      "Use factual, objective language",
+      "Include time and precise location",
+      "Record who did what and outcome"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Incident at [location]. [What happened] at [HH:MM].",
+        "actions_taken": "[Actions taken] by [team/callsign]. Status: [ongoing/resolved]."
+      }
+    ],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Welfare": {
+    "summary": [
+      "State welfare concern and immediate risks",
+      "Record support actions and referrals",
+      "Protect privacy; avoid sensitive PII"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Welfare concern at [location] regarding [brief description]. Time: [HH:MM].",
+      "actions_taken": "Welfare team dispatched. Provided support and monitored. Escalation to medical/police: [yes/no]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Suspicious Behaviour": {
+    "summary": [
+      "Describe observable behavior only (no opinions)",
+      "Record time, location, and description",
+      "Note observations/actions and any police liaison"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Suspicious behaviour observed at [location]: [factual description]. Time: [HH:MM].",
+      "actions_taken": "Area monitored/CCTV reviewed. Units briefed. Police informed: [yes/no]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Lost Property": {
+    "summary": [
+      "Capture item description and last known location",
+      "Record owner contact/reference if provided",
+      "Note chain of custody if item recovered"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Lost property report: [item] last seen at [location] around [HH:MM].",
+      "actions_taken": "Logged in property system. Search initiated/owner advised. If found, stored at [store] with ref [ref]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Site Issue": {
+    "summary": [
+      "Describe hazard/defect and impact",
+      "Record location and isolation/cordon if applicable",
+      "Note who was tasked and current status"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Site issue at [location]: [fault/hazard]. Time: [HH:MM].",
+      "actions_taken": "Area made safe/cordoned. FM/contractor notified. Repair scheduled/monitoring ongoing."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Tech Issue": {
+    "summary": [
+      "State affected system and business impact",
+      "Record owner/escalation",
+      "Note workaround and status"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Technical issue on [system] at [location]. Impact: [brief]. Time: [HH:MM].",
+      "actions_taken": "Escalated to [team]. Workaround applied [yes/no]. Monitoring until resolved."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Environmental": {
+    "summary": [
+      "Describe environmental risk (spill, weather, noise)",
+      "Record thresholds/measurements where possible",
+      "Note mitigations and notifications"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Environmental issue: [type] at [location]. Measures: [value/units]. Time: [HH:MM].",
+      "actions_taken": "Mitigation step [x] enacted. Stakeholders informed. Ongoing monitoring."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Alcohol / Drug Related": {
+    "summary": [
+      "Record objective signs and safety concerns",
+      "Note duty of care and refusal/ejection where applicable",
+      "Avoid speculation; keep factual"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Alcohol/drug-related incident at [location]: [observable signs]. Time: [HH:MM].",
+      "actions_taken": "Welfare/medical assessed. Service refused/ejection considered. Police informed: [yes/no]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Weapon Related": {
+    "summary": [
+      "Record description and location carefully",
+      "Follow safety and preserve evidence",
+      "Note police involvement/reference if any"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Weapon-related report at [location]: [description]. Time: [HH:MM].",
+      "actions_taken": "Area made safe. Police informed [ref if any]. Evidence preserved."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Artist Movement": {
+    "summary": [
+      "Log planned/unplanned movement",
+      "Capture routes and timings",
+      "Note impacts on stewarding/flows"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Artist movement: [artist] moving [from] → [to] at [HH:MM].",
+      "actions_taken": "Route secured. Teams briefed. Contingencies in place."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Artist On Stage": {
+    "summary": [
+      "Log on-stage time",
+      "Note stage/area and show impacts",
+      "Record any safety considerations"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Artist on stage: [artist] at [stage] [HH:MM].",
+      "actions_taken": "Crowd watch enhanced. Comms sent to stakeholders."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Artist Off Stage": {
+    "summary": [
+      "Log off-stage time",
+      "Note movement or exit",
+      "Record any changes to flows"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Artist off stage: [artist] at [stage] [HH:MM].",
+      "actions_taken": "Flows adjusted. Security stood down where appropriate."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Sexual Misconduct": {
+    "summary": [
+      "Use sensitive, factual wording; protect privacy",
+      "Record time, location, and immediate safety actions",
+      "Note referral to police/welfare as appropriate"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Report of sexual misconduct at [location] around [HH:MM].",
+      "actions_taken": "Immediate safety ensured. Welfare/police informed [ref]. Evidence preservation guidance followed."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Timings": {
+    "summary": [
+      "Record milestone and exact time",
+      "Link actions to timing",
+      "Note operational impacts"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Timing update: [gate open/curfew/etc.] at [HH:MM].",
+      "actions_taken": "Teams updated. Plans adjusted. Stakeholders informed."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Sit Rep": {
+    "summary": [
+      "Provide concise situation overview",
+      "State key risks and resources",
+      "Record next actions and review time"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Situation report at [HH:MM]: [brief facts/risk/impact].",
+      "actions_taken": "Resources allocated. Next review at [time]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Crowd Management": {
+    "summary": [
+      "Describe density/flow and areas affected",
+      "Note mitigations and triggers",
+      "Record comms and monitoring"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Crowd management issue at [location]. Density/flow: [details]. Time: [HH:MM].",
+      "actions_taken": "Additional stewarding/barriers. Comms issued. Ongoing monitoring."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Hostile Act": {
+    "summary": [
+      "Record facts clearly; avoid speculation",
+      "Prioritize safety and inform police",
+      "Preserve evidence and document references"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Hostile act reported at [location] around [HH:MM]: [facts].",
+      "actions_taken": "Area secured. Police informed [ref]. Evidence preserved."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Fire Alarm": {
+    "summary": [
+      "State alarm panel/zone if known",
+      "Record checks and evacuation/hold",
+      "Note cause/reset when confirmed"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Fire alarm activation at [location/zone] [HH:MM].",
+      "actions_taken": "Fire team investigated. [Evacuated/held]. Cause: [TBC/known]. System reset at [time]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Noise Complaint": {
+    "summary": [
+      "Record source/location and times",
+      "Log measurements if available",
+      "Note mitigations and comms"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Noise complaint at [location/time]: [details].",
+      "actions_taken": "Levels checked. Mitigation applied. Complainant updated if applicable."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Evacuation": {
+    "summary": [
+      "State trigger and areas affected",
+      "Record evacuation routes/comms",
+      "Note all-clear and timings"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Evacuation initiated for [area] at [HH:MM] due to [trigger].",
+      "actions_taken": "Routes opened/PA issued. Assembly points monitored. All-clear at [time]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Counter-Terror Alert": {
+    "summary": [
+      "Follow CT protocols; share only necessary facts",
+      "Record police liaison and references",
+      "Preserve evidence"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Counter-terror alert: [brief] at [location] [HH:MM].",
+      "actions_taken": "CT protocol enacted. Police ref [ref]. Evidence preserved."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Entry Breach": {
+    "summary": [
+      "Describe breach point and method",
+      "Record numbers involved if known",
+      "Note containment and follow-up"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Entry breach at [location] around [HH:MM]. Method: [details].",
+      "actions_taken": "Area secured. Individuals intercepted/removed. Police informed: [yes/no]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Theft": {
+    "summary": [
+      "Record item, location, and time",
+      "Preserve evidence and CCTV references",
+      "Note police report/reference if any"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Theft reported at [location] around [HH:MM]: [item/brief].",
+      "actions_taken": "CCTV reviewed. Evidence preserved. Police ref [ref]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Emergency Show Stop": {
+    "summary": [
+      "State trigger and decision time",
+      "Record comms and actions",
+      "Note restart/stand-down criteria"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Emergency show stop at [HH:MM] due to [trigger].",
+      "actions_taken": "PA/comms sent. Safety actions executed. Review for restart at [time]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Animal Incident": {
+    "summary": [
+      "Describe animal type and behavior",
+      "Record risk and control measures",
+      "Note authorities contacted if needed"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Animal incident at [location] involving [animal]. Time: [HH:MM].",
+      "actions_taken": "Area controlled. Appropriate team/authority informed. Monitoring/removed."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Missing Child/Person": {
+    "summary": [
+      "Record last seen details and description (safely)",
+      "Initiate search protocol and comms",
+      "Note police involvement and outcome"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Missing [child/person] last seen at [location] around [HH:MM]. Description: [brief/safe].",
+      "actions_taken": "Search protocol activated. Teams briefed. Police informed: [yes/no]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Accreditation": {
+    "summary": [
+      "State pass/credential issue",
+      "Record location/time and security actions",
+      "Note resolution and updates"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Accreditation issue at [location] [HH:MM]: [brief].",
+      "actions_taken": "Identity verified. Access adjusted. System updated."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Staffing": {
+    "summary": [
+      "Record shortage/overlap and area",
+      "Note mitigation (reassignments)",
+      "Capture impact on operations"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Staffing issue in [area] at [HH:MM]: [brief].",
+      "actions_taken": "Resources reallocated. Supervisor informed. Monitoring continues."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Accsessablity": {
+    "summary": [
+      "Use respectful, factual language",
+      "Record access concern and location",
+      "Note adjustments and assistance given"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Accessibility concern at [location] around [HH:MM]: [brief].",
+      "actions_taken": "Reasonable adjustments made. Assistance provided. Follow-up planned."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Suspected Fire": {
+    "summary": [
+      "Record signs (smell/smoke/heat) and location",
+      "Note checks/evacuation status",
+      "Update when confirmed/false alarm"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Suspected fire reported at [location] around [HH:MM]: [signs].",
+      "actions_taken": "Fire team dispatched. Evacuation/hold decision. Cause confirmed [later if known]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Fire": {
+    "summary": [
+      "Describe area involved and response",
+      "Note evacuation and services",
+      "Record extinguish/overhaul and cause if known"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Fire at [location] at [HH:MM].",
+      "actions_taken": "Area evacuated/held. Fire service engaged. Overhaul completed. Cause: [known/TBC]."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Showdown": {
+    "summary": [
+      "Log end-of-show time",
+      "Record dispersal/egress status",
+      "Note any incidents/escalations"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Showdown called at [HH:MM].",
+      "actions_taken": "Egress plan active. Teams positioned. Issues monitored."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Fight": {
+    "summary": [
+      "Record location, number of persons, and time",
+      "Describe actions taken (de-escalation/split) factually",
+      "Note injuries, medical/police involvement"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Fight reported at [location] at [HH:MM] involving [approx. number] persons.",
+      "actions_taken": "Teams intervened/split. Medical/police informed: [yes/no]. Area monitored."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  }
+}
+
+

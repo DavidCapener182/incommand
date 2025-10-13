@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { 
   InformationCircleIcon,
   CheckCircleIcon,
@@ -35,6 +36,11 @@ const HelpPage = () => {
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Help &amp; Glossary</h1>
               <p className="text-sm text-gray-600 dark:text-gray-300">Quick answers, definitions, and how-to guidance</p>
+            </div>
+            <div className="ml-auto">
+              <Link href="/help/tutorial" className="inline-flex items-center px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500">
+                Open Tutorial
+              </Link>
             </div>
           </div>
         </header>

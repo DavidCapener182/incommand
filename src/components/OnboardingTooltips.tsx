@@ -1,9 +1,16 @@
 'use client'
 
 import React from 'react'
-import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride'
+import dynamic from 'next/dynamic'
+import type { CallBackProps, Step } from 'react-joyride'
+import { STATUS } from 'react-joyride'
 import CustomTooltip from './joyride/CustomTooltip'
 import { useTooltipOnboarding } from '@/hooks/useTooltipOnboarding'
+import { usePathname } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+
+const Joyride = dynamic(() => import('react-joyride'), { ssr: false })
 
 interface OnboardingTooltipsProps {
   run?: boolean
@@ -11,6 +18,8 @@ interface OnboardingTooltipsProps {
 
 export default function OnboardingTooltips({ run }: OnboardingTooltipsProps) {
   const { shouldShow, completeTour, skipTour } = useTooltipOnboarding()
+  const pathname = usePathname() || '/'
+  const { user } = useAuth()
 
   const steps: Step[] = [
     {
@@ -48,13 +57,21 @@ export default function OnboardingTooltips({ run }: OnboardingTooltipsProps) {
     },
   ]
 
-  const handleCallback = (data: CallBackProps) => {
+  const handleCallback = async (data: CallBackProps) => {
     const { status, action } = data
-    if ([STATUS.FINISHED].includes(status)) {
+    if (status === STATUS.FINISHED) {
       completeTour()
+      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'finished', step_index: data.index ?? null, route: pathname }) } catch {}
     }
     if (action === 'skip') {
       skipTour()
+      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'skipped', step_index: data.index ?? null, route: pathname }) } catch {}
+    }
+    if (action === 'start') {
+      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'started', step_index: data.index ?? 0, route: pathname }) } catch {}
+    }
+    if (action === 'next' || action === 'prev' || action === 'update') {
+      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'step', step_index: data.index ?? null, route: pathname }) } catch {}
     }
   }
 
@@ -66,6 +83,9 @@ export default function OnboardingTooltips({ run }: OnboardingTooltipsProps) {
       showSkipButton
       showProgress
       disableOverlayClose
+      disableOverlay
+      spotlightClicks
+      disableScrolling
       callback={handleCallback}
       tooltipComponent={CustomTooltip}
       styles={{

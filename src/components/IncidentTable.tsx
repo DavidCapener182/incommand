@@ -727,14 +727,13 @@ export default function IncidentTable({
     onFiltersChange({ ...filters, priorities: [] });
   }, [filters, onFiltersChange]);
 
-  // Performance monitoring - measure render time
+  // Performance monitoring - measure render time (mount/unmount only)
   useEffect(() => {
     startRenderMeasurement()
-    
     return () => {
       endRenderMeasurement('IncidentTable')
     }
-  }, [incidents.length, sortedIncidents.length, startRenderMeasurement, endRenderMeasurement])
+  }, [])
 
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {

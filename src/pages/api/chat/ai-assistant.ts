@@ -221,6 +221,8 @@ const QUICK_ACTIONS: readonly QuickAction[] = [
   { id: 'show-stop', text: "Best practice for show stop", icon: '⏹️' }
 ] as const;
 
+const SHOULD_USE_GREEN_GUIDE = true;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -263,6 +265,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Add current user message
     messages.push({ role: 'user', content: message });
+
+    // Intent detect for best practice queries
+    const lower = message.toLowerCase();
+    const wantsBestPractice = /best practice|procedure|how should|what should we do|safety|green guide/.test(lower);
+
+    if (SHOULD_USE_GREEN_GUIDE && wantsBestPractice) {
+      try {
+        const origin = req.headers['x-forwarded-proto'] && req.headers['x-forwarded-host']
+          ? `${req.headers['x-forwarded-proto']}://${req.headers['x-forwarded-host']}`
+          : `${req.headers.origin || ''}`;
+        const base = origin || '';
+        const resp = await fetch(`${base}/api/green-guide-search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: message, topK: 4 })
+        });
+        if (resp.ok) {
+          const { results } = await resp.json();
+          if (Array.isArray(results) && results.length) {
+            const formatted = results.map((r: any, i: number) => `(${i + 1}) p.${r.page || '?'}: ${r.content?.slice(0, 400)}`).join('\n');
+            messages.push({
+              role: 'system',
+              content: `You have access to Green Guide context. Cite using [GG p.<page>]. Relevant snippets:\n${formatted}`
+            });
+          }
+        }
+      } catch {}
+    }
 
     console.log('📤 Sending to OpenAI with', messages.length, 'messages');
 

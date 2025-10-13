@@ -42,6 +42,21 @@ const PreferencesPage: React.FC = () => {
   const { dashboardLayout } = useDashboardLayout()
   const { syncPreferences, lastSyncTime } = useSyncPreferences()
   const { restartTour, skipTour } = useTooltipOnboarding()
+  const [greenGuideEnabled, setGreenGuideEnabled] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('green-guide-assistance-enabled')
+      return stored !== null ? JSON.parse(stored) : true
+    } catch {
+      return true
+    }
+  })
+
+  const persistGreenGuide = (value: boolean) => {
+    setGreenGuideEnabled(value)
+    try {
+      localStorage.setItem('green-guide-assistance-enabled', JSON.stringify(value))
+    } catch {}
+  }
   
   const [isSyncing, setIsSyncing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -199,6 +214,36 @@ const PreferencesPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Green Guide Assistance */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="flex items-center mb-4">
+              <ShieldCheckIcon className="h-6 w-6 text-emerald-600 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Green Guide Assistance
+              </h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              Show concise best‑practice hints during incident creation and link to the Green Guide.
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enable Hints</span>
+              <button
+                onClick={() => persistGreenGuide(!greenGuideEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                  greenGuideEnabled ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    greenGuideEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <div className="mt-3 text-xs">
+              <a href="/green-guide" target="_blank" rel="noreferrer" className="text-emerald-700 dark:text-emerald-300 hover:underline">Open Green Guide (PDF)</a>
+            </div>
+          </div>
           {/* Theme Preferences */}
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <div className="flex items-center mb-4">

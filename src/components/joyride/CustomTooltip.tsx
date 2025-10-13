@@ -3,6 +3,7 @@
 import React from 'react'
 import type { TooltipRenderProps } from 'react-joyride'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 
 export default function CustomTooltip({
   backProps,
@@ -15,6 +16,7 @@ export default function CustomTooltip({
   size,
   isLastStep,
 }: TooltipRenderProps) {
+  const router = useRouter()
   const learnMoreHref = (step as any)?.data?.href as string | undefined
 
   return (
@@ -39,12 +41,12 @@ export default function CustomTooltip({
           <p className="leading-relaxed">{step.content}</p>
         ) : step.content}
         {learnMoreHref && (
-          <a
-            href={learnMoreHref}
+          <button
+            onClick={() => router.push(learnMoreHref)}
             className="inline-block mt-2 text-blue-600 hover:underline"
           >
             Learn more
-          </a>
+          </button>
         )}
       </div>
       <div className="px-4 py-3 bg-white/70 flex items-center justify-between gap-2">

@@ -3,6 +3,9 @@
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import dynamic from 'next/dynamic'
+
+const JoyrideLazy = dynamic(() => import('@/components/OnboardingTooltips'), { ssr: false })
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -58,11 +61,14 @@ export default function TutorialPage() {
                 and operational best practices.
               </p>
               <div className="mt-3 flex gap-2 text-sm">
-                <Link href="/events/create" className="text-blue-600 hover:underline">Create Event</Link>
+                <Link href="/settings/events" className="text-blue-600 hover:underline">Create Event</Link>
                 <span className="text-gray-400">•</span>
                 <Link href="/incidents" className="text-blue-600 hover:underline">Log Incident</Link>
                 <span className="text-gray-400">•</span>
                 <Link href="/" className="text-blue-600 hover:underline">View Dashboard</Link>
+              </div>
+              <div className="mt-4">
+                <JoyrideLazy run />
               </div>
             </Section>
 
@@ -98,6 +104,10 @@ export default function TutorialPage() {
               </figure>
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/60 dark:border-blue-800/40 text-sm">
                 Best practice: Use professional, factual language. Amend, do not overwrite.
+              </div>
+              <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 text-sm">
+                Green Guide: When selecting an incident type, you’ll see concise best‑practice hints and quick‑insert templates. For full guidance, open the PDF.
+                <div className="mt-2 text-xs"><a href="/green-guide" target="_blank" rel="noreferrer" className="text-emerald-700 dark:text-emerald-300 hover:underline">Open Green Guide (PDF)</a></div>
               </div>
             </Section>
 

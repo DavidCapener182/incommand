@@ -33,6 +33,7 @@ import QuickTabs from './QuickTabs'
 import IncidentTypeCategories from './IncidentTypeCategories'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useScreenReader } from '@/hooks/useScreenReader'
+import greenGuideBestPractices from '@/data/greenGuideBestPractices.json'
 
 interface Props {
   isOpen: boolean
@@ -2130,6 +2131,30 @@ export default function IncidentCreationModal({
   const [offlineState, offlineActions] = useOfflineSync();
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [offlineIncidents, setOfflineIncidents] = useState<any[]>([]);
+  // Green Guide hints toggle (persisted locally, respects global assistance flag if present)
+  const [showBestPracticeHints, setShowBestPracticeHints] = useState<boolean>(() => {
+    try {
+      const local = localStorage.getItem('showGreenGuideHints')
+      if (local !== null) return JSON.parse(local)
+      const global = localStorage.getItem('green-guide-assistance-enabled')
+      return global !== null ? JSON.parse(global) : true
+    } catch {
+      return true
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('showGreenGuideHints', JSON.stringify(showBestPracticeHints))
+    } catch {}
+  }, [showBestPracticeHints])
+
+  const getBestPracticesForType = useCallback((type: string) => {
+    const key = (type || '').trim()
+    // @ts-ignore - JSON import typing
+    const store: any = greenGuideBestPractices as any
+    return store[key] || store['Generic']
+  }, [])
 
   // Mobile gesture support
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -4957,6 +4982,105 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
 
             {/* Right Column - Location & Actions, Additional Options */}
             <section className="lg:col-span-4 space-y-3 h-full">
+              {/* Green Guide Best Practices */}
+              {(
+                <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="best-practices-title">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 id="best-practices-title" className="text-sm font-semibold text-gray-900">Best Practices (Green Guide)</h3>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={showBestPracticeHints}
+                        onChange={(e) => setShowBestPracticeHints(e.target.checked)}
+                        className="text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Show
+                    </label>
+                  </div>
+                  {showBestPracticeHints && (
+                    <div className="space-y-3">
+                      {(() => {
+                        // @ts-ignore - JSON import typing
+                        const bp = formData.incident_type ? (greenGuideBestPractices as any)[formData.incident_type] : null
+                        if (!bp) {
+                          return (
+                            <div className="p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700">
+                              Select a specific incident type to view brief best‑practice hints and quick‑insert templates.
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-[11px] text-gray-500">Examples: Medical, Ejection, Refusal, Queue Build‑Up</span>
+                                <a href="/green-guide" target="_blank" rel="noreferrer" className="text-[11px] text-emerald-700 hover:underline">Open Green Guide (PDF)</a>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return (
+                          <>
+                            {Array.isArray(bp.summary) && bp.summary.length > 0 && (
+                              <ul className="list-disc list-inside text-xs text-gray-700 space-y-1">
+                                {bp.summary.slice(0, 3).map((s: string, i: number) => (
+                                  <li key={i}>{s}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {Array.isArray(bp.checklists) && bp.checklists.length > 0 && (
+                              <div className="space-y-2">
+                                {bp.checklists.map((c: any, idx: number) => (
+                                  <div key={idx} className="border rounded-md p-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium text-gray-800">{c.label}</span>
+                                      <div className="flex gap-2">
+                                        {c.occurrence && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({
+                                              ...prev,
+                                              occurrence: (prev.occurrence ? prev.occurrence + '\n' : '') + c.occurrence
+                                            }))}
+                                            className="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-emerald-500"
+                                          >
+                                            Insert occurrence
+                                          </button>
+                                        )}
+                                        {c.actions_taken && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({
+                                              ...prev,
+                                              actions_taken: (prev.actions_taken ? prev.actions_taken + '\n' : '') + c.actions_taken
+                                            }))}
+                                            className="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-emerald-500"
+                                          >
+                                            Insert action
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between pt-1">
+                              <a href="/green-guide" target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
+                                Open Green Guide (PDF)
+                              </a>
+                              {Array.isArray(bp.cautions) && bp.cautions.length > 0 && (
+                                <span className="text-[11px] text-amber-700">Keep logs factual. Amend, don’t overwrite.</span>
+                              )}
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Location & Actions Card */}
               <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="location-actions-title">
                 <div className="flex items-center gap-2 mb-3">
