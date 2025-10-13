@@ -405,24 +405,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, role, loading, signOut, invalidateRoleCache, systemSettings, userPreferences, refreshSettings }}>
-      {!loading && (
-        <>
-          {showStayLoggedIn && (
-            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded shadow-lg flex flex-col items-center">
-                <p className="mb-4 text-lg font-semibold">Stay logged in?</p>
-                <button
-                  className="px-4 py-2 bg-[#2A3990] text-white rounded hover:bg-[#1e2a6a]"
-                  onClick={handleStayLoggedIn}
-                >
-                  Yes, stay logged in
-                </button>
-              </div>
+      <>
+        {showStayLoggedIn && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded shadow-lg flex flex-col items-center">
+              <p className="mb-4 text-lg font-semibold">Stay logged in?</p>
+              <button
+                className="px-4 py-2 bg-[#2A3990] text-white rounded hover:bg-[#1e2a6a]"
+                onClick={handleStayLoggedIn}
+              >
+                Yes, stay logged in
+              </button>
             </div>
-          )}
-          {children}
-        </>
-      )}
+          </div>
+        )}
+        {children}
+      </>
     </AuthContext.Provider>
   )
 }
