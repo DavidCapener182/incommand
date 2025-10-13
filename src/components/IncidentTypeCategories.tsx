@@ -122,7 +122,7 @@ export default function IncidentTypeCategories({
 
       {sortedCategories.map((category) => {
         const isExpanded = expandedCategories[category.name]
-        const hasSelectedType = category.types.includes(selectedType)
+        const hasSelectedType = (category.types as unknown as string[]).includes(selectedType)
 
         return (
           <div

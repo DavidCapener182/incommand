@@ -8,11 +8,11 @@ import { Variants } from 'framer-motion'
 
 // Easing curves
 export const easing = {
-  easeInOut: [0.4, 0, 0.2, 1],
-  easeOut: [0, 0, 0.2, 1],
-  easeIn: [0.4, 0, 1, 1],
-  sharp: [0.4, 0, 0.6, 1],
-  spring: { type: 'spring', stiffness: 300, damping: 30 }
+  easeInOut: 'easeInOut' as const,
+  easeOut: 'easeOut' as const,
+  easeIn: 'easeIn' as const,
+  sharp: 'linear' as const,
+  spring: { type: 'spring', stiffness: 300, damping: 30 } as const
 }
 
 // Duration presets (in seconds)

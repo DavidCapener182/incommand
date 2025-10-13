@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { 
+import {
   MicrophoneIcon,
   StopIcon,
   SpeakerWaveIcon,
@@ -10,7 +10,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useVoiceInput, parseVoiceCommand } from '@/hooks/useVoiceInput'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 
 interface VoiceInputFieldProps {
   value: string
@@ -62,12 +62,12 @@ export default function VoiceInputField({
         onChange(newValue)
         setLastVoiceResult(text)
         onVoiceResult?.(text, confidence)
-        
+
         // Provide audio feedback for successful recognition
         if (confidence > 0.8) {
           speak('Got it.')
         }
-        
+
         // Clear the result after a delay
         setTimeout(() => setLastVoiceResult(null), 2000)
       }
@@ -231,7 +231,7 @@ export default function VoiceInputField({
           >
             <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              "{interimTranscript}"
+              &quot;{interimTranscript}&quot;
             </div>
           </motion.div>
         )}
@@ -280,12 +280,12 @@ export function VoiceTextareaField({
         onChange(newValue)
         setLastVoiceResult(text)
         onVoiceResult?.(text, confidence)
-        
+
         // Provide audio feedback for successful recognition
         if (confidence > 0.8) {
           speak('Got it.')
         }
-        
+
         // Clear the result after a delay
         setTimeout(() => setLastVoiceResult(null), 2000)
       }
@@ -442,7 +442,7 @@ export function VoiceTextareaField({
           >
             <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              "{interimTranscript}"
+              &quot;{interimTranscript}&quot;
             </div>
           </motion.div>
         )}
@@ -450,3 +450,5 @@ export function VoiceTextareaField({
     </div>
   )
 }
+
+

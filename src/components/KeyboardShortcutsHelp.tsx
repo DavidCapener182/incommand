@@ -82,7 +82,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
             aria-labelledby="shortcuts-title"
           >
             <motion.div
-              ref={focusTrapRef}
+              ref={focusTrapRef as React.RefObject<HTMLDivElement>}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}

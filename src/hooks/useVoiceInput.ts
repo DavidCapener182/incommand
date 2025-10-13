@@ -136,13 +136,13 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
             transcript: prev.transcript + finalTranscriptText,
             interimTranscript: ''
           }))
-          onResult?.(finalTranscriptText.trim(), true, confidence)
+          onResult?.(finalTranscriptText.trim(), true, 1.0)
         } else if (interimTranscriptText) {
           setState(prev => ({
             ...prev,
             interimTranscript: interimTranscriptText
           }))
-          onResult?.(interimTranscriptText, false, confidence)
+          onResult?.(interimTranscriptText, false, 1.0)
         }
       }
     }

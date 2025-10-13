@@ -12,6 +12,7 @@ export interface KeyboardShortcut {
   description: string
   action: () => void
   disabled?: boolean
+  category?: string
 }
 
 interface UseKeyboardShortcutsOptions {

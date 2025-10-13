@@ -3,7 +3,7 @@
 import React, { memo, useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import LazyImage from './LazyImage'
-import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
+import { useRenderPerformance } from '../hooks/usePerformanceMonitor'
 
 interface OptimizedImageGalleryProps {
   images: Array<{
@@ -30,10 +30,9 @@ const OptimizedImageGallery = memo(function OptimizedImageGallery({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   
-  const { isSlowDevice, connectionSpeed } = usePerformanceMonitor('ImageGallery', {
-    trackRenderTime: true,
-    trackMemory: true
-  })
+  const perf = useRenderPerformance('ImageGallery')
+  const isSlowDevice = perf.metrics.renderTime > 200 || perf.metrics.memoryUsage > 150
+  const connectionSpeed: 'slow' | 'fast' = perf.metrics.networkLatency > 800 ? 'slow' : 'fast'
 
   // Optimize images based on device performance
   const optimizedImages = useMemo(() => {

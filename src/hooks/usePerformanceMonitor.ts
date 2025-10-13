@@ -230,7 +230,7 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
 
   // Performance report
   const getPerformanceReport = useCallback(() => {
-    const report = {
+    const report: any = {
       ...metrics,
       thresholds: finalThresholds,
       isHealthy: {
@@ -239,7 +239,7 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
         networkLatency: metrics.networkLatency <= finalThresholds.maxNetworkLatency,
         errorCount: metrics.errorCount <= finalThresholds.maxErrorCount
       },
-      recommendations: []
+      recommendations: [] as string[]
     }
 
     // Generate recommendations

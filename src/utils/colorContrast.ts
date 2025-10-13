@@ -10,7 +10,7 @@
 // - Large text (18pt+ or 14pt+ bold): 3:1 contrast ratio
 // - UI components: 3:1 contrast ratio
 
-interface ColorContrastResult {
+export interface ColorContrastResult {
   ratio: number
   passesAA: boolean
   passesAAA: boolean

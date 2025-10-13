@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   SpeakerWaveIcon, 
   SpeakerXMarkIcon,
-  VolumeUpIcon,
-  VolumeDownIcon,
+  MinusSmallIcon,
+  PlusSmallIcon,
   Cog6ToothIcon,
   XMarkIcon,
   CheckCircleIcon
@@ -248,7 +248,7 @@ export default function VoiceFeedbackSettings({ isOpen, onClose }: VoiceFeedback
                 Volume: {Math.round(localConfig.volume * 100)}%
               </label>
               <div className="flex items-center gap-3">
-                <VolumeDownIcon className="h-5 w-5 text-gray-400" />
+                <MinusSmallIcon className="h-5 w-5 text-gray-400" />
                 <input
                   type="range"
                   min="0"
@@ -258,7 +258,7 @@ export default function VoiceFeedbackSettings({ isOpen, onClose }: VoiceFeedback
                   onChange={(e) => handleConfigChange('volume', parseFloat(e.target.value))}
                   className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                 />
-                <VolumeUpIcon className="h-5 w-5 text-gray-400" />
+                <PlusSmallIcon className="h-5 w-5 text-gray-400" />
               </div>
             </div>
 
