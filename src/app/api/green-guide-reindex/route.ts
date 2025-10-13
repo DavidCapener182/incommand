@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import path from 'path'
 import { promises as fs } from 'fs'
-import { supabase } from '@/lib/supabase'
+import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 
 async function embedTexts(texts: string[]): Promise<number[][]> {
   if (!process.env.OPENAI_API_KEY) {
@@ -32,6 +32,14 @@ function chunkText(text: string, size = 700, overlap = 120): string[] {
 
 export async function POST() {
   try {
+    const supabase = getServiceSupabaseClient()
+    // If already fully indexed, avoid overwriting with placeholder
+    const existing = await supabase
+      .from('green_guide_chunks')
+      .select('id', { count: 'exact', head: true })
+    if ((existing.count || 0) > 100) {
+      return NextResponse.json({ ok: true, chunks: existing.count, note: 'Already indexed. Use CLI ingest for full refresh.' })
+    }
     const filePath = path.join(process.cwd(), 'docs', 'green-guide.pdf')
     // Minimal extraction: read bytes and fallback to a placeholder if PDF.js not available server-side
     // In production, prefer running the full scripts/ingest-green-guide.ts
@@ -43,8 +51,7 @@ export async function POST() {
     const chunks = chunkText(placeholder, 700, 120)
     const embeddings = await embedTexts(chunks)
 
-    // Clear and upsert minimal row so search works (better than nothing)
-    await supabase.from('green_guide_chunks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    // Upsert minimal row without deleting existing data (safer default)
     const payload = chunks.map((c, idx) => ({ content: c, page: 1, heading: idx === 0 ? 'Overview' : null, embedding: embeddings[idx] as any }))
     const { error } = await supabase.from('green_guide_chunks').upsert(payload)
     if (error) throw new Error(error.message)

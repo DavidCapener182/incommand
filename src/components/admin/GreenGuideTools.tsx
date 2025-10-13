@@ -9,6 +9,14 @@ export default function GreenGuideTools() {
   const [error, setError] = useState<string | null>(null)
   const [reindexing, setReindexing] = useState(false)
   const [reindexMsg, setReindexMsg] = useState<string | null>(null)
+  const [stats, setStats] = useState<{ count: number } | null>(null)
+
+  React.useEffect(() => {
+    fetch('/api/green-guide-stats')
+      .then(r => r.json())
+      .then(json => setStats(json?.count ? { count: json.count } : { count: 0 }))
+      .catch(() => {})
+  }, [])
 
   const runSearch = async () => {
     setLoading(true)
@@ -56,7 +64,10 @@ export default function GreenGuideTools() {
         >
           {reindexing ? 'Reindexing…' : 'Quick Reindex'}
         </button>
-        {reindexMsg && <div className="text-xs text-gray-600 mt-2">{reindexMsg}</div>}
+        <div className="text-xs text-gray-600 mt-2 flex items-center gap-3">
+          {reindexMsg && <span>{reindexMsg}</span>}
+          {typeof stats?.count === 'number' && <span>Indexed: {stats.count} chunks</span>}
+        </div>
       </div>
       <div className="flex gap-2 mb-4">
         <input

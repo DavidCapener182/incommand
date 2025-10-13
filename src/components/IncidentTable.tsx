@@ -29,6 +29,9 @@ import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
 import { SkeletonIncidentTable, LoadingSpinner } from './ui/LoadingStates'
 // import VirtualizedIncidentTable from './VirtualizedIncidentTable'
 import EnhancedSearch from './EnhancedSearch'
+import { useBestPractice } from '@/hooks/useBestPractice'
+import { featureFlags } from '@/config/featureFlags'
+import { BestPracticePayload } from '@/types/bestPractice'
 
 interface Incident {
   id: number
@@ -146,6 +149,7 @@ export default function IncidentTable({
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({})
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
+  const { state: bpState, data: bpData, fetchBestPractice } = useBestPractice()
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -346,6 +350,37 @@ export default function IncidentTable({
                   duration: isHighPriority ? 12000 : 8000, // Increased from 8000/5000 to 12000/8000
                   urgent: isHighPriority
                 });
+
+                // Trigger Best-Practice flow (non-blocking)
+                if (featureFlags.best_practice_enabled && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
+                  // show spinner toast
+                  globalToastCallback({
+                    type: 'info',
+                    title: 'Finding best practice…',
+                    message: 'Consulting Green Guide',
+                    duration: 3000
+                  })
+                  // async call
+                  fetchBestPractice({
+                    incidentId: String(incident.id),
+                    incidentType: incident.incident_type,
+                    occurrence: incident.occurrence,
+                    eventId: incident.event_id
+                  }).then((bp) => {
+                    // bp is the returned BestPracticePayload from fetchBestPractice
+                    if (!bp) return
+                    const riskType = bp.risk_level === 'high' ? 'error' : bp.risk_level === 'medium' ? 'warning' : 'info'
+                    // Add small delay to prevent conflict with spinner toast
+                    setTimeout(() => {
+                      globalToastCallback({
+                        type: riskType as any,
+                        title: `Best practice: ${incident.incident_type}`,
+                        message: bp.summary,
+                        duration: bp.risk_level === 'high' ? 20000 : bp.risk_level === 'medium' ? 15000 : 12000 // Increased durations significantly
+                      })
+                    }, 500)
+                  }).catch(() => {/* silent */})
+                }
                 logger.debug('Toast sent for new incident', { component: 'IncidentTable', action: 'subscriptionEffect', incidentLogNumber: incident.log_number });
         } else {
           logger.debug('No global toast callback found for key', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });

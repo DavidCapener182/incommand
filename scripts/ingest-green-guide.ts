@@ -9,6 +9,7 @@
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
+// Use dynamic import inside function to avoid ESM/CJS friction
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
@@ -23,20 +24,13 @@ if (!supabaseUrl || !serviceKey || !OPENAI_API_KEY) {
 
 const supabase = createClient(supabaseUrl, serviceKey)
 
-async function loadPdfText(filePath: string): Promise<{ page: number; text: string }[]> {
-  const pdfjsLib = await import('pdfjs-dist')
-  const { getDocument } = await import('pdfjs-dist')
-  // @ts-ignore
-  const doc = await getDocument(filePath).promise
-  const pages: { page: number; text: string }[] = []
-  for (let p = 1; p <= doc.numPages; p++) {
-    const page = await doc.getPage(p)
-    // @ts-ignore
-    const content = await page.getTextContent()
-    const text = content.items.map((i: any) => i.str).join(' ')
-    pages.push({ page: p, text })
-  }
-  return pages
+async function loadPdfText(filePath: string): Promise<string> {
+  const fs = await import('fs/promises')
+  const buf = await fs.readFile(filePath)
+  const mod: any = await import('pdf-parse')
+  const pdf = mod.default || mod
+  const data = await pdf(buf)
+  return (data.text || '').replace(/\u0000/g, '')
 }
 
 function chunkText(text: string, size = 700, overlap = 120): string[] {
@@ -66,21 +60,19 @@ async function embed(texts: string[]): Promise<number[][]> {
     throw new Error(`Embedding failed: ${t}`)
   }
   const json = await resp.json()
-  return json.data.map((d: any: any) => d.embedding)
+  return json.data.map((d: any) => d.embedding)
 }
 
 async function main() {
   const pdfPath = path.resolve(process.cwd(), 'docs', 'green-guide.pdf')
   console.log('Reading PDF:', pdfPath)
-  const pages = await loadPdfText(pdfPath)
-  console.log('Pages:', pages.length)
+  const fullText = await loadPdfText(pdfPath)
+  console.log('Text length:', fullText.length)
 
-  const rows: { content: string; page: number; heading: string | null; embedding: number[] }[] = []
-  for (const { page, text } of pages) {
-    const chunks = chunkText(text)
-    for (const c of chunks) {
-      rows.push({ content: c, page, heading: null, embedding: [] })
-    }
+  const rows: { content: string; page: number | null; heading: string | null; embedding: number[] }[] = []
+  const chunks = chunkText(fullText)
+  for (const c of chunks) {
+    rows.push({ content: c, page: null, heading: null, embedding: [] })
   }
   console.log('Chunks:', rows.length)
 

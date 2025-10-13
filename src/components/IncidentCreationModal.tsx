@@ -22,6 +22,7 @@ import { calculateEscalationTime } from '../lib/escalationEngine'
 import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
 import EscalationTimer from './EscalationTimer'
+import IncidentFormDebugger from './debug/IncidentFormDebugger'
 import { useSwipeModal } from '../hooks/useSwipeGestures'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import useWhat3Words from '@/hooks/useWhat3Words'
@@ -2115,6 +2116,7 @@ export default function IncidentCreationModal({
   } = useWhat3Words()
   const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
+  const [showDebugger, setShowDebugger] = useState(false);
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
   const [typeSearchQuery, setTypeSearchQuery] = useState('');
   // Removed auto-assignment state
@@ -2830,7 +2832,9 @@ export default function IncidentCreationModal({
   }
   // Handler for parsed AI data from QuickAddInput
   const handleParsedData = (data: ParsedIncidentData) => {
-    console.log('handleParsedData called with:', data); // Debug log
+    console.log('🔍 handleParsedData called with:', data); // Debug log
+    console.log('🔍 Current formData.incident_type:', formData.incident_type);
+    console.log('🔍 Current formData.callsign_from:', formData.callsign_from);
     
     // Generate structured template fields from parsed data
     const generateStructuredFields = (parsedData: ParsedIncidentData) => {
@@ -2902,21 +2906,37 @@ export default function IncidentCreationModal({
     
     const structuredFields = generateStructuredFields(data)
     
-    setFormData(prev => ({
-      ...prev,
-      incident_type: data.incidentType || prev.incident_type,
-      what3words: data.location || prev.what3words,
-      callsign_from: data.callsign || prev.callsign_from,
-      priority: data.priority || prev.priority,
-      // Populate structured template fields
-      headline: structuredFields.headline,
-      source: structuredFields.source,
-      facts_observed: structuredFields.facts_observed,
-      actions_taken: structuredFields.actions_taken,
-      outcome: structuredFields.outcome,
-      // Also populate legacy occurrence field for backward compatibility
-      occurrence: data.description || prev.occurrence
-    }));
+    console.log('🔍 About to update form data with:', {
+      incident_type: data.incidentType,
+      callsign_from: data.callsign,
+      priority: data.priority
+    });
+    
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        incident_type: data.incidentType || prev.incident_type,
+        what3words: data.location || prev.what3words,
+        callsign_from: data.callsign || prev.callsign_from,
+        priority: data.priority || prev.priority,
+        // Populate structured template fields
+        headline: structuredFields.headline,
+        source: structuredFields.source,
+        facts_observed: structuredFields.facts_observed,
+        actions_taken: structuredFields.actions_taken,
+        outcome: structuredFields.outcome,
+        // Also populate legacy occurrence field for backward compatibility
+        occurrence: data.description || prev.occurrence
+      };
+      
+      console.log('🔍 Updated form data:', {
+        incident_type: newData.incident_type,
+        callsign_from: newData.callsign_from,
+        priority: newData.priority
+      });
+      
+      return newData;
+    });
     
     // Switch to details tab after applying parsed data
     setCurrentTab('details');
@@ -3379,6 +3399,12 @@ export default function IncidentCreationModal({
     setLoading(true);
     setError(null);
 
+    // Debug logging
+    console.log('🔍 Form submission started');
+    console.log('📝 Form data:', formData);
+    console.log('🎯 Selected event ID:', selectedEventId);
+    console.log('🎪 Current event fallback:', currentEventFallback);
+
     try {
       // Resolve effective event synchronously for this submission
       let effectiveEventId = selectedEventId;
@@ -3478,13 +3504,18 @@ export default function IncidentCreationModal({
       const sourceText = (structuredOccurrence || formData.occurrence || formData.ai_input || '').trim();
       let resolvedType = (formData.incident_type || '').trim();
       let resolvedOccurrence = structuredOccurrence || (formData.occurrence || '').trim();
+      console.log('🔍 Before resolution - Type:', resolvedType, 'Occurrence:', resolvedOccurrence?.substring(0, 50));
+      
       if (!resolvedType || !resolvedOccurrence) {
         const logic = detectIncidentFromText(sourceText);
+        console.log('🤖 Detection logic result:', logic);
         if (!resolvedType || resolvedType.toLowerCase() === 'select type') {
           resolvedType = logic.incidentType || detectIncidentType(sourceText) || 'Other';
+          console.log('✅ Resolved type:', resolvedType);
         }
         if (!resolvedOccurrence) {
           resolvedOccurrence = (logic.occurrence || sourceText || 'New incident reported.').trim();
+          console.log('✅ Resolved occurrence:', resolvedOccurrence?.substring(0, 50));
         }
       }
 
@@ -3543,6 +3574,7 @@ export default function IncidentCreationModal({
       }
 
       // Insert the incident
+      console.log('📤 About to insert incident:', incidentData);
       let insertedIncident: { id: number } | null = null;
       const { data: insertReturn, error: insertError } = await supabase
         .from('incident_logs')
@@ -3550,9 +3582,10 @@ export default function IncidentCreationModal({
         .select('id')
         .maybeSingle();
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('❌ Insert error:', insertError);
         throw new Error((insertError as any)?.message || 'Insert failed');
       }
+      console.log('✅ Insert successful:', insertReturn);
       insertedIncident = insertReturn as any;
       if (!insertedIncident?.id) {
         // Some RLS policies disable returning representation; fetch by unique log_number as fallback
@@ -4309,18 +4342,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               isProcessing={isQuickAddProcessing} 
               showParseButton={true}
               autoParseOnEnter={true}
-              onChangeValue={(txt: string) => {
-                if (!txt || !txt.trim()) {
-                  setFormData(prev => ({
-                    ...prev,
-                    occurrence: '',
-                    action_taken: '',
-                    incident_type: 'Select Type',
-                    callsign_from: '',
-                    what3words: ''
-                  }));
-                }
-              }} 
             />
             <div aria-live="polite" className="sr-only">
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
@@ -5304,6 +5325,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               >
                 Save as Draft
               </button>
+              {/* Debug button - only visible in development */}
+              {process.env.NODE_ENV === 'development' && (
+                <button
+                  onClick={() => setShowDebugger(!showDebugger)}
+                  className="touch-target w-full sm:w-auto px-4 py-2 text-sm bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  🐛 Debug
+                </button>
+              )}
               <button
                 onClick={handleSubmit}
                 className="touch-target w-full sm:w-auto px-6 py-3 sm:py-2 text-sm bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-lg"
@@ -5318,6 +5348,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </footer>
       </div>
       </div>
+      
+      {/* Debug component - only visible in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <IncidentFormDebugger
+          formData={formData}
+          eventId={selectedEventId || undefined}
+          isVisible={showDebugger}
+        />
+      )}
     </div>
   );
 } 
