@@ -65,6 +65,9 @@ export default function QuickAddInput({
             * "Crowd Control" - for crowd issues, overcrowding
             * "Fire Safety" - for fire alarms, smoke, fire incidents
             * "Technical" - for equipment failures, technical issues
+            * "Artist On Stage" - for artist/band on stage, performing, main act started
+            * "Artist Off Stage" - for artist/band off stage, performance ended, set finished
+            * "Artist Movement" - for artist/band movement, escorting, transportation
             * "Attendance" - for attendance updates, headcounts
             * "Other" - only if none of the above match
           - location: The location mentioned (e.g., "main stage", "north gate", "parking area", "entrance")
@@ -81,9 +84,9 @@ export default function QuickAddInput({
           - urgent: Fights, medical emergencies, fires, weapon incidents, security threats
           - high: Theft, entry breaches, major crowd issues
           - medium: Minor medical, suspicious behavior, technical failures
-          - low: Routine updates, attendance, minor issues
+          - low: Routine updates, attendance, minor issues, artist events (on/off stage, movement)
           
-          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". Match the most specific type possible.
+          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". If it mentions "artist", "band", "main act", "on stage", "off stage", "performing", "set finished", use the appropriate Artist type. Match the most specific type possible.
           
           If a field is not mentioned, omit it from the response.
           Return only valid JSON, no other text.`,
