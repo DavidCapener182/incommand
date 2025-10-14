@@ -26,8 +26,18 @@ export default function GlobalEscalationToast() {
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Use escalation toast context to notify other components
-  const { setEscalationToastVisible, setEscalationToastExpanded } = useEscalationToast();
+  // Use escalation toast context to notify other components (with safe fallback)
+  let setEscalationToastVisible = () => {};
+  let setEscalationToastExpanded = () => {};
+  
+  try {
+    const escalationContext = useEscalationToast();
+    setEscalationToastVisible = escalationContext.setEscalationToastVisible;
+    setEscalationToastExpanded = escalationContext.setEscalationToastExpanded;
+  } catch (error) {
+    // Context not available, use no-op functions
+    console.debug('EscalationToast context not available in GlobalEscalationToast');
+  }
 
   const fetchCurrentEvent = async () => {
     try {
