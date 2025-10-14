@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const filePath = path.join(process.cwd(), 'docs', 'green-guide.pdf')
     const data = await fs.readFile(filePath)
-    return new NextResponse(data, {
+    return new NextResponse(data.buffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'inline; filename="green-guide.pdf"'
