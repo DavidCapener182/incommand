@@ -14,7 +14,7 @@ export function useBestPractice() {
     const key = `${req.incidentType}|${(req.occurrence || '').slice(0, 100)}`
     // Debounce duplicate rapid calls (1.5s)
     const now = Date.now()
-    if (inFlightKey.current === key && (now - lastRunAt.current) < 1500) return
+    if (inFlightKey.current === key && (now - lastRunAt.current) < 1500) return null
     inFlightKey.current = key
     lastRunAt.current = now
 
