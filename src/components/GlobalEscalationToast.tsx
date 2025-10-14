@@ -27,8 +27,8 @@ export default function GlobalEscalationToast() {
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use escalation toast context to notify other components (with safe fallback)
-  let setEscalationToastVisible = () => {};
-  let setEscalationToastExpanded = () => {};
+  let setEscalationToastVisible = (_visible: boolean) => {};
+  let setEscalationToastExpanded = (_expanded: boolean) => {};
   
   try {
     const escalationContext = useEscalationToast();

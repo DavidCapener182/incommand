@@ -6,7 +6,10 @@ export async function GET() {
   try {
     const filePath = path.join(process.cwd(), 'docs', 'green-guide.pdf')
     const data = await fs.readFile(filePath)
-    const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+    // Convert Buffer to ArrayBuffer explicitly
+    const arrayBuffer = new ArrayBuffer(data.length)
+    const uint8Array = new Uint8Array(arrayBuffer)
+    uint8Array.set(data)
     return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
