@@ -36,16 +36,28 @@ export default function EscalationTimer({
 
   // Calculate time remaining until escalation
   const calculateTimeRemaining = useCallback(() => {
-    if (!escalateAt || escalated || isPaused) {
-      setTimeRemaining(0);
-      return;
-    }
+    try {
+      if (!escalateAt || escalated || isPaused) {
+        setTimeRemaining(0);
+        return;
+      }
 
-    const now = new Date().getTime();
-    const escalationTime = new Date(escalateAt).getTime();
-    const remaining = Math.max(0, escalationTime - now);
-    
-    setTimeRemaining(remaining);
+      const now = new Date().getTime();
+      const escalationTime = new Date(escalateAt).getTime();
+      
+      // Check for invalid dates
+      if (isNaN(escalationTime)) {
+        console.warn('Invalid escalation time:', escalateAt);
+        setTimeRemaining(0);
+        return;
+      }
+      
+      const remaining = Math.max(0, escalationTime - now);
+      setTimeRemaining(remaining);
+    } catch (error) {
+      console.error('Error calculating time remaining:', error);
+      setTimeRemaining(0);
+    }
   }, [escalateAt, escalated, isPaused]);
 
   // Update timer every second
@@ -67,7 +79,7 @@ export default function EscalationTimer({
     setError(null);
     try {
       const history = await getEscalationHistory(incidentId);
-      setEscalationHistory(history);
+      setEscalationHistory(history || []);
     } catch (error) {
       console.error('Error loading escalation history:', error);
       // Set empty history and show user-friendly error state

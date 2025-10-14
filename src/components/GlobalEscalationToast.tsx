@@ -26,12 +26,17 @@ export default function GlobalEscalationToast() {
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchCurrentEvent = async () => {
-    const { data } = await supabase
-      .from('events')
-      .select('id')
-      .eq('is_current', true)
-      .single();
-    setCurrentEventId(data?.id ?? null);
+    try {
+      const { data } = await supabase
+        .from('events')
+        .select('id')
+        .eq('is_current', true)
+        .single();
+      setCurrentEventId(data?.id ?? null);
+    } catch (error) {
+      console.error('Error fetching current event:', error);
+      setCurrentEventId(null);
+    }
   };
 
   const fetchNextEscalatingIncident = async (eventId?: string | null) => {
