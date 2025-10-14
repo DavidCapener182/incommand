@@ -376,7 +376,7 @@ export default function IncidentTable({
                         type: riskType as any,
                         title: `Best practice: ${incident.incident_type}`,
                         message: bp.summary,
-                        duration: bp.risk_level === 'high' ? 20000 : bp.risk_level === 'medium' ? 15000 : 12000 // Increased durations significantly
+                        duration: 10000 // Show Green Guide best practices for 10 seconds
                       })
                     }, 500)
                   }).catch(() => {/* silent */})
