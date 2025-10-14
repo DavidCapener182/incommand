@@ -35,6 +35,7 @@ import IncidentTypeCategories from './IncidentTypeCategories'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useScreenReader } from '@/hooks/useScreenReader'
 import greenGuideBestPractices from '@/data/greenGuideBestPractices.json'
+import { getOccurrenceTemplate } from '@/data/occurrenceTemplates'
 
 interface Props {
   isOpen: boolean
@@ -1973,19 +1974,6 @@ export default function IncidentCreationModal({
   }
 
   // Helper function to append amendments to actions_taken
-  const appendAmendment = (amendment: string) => {
-    const timestamp = new Date().toLocaleTimeString('en-GB', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    
-    const amendmentText = `\n\n[${timestamp}] AMENDMENT: ${amendment}`;
-    
-    setFormData(prev => ({
-      ...prev,
-      actions_taken: (prev.actions_taken || '') + amendmentText
-    }));
-  }
 
   // AI validation for factual language
   const validateFactualLanguage = (text: string): { warnings: string[], isFactual: boolean } => {
@@ -2745,20 +2733,54 @@ export default function IncidentCreationModal({
     const detectedFromText = detectIncidentType(rawInput);
     const aiType = candidateType || detectedFromText || prev.incident_type;
 
+    // Get Green Guide best practices for the incident type
+    const getBestPracticesForType = (type: string): string => {
+      const key = (type || '').trim()
+      // @ts-ignore - JSON import typing
+      const store: any = greenGuideBestPractices as any
+      const incidentData = store[key] || store['Generic']
+      
+      if (incidentData && incidentData.summary && incidentData.summary.length > 0) {
+        // Use the summary array which contains the best practices (usually 3 items)
+        const practices = incidentData.summary.slice(0, 3)
+        return practices.map((practice: string, index: number) => 
+          `${index + 1}. ${practice}`
+        ).join(' ')
+      }
+      
+      // If no Green Guide data found, return empty string instead of generic actions
+      return ''
+    };
+
+    // Get Green Guide occurrence template for the incident type
+    const getOccurrenceTemplateForType = (type: string): string => {
+      const key = (type || '').trim()
+      // @ts-ignore - JSON import typing
+      const store: any = greenGuideBestPractices as any
+      const incidentData = store[key] || store['Generic']
+      
+      if (incidentData && incidentData.checklists && incidentData.checklists.length > 0) {
+        // Get the occurrence from the first checklist
+        const firstChecklist = incidentData.checklists[0]
+        return firstChecklist.occurrence || getOccurrenceTemplate(type)
+      }
+      
+      return getOccurrenceTemplate(type)
+    };
+
     const normalizeActions = (raw: string): string => {
-      if (!raw) return defaultActionsForType(aiType);
+      if (!raw) return getBestPracticesForType(aiType);
       const lines = String(raw)
         .split(/\n|\r|\.|;|,/)
         .map(s => s.replace(/^\s*(?:\d+\.|[-*])\s*/, '').trim())
         .filter(Boolean);
-      if (lines.length === 0) return defaultActionsForType(aiType);
+      if (lines.length === 0) return getBestPracticesForType(aiType);
       const unique = Array.from(new Set(lines));
       return unique.slice(0, 4).map(s => (/[.!?]$/.test(s) ? s : s + '.')).join(' ');
     };
 
-    const recommendedActions = normalizeActions(
-      (aiData.actionTaken && (aiData.actionTaken as string).length > 3) ? (aiData.actionTaken as string) : defaultActionsForType(aiType)
-    );
+    // Always use Green Guide best practices instead of AI-generated actions
+    const recommendedActions = getBestPracticesForType(aiType);
     const reporter = (aiData.callsign || prev.callsign_from || '').trim();
     let enrichedOccurrence = cleanedOccurrence;
     if (cleanedLocation && !enrichedOccurrence.toLowerCase().includes(cleanedLocation.toLowerCase())) {
@@ -2773,15 +2795,24 @@ export default function IncidentCreationModal({
     const isW3W = !!cleanedLocation && /^(?:\s*\/{0,3})?[a-zA-Z]+\.[a-zA-Z]+\.[a-zA-Z]+$/.test(cleanedLocation);
     const normalizedW3W = isW3W ? (`///${cleanedLocation.replace(/^\/*/, '')}`) : prev.what3words;
 
+    // Priority override for low priority incident types
+    const lowPriorityTypes = ['Artist On Stage', 'Artist Off Stage', 'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Showdown'];
+    const finalPriority = lowPriorityTypes.includes(aiType) ? 'low' : normalizedPriority;
+
+    // Get occurrence template from Green Guide for the incident type
+    const occurrenceTemplate = getOccurrenceTemplateForType(aiType);
+
     return {
       ...prev,
       occurrence: enrichedOccurrence,
       incident_type: aiType,
       callsign_from: aiData.callsign || prev.callsign_from,
-      priority: normalizedPriority,
+      callsign_to: '', // Leave callsign_to empty as specified
+      priority: finalPriority,
       what3words: normalizedW3W,
       location_name: cleanedLocation,
-      action_taken: recommendedActions
+      action_taken: recommendedActions,
+      outcome: occurrenceTemplate
     };
   }
 
@@ -2852,47 +2883,39 @@ export default function IncidentCreationModal({
       // Generate facts observed
       const factsObserved = description || `A ${incidentType.toLowerCase()} incident occurred at ${location}.`
       
-      // Generate actions taken based on incident type
+      // Generate actions taken based on incident type using Green Guide best practices
       const getActionsTaken = (type: string, desc: string) => {
-        const lowerType = type.toLowerCase()
-        const lowerDesc = desc.toLowerCase()
+        const key = (type || '').trim()
+        // @ts-ignore - JSON import typing
+        const store: any = greenGuideBestPractices as any
+        const incidentData = store[key] || store['Generic']
         
-        if (lowerType.includes('fight') || lowerType.includes('altercation')) {
-          return '1. Dispatched security to de-escalate situation. 2. Separated involved parties. 3. Checked for injuries and called medical if needed. 4. Identified witnesses and reviewed CCTV. 5. Considered removals or arrests.'
-        } else if (lowerType.includes('medical')) {
-          return '1. Assessed the situation and provided first aid. 2. Called for medical assistance. 3. Established crowd control. 4. Documented incident details.'
-        } else if (lowerType.includes('security')) {
-          return '1. Dispatched security team to location. 2. Assessed threat level. 3. Implemented crowd control measures. 4. Documented incident details.'
-        } else if (lowerType.includes('fire')) {
-          return '1. Activated fire safety protocols. 2. Initiated evacuation procedures. 3. Contacted emergency services. 4. Secured area and documented incident.'
-        } else if (lowerType.includes('theft')) {
-          return '1. Secured the area and preserved evidence. 2. Identified witnesses and obtained statements. 3. Contacted police if necessary. 4. Documented stolen items and circumstances.'
-        } else if (lowerType.includes('weapon')) {
-          return '1. Immediately evacuated area for safety. 2. Contacted police and emergency services. 3. Isolated threat if possible. 4. Documented all details for investigation.'
-        } else {
-          return '1. Assessed the situation. 2. Dispatched appropriate resources. 3. Implemented necessary safety measures. 4. Documented incident details.'
+        if (incidentData && incidentData.summary && incidentData.summary.length > 0) {
+          // Use the summary array which contains the best practices (usually 3 items)
+          const practices = incidentData.summary.slice(0, 3)
+          return practices.map((practice: string, index: number) => 
+            `${index + 1}. ${practice}`
+          ).join(' ')
         }
+        
+        // Fallback to generic actions if no Green Guide data found
+        return '1. Assessed the situation. 2. Dispatched appropriate resources. 3. Implemented necessary safety measures. 4. Documented incident details.'
       }
       
-      // Generate outcome
+      // Generate outcome using Green Guide occurrence templates
       const getOutcome = (type: string) => {
-        const lowerType = type.toLowerCase()
+        const key = (type || '').trim()
+        // @ts-ignore - JSON import typing
+        const store: any = greenGuideBestPractices as any
+        const incidentData = store[key] || store['Generic']
         
-        if (lowerType.includes('fight') || lowerType.includes('altercation')) {
-          return 'Security team on scene. Parties separated. Incident contained. Investigation ongoing.'
-        } else if (lowerType.includes('medical')) {
-          return 'Medical team dispatched. Incident ongoing. Situation being monitored.'
-        } else if (lowerType.includes('security')) {
-          return 'Security team on scene. Situation contained. Monitoring ongoing.'
-        } else if (lowerType.includes('fire')) {
-          return 'Emergency services contacted. Evacuation procedures activated. Situation being assessed.'
-        } else if (lowerType.includes('theft')) {
-          return 'Area secured. Police contacted if necessary. Investigation ongoing.'
-        } else if (lowerType.includes('weapon')) {
-          return 'Area evacuated. Police and emergency services contacted. Situation being assessed.'
-        } else {
-          return 'Incident reported and logged. Appropriate response initiated. Monitoring ongoing.'
+        if (incidentData && incidentData.checklists && incidentData.checklists.length > 0) {
+          // Get the occurrence from the first checklist
+          const firstChecklist = incidentData.checklists[0]
+          return firstChecklist.occurrence || getOccurrenceTemplate(type)
         }
+        
+        return getOccurrenceTemplate(type)
       }
       
       return {
@@ -3531,6 +3554,10 @@ export default function IncidentCreationModal({
         `${userProfile?.first_name?.[0]}${userProfile?.last_name?.[0]}`.toUpperCase() ||
         'Unknown'
 
+      // Determine status based on priority - low priority incidents should be "logged" not "open"
+      const lowPriorityTypes = ['Artist On Stage', 'Artist Off Stage', 'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Showdown'];
+      const shouldBeLogged = lowPriorityTypes.includes(resolvedType) || formData.priority === 'low';
+      
       // Prepare the incident data
       const incidentData = {
         log_number: logNumber,
@@ -3539,9 +3566,9 @@ export default function IncidentCreationModal({
         occurrence: resolvedOccurrence,
         incident_type: resolvedType,
         action_taken: (formData.action_taken || '').trim(),
-        is_closed: formData.is_closed,
+        is_closed: shouldBeLogged,
         event_id: effectiveEvent.id,
-        status: formData.status || 'open',
+        status: shouldBeLogged ? 'logged' : (formData.status || 'open'),
         ai_input: formData.ai_input || null,
         created_at: now,
         updated_at: now, // Keep this for backward compatibility
@@ -4084,7 +4111,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] sticky top-0 z-10">
             <h2 id="incident-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Create Incident</h2>
             <button
-              onClick={onClose}
+              onClick={() => {
+                resetForm()
+                onClose()
+              }}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close modal"
             >
@@ -4224,7 +4254,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           <div className="border-t border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] p-4 sticky bottom-0">
             <div className="flex gap-3">
               <button
-                onClick={onClose}
+                onClick={() => {
+                  resetForm()
+                  onClose()
+                }}
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] text-base font-medium"
               >
                 Cancel
@@ -4301,7 +4334,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm()
+              onClose()
+            }}
               className="touch-target h-10 w-10 md:h-8 md:w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
           >
               <svg className="h-5 w-5 md:h-4 md:w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4342,6 +4378,26 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               isProcessing={isQuickAddProcessing} 
               showParseButton={true}
               autoParseOnEnter={true}
+              onChangeValue={(value: string) => {
+                // Clear auto-populated fields when user starts typing new text
+                if (value.trim() && value.trim() !== formData.occurrence) {
+                  setFormData(prev => ({
+                    ...prev,
+                    incident_type: initialIncidentType || '',
+                    callsign_from: '',
+                    callsign_to: 'Event Control',
+                    priority: 'medium',
+                    location_name: '',
+                    action_taken: '',
+                    outcome: '',
+                    // Clear structured fields that were auto-populated
+                    facts_observed: '',
+                    actions_taken: '',
+                    headline: '',
+                    source: ''
+                  }))
+                }
+              }}
             />
             <div aria-live="polite" className="sr-only">
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
@@ -4909,44 +4965,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       />
                       <p className="text-xs text-gray-500 mt-1">What actions were taken and by whom</p>
                       
-                      {/* Amendment Input */}
-                      <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <label htmlFor="amendment" className="block text-sm font-medium text-gray-700 mb-2">
-                          Add Amendment/Update
-                          <span className="ml-2 text-xs text-gray-500">(Optional)</span>
-                        </label>
-                        <div className="flex gap-2">
-                          <VoiceInputField
-                            value=""
-                            onChange={(value) => {
-                              // This will be handled by the onKeyPress
-                            }}
-                            placeholder="e.g., Additional security deployed at 15:30"
-                            className="flex-1"
-                            onVoiceResult={(transcript, confidence) => {
-                              if (transcript.trim()) {
-                                appendAmendment(transcript.trim());
-                              }
-                            }}
-                            silenceTimeout={3000}
-                            noiseThreshold={0.7}
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              const input = e.currentTarget.previousElementSibling?.querySelector('input') as HTMLInputElement;
-                              if (input && input.value.trim()) {
-                                appendAmendment(input.value.trim());
-                                input.value = '';
-                              }
-                            }}
-                            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            Add
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Press Enter or click Add to append to actions</p>
-                      </div>
                     </div>
 
                     {/* Outcome */}
@@ -5314,7 +5332,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">Auto-saved</div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm()
+              onClose()
+            }}
                 className="touch-target w-full sm:w-auto px-4 py-3 sm:py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#2d437a] focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
           >
             Cancel

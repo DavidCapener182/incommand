@@ -667,6 +667,19 @@
       "actions_taken": "Teams intervened/split. Medical/police informed: [yes/no]. Area monitored."
     }],
     "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+  },
+  "Missing Child/Person": {
+    "summary": [
+      "Record child/person description and last known location",
+      "Initiate immediate search protocol and notify all security teams",
+      "Coordinate with police and venue management for rapid response"
+    ],
+    "checklists": [{
+      "label": "Occurrence template",
+      "occurrence": "Missing child/person reported at [location] at [HH:MM]. Description: [age/gender/clothing]. Last seen: [location/time].",
+      "actions_taken": "Search initiated immediately. All security teams notified. PA announcement made. Police contacted. Parents/guardians informed."
+    }],
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
   }
 }
 

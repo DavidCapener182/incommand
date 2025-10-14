@@ -67,6 +67,7 @@ export async function POST(request: Request) {
         const content = completion.choices[0].message.content || '';
         const extracted = extractIncidentJson(content, input);
         if (extracted) {
+          console.log('enhanced-incident-parsing AI result:', extracted);
           aiResult = extracted;
           aiSource = 'openai';
         }
@@ -86,22 +87,237 @@ export async function POST(request: Request) {
       // Basic synonym mapping
       const lower = c.toLowerCase();
       const synonymMap: Record<string, string> = {
-        'fight': 'Aggressive Behaviour',
-        'fighting': 'Aggressive Behaviour',
-        'assault': 'Aggressive Behaviour',
-        'violent incident': 'Aggressive Behaviour',
+        // Fight incidents
+        'fight': 'Fight',
+        'fighting': 'Fight',
+        'assault': 'Fight',
+        'violent incident': 'Fight',
+        'brawl': 'Fight',
+        'altercation': 'Fight',
+        
+        // Medical incidents
+        'medical': 'Medical',
+        'medical emergency': 'Medical',
+        'first aid': 'Medical',
+        'injury': 'Medical',
+        'ambulance': 'Medical',
+        'illness': 'Medical',
+        'sick': 'Medical',
+        'unwell': 'Medical',
+        
+        // Security incidents
+        'security': 'Security',
+        'security breach': 'Security',
+        'unauthorized access': 'Security',
+        
+        // Theft incidents
+        'theft': 'Theft',
+        'steal': 'Theft',
+        'stolen': 'Theft',
+        'robbery': 'Theft',
+        'theft reported': 'Theft',
+        
+        // Entry Breach incidents
+        'entry breach': 'Entry Breach',
+        'gate breach': 'Entry Breach',
+        'perimeter breach': 'Entry Breach',
+        'unauthorized entry': 'Entry Breach',
+        
+        // Weapon Related incidents
+        'weapon': 'Weapon Related',
+        'knife': 'Weapon Related',
+        'gun': 'Weapon Related',
+        'blade': 'Weapon Related',
+        'weapon found': 'Weapon Related',
+        'weapon discovered': 'Weapon Related',
+        
+        // Crowd Control incidents
+        'crowd control': 'Crowd Control',
+        'crowd surge': 'Crowd Control',
+        'crowd crush': 'Crowd Control',
+        'crowd management': 'Crowd Control',
+        
+        // Fire Safety incidents
+        'fire safety': 'Fire Safety',
+        'fire hazard': 'Fire Safety',
+        
+        // Technical incidents
+        'technical': 'Technical',
+        'tech issue': 'Technical',
+        'equipment failure': 'Technical',
+        'sound issue': 'Technical',
+        'lighting issue': 'Technical',
+        
+        // Artist incidents
+        'main act on stage': 'Artist On Stage',
+        'artist on stage': 'Artist On Stage',
+        'headliner on stage': 'Artist On Stage',
+        'band performing': 'Artist On Stage',
+        'performing': 'Artist On Stage',
+        'main act finished': 'Artist Off Stage',
+        'artist off stage': 'Artist Off Stage',
+        'set finished': 'Artist Off Stage',
+        'performance ended': 'Artist Off Stage',
+        'artist movement': 'Artist Movement',
+        'artist transit': 'Artist Movement',
+        
+        // Attendance incidents
+        'attendance': 'Attendance',
+        'headcount': 'Attendance',
+        'crowd numbers': 'Attendance',
+        
+        // Ejection incidents
+        'ejection': 'Ejection',
+        'eject': 'Ejection',
+        'remove': 'Ejection',
+        'escort out': 'Ejection',
+        'thrown out': 'Ejection',
+        'kicked out': 'Ejection',
+        
+        // Refusal incidents
+        'refusal': 'Refusal',
+        'refuse': 'Refusal',
+        'deny': 'Refusal',
+        'denied': 'Refusal',
+        'entry refused': 'Refusal',
+        
+        // Welfare incidents
+        'welfare': 'Welfare',
+        'welfare check': 'Welfare',
+        'welfare concern': 'Welfare',
+        
+        // Suspicious Behaviour incidents
         'suspicious behavior': 'Suspicious Behaviour',
         'suspicious behaviour': 'Suspicious Behaviour',
-        'queue buildup': 'Queue Build-Up',
-        'queue build up': 'Queue Build-Up',
+        'suspicious': 'Suspicious Behaviour',
+        'suspicious activity': 'Suspicious Behaviour',
+        'concern': 'Suspicious Behaviour',
+        'worried': 'Suspicious Behaviour',
+        
+        // Lost Property incidents
         'lost property': 'Lost Property',
-        'tech issue': 'Technical Issue',
-        'weather': 'Weather Disruption',
+        'lost item': 'Lost Property',
+        'found property': 'Lost Property',
+        
+        // Missing Child/Person incidents
+        'missing child': 'Missing Child/Person',
+        'missing person': 'Missing Child/Person',
+        'lost child': 'Missing Child/Person',
+        'lost person': 'Missing Child/Person',
+        'child missing': 'Missing Child/Person',
+        'person missing': 'Missing Child/Person',
+        'missing': 'Missing Child/Person',
+        
+        // Site Issue incidents
+        'site issue': 'Site Issue',
+        'venue issue': 'Site Issue',
+        'facility issue': 'Site Issue',
+        
+        // Environmental incidents
+        'environmental': 'Environmental',
+        'weather': 'Environmental',
+        'weather disruption': 'Environmental',
+        
+        // Crowd Management incidents
+        'queue management': 'Crowd Management',
+        'queue buildup': 'Crowd Management',
+        'queue build up': 'Crowd Management',
+        
+        // Evacuation incidents
+        'evacuation': 'Evacuation',
+        'evacuate': 'Evacuation',
+        'emergency evacuation': 'Evacuation',
+        
+        // Fire Alarm incidents
+        'fire alarm': 'Fire Alarm',
+        'fire alarm activated': 'Fire Alarm',
+        'alarm': 'Fire Alarm',
+        
+        // Fire incidents
+        'fire': 'Fire',
+        'smoke': 'Fire',
+        'flame': 'Fire',
+        'burning': 'Fire',
+        'suspected fire': 'Suspected Fire',
+        
+        // Noise Complaint incidents
+        'noise complaint': 'Noise Complaint',
+        'noise issue': 'Noise Complaint',
+        'complaint': 'Noise Complaint',
+        
+        // Animal Incident incidents
+        'animal incident': 'Animal Incident',
+        'animal': 'Animal Incident',
+        'dog': 'Animal Incident',
+        'cat': 'Animal Incident',
+        
+        // Alcohol/Drug incidents
+        'alcohol': 'Alcohol / Drug Related',
+        'drug': 'Alcohol / Drug Related',
+        'drugs': 'Alcohol / Drug Related',
+        'drunk': 'Alcohol / Drug Related',
+        'intoxicated': 'Alcohol / Drug Related',
+        
+        // Hostile Act incidents
+        'hostile act': 'Hostile Act',
+        'terrorism': 'Hostile Act',
+        'terrorist': 'Hostile Act',
+        'threat': 'Hostile Act',
+        
+        // Counter-Terror Alert incidents
+        'counter-terror alert': 'Counter-Terror Alert',
+        'terror alert': 'Counter-Terror Alert',
+        'security alert': 'Counter-Terror Alert',
+        
+        // Sexual Misconduct incidents
+        'sexual misconduct': 'Sexual Misconduct',
+        'sexual assault': 'Sexual Misconduct',
+        'rape': 'Sexual Misconduct',
+        'harassment': 'Sexual Misconduct',
+        
+        // Emergency Show Stop incidents
+        'emergency show stop': 'Emergency Show Stop',
+        'show stop': 'Emergency Show Stop',
+        'stop show': 'Emergency Show Stop',
+        
+        // Event Timing incidents
+        'event timing': 'Event Timing',
+        'timing': 'Event Timing',
+        'schedule': 'Event Timing',
+        'delay': 'Event Timing',
+        
+        // Timings incidents
+        'timings': 'Timings',
+        'time check': 'Timings',
+        'time update': 'Timings',
+        
+        // Sit Rep incidents
+        'sit rep': 'Sit Rep',
+        'situation report': 'Sit Rep',
+        'status report': 'Sit Rep',
+        
+        // Showdown incidents
+        'showdown': 'Showdown',
+        'show down': 'Showdown',
+        
+        // Accreditation incidents
+        'accreditation': 'Accreditation',
+        'accred': 'Accreditation',
+        'badge': 'Accreditation',
+        
+        // Staffing incidents
+        'staffing': 'Staffing',
+        'staff': 'Staffing',
+        'personnel': 'Staffing',
       };
       let mapped = c;
-      if (synonymMap[lower]) mapped = synonymMap[lower];
+      if (synonymMap[lower]) {
+        mapped = synonymMap[lower];
+      }
       // If mapped (or original) is in allowed, use it; else try case-insensitive match
-      if (allowed.includes(mapped)) return mapped;
+      if (allowed.includes(mapped)) {
+        return mapped;
+      }
       const ci = allowed.find(a => a.toLowerCase() === mapped.toLowerCase());
       return ci || '';
     };
@@ -110,8 +326,16 @@ export async function POST(request: Request) {
     const incidentType = normalizeIncidentType(incidentTypeRaw, incidentTypes) || '';
     const description = aiResult?.description || input;
     const callsign = aiResult?.callsign || fallbackDetectCallsign(input);
-    const location = (aiResult?.location || fallbackExtractLocation(input) || '').toString();
-    const priority = (aiResult?.priority as string)?.toLowerCase?.() || detectPriority(input);
+    let location = (aiResult?.location || fallbackExtractLocation(input) || '').toString();
+    // Capitalize first letter of each word in location
+    if (location) {
+      location = location.replace(/\b\w/g, (l: string) => l.toUpperCase());
+    }
+    let priority = (aiResult?.priority as string)?.toLowerCase?.() || detectPriority(input);
+    // Override priority for artist events - they should always be low priority
+    if (incidentType === 'Artist On Stage' || incidentType === 'Artist Off Stage') {
+      priority = 'low';
+    }
     const confidence = typeof aiResult?.confidence === 'number' ? aiResult.confidence : 0;
     const actionTaken = (aiResult?.actionTaken && aiResult.actionTaken.length > 10)
       ? aiResult.actionTaken
@@ -132,7 +356,7 @@ export async function POST(request: Request) {
       ejectionInfo = { location: cleanedLocation || '', description: '', reason: '' };
     }
 
-    console.log('enhanced-incident-parsing source=', aiSource, { incidentType, cleanedLocation });
+    console.log('enhanced-incident-parsing source=', aiSource, { incidentType, cleanedLocation, priority, confidence });
 
     const successResponse: EnhancedIncidentParsingResponse = { incidentType, description, callsign, location: cleanedLocation, priority, confidence, actionTaken, ejectionInfo, aiSource };
     // Server-side fallback signal: recommend client to use WebLLM in the browser when cloud AI is unavailable

@@ -364,12 +364,14 @@ export function parseVoiceCommand(transcript: string): ParsedVoiceCommand {
   const typePatterns = [
     { pattern: /medical|injury|first aid|ambulance/, type: 'Medical' },
     { pattern: /ejection|eject|remove|escort out/, type: 'Ejection' },
-    { pattern: /refusal|refuse|deny|denied/, type: 'Refusal of Entry' },
+    { pattern: /refusal|refuse|deny|denied/, type: 'Refusal' },
     { pattern: /theft|steal|stolen|robbery/, type: 'Theft' },
-    { pattern: /assault|fight|violence|attack/, type: 'Assault' },
+    { pattern: /assault|fight|violence|attack/, type: 'Fight' },
     { pattern: /fire|smoke|flame/, type: 'Fire' },
-    { pattern: /lost (child|person)|missing/, type: 'Lost Person' },
-    { pattern: /suspicious|concern|worried/, type: 'Suspicious Activity' }
+    { pattern: /lost (child|person)|missing/, type: 'Missing Child/Person' },
+    { pattern: /suspicious|concern|worried/, type: 'Suspicious Behaviour' },
+    { pattern: /main act on stage|artist on stage|headliner on stage|band performing|performing/, type: 'Artist On Stage' },
+    { pattern: /main act finished|set finished|artist off stage|performance ended/, type: 'Artist Off Stage' }
   ]
 
   for (const { pattern, type } of typePatterns) {
@@ -387,11 +389,18 @@ export function parseVoiceCommand(transcript: string): ParsedVoiceCommand {
   } else if (lowerTranscript.match(/low|minor|routine/)) {
     result.priority = 'low'
   }
+  
+  // Override priority for artist events - they should always be low priority
+  if (result.incidentType === 'Artist On Stage' || result.incidentType === 'Artist Off Stage') {
+    result.priority = 'low'
+  }
 
   // Extract location (common patterns)
   const locationMatch = lowerTranscript.match(/(?:at|in|near|by|outside|inside)\s+([\w\s]+?)(?:\s+(?:for|with|about|regarding)|$)/i)
   if (locationMatch) {
     result.location = locationMatch[1].trim()
+    // Capitalize first letter of each word in location
+    result.location = result.location.replace(/\b\w/g, l => l.toUpperCase())
   }
 
   // Extract description (everything after the initial command)

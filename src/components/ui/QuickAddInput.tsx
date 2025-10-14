@@ -46,56 +46,23 @@ export default function QuickAddInput({
     console.log('parseIncident called with:', text, 'v2.0'); // Debug log
     setIsParsing(true)
     try {
-      const response = await fetch('/api/ai-insights', {
+      const response = await fetch('/api/enhanced-incident-parsing', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: `Parse this incident description into structured data: "${text}"
-          
-          Extract and return a JSON object with these fields:
-          - incidentType: The type of incident. Look for these specific types:
-            * "Fight" - for fights, altercations, physical confrontations
-            * "Medical" - for medical emergencies, injuries, health issues
-            * "Security" - for security breaches, suspicious behavior, threats
-            * "Theft" - for stolen items, property crimes
-            * "Entry Breach" - for unauthorized access, gate violations
-            * "Weapon Related" - for weapons, dangerous objects
-            * "Crowd Control" - for crowd issues, overcrowding
-            * "Fire Safety" - for fire alarms, smoke, fire incidents
-            * "Technical" - for equipment failures, technical issues
-            * "Artist On Stage" - for artist/band on stage, performing, main act started
-            * "Artist Off Stage" - for artist/band off stage, performance ended, set finished
-            * "Artist Movement" - for artist/band movement, escorting, transportation
-            * "Attendance" - for attendance updates, headcounts
-            * "Other" - only if none of the above match
-          - location: The location mentioned (e.g., "Main Stage", "North Gate", "Parking Area", "Entrance"). Always capitalize the first letter of each word.
-          - callsign: Any callsign mentioned (e.g., "A1", "R3", "S1", "Security Team", "Medical Team")
-          - priority: Priority level based on severity ("low", "medium", "high", "urgent")
-          - description: A detailed, factual description of what happened, including:
-            * What was observed
-            * Who was involved
-            * When it occurred (if mentioned)
-            * Current status
-          - confidence: Confidence score 0-100
-          
-          Priority guidelines:
-          - urgent: Fights, medical emergencies, fires, weapon incidents, security threats
-          - high: Theft, entry breaches, major crowd issues
-          - medium: Minor medical, suspicious behavior, technical failures
-          - low: Routine updates, attendance, minor issues, artist events (on/off stage, movement, performing, main act)
-          
-          Examples:
-          - "Main act on stage" → incidentType: "Artist On Stage", priority: "low", location: "Stage"
-          - "Artist performing" → incidentType: "Artist On Stage", priority: "low", location: "Stage"
-          - "Set finished" → incidentType: "Artist Off Stage", priority: "low", location: "Stage"
-          
-          IMPORTANT: Be very specific about incident types. If the text mentions "fight", "altercation", "confrontation", etc., use "Fight". If it mentions medical terms, use "Medical". If it mentions "artist", "band", "main act", "on stage", "off stage", "performing", "set finished", use the appropriate Artist type with "low" priority. Match the most specific type possible.
-          
-          If a field is not mentioned, omit it from the response.
-          Return only valid JSON, no other text.`,
-          context: 'incident_parsing'
+          input: text,
+          incidentTypes: [
+            'Fight', 'Medical', 'Security', 'Theft', 'Entry Breach', 'Weapon Related',
+            'Crowd Control', 'Fire Safety', 'Technical', 'Artist On Stage', 'Artist Off Stage',
+            'Artist Movement', 'Attendance', 'Ejection', 'Refusal', 'Welfare', 'Suspicious Behaviour',
+            'Lost Property', 'Missing Child/Person', 'Site Issue', 'Environmental', 'Crowd Management', 'Evacuation',
+            'Fire Alarm', 'Suspected Fire', 'Noise Complaint', 'Animal Incident', 'Alcohol / Drug Related',
+            'Hostile Act', 'Counter-Terror Alert', 'Sexual Misconduct', 'Emergency Show Stop',
+            'Event Timing', 'Timings', 'Sit Rep', 'Showdown', 'Accreditation', 'Staffing',
+            'Accsessablity', 'Other'
+          ]
         })
       })
 
@@ -103,21 +70,16 @@ export default function QuickAddInput({
         throw new Error('Failed to parse incident')
       }
 
-      const result = await response.json()
-      const parsed = result.response || result.content || result
-
-      // Try to parse the JSON response
-      let incidentData: ParsedIncidentData
-      try {
-        incidentData = JSON.parse(parsed)
-      } catch {
-        // If parsing fails, try to extract JSON from the response
-        const jsonMatch = parsed.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          incidentData = JSON.parse(jsonMatch[0])
-        } else {
-          throw new Error('Could not parse AI response')
-        }
+      const data = await response.json()
+      
+      // The enhanced-incident-parsing API returns the parsed data directly
+      const incidentData: ParsedIncidentData = {
+        incidentType: data.incidentType || 'Other',
+        location: data.location || '',
+        callsign: data.callsign || '',
+        priority: data.priority || 'medium',
+        description: data.description || text,
+        confidence: data.confidence || 80
       }
 
       setParsedData(incidentData)
