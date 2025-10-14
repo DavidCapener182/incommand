@@ -72,7 +72,18 @@ const getTextStyles = (type: ToastMessage['type']) => {
 }
 
 export default function Toast({ messages, onRemove }: ToastProps) {
-  const { isEscalationToastVisible, isEscalationToastExpanded } = useEscalationToast();
+  // Safely use escalation toast context with fallback
+  let isEscalationToastVisible = false;
+  let isEscalationToastExpanded = false;
+  
+  try {
+    const escalationContext = useEscalationToast();
+    isEscalationToastVisible = escalationContext.isEscalationToastVisible;
+    isEscalationToastExpanded = escalationContext.isEscalationToastExpanded;
+  } catch (error) {
+    // Context not available, use default positioning
+    console.debug('EscalationToast context not available, using default toast positioning');
+  }
   
   // Calculate positioning based on escalation toast state
   const getToastPosition = () => {
