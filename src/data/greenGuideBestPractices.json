@@ -24,6 +24,30 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "{{responders}} dispatched to {{location}}. Patient assessed presenting with {{symptoms}}. {{treatment_provided}}. {{ambulance_status}}.",
+      "outcome": "Patient condition {{patient_status}} at {{time}}. {{transport_outcome}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "ambulance_required",
+        "text": "Was an ambulance required?",
+        "type": "boolean",
+        "placeholder": "ambulance_status"
+      },
+      {
+        "id": "treatment_refused",
+        "text": "Did the patient refuse treatment?",
+        "type": "boolean",
+        "placeholder": "treatment_provided"
+      },
+      {
+        "id": "transported",
+        "text": "Was the patient transported off-site?",
+        "type": "boolean",
+        "placeholder": "transport_outcome"
+      }
     ]
   },
   "Ejection": {
@@ -45,6 +69,30 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "{{responders}} ejected individual from {{location}} at {{time}}. Reason: {{reason}}. {{police_status}}. {{reentry_status}}.",
+      "outcome": "Individual removed from venue. {{ban_status}}. {{additional_notes}}."
+    },
+    "questions": [
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "reentry_refused",
+        "text": "Was re-entry refused?",
+        "type": "boolean",
+        "placeholder": "reentry_status"
+      },
+      {
+        "id": "banned",
+        "text": "Was the individual banned from future events?",
+        "type": "boolean",
+        "placeholder": "ban_status"
+      }
     ]
   },
   "Refusal": {
@@ -66,6 +114,42 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Refusal at {{location}} at {{time}} related to {{context}}. {{options_explained}}. {{safety_monitored}}. {{police_status}}.",
+      "outcome": "{{resolution_status}}. {{followup_required}}. {{safety_measures}}."
+    },
+    "questions": [
+      {
+        "id": "refusal_context",
+        "text": "What was the refusal about?",
+        "type": "text",
+        "placeholder": "context"
+      },
+      {
+        "id": "options_explained",
+        "text": "Were options/alternatives explained?",
+        "type": "boolean",
+        "placeholder": "options_explained"
+      },
+      {
+        "id": "safety_monitored",
+        "text": "Was safety monitored?",
+        "type": "boolean",
+        "placeholder": "safety_monitored"
+      },
+      {
+        "id": "police_required",
+        "text": "Were police required?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "resolution_status",
+        "text": "Current resolution status",
+        "type": "text",
+        "placeholder": "resolution_status"
+      }
     ]
   },
   "Queue Build-Up": {
@@ -86,6 +170,42 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Queue build-up observed at {{location}} at {{time}}. Contributing factors: {{contributing_factors}}. {{staff_deployed}}. {{lanes_adjusted}}. {{density_monitored}}.",
+      "outcome": "{{queue_status}}. {{flow_improved}}. {{monitoring_continued}}."
+    },
+    "questions": [
+      {
+        "id": "contributing_factors",
+        "text": "What factors contributed to the queue build-up?",
+        "type": "text",
+        "placeholder": "contributing_factors"
+      },
+      {
+        "id": "staff_deployed",
+        "text": "Were additional staff deployed?",
+        "type": "boolean",
+        "placeholder": "staff_deployed"
+      },
+      {
+        "id": "lanes_adjusted",
+        "text": "Were lanes adjusted?",
+        "type": "boolean",
+        "placeholder": "lanes_adjusted"
+      },
+      {
+        "id": "density_monitored",
+        "text": "Is density being monitored?",
+        "type": "boolean",
+        "placeholder": "density_monitored"
+      },
+      {
+        "id": "queue_status",
+        "text": "Current queue status",
+        "type": "text",
+        "placeholder": "queue_status"
+      }
     ]
   },
   "Technical Issue": {
@@ -106,6 +226,42 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Technical issue affecting {{system}} at {{location}} at {{time}}. Impact: {{impact_description}}. {{escalated_to_team}}. {{workaround_applied}}. {{monitoring_in_place}}.",
+      "outcome": "{{issue_status}}. {{resolution_timeline}}. {{ongoing_monitoring}}."
+    },
+    "questions": [
+      {
+        "id": "affected_system",
+        "text": "What system is affected?",
+        "type": "text",
+        "placeholder": "system"
+      },
+      {
+        "id": "impact_description",
+        "text": "Describe the impact on safety/operations",
+        "type": "text",
+        "placeholder": "impact_description"
+      },
+      {
+        "id": "escalated_to_team",
+        "text": "Was the issue escalated to a team?",
+        "type": "boolean",
+        "placeholder": "escalated_to_team"
+      },
+      {
+        "id": "workaround_applied",
+        "text": "Was a workaround applied?",
+        "type": "boolean",
+        "placeholder": "workaround_applied"
+      },
+      {
+        "id": "monitoring_in_place",
+        "text": "Is monitoring in place?",
+        "type": "boolean",
+        "placeholder": "monitoring_in_place"
+      }
     ]
   },
   "Weather Disruption": {
@@ -126,9 +282,44 @@
     ],
     "links": [
       { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Weather disruption at {{location}} at {{time}}: {{weather_conditions}}. Thresholds crossed: {{thresholds}}. {{weather_plan_implemented}}. {{communications_sent}}.",
+      "outcome": "{{weather_status}}. {{monitoring_continued}}. {{safety_measures}}."
+    },
+    "questions": [
+      {
+        "id": "weather_conditions",
+        "text": "Describe the weather conditions",
+        "type": "text",
+        "placeholder": "weather_conditions"
+      },
+      {
+        "id": "thresholds_crossed",
+        "text": "What thresholds were crossed?",
+        "type": "text",
+        "placeholder": "thresholds"
+      },
+      {
+        "id": "weather_plan_implemented",
+        "text": "Was weather plan implemented?",
+        "type": "boolean",
+        "placeholder": "weather_plan_implemented"
+      },
+      {
+        "id": "communications_sent",
+        "text": "Were communications sent?",
+        "type": "boolean",
+        "placeholder": "communications_sent"
+      },
+      {
+        "id": "weather_status",
+        "text": "Current weather status",
+        "type": "text",
+        "placeholder": "weather_status"
+      }
     ]
-  }
-  ,
+  },
   "Security": {
     "summary": [
       "Record time, location, and roles involved",
@@ -145,7 +336,43 @@
     "cautions": [
       "Avoid emotive adjectives and speculation"
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Security incident at {{location}} at {{time}}. Observed behavior: {{behavior_description}}. {{deescalation_attempted}}. {{supervisors_informed}}. {{police_status}}.",
+      "outcome": "{{incident_status}}. {{escalation_criteria}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "behavior_description",
+        "text": "Describe the observed behavior (facts only)",
+        "type": "text",
+        "placeholder": "behavior_description"
+      },
+      {
+        "id": "deescalation_attempted",
+        "text": "Was de-escalation attempted?",
+        "type": "boolean",
+        "placeholder": "deescalation_attempted"
+      },
+      {
+        "id": "supervisors_informed",
+        "text": "Were supervisors informed?",
+        "type": "boolean",
+        "placeholder": "supervisors_informed"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "incident_status",
+        "text": "Current incident status",
+        "type": "text",
+        "placeholder": "incident_status"
+      }
+    ]
   },
   "Crowd Control": {
     "summary": [
@@ -160,7 +387,43 @@
         "actions_taken": "Barriers/lane changes deployed. PA/comms issued. Monitoring ongoing."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Crowd control issue at {{location}} at {{time}}. Density/flow: {{density_details}}. {{barriers_deployed}}. {{pa_communications}}. {{monitoring_ongoing}}.",
+      "outcome": "{{crowd_status}}. {{flow_improved}}. {{thresholds_monitored}}."
+    },
+    "questions": [
+      {
+        "id": "density_details",
+        "text": "Describe density/flow issues",
+        "type": "text",
+        "placeholder": "density_details"
+      },
+      {
+        "id": "barriers_deployed",
+        "text": "Were barriers/lane changes deployed?",
+        "type": "boolean",
+        "placeholder": "barriers_deployed"
+      },
+      {
+        "id": "pa_communications",
+        "text": "Were PA/communications issued?",
+        "type": "boolean",
+        "placeholder": "pa_communications"
+      },
+      {
+        "id": "monitoring_ongoing",
+        "text": "Is monitoring ongoing?",
+        "type": "boolean",
+        "placeholder": "monitoring_ongoing"
+      },
+      {
+        "id": "crowd_status",
+        "text": "Current crowd status",
+        "type": "text",
+        "placeholder": "crowd_status"
+      }
+    ]
   },
   "Fire Safety": {
     "summary": [
@@ -175,7 +438,44 @@
         "actions_taken": "Fire team dispatched. Area [evacuated/held]. Cause investigated."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Fire safety incident at {{location}} at {{time}}: {{alarm_type}}. {{fire_team_dispatched}}. Area {{evacuation_status}}. {{cause_investigated}}.",
+      "outcome": "{{fire_status}}. {{area_reset}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "alarm_type",
+        "text": "What type of alarm/smoke/heat detected?",
+        "type": "text",
+        "placeholder": "alarm_type"
+      },
+      {
+        "id": "fire_team_dispatched",
+        "text": "Was fire team dispatched?",
+        "type": "boolean",
+        "placeholder": "fire_team_dispatched"
+      },
+      {
+        "id": "evacuation_status",
+        "text": "Was area evacuated or held?",
+        "type": "select",
+        "options": ["Evacuated", "Held", "N/A"],
+        "placeholder": "evacuation_status"
+      },
+      {
+        "id": "cause_investigated",
+        "text": "Was cause investigated?",
+        "type": "boolean",
+        "placeholder": "cause_investigated"
+      },
+      {
+        "id": "fire_status",
+        "text": "Current fire safety status",
+        "type": "text",
+        "placeholder": "fire_status"
+      }
+    ]
   },
   "Traffic": {
     "summary": [
@@ -190,7 +490,43 @@
         "actions_taken": "Stewarding adjusted. Liaised with [police/council]. Signage updated."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Traffic issue at {{location}} at {{time}}. Impact: {{traffic_impact}}. {{stewarding_adjusted}}. {{authorities_liaised}}. {{signage_updated}}.",
+      "outcome": "{{traffic_status}}. {{flow_improved}}. {{ongoing_monitoring}}."
+    },
+    "questions": [
+      {
+        "id": "traffic_impact",
+        "text": "Describe the traffic impact",
+        "type": "text",
+        "placeholder": "traffic_impact"
+      },
+      {
+        "id": "stewarding_adjusted",
+        "text": "Was stewarding adjusted?",
+        "type": "boolean",
+        "placeholder": "stewarding_adjusted"
+      },
+      {
+        "id": "authorities_liaised",
+        "text": "Were authorities liaised with?",
+        "type": "boolean",
+        "placeholder": "authorities_liaised"
+      },
+      {
+        "id": "signage_updated",
+        "text": "Was signage updated?",
+        "type": "boolean",
+        "placeholder": "signage_updated"
+      },
+      {
+        "id": "traffic_status",
+        "text": "Current traffic status",
+        "type": "text",
+        "placeholder": "traffic_status"
+      }
+    ]
   },
   "Attendance": {
     "summary": [
@@ -220,7 +556,37 @@
         "actions_taken": "Teams briefed, plans updated, stakeholders informed."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Event timing milestone at {{time}}: {{milestone_type}}. {{teams_briefed}}. {{plans_updated}}. {{stakeholders_informed}}.",
+      "outcome": "{{timing_status}}. {{operational_impact}}. {{next_milestone}}."
+    },
+    "questions": [
+      {
+        "id": "milestone_type",
+        "text": "Milestone type (gates open/artist on/show stop/curfew)",
+        "type": "text",
+        "placeholder": "milestone_type"
+      },
+      {
+        "id": "teams_briefed",
+        "text": "Were teams briefed?",
+        "type": "boolean",
+        "placeholder": "teams_briefed"
+      },
+      {
+        "id": "plans_updated",
+        "text": "Were plans updated?",
+        "type": "boolean",
+        "placeholder": "plans_updated"
+      },
+      {
+        "id": "stakeholders_informed",
+        "text": "Were stakeholders informed?",
+        "type": "boolean",
+        "placeholder": "stakeholders_informed"
+      }
+    ]
   },
   "Other": {
     "summary": [
@@ -235,7 +601,37 @@
         "actions_taken": "[Actions by teams], escalation if needed, monitoring."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "{{incident_description}} at {{location}} at {{time}}. {{actions_by_teams}}. {{escalation_status}}. {{monitoring_status}}.",
+      "outcome": "{{incident_status}}. {{resolution_status}}. {{next_steps}}."
+    },
+    "questions": [
+      {
+        "id": "incident_description",
+        "text": "Brief factual description",
+        "type": "text",
+        "placeholder": "incident_description"
+      },
+      {
+        "id": "actions_by_teams",
+        "text": "Actions taken by teams",
+        "type": "text",
+        "placeholder": "actions_by_teams"
+      },
+      {
+        "id": "escalation_needed",
+        "text": "Was escalation needed?",
+        "type": "boolean",
+        "placeholder": "escalation_status"
+      },
+      {
+        "id": "incident_status",
+        "text": "Current incident status",
+        "type": "text",
+        "placeholder": "incident_status"
+      }
+    ]
   },
   "Generic": {
     "summary": [
@@ -250,7 +646,38 @@
         "actions_taken": "[Actions taken] by [team/callsign]. Status: [ongoing/resolved]."
       }
     ],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Incident at {{location}} at {{time}}: {{what_happened}}. {{actions_taken}} by {{team_callsign}}.",
+      "outcome": "{{incident_status}}. {{resolution_status}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "what_happened",
+        "text": "What happened?",
+        "type": "text",
+        "placeholder": "what_happened"
+      },
+      {
+        "id": "actions_taken",
+        "text": "Actions taken",
+        "type": "text",
+        "placeholder": "actions_taken"
+      },
+      {
+        "id": "team_callsign",
+        "text": "Team/callsign",
+        "type": "text",
+        "placeholder": "team_callsign"
+      },
+      {
+        "id": "incident_status",
+        "text": "Status (ongoing/resolved)",
+        "type": "select",
+        "options": ["Ongoing", "Resolved", "Monitoring"],
+        "placeholder": "incident_status"
+      }
+    ]
   },
   "Welfare": {
     "summary": [
@@ -263,7 +690,43 @@
       "occurrence": "Welfare concern at [location] regarding [brief description]. Time: [HH:MM].",
       "actions_taken": "Welfare team dispatched. Provided support and monitored. Escalation to medical/police: [yes/no]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Welfare concern at {{location}} at {{time}} regarding {{concern_description}}. {{welfare_team_dispatched}}. {{support_provided}}. {{monitoring_continued}}. {{escalation_status}}.",
+      "outcome": "{{welfare_status}}. {{privacy_protected}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "concern_description",
+        "text": "Brief description of welfare concern (protect privacy)",
+        "type": "text",
+        "placeholder": "concern_description"
+      },
+      {
+        "id": "welfare_team_dispatched",
+        "text": "Was welfare team dispatched?",
+        "type": "boolean",
+        "placeholder": "welfare_team_dispatched"
+      },
+      {
+        "id": "support_provided",
+        "text": "Was support provided?",
+        "type": "boolean",
+        "placeholder": "support_provided"
+      },
+      {
+        "id": "monitoring_continued",
+        "text": "Is monitoring continued?",
+        "type": "boolean",
+        "placeholder": "monitoring_continued"
+      },
+      {
+        "id": "escalation_required",
+        "text": "Was escalation to medical/police required?",
+        "type": "boolean",
+        "placeholder": "escalation_status"
+      }
+    ]
   },
   "Suspicious Behaviour": {
     "summary": [
@@ -276,7 +739,43 @@
       "occurrence": "Suspicious behaviour observed at [location]: [factual description]. Time: [HH:MM].",
       "actions_taken": "Area monitored/CCTV reviewed. Units briefed. Police informed: [yes/no]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Suspicious behaviour observed at {{location}} at {{time}}: {{behaviour_description}}. {{area_monitored}}. {{units_briefed}}. {{police_status}}.",
+      "outcome": "{{monitoring_status}}. {{followup_required}}. {{police_liaison}}."
+    },
+    "questions": [
+      {
+        "id": "behaviour_description",
+        "text": "Describe the observable behaviour (facts only)",
+        "type": "text",
+        "placeholder": "behaviour_description"
+      },
+      {
+        "id": "area_monitored",
+        "text": "Was the area monitored/CCTV reviewed?",
+        "type": "boolean",
+        "placeholder": "area_monitored"
+      },
+      {
+        "id": "units_briefed",
+        "text": "Were units briefed?",
+        "type": "boolean",
+        "placeholder": "units_briefed"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "monitoring_status",
+        "text": "Current monitoring status",
+        "type": "text",
+        "placeholder": "monitoring_status"
+      }
+    ]
   },
   "Lost Property": {
     "summary": [
@@ -289,7 +788,43 @@
       "occurrence": "Lost property report: [item] last seen at [location] around [HH:MM].",
       "actions_taken": "Logged in property system. Search initiated/owner advised. If found, stored at [store] with ref [ref]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Lost property report received at {{time}}. Item: {{item_description}}. Last seen at {{location}}. {{logged_in_system}}. {{search_initiated}}. {{owner_contacted}}.",
+      "outcome": "{{item_status}}. {{storage_location}}. {{reference_number}}."
+    },
+    "questions": [
+      {
+        "id": "item_description",
+        "text": "Description of lost item",
+        "type": "text",
+        "placeholder": "item_description"
+      },
+      {
+        "id": "logged_in_system",
+        "text": "Logged in property system?",
+        "type": "boolean",
+        "placeholder": "logged_in_system"
+      },
+      {
+        "id": "search_initiated",
+        "text": "Search initiated?",
+        "type": "boolean",
+        "placeholder": "search_initiated"
+      },
+      {
+        "id": "owner_contacted",
+        "text": "Owner contacted?",
+        "type": "boolean",
+        "placeholder": "owner_contacted"
+      },
+      {
+        "id": "item_found",
+        "text": "Was the item found?",
+        "type": "boolean",
+        "placeholder": "item_status"
+      }
+    ]
   },
   "Site Issue": {
     "summary": [
@@ -302,7 +837,37 @@
       "occurrence": "Site issue at [location]: [fault/hazard]. Time: [HH:MM].",
       "actions_taken": "Area made safe/cordoned. FM/contractor notified. Repair scheduled/monitoring ongoing."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Site issue at {{location}} at {{time}}: {{fault_hazard}}. {{area_made_safe}}. {{fm_contractor_notified}}. {{repair_status}}.",
+      "outcome": "{{site_status}}. {{monitoring_ongoing}}. {{completion_eta}}."
+    },
+    "questions": [
+      {
+        "id": "fault_hazard",
+        "text": "Describe fault/hazard",
+        "type": "text",
+        "placeholder": "fault_hazard"
+      },
+      {
+        "id": "area_made_safe",
+        "text": "Was area made safe/cordoned?",
+        "type": "boolean",
+        "placeholder": "area_made_safe"
+      },
+      {
+        "id": "fm_contractor_notified",
+        "text": "Was FM/contractor notified?",
+        "type": "boolean",
+        "placeholder": "fm_contractor_notified"
+      },
+      {
+        "id": "repair_status",
+        "text": "Repair status (scheduled/in progress/complete)",
+        "type": "text",
+        "placeholder": "repair_status"
+      }
+    ]
   },
   "Tech Issue": {
     "summary": [
@@ -315,7 +880,37 @@
       "occurrence": "Technical issue on [system] at [location]. Impact: [brief]. Time: [HH:MM].",
       "actions_taken": "Escalated to [team]. Workaround applied [yes/no]. Monitoring until resolved."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Technical issue on {{system_name}} at {{location}} at {{time}}. Impact: {{business_impact}}. {{escalated_to}}. {{workaround_applied}}. {{monitoring_status}}.",
+      "outcome": "{{tech_status}}. {{resolution_eta}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "system_name",
+        "text": "Affected system",
+        "type": "text",
+        "placeholder": "system_name"
+      },
+      {
+        "id": "business_impact",
+        "text": "Business impact description",
+        "type": "text",
+        "placeholder": "business_impact"
+      },
+      {
+        "id": "escalated_to",
+        "text": "Escalated to which team?",
+        "type": "text",
+        "placeholder": "escalated_to"
+      },
+      {
+        "id": "workaround_applied",
+        "text": "Was workaround applied?",
+        "type": "boolean",
+        "placeholder": "workaround_applied"
+      }
+    ]
   },
   "Environmental": {
     "summary": [
@@ -328,7 +923,49 @@
       "occurrence": "Environmental issue: [type] at [location]. Measures: [value/units]. Time: [HH:MM].",
       "actions_taken": "Mitigation step [x] enacted. Stakeholders informed. Ongoing monitoring."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Environmental issue at {{location}} at {{time}}: {{environmental_type}}. Measures: {{measurements}}. {{mitigation_enacted}}. {{stakeholders_informed}}. {{monitoring_ongoing}}.",
+      "outcome": "{{environmental_status}}. {{thresholds_monitored}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "environmental_type",
+        "text": "What type of environmental issue?",
+        "type": "text",
+        "placeholder": "environmental_type"
+      },
+      {
+        "id": "measurements",
+        "text": "Record measurements/values if available",
+        "type": "text",
+        "placeholder": "measurements"
+      },
+      {
+        "id": "mitigation_enacted",
+        "text": "What mitigation steps were enacted?",
+        "type": "text",
+        "placeholder": "mitigation_enacted"
+      },
+      {
+        "id": "stakeholders_informed",
+        "text": "Were stakeholders informed?",
+        "type": "boolean",
+        "placeholder": "stakeholders_informed"
+      },
+      {
+        "id": "monitoring_ongoing",
+        "text": "Is ongoing monitoring in place?",
+        "type": "boolean",
+        "placeholder": "monitoring_ongoing"
+      },
+      {
+        "id": "environmental_status",
+        "text": "Current environmental status",
+        "type": "text",
+        "placeholder": "environmental_status"
+      }
+    ]
   },
   "Alcohol / Drug Related": {
     "summary": [
@@ -341,7 +978,44 @@
       "occurrence": "Alcohol/drug-related incident at [location]: [observable signs]. Time: [HH:MM].",
       "actions_taken": "Welfare/medical assessed. Service refused/ejection considered. Police informed: [yes/no]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Alcohol/drug-related incident at {{location}} at {{time}}: {{observable_signs}}. {{welfare_assessed}}. {{service_refused}}. {{police_informed}}.",
+      "outcome": "{{incident_status}}. {{duty_of_care}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "observable_signs",
+        "text": "Describe observable signs (keep factual)",
+        "type": "text",
+        "placeholder": "observable_signs"
+      },
+      {
+        "id": "welfare_assessed",
+        "text": "Was welfare/medical assessed?",
+        "type": "boolean",
+        "placeholder": "welfare_assessed"
+      },
+      {
+        "id": "service_refused",
+        "text": "Was service refused or ejection considered?",
+        "type": "select",
+        "options": ["Service refused", "Ejection considered", "No action", "N/A"],
+        "placeholder": "service_refused"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_informed"
+      },
+      {
+        "id": "incident_status",
+        "text": "Current incident status",
+        "type": "text",
+        "placeholder": "incident_status"
+      }
+    ]
   },
   "Weapon Related": {
     "summary": [
@@ -354,7 +1028,32 @@
       "occurrence": "Weapon-related report at [location]: [description]. Time: [HH:MM].",
       "actions_taken": "Area made safe. Police informed [ref if any]. Evidence preserved."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Weapon discovered at {{location}} at {{time}}. Area immediately secured. {{police_status}}. Evidence preserved. {{person_status}}.",
+      "outcome": "{{weapon_secured}}. {{police_reference}}. {{area_status}}."
+    },
+    "questions": [
+      {
+        "id": "police_notified",
+        "text": "Were police immediately notified?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "person_detained",
+        "text": "Was a person detained or ejected?",
+        "type": "select",
+        "options": ["Detained", "Ejected", "Escaped", "N/A"],
+        "placeholder": "person_status"
+      },
+      {
+        "id": "police_ref",
+        "text": "Police reference number",
+        "type": "text",
+        "placeholder": "police_reference"
+      }
+    ]
   },
   "Artist Movement": {
     "summary": [
@@ -367,7 +1066,43 @@
       "occurrence": "Artist movement: [artist] moving [from] → [to] at [HH:MM].",
       "actions_taken": "Route secured. Teams briefed. Contingencies in place."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Artist movement at {{time}}: {{artist_name}} moving from {{from_location}} to {{to_location}}. {{route_secured}}. {{teams_briefed}}. {{contingencies_in_place}}.",
+      "outcome": "{{movement_status}}. {{impacts_noted}}. {{completion_status}}."
+    },
+    "questions": [
+      {
+        "id": "artist_name",
+        "text": "Artist name (optional)",
+        "type": "text",
+        "placeholder": "artist_name"
+      },
+      {
+        "id": "from_location",
+        "text": "From location",
+        "type": "text",
+        "placeholder": "from_location"
+      },
+      {
+        "id": "to_location",
+        "text": "To location",
+        "type": "text",
+        "placeholder": "to_location"
+      },
+      {
+        "id": "route_secured",
+        "text": "Was route secured?",
+        "type": "boolean",
+        "placeholder": "route_secured"
+      },
+      {
+        "id": "teams_briefed",
+        "text": "Were teams briefed?",
+        "type": "boolean",
+        "placeholder": "teams_briefed"
+      }
+    ]
   },
   "Artist On Stage": {
     "summary": [
@@ -378,22 +1113,108 @@
     "checklists": [{
       "label": "Occurrence template",
       "occurrence": "Artist on stage: [artist] at [stage] [HH:MM].",
-      "actions_taken": "Crowd watch enhanced. Comms sent to stakeholders."
+      "actions_taken": "Artist information received. Performance monitoring active."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Artist on stage at {{time}}: {{artist_name}} at {{stage_location}}. {{artist_information_received}}.",
+      "outcome": "{{performance_status}}. {{safety_considerations}}. {{show_impact}}."
+    },
+    "questions": [
+      {
+        "id": "artist_name",
+        "text": "Artist name (optional)",
+        "type": "text",
+        "placeholder": "artist_name"
+      },
+      {
+        "id": "stage_location",
+        "text": "Stage/area",
+        "type": "text",
+        "placeholder": "stage_location"
+      },
+      {
+        "id": "artist_information_received",
+        "text": "Artist Information Received",
+        "type": "multiselect",
+        "options": [
+          "Setlist received",
+          "Pyrotechnics planned",
+          "Special effects (smoke, flame, CO₂)",
+          "Artist entry via pit",
+          "Guest performer expected",
+          "Raised platform use",
+          "Other"
+        ],
+        "placeholder": "artist_information_received"
+      }
+    ]
   },
   "Artist Off Stage": {
     "summary": [
       "Log off-stage time",
-      "Note movement or exit",
-      "Record any changes to flows"
+      "Note artist movement or exit",
+      "Record any changes to crowd flow",
+      "Note any incidents or unusual activity during transition"
     ],
     "checklists": [{
       "label": "Occurrence template",
-      "occurrence": "Artist off stage: [artist] at [stage] [HH:MM].",
-      "actions_taken": "Flows adjusted. Security stood down where appropriate."
+      "occurrence": "Artist off stage: [artist] at Stage [HH:MM].",
+      "actions_taken": "Crowd management active. Area secured for next act prep."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Artist off stage at {{time}}: {{artist_name}} at Stage. {{crowdsurfers_managed}}. {{medical_incidents_handled}}. {{crowd_movement_summary}}. {{artist_information}}.",
+      "outcome": "{{crowd_dispersed_status}}. {{area_clear_status}}. Artist transition completed."
+    },
+    "questions": [
+      {
+        "id": "artist_name",
+        "text": "Artist name (optional)",
+        "type": "text",
+        "placeholder": "artist_name"
+      },
+      {
+        "id": "crowdsurfers_count",
+        "text": "Crowdsurfers Count",
+        "type": "number",
+        "placeholder": "e.g. 15 crowdsurfers managed during exit"
+      },
+      {
+        "id": "medical_incidents_count",
+        "text": "Medical Incidents Count",
+        "type": "number",
+        "placeholder": "e.g. 2 minor incidents handled during dispersal"
+      },
+      {
+        "id": "crowd_movement_summary",
+        "text": "Crowd Movement Summary",
+        "type": "select",
+        "options": ["Orderly", "Dense but moving", "Brief congestion", "Temporary pause"],
+        "placeholder": "crowd_movement_summary"
+      },
+      {
+        "id": "artist_information",
+        "text": "Artist Information",
+        "type": "multiselect",
+        "options": [
+          "Pyrotechnics used",
+          "Artist entered pit",
+          "Crowd brought on stage",
+          "Guest performers joined",
+          "Crowd interaction (e.g., throwing items)",
+          "Security escort required",
+          "Other"
+        ],
+        "placeholder": "artist_information"
+      },
+      {
+        "id": "crowd_dispersed",
+        "text": "Was crowd fully dispersed before next act prep?",
+        "type": "boolean",
+        "placeholder": "confirms area clear and stable"
+      }
+    ]
   },
   "Sexual Misconduct": {
     "summary": [
@@ -406,7 +1227,31 @@
       "occurrence": "Report of sexual misconduct at [location] around [HH:MM].",
       "actions_taken": "Immediate safety ensured. Welfare/police informed [ref]. Evidence preservation guidance followed."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Report received at {{time}}. Immediate safety ensured for victim. {{welfare_status}}. {{police_status}}. Evidence preservation protocols followed.",
+      "outcome": "{{support_provided}}. {{police_reference}}. {{followup_arranged}}."
+    },
+    "questions": [
+      {
+        "id": "police_contacted",
+        "text": "Were police contacted immediately?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "welfare_support",
+        "text": "Was welfare/victim support provided?",
+        "type": "boolean",
+        "placeholder": "welfare_status"
+      },
+      {
+        "id": "police_ref",
+        "text": "Police reference number",
+        "type": "text",
+        "placeholder": "police_reference"
+      }
+    ]
   },
   "Timings": {
     "summary": [
@@ -419,7 +1264,37 @@
       "occurrence": "Timing update: [gate open/curfew/etc.] at [HH:MM].",
       "actions_taken": "Teams updated. Plans adjusted. Stakeholders informed."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Timing update at {{time}}: {{milestone_type}}. {{teams_updated}}. {{plans_adjusted}}. {{stakeholders_informed}}.",
+      "outcome": "{{timing_status}}. {{operational_impact}}. {{next_milestone}}."
+    },
+    "questions": [
+      {
+        "id": "milestone_type",
+        "text": "Milestone type (gate open/curfew/etc.)",
+        "type": "text",
+        "placeholder": "milestone_type"
+      },
+      {
+        "id": "teams_updated",
+        "text": "Were teams updated?",
+        "type": "boolean",
+        "placeholder": "teams_updated"
+      },
+      {
+        "id": "plans_adjusted",
+        "text": "Were plans adjusted?",
+        "type": "boolean",
+        "placeholder": "plans_adjusted"
+      },
+      {
+        "id": "stakeholders_informed",
+        "text": "Were stakeholders informed?",
+        "type": "boolean",
+        "placeholder": "stakeholders_informed"
+      }
+    ]
   },
   "Sit Rep": {
     "summary": [
@@ -432,7 +1307,31 @@
       "occurrence": "Situation report at [HH:MM]: [brief facts/risk/impact].",
       "actions_taken": "Resources allocated. Next review at [time]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Situation report provided at {{time}}. {{overview_summary}}. {{resources_status}}. {{next_review}}.",
+      "outcome": "{{current_status}}. {{key_risks}}. {{followup_actions}}."
+    },
+    "questions": [
+      {
+        "id": "resources_allocated",
+        "text": "Were resources allocated?",
+        "type": "boolean",
+        "placeholder": "resources_status"
+      },
+      {
+        "id": "next_review_time",
+        "text": "Next review time",
+        "type": "text",
+        "placeholder": "next_review"
+      },
+      {
+        "id": "key_risks",
+        "text": "Key risks identified",
+        "type": "text",
+        "placeholder": "key_risks"
+      }
+    ]
   },
   "Crowd Management": {
     "summary": [
@@ -445,7 +1344,31 @@
       "occurrence": "Crowd management issue at [location]. Density/flow: [details]. Time: [HH:MM].",
       "actions_taken": "Additional stewarding/barriers. Comms issued. Ongoing monitoring."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Crowd management required at {{location}} at {{time}}. {{density_assessment}}. {{mitigation_deployed}}. {{comms_status}}.",
+      "outcome": "{{crowd_dispersed}}. {{monitoring_status}}. {{additional_measures}}."
+    },
+    "questions": [
+      {
+        "id": "barriers_deployed",
+        "text": "Were additional barriers deployed?",
+        "type": "boolean",
+        "placeholder": "mitigation_deployed"
+      },
+      {
+        "id": "stewarding_increased",
+        "text": "Was additional stewarding deployed?",
+        "type": "boolean",
+        "placeholder": "mitigation_deployed"
+      },
+      {
+        "id": "crowd_dispersed",
+        "text": "Was the crowd successfully dispersed?",
+        "type": "boolean",
+        "placeholder": "crowd_dispersed"
+      }
+    ]
   },
   "Hostile Act": {
     "summary": [
@@ -458,7 +1381,37 @@
       "occurrence": "Hostile act reported at [location] around [HH:MM]: [facts].",
       "actions_taken": "Area secured. Police informed [ref]. Evidence preserved."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Hostile act reported at {{location}} around {{time}}: {{facts_observed}}. {{area_secured}}. {{police_status}}. {{evidence_preserved}}.",
+      "outcome": "{{safety_status}}. {{police_response}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "area_secured",
+        "text": "Was the area secured?",
+        "type": "boolean",
+        "placeholder": "area_secured"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "evidence_preserved",
+        "text": "Was evidence preserved?",
+        "type": "boolean",
+        "placeholder": "evidence_preserved"
+      },
+      {
+        "id": "safety_status",
+        "text": "Current safety status",
+        "type": "text",
+        "placeholder": "safety_status"
+      }
+    ]
   },
   "Fire Alarm": {
     "summary": [
@@ -471,7 +1424,32 @@
       "occurrence": "Fire alarm activation at [location/zone] [HH:MM].",
       "actions_taken": "Fire team investigated. [Evacuated/held]. Cause: [TBC/known]. System reset at [time]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Fire alarm activated at {{location}} at {{time}}. Fire team dispatched. {{evacuation_status}}. {{investigation_status}}.",
+      "outcome": "{{cause_identified}}. System reset at {{reset_time}}. {{all_clear_status}}."
+    },
+    "questions": [
+      {
+        "id": "evacuation_required",
+        "text": "Was evacuation required?",
+        "type": "select",
+        "options": ["Full evacuation", "Partial evacuation", "Hold in place", "No action"],
+        "placeholder": "evacuation_status"
+      },
+      {
+        "id": "false_alarm",
+        "text": "Was it a false alarm?",
+        "type": "boolean",
+        "placeholder": "cause_identified"
+      },
+      {
+        "id": "fire_service_attended",
+        "text": "Did fire service attend?",
+        "type": "boolean",
+        "placeholder": "investigation_status"
+      }
+    ]
   },
   "Noise Complaint": {
     "summary": [
@@ -484,7 +1462,43 @@
       "occurrence": "Noise complaint at [location/time]: [details].",
       "actions_taken": "Levels checked. Mitigation applied. Complainant updated if applicable."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Noise complaint at {{location}} at {{time}}: {{complaint_details}}. {{levels_checked}}. {{mitigation_applied}}. {{complainant_updated}}.",
+      "outcome": "{{noise_status}}. {{monitoring_continued}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "complaint_details",
+        "text": "Describe the noise complaint details",
+        "type": "text",
+        "placeholder": "complaint_details"
+      },
+      {
+        "id": "levels_checked",
+        "text": "Were noise levels checked?",
+        "type": "boolean",
+        "placeholder": "levels_checked"
+      },
+      {
+        "id": "mitigation_applied",
+        "text": "Was mitigation applied?",
+        "type": "boolean",
+        "placeholder": "mitigation_applied"
+      },
+      {
+        "id": "complainant_updated",
+        "text": "Was complainant updated?",
+        "type": "boolean",
+        "placeholder": "complainant_updated"
+      },
+      {
+        "id": "noise_status",
+        "text": "Current noise status",
+        "type": "text",
+        "placeholder": "noise_status"
+      }
+    ]
   },
   "Evacuation": {
     "summary": [
@@ -497,7 +1511,31 @@
       "occurrence": "Evacuation initiated for [area] at [HH:MM] due to [trigger].",
       "actions_taken": "Routes opened/PA issued. Assembly points monitored. All-clear at [time]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Evacuation initiated at {{time}} for {{areas}}. {{pa_status}}. Evacuation routes opened. Assembly points monitored. {{emergency_services}}.",
+      "outcome": "{{evacuation_complete}}. All-clear given at {{all_clear_time}}. {{reentry_status}}."
+    },
+    "questions": [
+      {
+        "id": "pa_issued",
+        "text": "Was PA announcement issued?",
+        "type": "boolean",
+        "placeholder": "pa_status"
+      },
+      {
+        "id": "emergency_attended",
+        "text": "Did emergency services attend?",
+        "type": "boolean",
+        "placeholder": "emergency_services"
+      },
+      {
+        "id": "reentry_allowed",
+        "text": "Was re-entry permitted?",
+        "type": "boolean",
+        "placeholder": "reentry_status"
+      }
+    ]
   },
   "Counter-Terror Alert": {
     "summary": [
@@ -510,7 +1548,43 @@
       "occurrence": "Counter-terror alert: [brief] at [location] [HH:MM].",
       "actions_taken": "CT protocol enacted. Police ref [ref]. Evidence preserved."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Counter-terror alert at {{location}} at {{time}}: {{alert_details}}. {{ct_protocol_enacted}}. {{police_liaison}}. {{evidence_preserved}}.",
+      "outcome": "{{alert_status}}. {{protocol_completed}}. {{ongoing_assessment}}."
+    },
+    "questions": [
+      {
+        "id": "alert_details",
+        "text": "Brief alert details (follow CT protocols)",
+        "type": "text",
+        "placeholder": "alert_details"
+      },
+      {
+        "id": "ct_protocol_enacted",
+        "text": "Was CT protocol enacted?",
+        "type": "boolean",
+        "placeholder": "ct_protocol_enacted"
+      },
+      {
+        "id": "police_liaison",
+        "text": "Police liaison reference",
+        "type": "text",
+        "placeholder": "police_liaison"
+      },
+      {
+        "id": "evidence_preserved",
+        "text": "Was evidence preserved?",
+        "type": "boolean",
+        "placeholder": "evidence_preserved"
+      },
+      {
+        "id": "alert_status",
+        "text": "Current alert status",
+        "type": "text",
+        "placeholder": "alert_status"
+      }
+    ]
   },
   "Entry Breach": {
     "summary": [
@@ -523,7 +1597,43 @@
       "occurrence": "Entry breach at [location] around [HH:MM]. Method: [details].",
       "actions_taken": "Area secured. Individuals intercepted/removed. Police informed: [yes/no]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Entry breach detected at {{location}} around {{time}}. Method: {{breach_method}}. {{area_secured}}. {{individuals_intercepted}}. {{police_status}}.",
+      "outcome": "{{containment_status}}. {{followup_required}}. {{security_measures}}."
+    },
+    "questions": [
+      {
+        "id": "breach_method",
+        "text": "How was the breach attempted?",
+        "type": "text",
+        "placeholder": "breach_method"
+      },
+      {
+        "id": "area_secured",
+        "text": "Was the area secured?",
+        "type": "boolean",
+        "placeholder": "area_secured"
+      },
+      {
+        "id": "individuals_intercepted",
+        "text": "Were individuals intercepted/removed?",
+        "type": "boolean",
+        "placeholder": "individuals_intercepted"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "containment_status",
+        "text": "Current containment status",
+        "type": "text",
+        "placeholder": "containment_status"
+      }
+    ]
   },
   "Theft": {
     "summary": [
@@ -536,7 +1646,31 @@
       "occurrence": "Theft reported at [location] around [HH:MM]: [item/brief].",
       "actions_taken": "CCTV reviewed. Evidence preserved. Police ref [ref]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Theft reported at {{location}} at {{time}}. {{cctv_status}}. Evidence preserved. {{police_status}}.",
+      "outcome": "{{item_recovery}}. {{police_reference}}. {{followup_action}}."
+    },
+    "questions": [
+      {
+        "id": "cctv_reviewed",
+        "text": "Was CCTV footage reviewed?",
+        "type": "boolean",
+        "placeholder": "cctv_status"
+      },
+      {
+        "id": "police_ref",
+        "text": "Police reference number (if applicable)",
+        "type": "text",
+        "placeholder": "police_reference"
+      },
+      {
+        "id": "item_recovered",
+        "text": "Was the item recovered?",
+        "type": "boolean",
+        "placeholder": "item_recovery"
+      }
+    ]
   },
   "Emergency Show Stop": {
     "summary": [
@@ -549,7 +1683,31 @@
       "occurrence": "Emergency show stop at [HH:MM] due to [trigger].",
       "actions_taken": "PA/comms sent. Safety actions executed. Review for restart at [time]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Emergency show stop initiated at {{time}} due to {{trigger}}. {{pa_status}}. {{safety_actions}}. {{restart_review}}.",
+      "outcome": "{{show_status}}. {{crowd_status}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "pa_announced",
+        "text": "Was PA announcement made?",
+        "type": "boolean",
+        "placeholder": "pa_status"
+      },
+      {
+        "id": "safety_executed",
+        "text": "Were safety actions executed?",
+        "type": "boolean",
+        "placeholder": "safety_actions"
+      },
+      {
+        "id": "show_resumed",
+        "text": "Was the show resumed?",
+        "type": "boolean",
+        "placeholder": "show_status"
+      }
+    ]
   },
   "Animal Incident": {
     "summary": [
@@ -562,20 +1720,44 @@
       "occurrence": "Animal incident at [location] involving [animal]. Time: [HH:MM].",
       "actions_taken": "Area controlled. Appropriate team/authority informed. Monitoring/removed."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
-  },
-  "Missing Child/Person": {
-    "summary": [
-      "Record last seen details and description (safely)",
-      "Initiate search protocol and comms",
-      "Note police involvement and outcome"
-    ],
-    "checklists": [{
-      "label": "Occurrence template",
-      "occurrence": "Missing [child/person] last seen at [location] around [HH:MM]. Description: [brief/safe].",
-      "actions_taken": "Search protocol activated. Teams briefed. Police informed: [yes/no]."
-    }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Animal incident at {{location}} at {{time}} involving {{animal_type}}. {{area_controlled}}. {{appropriate_team_informed}}. {{monitoring_status}}.",
+      "outcome": "{{animal_status}}. {{risk_managed}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "animal_type",
+        "text": "What type of animal was involved?",
+        "type": "text",
+        "placeholder": "animal_type"
+      },
+      {
+        "id": "area_controlled",
+        "text": "Was area controlled?",
+        "type": "boolean",
+        "placeholder": "area_controlled"
+      },
+      {
+        "id": "appropriate_team_informed",
+        "text": "Was appropriate team/authority informed?",
+        "type": "boolean",
+        "placeholder": "appropriate_team_informed"
+      },
+      {
+        "id": "monitoring_status",
+        "text": "Is animal being monitored or removed?",
+        "type": "select",
+        "options": ["Monitoring", "Removed", "Contained", "N/A"],
+        "placeholder": "monitoring_status"
+      },
+      {
+        "id": "animal_status",
+        "text": "Current animal incident status",
+        "type": "text",
+        "placeholder": "animal_status"
+      }
+    ]
   },
   "Accreditation": {
     "summary": [
@@ -588,7 +1770,43 @@
       "occurrence": "Accreditation issue at [location] [HH:MM]: [brief].",
       "actions_taken": "Identity verified. Access adjusted. System updated."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Accreditation issue at {{location}} at {{time}}: {{issue_description}}. {{identity_verified}}. {{access_adjusted}}. {{system_updated}}.",
+      "outcome": "{{resolution_status}}. {{access_granted}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "issue_description",
+        "text": "Brief description of accreditation issue",
+        "type": "text",
+        "placeholder": "issue_description"
+      },
+      {
+        "id": "identity_verified",
+        "text": "Was identity verified?",
+        "type": "boolean",
+        "placeholder": "identity_verified"
+      },
+      {
+        "id": "access_adjusted",
+        "text": "Was access adjusted?",
+        "type": "boolean",
+        "placeholder": "access_adjusted"
+      },
+      {
+        "id": "system_updated",
+        "text": "Was system updated?",
+        "type": "boolean",
+        "placeholder": "system_updated"
+      },
+      {
+        "id": "resolution_status",
+        "text": "Current resolution status",
+        "type": "text",
+        "placeholder": "resolution_status"
+      }
+    ]
   },
   "Staffing": {
     "summary": [
@@ -601,7 +1819,37 @@
       "occurrence": "Staffing issue in [area] at [HH:MM]: [brief].",
       "actions_taken": "Resources reallocated. Supervisor informed. Monitoring continues."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Staffing issue in {{location}} at {{time}}: {{issue_description}}. {{resources_reallocated}}. {{supervisor_informed}}. {{monitoring_continues}}.",
+      "outcome": "{{staffing_status}}. {{operational_impact}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "issue_description",
+        "text": "Brief description of staffing issue",
+        "type": "text",
+        "placeholder": "issue_description"
+      },
+      {
+        "id": "resources_reallocated",
+        "text": "Were resources reallocated?",
+        "type": "boolean",
+        "placeholder": "resources_reallocated"
+      },
+      {
+        "id": "supervisor_informed",
+        "text": "Was supervisor informed?",
+        "type": "boolean",
+        "placeholder": "supervisor_informed"
+      },
+      {
+        "id": "operational_impact",
+        "text": "Impact on operations",
+        "type": "text",
+        "placeholder": "operational_impact"
+      }
+    ]
   },
   "Accsessablity": {
     "summary": [
@@ -614,7 +1862,37 @@
       "occurrence": "Accessibility concern at [location] around [HH:MM]: [brief].",
       "actions_taken": "Reasonable adjustments made. Assistance provided. Follow-up planned."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Accessibility concern at {{location}} at {{time}}: {{concern_description}}. {{adjustments_made}}. {{assistance_provided}}. {{followup_planned}}.",
+      "outcome": "{{access_status}}. {{person_satisfied}}. {{improvements_noted}}."
+    },
+    "questions": [
+      {
+        "id": "concern_description",
+        "text": "Brief description of accessibility concern",
+        "type": "text",
+        "placeholder": "concern_description"
+      },
+      {
+        "id": "adjustments_made",
+        "text": "Were reasonable adjustments made?",
+        "type": "boolean",
+        "placeholder": "adjustments_made"
+      },
+      {
+        "id": "assistance_provided",
+        "text": "Was assistance provided?",
+        "type": "boolean",
+        "placeholder": "assistance_provided"
+      },
+      {
+        "id": "access_status",
+        "text": "Current access status",
+        "type": "text",
+        "placeholder": "access_status"
+      }
+    ]
   },
   "Suspected Fire": {
     "summary": [
@@ -627,7 +1905,39 @@
       "occurrence": "Suspected fire reported at [location] around [HH:MM]: [signs].",
       "actions_taken": "Fire team dispatched. Evacuation/hold decision. Cause confirmed [later if known]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Suspected fire reported at {{location}} at {{time}}: {{signs_observed}}. {{fire_team_dispatched}}. {{evacuation_decision}}. {{investigation_status}}.",
+      "outcome": "{{confirmation_status}}. {{area_status}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "signs_observed",
+        "text": "What signs were observed? (smell/smoke/heat)",
+        "type": "text",
+        "placeholder": "signs_observed"
+      },
+      {
+        "id": "fire_team_dispatched",
+        "text": "Was fire team dispatched?",
+        "type": "boolean",
+        "placeholder": "fire_team_dispatched"
+      },
+      {
+        "id": "evacuation_decision",
+        "text": "Evacuation decision made?",
+        "type": "select",
+        "options": ["Evacuated", "Held", "Monitored"],
+        "placeholder": "evacuation_decision"
+      },
+      {
+        "id": "confirmation_status",
+        "text": "Confirmed/false alarm status",
+        "type": "select",
+        "options": ["Confirmed fire", "False alarm", "Under investigation"],
+        "placeholder": "confirmation_status"
+      }
+    ]
   },
   "Fire": {
     "summary": [
@@ -640,20 +1950,94 @@
       "occurrence": "Fire at [location] at [HH:MM].",
       "actions_taken": "Area evacuated/held. Fire service engaged. Overhaul completed. Cause: [known/TBC]."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Fire at {{location}} at {{time}}. {{area_evacuated}}. {{fire_service_engaged}}. {{overhaul_completed}}. {{cause_investigation}}.",
+      "outcome": "{{fire_status}}. {{area_secured}}. {{investigation_ongoing}}."
+    },
+    "questions": [
+      {
+        "id": "area_evacuated",
+        "text": "Was area evacuated or held?",
+        "type": "select",
+        "options": ["Evacuated", "Held", "N/A"],
+        "placeholder": "area_evacuated"
+      },
+      {
+        "id": "fire_service_engaged",
+        "text": "Was fire service engaged?",
+        "type": "boolean",
+        "placeholder": "fire_service_engaged"
+      },
+      {
+        "id": "overhaul_completed",
+        "text": "Was overhaul completed?",
+        "type": "boolean",
+        "placeholder": "overhaul_completed"
+      },
+      {
+        "id": "cause_known",
+        "text": "Is cause known or TBC?",
+        "type": "select",
+        "options": ["Known", "TBC", "Under investigation"],
+        "placeholder": "cause_investigation"
+      },
+      {
+        "id": "fire_status",
+        "text": "Current fire status",
+        "type": "text",
+        "placeholder": "fire_status"
+      }
+    ]
   },
   "Showdown": {
     "summary": [
-      "Log end-of-show time",
-      "Record dispersal/egress status",
-      "Note any incidents/escalations"
+      "Log show completion time",
+      "Record dispersal/egress status", 
+      "Note any incidents/escalations during egress"
     ],
     "checklists": [{
-      "label": "Occurrence template",
-      "occurrence": "Showdown called at [HH:MM].",
-      "actions_taken": "Egress plan active. Teams positioned. Issues monitored."
+      "label": "Show completion template",
+      "occurrence": "Showdown called at [HH:MM] - show completed.",
+      "actions_taken": "Egress plan activated. Teams positioned for dispersal. Crowd management active."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Showdown called at {{time}} - show completed. {{egress_plan_active}}. {{teams_positioned}}. {{crowd_management_status}}.",
+      "outcome": "{{dispersal_status}}. {{incidents_logged}}. Show completion logged."
+    },
+    "questions": [
+      {
+        "id": "egress_plan_active",
+        "text": "Is egress plan activated?",
+        "type": "boolean",
+        "placeholder": "egress_plan_active"
+      },
+      {
+        "id": "teams_positioned",
+        "text": "Are teams positioned for dispersal?",
+        "type": "boolean",
+        "placeholder": "teams_positioned"
+      },
+      {
+        "id": "crowd_management_status",
+        "text": "Crowd management status",
+        "type": "text",
+        "placeholder": "crowd_management_status"
+      },
+      {
+        "id": "dispersal_status",
+        "text": "Current dispersal status",
+        "type": "text",
+        "placeholder": "dispersal_status"
+      },
+      {
+        "id": "incidents_logged",
+        "text": "Any incidents during egress?",
+        "type": "text",
+        "placeholder": "incidents_logged"
+      }
+    ]
   },
   "Fight": {
     "summary": [
@@ -666,7 +2050,31 @@
       "occurrence": "Fight reported at [location] at [HH:MM] involving [approx. number] persons.",
       "actions_taken": "Teams intervened/split. Medical/police informed: [yes/no]. Area monitored."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "{{responders}} attended {{location}}, de-escalated altercation involving {{persons}} individuals. Parties separated. {{medical_status}}. {{police_status}}.",
+      "outcome": "Incident contained at {{time}}. {{injury_status}}. {{followup_action}}."
+    },
+    "questions": [
+      {
+        "id": "police_involved",
+        "text": "Were police involved?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "injuries_reported",
+        "text": "Were any injuries reported?",
+        "type": "boolean",
+        "placeholder": "injury_status"
+      },
+      {
+        "id": "medical_required",
+        "text": "Was medical attention required?",
+        "type": "boolean",
+        "placeholder": "medical_status"
+      }
+    ]
   },
   "Missing Child/Person": {
     "summary": [
@@ -679,7 +2087,31 @@
       "occurrence": "Missing child/person reported at [location] at [HH:MM]. Description: [age/gender/clothing]. Last seen: [location/time].",
       "actions_taken": "Search initiated immediately. All security teams notified. PA announcement made. Police contacted. Parents/guardians informed."
     }],
-    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }]
+    "links": [{ "title": "Green Guide PDF", "href": "/green-guide" }],
+    "template": {
+      "actions": "Search protocol activated immediately at {{time}}. All security teams notified. {{pa_announcement}}. {{police_status}}. {{guardian_status}}.",
+      "outcome": "{{search_outcome}}. {{reunion_status}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "police_notified",
+        "text": "Were police notified?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "pa_made",
+        "text": "Was a PA announcement made?",
+        "type": "boolean",
+        "placeholder": "pa_announcement"
+      },
+      {
+        "id": "person_found",
+        "text": "Was the person located?",
+        "type": "boolean",
+        "placeholder": "search_outcome"
+      }
+    ]
   }
 }
 

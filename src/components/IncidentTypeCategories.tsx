@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { getIncidentTypeIcon } from '@/utils/incidentIcons'
@@ -16,14 +16,14 @@ const INCIDENT_CATEGORIES = {
       'Ejection', 'Refusal', 'Hostile Act', 'Counter-Terror Alert', 'Entry Breach', 
       'Theft', 'Fight', 'Weapon Related', 'Suspicious Behaviour'
     ],
-    defaultExpanded: true
+    defaultExpanded: false
   },
   'Medical & Welfare': {
     icon: '🏥',
     types: [
       'Medical', 'Welfare', 'Missing Child/Person', 'Sexual Misconduct'
     ],
-    defaultExpanded: true
+    defaultExpanded: false
   },
   'Crowd & Safety': {
     icon: '👥',
@@ -91,6 +91,24 @@ export default function IncidentTypeCategories({
       [category]: !prev[category]
     }))
   }
+
+  // Auto-expand category when incident type is selected
+  useEffect(() => {
+    if (selectedType) {
+      // Find which category contains the selected type
+      const categoryWithType = Object.entries(INCIDENT_CATEGORIES).find(([_, categoryData]) =>
+        (categoryData.types as readonly string[]).includes(selectedType)
+      )
+      
+      if (categoryWithType) {
+        const [categoryName] = categoryWithType
+        setExpandedCategories(prev => ({
+          ...prev,
+          [categoryName]: true
+        }))
+      }
+    }
+  }, [selectedType])
 
   // Sort incident types within each category by usage stats
   const sortedCategories = useMemo(() => {

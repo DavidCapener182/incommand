@@ -8,6 +8,27 @@ import type { EnhancedIncidentParsingResponse } from '@/types/ai';
 // Local lightweight fallbacks to mirror existing modal helpers without importing the big component
 function fallbackDetectCallsign(input: string): string {
   const text = input.toLowerCase();
+  
+  // Check for specific role-based callsigns first
+  const rolePatterns = [
+    /\b(production\s*manager)\b/i,
+    /\b(stage\s*manager)\b/i,
+    /\b(event\s*manager)\b/i,
+    /\b(security\s*manager)\b/i,
+    /\b(venue\s*manager)\b/i
+  ];
+  
+  for (const pattern of rolePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[1]
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+  }
+  
+  // Then check for standard callsign patterns
   const patterns = [
     /\b([rsa][0-9]+[a-z]*)\b/i,
     /\b(response\s*[0-9]+)\b/i,
@@ -280,6 +301,11 @@ export async function POST(request: Request) {
         'show stop': 'Emergency Show Stop',
         'stop show': 'Emergency Show Stop',
         
+        // Showdown incidents
+        'showdown': 'Showdown',
+        'end of show': 'Showdown',
+        'show down': 'Showdown',
+        
         // Event Timing incidents
         'event timing': 'Event Timing',
         'timing': 'Event Timing',
@@ -296,9 +322,6 @@ export async function POST(request: Request) {
         'situation report': 'Sit Rep',
         'status report': 'Sit Rep',
         
-        // Showdown incidents
-        'showdown': 'Showdown',
-        'show down': 'Showdown',
         
         // Accreditation incidents
         'accreditation': 'Accreditation',
@@ -327,6 +350,10 @@ export async function POST(request: Request) {
     const description = aiResult?.description || input;
     const callsign = aiResult?.callsign || fallbackDetectCallsign(input);
     let location = (aiResult?.location || fallbackExtractLocation(input) || '').toString();
+    // Special handling for Emergency Show Stop, Artist On Stage, and Artist Off Stage - location should be "Stage"
+    if (incidentType === 'Emergency Show Stop' || incidentType === 'Artist On Stage' || incidentType === 'Artist Off Stage') {
+      location = 'Stage';
+    }
     // Capitalize first letter of each word in location
     if (location) {
       location = location.replace(/\b\w/g, (l: string) => l.toUpperCase());
@@ -336,7 +363,23 @@ export async function POST(request: Request) {
     if (incidentType === 'Artist On Stage' || incidentType === 'Artist Off Stage') {
       priority = 'low';
     }
-    const confidence = typeof aiResult?.confidence === 'number' ? aiResult.confidence : 0;
+    // Override priority for Emergency Show Stop - should be medium priority
+    if (incidentType === 'Emergency Show Stop') {
+      priority = 'medium';
+    }
+    // Override priority for Showdown - should be medium priority
+    if (incidentType === 'Showdown') {
+      priority = 'medium';
+    }
+    let confidence = typeof aiResult?.confidence === 'number' ? aiResult.confidence : 0;
+    // Override confidence for Emergency Show Stop - should be high confidence
+    if (incidentType === 'Emergency Show Stop' && confidence < 0.8) {
+      confidence = 0.9;
+    }
+    // Override confidence for Showdown - should be high confidence
+    if (incidentType === 'Showdown' && confidence < 0.8) {
+      confidence = 0.9;
+    }
     const actionTaken = (aiResult?.actionTaken && aiResult.actionTaken.length > 10)
       ? aiResult.actionTaken
       : (() => {

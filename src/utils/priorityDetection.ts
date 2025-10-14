@@ -63,7 +63,13 @@ const DEFAULT_KEYWORDS: PriorityKeywords = {
     'distressed',
     'unwell',
     'lost person',
-    'found person'
+    'found person',
+    'emergency show stop',
+    'show stop',
+    'production manager',
+    'stage issue',
+    'showdown',
+    'end of show'
   ],
   low: [
     'lost property',

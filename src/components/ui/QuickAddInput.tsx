@@ -85,9 +85,7 @@ export default function QuickAddInput({
       setParsedData(incidentData)
       setShowParsedPreview(true)
       
-      if (onParsedData) {
-        onParsedData(incidentData)
-      }
+      // Don't call onParsedData here - wait for user to click "Apply All"
     } catch (error) {
       console.error('Failed to parse incident:', error)
       // Fallback to basic parsing
@@ -207,6 +205,15 @@ export default function QuickAddInput({
     setParsedData(null)
   }
 
+  const handleUpdateCallsign = (newCallsign: string) => {
+    if (parsedData) {
+      setParsedData({
+        ...parsedData,
+        callsign: newCallsign
+      })
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div className="relative" data-tour="quick-add-ai">
@@ -261,6 +268,7 @@ export default function QuickAddInput({
             onApply={handleApplyParsedData}
             onEdit={handleEditParsedData}
             onCancel={handleCancelParsedData}
+            onUpdateCallsign={handleUpdateCallsign}
           />
         )}
       </AnimatePresence>

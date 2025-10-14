@@ -17,6 +17,7 @@ interface ParsedFieldsPreviewProps {
   onApply: () => void
   onEdit: () => void
   onCancel: () => void
+  onUpdateCallsign?: (callsign: string) => void
 }
 
 const getPriorityColor = (priority: string) => {
@@ -43,10 +44,17 @@ export default function ParsedFieldsPreview({
   data,
   onApply,
   onEdit,
-  onCancel
+  onCancel,
+  onUpdateCallsign
 }: ParsedFieldsPreviewProps) {
   const iconConfig = data.incidentType ? getIncidentTypeIcon(data.incidentType) : null
   const IconComponent = iconConfig?.icon
+  
+  // Check if callsign is missing
+  const isCallsignMissing = !data.callsign || data.callsign.trim() === ''
+  
+  // Disable Apply All if callsign is missing
+  const canApply = !isCallsignMissing
 
   return (
     <motion.div
@@ -66,7 +74,7 @@ export default function ParsedFieldsPreview({
           </h4>
           {data.confidence && (
             <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded-full">
-              {data.confidence}% confidence
+              {Math.round(data.confidence * 100)}% confidence
             </span>
           )}
         </div>
@@ -126,20 +134,49 @@ export default function ParsedFieldsPreview({
         )}
 
         {/* Callsign */}
-        {data.callsign && (
-          <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border">
-            <div className="flex-shrink-0">
-              <span className="text-sm">📻</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-gray-500 dark:text-gray-400">Callsign</div>
+        <div className={`flex items-center gap-2 p-2 rounded border ${
+          isCallsignMissing 
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700' 
+            : 'bg-white dark:bg-gray-800'
+        }`}>
+          <div className="flex-shrink-0">
+            <span className="text-sm">📻</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Callsign</div>
+            {isCallsignMissing ? (
+              <input
+                type="text"
+                placeholder="Enter callsign or person name..."
+                className="w-full text-sm font-medium text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder-gray-400"
+                onBlur={(e) => onUpdateCallsign?.(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    onUpdateCallsign?.(e.currentTarget.value)
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
               <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {data.callsign}
               </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Warning message for missing callsign */}
+      {isCallsignMissing && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-red-600 dark:text-red-400">⚠️</span>
+            <div className="text-sm text-red-700 dark:text-red-300">
+              <strong>Callsign/Person required:</strong> Please enter a callsign or person name before applying the incident.
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Description */}
       {data.description && (
@@ -155,7 +192,12 @@ export default function ParsedFieldsPreview({
       <div className="flex items-center gap-2 pt-2 border-t border-blue-200 dark:border-blue-700">
         <button
           onClick={onApply}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          disabled={!canApply}
+          className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            canApply
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+          }`}
         >
           <CheckIcon className="w-4 h-4" />
           Apply All

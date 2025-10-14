@@ -36,6 +36,9 @@ import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useScreenReader } from '@/hooks/useScreenReader'
 import greenGuideBestPractices from '@/data/greenGuideBestPractices.json'
 import { getOccurrenceTemplate } from '@/data/occurrenceTemplates'
+import GuidedActionsModal from './GuidedActionsModal'
+import { useGuidedActions } from '@/hooks/useGuidedActions'
+import { shouldAutoClose, getAutoCloseReason } from '@/utils/autoCloseIncidents'
 
 interface Props {
   isOpen: boolean
@@ -2105,6 +2108,9 @@ export default function IncidentCreationModal({
   const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
+  const [showGuidedActions, setShowGuidedActions] = useState(false);
+  const [guidedActionsGenerated, setGuidedActionsGenerated] = useState(false);
+  const { hasGuidedActions } = useGuidedActions();
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
   const [typeSearchQuery, setTypeSearchQuery] = useState('');
   // Removed auto-assignment state
@@ -2174,7 +2180,6 @@ export default function IncidentCreationModal({
         setIsListening(true);
         setVoiceError(null);
         isManuallyStopping = false;
-        console.log('Voice recognition started');
         
         // Also start audio recording as backup
         startAudioRecording();
@@ -2182,7 +2187,6 @@ export default function IncidentCreationModal({
         // Set a timeout to automatically stop after 30 seconds of continuous listening
         const timeout = setTimeout(() => {
           if (isListening) {
-            console.log('Auto-stopping voice recognition after timeout');
             isManuallyStopping = true;
             recognition.stop();
             stopAudioRecording();
@@ -2276,7 +2280,6 @@ export default function IncidentCreationModal({
       };
       
       recognition.onend = () => {
-        console.log('Voice recognition ended');
         setIsListening(false);
         stopAudioRecording();
         
@@ -2289,7 +2292,6 @@ export default function IncidentCreationModal({
         // Check if we got a very short transcript (likely cut off)
         const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
         if (cleanTranscript && cleanTranscript.split(' ').length < 3 && !isManuallyStopping) {
-          console.log('Short transcript detected, likely cut off. Retrying...');
           setIsRetrying(true);
           // Auto-retry for short transcripts
           setTimeout(() => {
@@ -2349,7 +2351,6 @@ export default function IncidentCreationModal({
           };
           
           mediaRecorder.start(100); // Small timeslice for better capture
-          console.log('Audio recording started as backup');
           
         } catch (error) {
           console.error('Failed to start audio recording:', error);
@@ -2367,7 +2368,6 @@ export default function IncidentCreationModal({
         if (mediaRecorder && mediaRecorder.stream) {
           mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
-        console.log('Audio recording stopped');
       };
       
       // Store the manual stopping flag in the recognition object
@@ -2385,7 +2385,6 @@ export default function IncidentCreationModal({
           recognition.isManuallyStopping = true;
           recognition.stop();
         } catch (error) {
-          console.log('Error stopping recognition during cleanup:', error);
         }
       }
       
@@ -2805,7 +2804,8 @@ export default function IncidentCreationModal({
     return {
       ...prev,
       occurrence: enrichedOccurrence,
-      incident_type: aiType,
+      // Don't set incident_type here - only set it when user clicks "Apply All"
+      // incident_type: aiType,
       callsign_from: aiData.callsign || prev.callsign_from,
       callsign_to: '', // Leave callsign_to empty as specified
       priority: finalPriority,
@@ -2863,9 +2863,6 @@ export default function IncidentCreationModal({
   }
   // Handler for parsed AI data from QuickAddInput
   const handleParsedData = (data: ParsedIncidentData) => {
-    console.log('🔍 handleParsedData called with:', data); // Debug log
-    console.log('🔍 Current formData.incident_type:', formData.incident_type);
-    console.log('🔍 Current formData.callsign_from:', formData.callsign_from);
     
     // Generate structured template fields from parsed data
     const generateStructuredFields = (parsedData: ParsedIncidentData) => {
@@ -2929,16 +2926,13 @@ export default function IncidentCreationModal({
     
     const structuredFields = generateStructuredFields(data)
     
-    console.log('🔍 About to update form data with:', {
-      incident_type: data.incidentType,
-      callsign_from: data.callsign,
-      priority: data.priority
-    });
-    
     setFormData(prev => {
+      const incidentType = data.incidentType || prev.incident_type;
+      const shouldAutoCloseIncident = incidentType && shouldAutoClose(incidentType);
+      
       const newData = {
         ...prev,
-        incident_type: data.incidentType || prev.incident_type,
+        incident_type: incidentType,
         what3words: data.location || prev.what3words,
         callsign_from: data.callsign || prev.callsign_from,
         priority: data.priority || prev.priority,
@@ -2949,17 +2943,24 @@ export default function IncidentCreationModal({
         actions_taken: structuredFields.actions_taken,
         outcome: structuredFields.outcome,
         // Also populate legacy occurrence field for backward compatibility
-        occurrence: data.description || prev.occurrence
+        occurrence: data.description || prev.occurrence,
+        // Auto-close incident types that don't need follow-up
+        is_closed: shouldAutoCloseIncident || prev.is_closed
       };
       
-      console.log('🔍 Updated form data:', {
-        incident_type: newData.incident_type,
-        callsign_from: newData.callsign_from,
-        priority: newData.priority
-      });
       
       return newData;
     });
+    
+    // Automatically open Guided Actions modal if available for this incident type
+    // This is called when user clicks "Apply All" from QuickAddInput
+    if (data.incidentType && hasGuidedActions(data.incidentType)) {
+      // Small delay to ensure form data is updated first
+      setTimeout(() => {
+        setGuidedActionsGenerated(false); // Reset state
+        setShowGuidedActions(true);
+      }, 100);
+    }
     
     // Switch to details tab after applying parsed data
     setCurrentTab('details');
@@ -3422,11 +3423,6 @@ export default function IncidentCreationModal({
     setLoading(true);
     setError(null);
 
-    // Debug logging
-    console.log('🔍 Form submission started');
-    console.log('📝 Form data:', formData);
-    console.log('🎯 Selected event ID:', selectedEventId);
-    console.log('🎪 Current event fallback:', currentEventFallback);
 
     try {
       // Resolve effective event synchronously for this submission
@@ -3527,18 +3523,14 @@ export default function IncidentCreationModal({
       const sourceText = (structuredOccurrence || formData.occurrence || formData.ai_input || '').trim();
       let resolvedType = (formData.incident_type || '').trim();
       let resolvedOccurrence = structuredOccurrence || (formData.occurrence || '').trim();
-      console.log('🔍 Before resolution - Type:', resolvedType, 'Occurrence:', resolvedOccurrence?.substring(0, 50));
       
       if (!resolvedType || !resolvedOccurrence) {
         const logic = detectIncidentFromText(sourceText);
-        console.log('🤖 Detection logic result:', logic);
         if (!resolvedType || resolvedType.toLowerCase() === 'select type') {
           resolvedType = logic.incidentType || detectIncidentType(sourceText) || 'Other';
-          console.log('✅ Resolved type:', resolvedType);
         }
         if (!resolvedOccurrence) {
           resolvedOccurrence = (logic.occurrence || sourceText || 'New incident reported.').trim();
-          console.log('✅ Resolved occurrence:', resolvedOccurrence?.substring(0, 50));
         }
       }
 
@@ -3601,7 +3593,6 @@ export default function IncidentCreationModal({
       }
 
       // Insert the incident
-      console.log('📤 About to insert incident:', incidentData);
       let insertedIncident: { id: number } | null = null;
       const { data: insertReturn, error: insertError } = await supabase
         .from('incident_logs')
@@ -3612,7 +3603,6 @@ export default function IncidentCreationModal({
         console.error('❌ Insert error:', insertError);
         throw new Error((insertError as any)?.message || 'Insert failed');
       }
-      console.log('✅ Insert successful:', insertReturn);
       insertedIncident = insertReturn as any;
       if (!insertedIncident?.id) {
         // Some RLS policies disable returning representation; fetch by unique log_number as fallback
@@ -3632,9 +3622,7 @@ export default function IncidentCreationModal({
       // If this is an attendance incident, also update the attendance_records table
       if (formData.incident_type === 'Attendance') {
         const count = parseInt(formData.occurrence.match(/\d+/)?.[0] || '0');
-        console.log('🎯 Attendance incident - extracted count:', count, 'from:', formData.occurrence);
         if (count > 0) {
-          console.log('🎯 Inserting attendance record:', { event_id: effectiveEvent.id, count, timestamp: now });
           const { error: attendanceError, data: attendanceData } = await supabase
             .from('attendance_records')
             .insert([{
@@ -3648,14 +3636,11 @@ export default function IncidentCreationModal({
             console.error('❌ Error updating attendance record:', attendanceError);
             // Don't throw here, as the incident was already created
           } else {
-            console.log('✅ Successfully inserted attendance record:', attendanceData);
           }
         } else {
-          console.log('⚠️ No valid count found in attendance incident');
         }
       }
 
-      console.log('Successfully created incident:', insertedIncident);
 
       // Auto-assignment removed per requirements
 
@@ -4839,29 +4824,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900">Detailed Information</h3>
             </div>
               <div className="space-y-3">
-                {/* Logging Template Toggle */}
-                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-blue-800">📝 Logging Template</span>
-                      <span className="text-xs text-blue-600">
-                        {formData.use_structured_template ? 'Structured (Recommended)' : 'Legacy Format'}
-                      </span>
-                    </div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.use_structured_template || false}
-                        onChange={(e) => setFormData({ ...formData, use_structured_template: e.target.checked })}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-blue-700">Use Structured Template</span>
-                    </label>
-                  </div>
-                </div>
-
-                {formData.use_structured_template ? (
-                  /* Structured Template */
+                {/* Always use structured template */}
                   <div className="space-y-3">
                     {/* Headline */}
                     <div>
@@ -4951,10 +4914,23 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
 
                     {/* Actions Taken */}
                     <div>
-                      <label htmlFor="actions-taken" className="block text-sm font-medium text-gray-700 mb-1">
-                        Actions Taken
-                        <span className="ml-2 text-xs text-blue-600 font-normal" title="What was done and by whom">💡 What was done</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor="actions-taken" className="block text-sm font-medium text-gray-700">
+                          Actions Taken
+                          <span className="ml-2 text-xs text-blue-600 font-normal" title="What was done and by whom">💡 What was done</span>
+                        </label>
+                        {formData.incident_type && hasGuidedActions(formData.incident_type) && (
+                          <button
+                            type="button"
+                            onClick={() => setShowGuidedActions(true)}
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                            aria-label="Open Guided Actions Assistant"
+                          >
+                            <span>💡</span>
+                            <span>Guided Actions</span>
+                          </button>
+                        )}
+                      </div>
                       <textarea
                         id="actions-taken"
                         value={formData.actions_taken || ''}
@@ -4963,8 +4939,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                         rows={3}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
                       />
-                      <p className="text-xs text-gray-500 mt-1">What actions were taken and by whom</p>
-                      
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-gray-500">What actions were taken and by whom</p>
+                        {guidedActionsGenerated && (
+                          <span className="text-xs text-green-600 flex items-center gap-1">
+                            <span>✓</span>
+                            <span>AI + Green Guide</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Outcome */}
@@ -4981,7 +4964,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                         rows={3}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Current status or final outcome</p>
                     </div>
 
                     {/* Preview of Structured Output */}
@@ -4997,25 +4979,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                       </div>
                     )}
                   </div>
-                ) : (
-                  /* Legacy Format */
-                  <div>
-                    <label htmlFor="occurrence" className="block text-sm font-medium text-gray-700 mb-1">
-                      Occurrence Description
-                      <span className="ml-2 text-xs text-blue-600 font-normal" title="Stick to verifiable facts - avoid opinions or adjectives">💡 Stick to facts</span>
-                    </label>
-                    <textarea
-                      id="occurrence"
-                      value={formData.occurrence || ''}
-                      onChange={(e) => setFormData({ ...formData, occurrence: e.target.value })}
-                      placeholder="Provide detailed factual description of the incident... (who, what, where, when)"
-                      rows={4}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Describe what happened in detail - stick to verifiable facts only</p>
-                  </div>
-                )}
-              </div>
+                </div>
             </div>
             </section>
 
@@ -5134,7 +5098,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               <div className="space-y-3">
                 <div>
                     <label htmlFor="w3w" className="block text-sm font-medium text-gray-700 mb-1">
-                      What3Words Location
+                      Location
                       <span className="ml-1 text-gray-400" title="Three-word address for precise location">ⓘ</span>
                     </label>
                     <div className="relative">
@@ -5185,75 +5149,8 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                           <span className="font-semibold">{w3wCoordinates.lng.toFixed(5)}</span>
                         </p>
                       )}
-                      {!what3WordsError && !w3wCoordinates && !isValidatingWhat3Words && (
-                        <p>Enter a valid what3words address</p>
-                      )}
                     </div>
                 </div>
-                {/* Legacy Actions Taken Field - Only show when structured template is disabled */}
-                {!formData.use_structured_template && (
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label htmlFor="action-taken" className="block text-sm font-medium text-gray-700">Actions Taken</label>
-                      <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, action_taken: (prev.action_taken ? prev.action_taken + ' ' : '') + 'Other:' }))}
-                          className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    >
-                      Other
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          let rewrite = null as null | { occurrence: string; actionTaken: string };
-                          if (isBrowserLLMAvailable()) {
-                            try {
-                              rewrite = await rewriteIncidentFieldsWithBrowserLLM(formData.occurrence || '', formData.action_taken || '');
-                            } catch {}
-                          }
-                          if (!rewrite) {
-                            const input = `${formData.occurrence || ''}\nActions: ${formData.action_taken || ''}`;
-                            const resp = await fetch('/api/enhanced-incident-parsing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input, incidentTypes }) });
-                            if (resp.ok) {
-                              const data = await resp.json();
-                              rewrite = { occurrence: data.description || formData.occurrence || '', actionTaken: data.actionTaken || formData.action_taken || '' };
-                            }
-                          }
-                          if (rewrite) {
-                            setFormData(prev => ({
-                              ...prev,
-                              occurrence: cleanSentence(rewrite!.occurrence, prev.occurrence),
-                              action_taken: cleanSentence(rewrite!.actionTaken, prev.action_taken)
-                            }));
-                          }
-                        } catch (e) {
-                          console.log('Rewrite failed', e);
-                        }
-                      }}
-                          className="px-2 py-1 text-xs rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    >
-                      Rewrite with AI
-                    </button>
-                      </div>
-                  </div>
-                  <div className="relative">
-                    <textarea
-                        id="action-taken"
-                      value={formData.action_taken || ''}
-                      onChange={(e) => setFormData({ ...formData, action_taken: e.target.value })}
-                      onFocus={() => updateFocus('action-taken')}
-                      onBlur={() => updateTyping('action-taken', false)}
-                      onKeyDown={() => updateTyping('action-taken', true)}
-                      placeholder="Describe actions taken in response to the incident..."
-                      rows={3}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-gray-50"
-                    />
-                    <TypingIndicator users={presenceUsers} fieldName="action-taken" position="bottom" />
-                  </div>
-                </div>
-                )}
               </div>
             </div>
 
@@ -5268,17 +5165,30 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   <h3 id="additional-options-title" className="text-sm font-semibold text-gray-900">Additional Options</h3>
                 </div>
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="closed"
-                    checked={formData.is_closed || false}
-                    onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                  />
-                    <label htmlFor="closed" className="text-sm font-medium text-gray-700">
-                    Mark as Closed
-                  </label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="closed"
+                      checked={formData.is_closed || false}
+                      onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                    />
+                      <label htmlFor="closed" className="text-sm font-medium text-gray-700">
+                      Mark as Closed
+                    </label>
+                  </div>
+                  {/* Auto-close indicator */}
+                  {formData.is_closed && formData.incident_type && shouldAutoClose(formData.incident_type) && (
+                    <div className="ml-7 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-xs text-green-700 font-medium">
+                          Auto-closed: {getAutoCloseReason(formData.incident_type)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                     <label htmlFor="photo-upload" className="block text-sm font-medium text-gray-700 mb-2">Attach Photo (optional, max 5MB)</label>
@@ -5378,6 +5288,37 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           isVisible={showDebugger}
         />
       )}
+
+      {/* Guided Actions Modal */}
+      <GuidedActionsModal
+        isOpen={showGuidedActions}
+        onClose={() => setShowGuidedActions(false)}
+        incidentType={formData.incident_type}
+        incidentData={{
+          occurrence: formData.occurrence,
+          callsign: formData.callsign_from,
+          location: formData.location_name || '',
+          priority: formData.priority,
+          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          persons: '', // Can be extracted from occurrence if needed
+          reason: '', // Can be extracted from occurrence if needed
+        }}
+        onApply={(actions, outcome) => {
+          setFormData(prev => ({
+            ...prev,
+            actions_taken: actions,
+            outcome: outcome
+          }));
+          setGuidedActionsGenerated(true);
+          setShowGuidedActions(false);
+          addToast({
+            type: 'success',
+            title: 'Guided Actions Applied',
+            message: 'Actions and outcome generated from Green Guide best practices.',
+            duration: 3000
+          });
+        }}
+      />
     </div>
   );
 } 
