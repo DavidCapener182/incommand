@@ -8,6 +8,7 @@ import {
   XCircleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
+import { useEscalationToast } from '../contexts/EscalationToastContext'
 
 export interface ToastMessage {
   id: string
@@ -71,8 +72,27 @@ const getTextStyles = (type: ToastMessage['type']) => {
 }
 
 export default function Toast({ messages, onRemove }: ToastProps) {
+  const { isEscalationToastVisible, isEscalationToastExpanded } = useEscalationToast();
+  
+  // Calculate positioning based on escalation toast state
+  const getToastPosition = () => {
+    if (!isEscalationToastVisible) {
+      // No escalation toast, use normal position
+      return 'fixed top-4 right-4 z-50 space-y-2';
+    }
+    
+    if (isEscalationToastExpanded) {
+      // Escalation toast is expanded (full height), position toasts below it
+      // Escalation toast is 360px wide and takes up significant height when expanded
+      return 'fixed top-[200px] right-4 z-50 space-y-2';
+    } else {
+      // Escalation toast is collapsed, position toasts below it
+      return 'fixed top-16 right-4 z-50 space-y-2';
+    }
+  };
+
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className={getToastPosition()}>
       {messages.map((message) => (
         <div
           key={message.id}

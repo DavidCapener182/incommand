@@ -148,15 +148,30 @@ export async function POST(
       )
     }
 
+    // Check if action_taken field contains ejection keywords and update incident type accordingly
+    let updateData: any = {
+      [body.field_changed]: body.new_value,
+      updated_at: new Date().toISOString()
+    }
+
+    // Auto-detect ejection from actions_taken field
+    if (body.field_changed === 'action_taken' && body.new_value) {
+      const actionText = String(body.new_value).toLowerCase()
+      const ejectionKeywords = ['ejection', 'ejected', 'removed from site', 'kicked out', 'escorted out', 'banned']
+      
+      if (ejectionKeywords.some(keyword => actionText.includes(keyword))) {
+        // Update incident type to Ejection
+        updateData.incident_type = 'Ejection'
+        console.log('Auto-detected ejection from actions_taken, updating incident type to Ejection')
+      }
+    }
+
     // Update the incident log with new value
     // Note: This is an exception to "no updates" rule - we do update the current value
     // but the revision history maintains the complete audit trail
     const { error: updateError } = await supabase
       .from('incident_logs')
-      .update({
-        [body.field_changed]: body.new_value,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', incidentId)
 
     if (updateError) {

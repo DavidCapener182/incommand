@@ -9,7 +9,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import IncidentCreationModal from './IncidentCreationModal'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { IncidentSummaryProvider } from '@/contexts/IncidentSummaryContext'
+import { EscalationToastProvider } from '@/contexts/EscalationToastContext'
 import { supabase } from '../lib/supabase'
+import GlobalEscalationToast from './GlobalEscalationToast'
 import PWAInstallPrompt from './PWAInstallPrompt'
 import OfflineIndicator from './OfflineIndicator'
 import PWAUpdateNotification from './PWAUpdateNotification'
@@ -146,8 +148,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   return (
     <IncidentSummaryProvider>
-      <>
-        <AuthGate>
+      <EscalationToastProvider>
+        <>
+          <AuthGate>
           {showNav && <Navigation />}
           <main 
             className="min-h-screen bg-gray-50 dark:bg-[#15192c]"
@@ -208,11 +211,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <CompanyFooter />
         </div>
         
-        {/* PWA Components */}
-        <OfflineIndicator />
-        <PWAUpdateNotification />
-        <PWASplashScreen />
-      </>
+          {/* Global Escalation Toast */}
+          <GlobalEscalationToast />
+          
+          {/* PWA Components */}
+          <OfflineIndicator />
+          <PWAUpdateNotification />
+          <PWASplashScreen />
+        </>
+      </EscalationToastProvider>
     </IncidentSummaryProvider>
   );
 }

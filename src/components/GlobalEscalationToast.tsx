@@ -4,6 +4,7 @@ import React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import EscalationTimer from './EscalationTimer';
+import { useEscalationToast } from '../contexts/EscalationToastContext';
 
 interface EscalationToastIncident {
   id: number;
@@ -24,6 +25,9 @@ export default function GlobalEscalationToast() {
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Use escalation toast context to notify other components
+  const { setEscalationToastVisible, setEscalationToastExpanded } = useEscalationToast();
 
   const fetchCurrentEvent = async () => {
     try {
@@ -128,6 +132,16 @@ export default function GlobalEscalationToast() {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current as any);
     };
   }, [incident?.id]);
+
+  // Update context when incident visibility changes
+  useEffect(() => {
+    setEscalationToastVisible(!!incident);
+  }, [incident, setEscalationToastVisible]);
+
+  // Update context when collapsed state changes
+  useEffect(() => {
+    setEscalationToastExpanded(!collapsed);
+  }, [collapsed, setEscalationToastExpanded]);
 
   const onMoveToInProgress = async () => {
     if (!incident) return;
