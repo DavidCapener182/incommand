@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:detection": "jest src/utils/__tests__/detection.test.ts",
     "backfill:auditable-logs": "ts-node scripts/backfill-auditable-logs.ts"
   },
   "dependencies": {
@@ -17,6 +20,7 @@
     "@headlessui/react": "^2.2.4",
     "@mlc-ai/web-llm": "^0.2.79",
     "@mui/material": "^7.1.1",
+    "@radix-ui/react-popover": "^1.1.15",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/supabase-js": "^2.38.4",
@@ -46,6 +50,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.544.0",
     "meshline": "^3.3.1",
+    "motion": "^12.23.24",
     "next": "14.0.3",
     "openai": "^4.104.0",
     "patternomaly": "^1.3.2",
@@ -104,6 +109,7 @@
     "jest-environment-jsdom": "^30.1.1",
     "pdf-parse": "^2.3.0",
     "postcss": "^8",
+    "shadcn": "^3.4.2",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
     "uuid": "^11.1.0"
