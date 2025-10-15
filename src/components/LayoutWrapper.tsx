@@ -18,6 +18,7 @@ import PWAUpdateNotification from './PWAUpdateNotification'
 import PWASplashScreen from './PWASplashScreen'
 import FloatingActionButton from './FloatingActionButton'
 import OnboardingTooltips from './OnboardingTooltips'
+import { FooterSimple } from './FooterSimple'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -38,73 +39,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Component to show company name in footer
-function CompanyFooter() {
-  const { user } = useAuth();
-  const [companyName, setCompanyName] = useState<string>('');
-  const pathname = usePathname() || '';
-  const showFooter = !['/login', '/signup'].includes(pathname);
-
-  useEffect(() => {
-    if (!user || !showFooter) return;
-
-    const fetchCompanyName = async () => {
-      try {
-        // Get user's company_id from profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('company_id')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError || !profile?.company_id) {
-          console.log('No company found for user');
-          return;
-        }
-
-        // Get company name
-        const { data: company, error: companyError } = await supabase
-          .from('companies')
-          .select('name')
-          .eq('id', profile.company_id)
-          .single();
-
-        if (companyError) {
-          console.error('Error fetching company:', companyError);
-          return;
-        }
-
-        setCompanyName(company?.name || '');
-      } catch (err) {
-        console.error('Error fetching company name:', err);
-      }
-    };
-
-    fetchCompanyName();
-  }, [user, showFooter]);
-
-  if (!showFooter) return null;
-
-  return (
-    <footer className="fixed bottom-0 left-0 w-full z-30 px-4 py-3 flex justify-between items-center text-xs text-white dark:text-gray-100"
-      style={{
-        background: 'linear-gradient(180deg, #1e326e 0%, #101a3a 100%)',
-        boxShadow: '0 -4px 24px 0 rgba(16, 26, 58, 0.12)',
-        backdropFilter: 'blur(2px)',
-        paddingLeft: 'max(env(safe-area-inset-left), 1rem)',
-        paddingRight: 'max(env(safe-area-inset-right), 1rem)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
-      }}
-    >
-      <span>
-        v0.1.0{companyName && ` Build for ${companyName}`}
-      </span>
-      <span className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
-        support@incommandapp.com
-      </span>
-    </footer>
-  );
-}
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
@@ -152,18 +86,25 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         <>
           <AuthGate>
           {showNav && <Navigation />}
-          <main 
-            className="min-h-screen bg-gray-50 dark:bg-[#15192c]"
-            style={{
-              paddingTop: 'max(env(safe-area-inset-top), 0px)',
-              paddingLeft: 'max(env(safe-area-inset-left), 0px)',
-              paddingRight: 'max(env(safe-area-inset-right), 0px)',
-              paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
-              minHeight: '100dvh', // Dynamic viewport height for mobile
-            }}
-          >
-            {children}
-          </main>
+          <div className="flex flex-col min-h-screen">
+            <main 
+              className="flex-grow bg-gray-50 dark:bg-[#15192c]"
+              style={{
+                paddingTop: 'max(env(safe-area-inset-top), 0px)',
+                paddingLeft: 'max(env(safe-area-inset-left), 0px)',
+                paddingRight: 'max(env(safe-area-inset-right), 0px)',
+                paddingBottom: '0', // No padding needed - footer is positioned by flex layout
+                marginBottom: 0,
+              }}
+            >
+              {children}
+            </main>
+            {showNav && (
+              <div className="hidden md:block mt-0">
+                <FooterSimple />
+              </div>
+            )}
+          </div>
           {showNav && (
             <BottomNav
               onOpenHelpCenter={() => {
@@ -207,9 +148,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             />
           )}
         </AuthGate>
-        <div className="hidden md:block">
-          <CompanyFooter />
-        </div>
         
           {/* Global Escalation Toast */}
           <GlobalEscalationToast />

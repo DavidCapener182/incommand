@@ -27,7 +27,6 @@ interface BottomNavProps {
 export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenterOpen, incidentSummary }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname() || '';
-  const [bottomOffset, setBottomOffset] = React.useState<number>(44);
   const [currentIncidentSummary, setCurrentIncidentSummary] = React.useState<string>('');
   const [recentIncidents, setRecentIncidents] = React.useState<Incident[]>([]);
   const [isVisible, setIsVisible] = React.useState(true);
@@ -87,18 +86,6 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
   // Use prop if provided, otherwise use state
   const displaySummary = incidentSummary || currentIncidentSummary;
 
-  React.useEffect(() => {
-    const measure = () => {
-      if (typeof window === 'undefined') return;
-      const footers = document.getElementsByTagName('footer');
-      const footerEl = footers && footers.length > 0 ? footers[0] as HTMLElement : null;
-      const h = footerEl ? footerEl.offsetHeight + 8 : 52; // Add 8px padding above footer
-      setBottomOffset(h);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
 
   const go = (href: string) => {
     try { router.push(href); } catch {}
@@ -113,13 +100,12 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
       <motion.nav 
         role="navigation" 
         aria-label="Primary" 
-        className="fixed inset-x-0 z-50 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
+        className="fixed inset-x-0 bottom-0 z-50 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
         style={{ 
-          bottom: '36px',
           backdropFilter: 'blur(8px)',
           paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)',
           paddingRight: 'max(env(safe-area-inset-right), 0.5rem)',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
         }}
         initial={{ y: 100 }}
         animate={{ y: isVisible ? 0 : 100 }}

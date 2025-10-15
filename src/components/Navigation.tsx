@@ -69,6 +69,7 @@ export default function Navigation() {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNoEventModal, setShowNoEventModal] = useState(false);
   const [showEventCreation, setShowEventCreation] = useState(false);
@@ -335,6 +336,30 @@ export default function Navigation() {
                 <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
                   Settings
                 </Link>
+                {/* More Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setMoreOpen((open) => !open)}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium focus:outline-none ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') ? 'border-red-500 text-white' : 'border-transparent text-white hover:border-white hover:text-gray-100'}`}
+                    aria-haspopup="true"
+                    aria-expanded={moreOpen}
+                  >
+                    More
+                    <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {moreOpen && (
+                    <div className="absolute left-0 mt-2 w-48 bg-white rounded shadow-lg z-10">
+                      <Link href="/features" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Features</Link>
+                      <Link href="/pricing" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Pricing</Link>
+                      <Link href="/about" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>About</Link>
+                      <Link href="/blog" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Blog</Link>
+                      <Link href="/careers" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Careers</Link>
+                      <Link href="/status" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Status</Link>
+                    </div>
+                  )}
+                </div>
                 {/* Admin Button - only show for admin users */}
                 {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
                   <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
@@ -500,6 +525,24 @@ export default function Navigation() {
             </Link>
             <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help & Glossary</Link>
             <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+            
+            <button
+              onClick={() => setMoreOpen((open) => !open)}
+              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center"
+            >
+              More
+            </button>
+            {moreOpen && (
+              <div className="pl-4 space-y-1 py-2">
+                <Link href="/features" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Features</Link>
+                <Link href="/pricing" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+                <Link href="/about" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>About</Link>
+                <Link href="/blog" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                <Link href="/careers" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Careers</Link>
+                <Link href="/status" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Status</Link>
+              </div>
+            )}
+            
             {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
               <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
             )}

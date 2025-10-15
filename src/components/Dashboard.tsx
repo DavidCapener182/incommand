@@ -1727,7 +1727,7 @@ export default function Dashboard() {
           aria-label="Incident logs"
           tabIndex={-1}
         >
-          <div id="incidents-table" className="-mb-6 md:-mb-8">
+          <div id="incidents-table" className="">
             <IncidentTable
               key={refreshKey}
               filters={filters}
