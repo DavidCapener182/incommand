@@ -341,7 +341,7 @@ export default function Navigation() {
                         <ul className="grid w-[300px] gap-4 p-4">
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/analytics" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/analytics" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Analytics</div>
                                 <div className="text-gray-200">View event analytics and insights.</div>
                               </Link>
@@ -349,7 +349,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/reports" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/reports" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">End of Event Report</div>
                                 <div className="text-gray-200">Generate comprehensive event reports.</div>
                               </Link>
@@ -391,7 +391,7 @@ export default function Navigation() {
                         <ul className="grid w-[300px] gap-4 p-4">
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/features" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/features" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Features</div>
                                 <div className="text-gray-200">Explore all platform features.</div>
                               </Link>
@@ -399,7 +399,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/pricing" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/pricing" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Pricing</div>
                                 <div className="text-gray-200">View pricing plans and options.</div>
                               </Link>
@@ -407,7 +407,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/about" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/about" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">About</div>
                                 <div className="text-gray-200">Learn about our company and mission.</div>
                               </Link>
@@ -415,7 +415,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/blog" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/blog" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Blog</div>
                                 <div className="text-gray-200">Read our latest blog posts.</div>
                               </Link>
@@ -423,7 +423,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/careers" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/careers" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Careers</div>
                                 <div className="text-gray-200">Join our team.</div>
                               </Link>
@@ -431,7 +431,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/status" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                              <Link href="/status" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Status</div>
                                 <div className="text-gray-200">Check system status and uptime.</div>
                               </Link>
