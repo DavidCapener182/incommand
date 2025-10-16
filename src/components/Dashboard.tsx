@@ -60,6 +60,8 @@ import SkipLinks from './SkipLinks'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useScreenReader } from '@/hooks/useScreenReader'
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -77,15 +79,17 @@ const EVENT_TYPES = [
 
 // Skeleton Loading Components
 const StatCardSkeleton = () => (
-  <div className="relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-2 md:p-3 animate-pulse">
-    <div className="flex flex-row items-center justify-between w-full">
-      <div className="flex flex-col items-start">
-        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+  <Card className="animate-pulse">
+    <CardContent className="p-3 md:p-4">
+      <div className="flex flex-row items-center justify-between w-full">
+        <div className="flex flex-col items-start">
+          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+        </div>
+        <div className="h-6 w-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
       </div>
-      <div className="h-6 w-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 );
 
 const TimeCardSkeleton = () => (
@@ -115,11 +119,13 @@ const TimeCardSkeleton = () => (
 );
 
 const CardSkeleton = () => (
-  <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center animate-pulse">
-    <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
-    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
-    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-  </div>
+  <Card className="h-[130px] animate-pulse bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl">
+    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+      <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
+      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+    </CardContent>
+  </Card>
 );
 
 interface StatCardProps {
@@ -167,123 +173,115 @@ const cardBase = `
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className={`${cardBase} h-full flex flex-col relative`}
+      className="h-full"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative flex-1">
-        <div className="md:block relative">
-          <div className="hidden md:block">
-            <motion.h2 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
-            >
-              Current Time
-            </motion.h2>
-            <motion.p 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-4"
-            >
-              {currentTime}
-            </motion.p>
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-2 mb-4"
-            >
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time Since Last Incident</h3>
-              <p className="text-lg font-bold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
-            </motion.div>
-            {nextEvent && (
+      <Card className="h-full flex flex-col relative bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            Current Time
+            <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+              </span>
+              LIVE
+            </span>
+          </CardTitle>
+          <CardDescription>Time Since Last Incident</CardDescription>
+        </CardHeader>
+        
+        <CardContent className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+            {/* Left Column - Time Info */}
+            <div className="space-y-4">
+              <motion.p 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                       className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight"
+              >
+                {currentTime}
+              </motion.p>
+              
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-2"
+                transition={{ delay: 0.4 }}
               >
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time until {nextEvent.title}</h3>
-                <p className="text-lg font-bold text-blue-600 dark:text-blue-300">{countdown}</p>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time Since Last Incident</h3>
+                       <p className="text-lg font-extrabold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
               </motion.div>
-            )}
-          </div>
-          {/* Mobile: show current time and happening now */}
-          <div className="md:hidden">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Time</h2>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentTime}</p>
+              
+              {nextEvent && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                >
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Happening Next</h4>
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{nextEvent.title}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-300">{countdown}</p>
+                </motion.div>
+              )}
+            </div>
+            
+            {/* Right Column - Event Schedule */}
+            <div className="space-y-2">
+              <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">Event Schedule</h4>
+              <div className="space-y-1">
+                {eventTimings.map((timing, index) => (
+                  <motion.div 
+                    key={index}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 + index * 0.1 }}
+                    className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 hover:shadow-sm ${
+                      timing.isNext 
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30' 
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                    }`}
+                  >
+                    <span className={`text-xs font-medium ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300'}`}>
+                      {timing.title}
+                    </span>
+                    <span className={`text-xs font-bold ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                      {timing.time}
+                    </span>
+                  </motion.div>
+                ))}
               </div>
-              {currentSlot && (
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
-                    {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-                  </span>
-                  <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
-                  <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
-                </div>
+              {eventTimings.length === 0 && !nextEvent && (
+                <p className="text-xs text-gray-400 dark:text-gray-400">No upcoming event timings</p>
               )}
             </div>
           </div>
-        </div>
-        <div>
-          <div className='hidden md:block'>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Event Schedule</h2>
-          </div>
-          <div className="space-y-2 mt-2">
-            {eventTimings.map((timing, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
-                className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 hover:shadow-sm ${
-                  timing.isNext 
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30' 
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                }`}
-              >
-                <span className={`text-sm font-medium ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300'}`}>
-                  {timing.title}
-                </span>
-                <span className={`text-sm font-bold ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
-                  {timing.time}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-          {eventTimings.length === 0 && !nextEvent && (
-            <p className="text-sm text-gray-400 dark:text-gray-400">No upcoming event timings</p>
-          )}
-        </div>
-      </div>
-      
-      {/* Desktop: Happening Now positioned in bottom left corner */}
-      {currentSlot && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
-          className="hidden md:block absolute bottom-4 left-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-blue-200/50 dark:border-blue-700/30 shadow-sm hover:shadow-md transition-all duration-200"
-        >
-          <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
-            {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-          </span>
-          <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
-          <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
-        </motion.div>
-      )}
-      
-      {/* Subtle gradient accent at bottom */}
-      <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
+        </CardContent>
+        
+        {/* Desktop: Happening Now positioned in bottom left corner */}
+        {currentSlot && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
+            className="hidden md:block absolute bottom-4 left-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-blue-200/50 dark:border-blue-700/30 shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
+              {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+            </span>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
+            <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
+          </motion.div>
+        )}
+      </Card>
     </motion.div>
-  );
+  )
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
@@ -348,52 +346,53 @@ const StatCard: React.FC<StatCardProps> = ({
     setShowTooltip(true);
   };
 
-  const baseClasses = `
-    relative bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-xl md:rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 
-    px-3 py-2.5 md:px-4 md:py-3 transition-all duration-300 md:hover:shadow-2xl md:hover:-translate-y-1 md:hover:scale-105
-    ${isFilterable ? 'cursor-pointer touch-target' : ''}
-    ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-[1.02] md:scale-105' : 'hover:shadow-xl active:scale-[0.98]'}
-    ${pulse ? 'animate-pulse' : ''}
-    ${className || ''}
-  `;
-
   const content = (
-    <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
-      <div className="flex flex-col flex-1 gap-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <motion.div 
-            key={value}
-            initial={{ scale: 1.1, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
-          >
-            {value}
-          </motion.div>
-          <span className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight whitespace-nowrap">
-            {title}
-          </span>
-        </div>
-        {trendData && trendData.length > 0 && (
-          <div className="mt-1 hidden sm:block">
-            <MiniTrendChart data={trendData} height={20} width={60} />
+    <Card className={`
+      relative transition-all duration-300 bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md
+      ${isFilterable ? 'cursor-pointer touch-target' : ''}
+      ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-[1.02] md:scale-105' : 'hover:shadow-md active:scale-[0.98]'}
+      ${pulse ? 'animate-pulse' : ''}
+      ${className || ''}
+    `}>
+      <CardContent className="p-3 md:p-4">
+        <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
+          <div className="flex flex-col flex-1 gap-1">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <motion.div 
+                key={value}
+                initial={{ scale: 1.1, opacity: 0.8 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+              >
+                {value}
+              </motion.div>
+              <span className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight whitespace-nowrap">
+                {title}
+              </span>
+            </div>
+            {trendData && trendData.length > 0 && (
+              <div className="mt-1 hidden sm:block">
+                <MiniTrendChart data={trendData} height={20} width={60} />
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      <motion.div 
-        whileHover={{ rotate: 5, scale: 1.1 }}
-        transition={{ duration: 0.2 }}
-        className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}
-      >
-        {icon}
-      </motion.div>
-      {showPulse && (
-        <div className="absolute top-2 right-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-          <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
+          <motion.div 
+            whileHover={{ rotate: 5, scale: 1.1 }}
+            transition={{ duration: 0.2 }}
+            className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}
+          >
+            {icon}
+          </motion.div>
+          {showPulse && (
+            <div className="absolute top-2 right-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+              <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 
   if (isFilterable) {
@@ -409,10 +408,10 @@ const StatCard: React.FC<StatCardProps> = ({
         }}
         whileHover={{ 
           y: -4,
+          scale: 1.03,
           transition: { duration: 0.2 }
         }}
-        whileTap={{ scale: 0.95 }}
-        className={baseClasses}
+        whileTap={{ scale: 0.97 }}
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
@@ -453,7 +452,6 @@ const StatCard: React.FC<StatCardProps> = ({
         y: -4,
         transition: { duration: 0.2 }
       }}
-      className={baseClasses}
     >
       {content}
     </motion.div>
@@ -509,15 +507,18 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
     if (sorted.length === 0) {
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-2">
-          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
-        </div>
+        <Card className="w-full h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+          <CardContent className="p-2 h-full flex flex-col items-center justify-center">
+            <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-2">
+      <Card className="w-full h-full">
+        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
         <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">Top 3 Incident Types</div>
         <div className="flex flex-col gap-1 w-full">
           {/* Clear Filter Button - Show when a filter is active */}
@@ -558,15 +559,18 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
             }
           })}
         </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   } catch (error) {
     console.error('Error in TopIncidentTypesCard:', error);
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-2">
-        <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
-        <div className="text-xs text-red-500">Error loading data</div>
-      </div>
+      <Card className="w-full h-full">
+        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
+          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
+          <div className="text-xs text-red-500">Error loading data</div>
+        </CardContent>
+      </Card>
     );
   }
 }
@@ -1333,9 +1337,13 @@ export default function Dashboard() {
       />
       
       {/* Event Header - Sticky */}
-      <div className="md:bg-transparent md:shadow-none -mx-3 sm:-mx-6 md:-mx-8 px-3 sm:px-6 md:px-8 pt-0 pb-2 md:py-0 mb-6 md:mb-8">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 hidden md:block">
+          Event Overview
+        </h3>
         {/* Desktop view */}
-        <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <section className="hidden md:block rounded-2xl bg-gray-50/70 dark:bg-[#1a1f3d]/60 p-4 border border-gray-100 dark:border-gray-800">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           <CurrentEvent
             currentTime={currentTime}
             currentEvent={currentEvent}
@@ -1361,7 +1369,8 @@ export default function Dashboard() {
             activeStatus={activeSummaryStatus}
             className="h-full"
           />
-        </div>
+          </div>
+        </section>
 
         {/* Mobile view */}
         <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300">
@@ -1419,24 +1428,27 @@ export default function Dashboard() {
       </div>
 
       {/* Incident Dashboard */}
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center mb-2" data-tour="dashboard">
-              <div className="h-8 w-1 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full mr-3"></div>
+      <div className="mb-4 rounded-2xl bg-gray-50/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
+        <div className="mb-3">
+          <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-gray-900 dark:text-white" data-tour="dashboard">
+              <span className="h-6 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
               Incident Dashboard
-              {isRefreshing && (
-                <span className="ml-3 text-sm text-blue-500 flex items-center animate-pulse">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce"></span>
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-1 animate-bounce delay-150"></span>
-                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-300"></span>
-                  <span className="ml-1">Live</span>
-                </span>
-              )}
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
-              Track and manage security incidents in real-time
+            <p className="text-sm text-muted-foreground mt-1">
+              Track and manage security incidents in real-time.
             </p>
+          </div>
+            {/* Live indicator aligned right */}
+            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+              </span>
+              Live <span className="text-muted-foreground ml-1">Updated {typeof currentTime === 'string' ? currentTime : new Date().toLocaleTimeString()}</span>
+            </div>
+          </div>
             
             {/* Real-time Status and Alerts */}
             {currentEvent && (
@@ -1462,6 +1474,10 @@ export default function Dashboard() {
           </div>
 
         </div>
+
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 hidden md:block">
+          Operational Metrics
+        </h3>
 
         {/* Stats Grid - Desktop Only (Hidden on Mobile) */}
         <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 mb-6 md:mb-8">
@@ -1598,8 +1614,8 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                whileHover={{ y: -4 }}
-                className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" 
+                whileHover={{ y: -4, scale: 1.03 }}
+                className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" 
                 onClick={() => setIsOccupancyModalOpen(true)}
               >
                 <VenueOccupancy currentEventId={currentEventId} />
@@ -1619,8 +1635,8 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ y: -4 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                  whileHover={{ y: -4, scale: 1.03 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
                 >
                   <What3WordsSearchCard 
                     lat={coordinates.lat} 
@@ -1634,8 +1650,8 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ y: -4 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                  whileHover={{ y: -4, scale: 1.03 }}
+                  className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
                 >
                   <TopIncidentTypesCard 
                     incidents={incidents} 
@@ -1649,6 +1665,11 @@ export default function Dashboard() {
             )}
           </div>
           {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in responsive grid */}
+          <div className="hidden md:block mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Support Tools
+            </h3>
+          </div>
           <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {loadingCurrentEvent ? (
               Array.from({ length: 4 }).map((_, index) => (
@@ -1660,11 +1681,16 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
-                  whileHover={{ y: -4 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 text-gray-900 dark:text-gray-100" 
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="h-[130px] cursor-pointer hover:shadow-lg transition-all duration-300 col-span-1" 
                   onClick={() => setIsOccupancyModalOpen(true)}
                 >
-                  <VenueOccupancy currentEventId={currentEventId} />
+                  <Card className="h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+                    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+                      <VenueOccupancy currentEventId={currentEventId} />
+                    </CardContent>
+                  </Card>
                 </motion.div>
                 {/* WeatherCard: render only the WeatherCard, no extra card container */}
                 {currentEvent?.venue_address && (
@@ -1672,7 +1698,8 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
-                    whileHover={{ y: -4 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <WeatherCard 
                       lat={coordinates?.lat} 
@@ -1688,23 +1715,29 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ y: -4 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1 cursor-pointer"
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="h-[130px] cursor-pointer hover:shadow-lg transition-all duration-300 col-span-1"
                 >
-                  <What3WordsSearchCard 
-                    lat={coordinates.lat} 
-                    lon={coordinates.lon} 
-                    venueAddress={currentEvent?.venue_address || ''} 
-                    singleCard={true}
-                    largeLogo={false}
-                  />
+                  <Card className="h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+                    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+                      <What3WordsSearchCard 
+                        lat={coordinates.lat} 
+                        lon={coordinates.lon} 
+                        venueAddress={currentEvent?.venue_address || ''} 
+                        singleCard={true}
+                        largeLogo={false}
+                      />
+                    </CardContent>
+                  </Card>
                 </motion.div>
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.5 }}
-                  whileHover={{ y: -4 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 col-span-1"
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="h-[130px] hover:shadow-lg transition-all duration-300 col-span-1"
                 >
                   <TopIncidentTypesCard 
                     incidents={incidents} 
@@ -1744,28 +1777,22 @@ export default function Dashboard() {
           
           {/* Staff Deployment Overview hidden intentionally */}
         </main>
-      </div>
 
-      <IncidentCreationModal
-        isOpen={isIncidentModalOpen}
-        onClose={() => setIsIncidentModalOpen(false)}
-        onIncidentCreated={handleIncidentCreated}
-        initialIncidentType={initialIncidentType}
-      />
+        <IncidentCreationModal
+          isOpen={isIncidentModalOpen}
+          onClose={() => setIsIncidentModalOpen(false)}
+          onIncidentCreated={handleIncidentCreated}
+          initialIncidentType={initialIncidentType}
+        />
 
-      {/* Venue Occupancy Modal */}
-      <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
-      
-      
-      
-      {/* Toast Notifications */}
-      <Toast messages={messages} onRemove={removeToast} />
-
-      {/* FAB now handled by FloatingActionButton component in LayoutWrapper */}
+        {/* Venue Occupancy Modal */}
+        <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
+        
+        {/* Toast Notifications */}
+        <Toast messages={messages} onRemove={removeToast} />
 
         {/* Log Review Reminder for Silver Commanders */}
         <LogReviewReminder />
-
       </div>
-    )
-  }
+  )
+}

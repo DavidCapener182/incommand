@@ -5,17 +5,8 @@ import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import EventCreationModal from './EventCreationModal'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline'
-
-// Shared card base styling for consistency
-const cardBase = `
-  bg-white/90 dark:bg-[#1e2a78]/90
-  backdrop-blur-lg
-  shadow-md hover:shadow-lg
-  transition-all duration-300
-  border border-gray-200/60 dark:border-[#2d437a]/50
-  rounded-2xl
-  p-5 sm:p-6
-`
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface Event {
   id: string
@@ -221,158 +212,180 @@ export default function CurrentEvent({
   }
 
   return (
-    <motion.div 
+    <motion.div
       className="h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
     >
-      <div className={`${cardBase} h-full flex flex-col justify-between relative`}>
+           <Card className="h-full flex flex-col justify-between relative bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
         {currentEvent ? (
-          <div className="space-y-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-start gap-3">
-                <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 mt-1" />
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Current Event</h2>
-                  <div className="mt-1">
-                    <span className="text-base font-semibold text-gray-900 dark:text-white">
-                      {currentEvent.event_name}
-                    </span>
-                    {currentEvent.support_acts && (() => {
-                      let acts = currentEvent.support_acts;
-                      if (typeof acts === 'string') {
-                        try {
-                          acts = JSON.parse(acts);
-                        } catch {
-                          acts = [];
-                        }
-                      }
-                      return Array.isArray(acts) && acts.length > 0 ? (
-                        <span className="text-sm font-normal text-gray-500 dark:text-gray-300 ml-2">
-                          {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+          <>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 mt-1" />
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                      Current Event
+                      <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
                         </span>
-                      ) : null;
-                    })()}
+                        LIVE
+                      </span>
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      <span className="text-base font-semibold text-gray-900 dark:text-white">
+                        {currentEvent.event_name}
+                      </span>
+                      {currentEvent.support_acts && (() => {
+                        let acts = currentEvent.support_acts;
+                        if (typeof acts === 'string') {
+                          try {
+                            acts = JSON.parse(acts);
+                          } catch {
+                            acts = [];
+                          }
+                        }
+                        return Array.isArray(acts) && acts.length > 0 ? (
+                          <span className="text-sm font-normal text-gray-500 dark:text-gray-300 ml-2">
+                            {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                          </span>
+                        ) : null;
+                      })()}
+                    </CardDescription>
                   </div>
                 </div>
+                <div className="md:hidden">
+                  {currentTime && (
+                    <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
+                  )}
+                </div>
               </div>
-              <div className="md:hidden">
-                {currentTime && (
-                  <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
+            </CardHeader>
+            
+            <CardContent className="flex-1">
+              <div className="hidden md:block space-y-4">
+                <div className="flex items-center gap-3">
+                  <MapPinIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-300">Venue</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
+                  </div>
+                </div>
+                
+                {/* AI Insights - modernized with better styling */}
+                {aiInsights.length > 0 && (
+                  <div className="pt-4 border-t border-gray-200/60 dark:border-[#2d437a]/50">
+                    <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">
+                      AI Analysis
+                    </h4>
+                    <div className="min-h-[100px] max-h-[100px] overflow-hidden">
+                      {aiLoading ? (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
+                          <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                        </div>
+                      ) : aiError ? (
+                        <div className="pb-4">
+                          <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
+                          <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
+                            {aiError}
+                            <button 
+                              onClick={fetchAiInsights}
+                              className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pb-4">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
+                            {aiInsights[currentInsightIndex]?.title}
+                          </h4>
+                          <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pr-1">
+                            {aiInsights[currentInsightIndex]?.content}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
+            </CardContent>
             
-            <div className="hidden md:block">
-              {/* Visual divider */}
-              <hr className="my-4 border-gray-200/60 dark:border-[#2d437a]/50" />
-              
-              <div className="flex items-center gap-3">
-                <MapPinIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-300">Venue</span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
+            {/* Navigation positioned at very bottom of entire card */}
+            {!aiLoading && aiInsights.length > 0 && (
+              <div className="absolute left-0 right-0 bottom-3 flex items-center justify-center">
+                <div className="flex items-center space-x-2">
+                  {aiInsights.length > 1 && (
+                    <button
+                      onClick={goToPrevious}
+                      className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      aria-label="Previous insight"
+                    >
+                      <ChevronLeftIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  )}
+                  <div className="flex space-x-1">
+                    {aiInsights.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setCurrentInsightIndex(index);
+                          setAutoAdvance(false);
+                          setTimeout(() => setAutoAdvance(true), 120000);
+                        }}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === currentInsightIndex
+                            ? 'bg-blue-500 dark:bg-blue-400'
+                            : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                        aria-label={`Go to insight ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  {aiInsights.length > 1 && (
+                    <button
+                      onClick={goToNext}
+                      className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      aria-label="Next insight"
+                    >
+                      <ChevronRightIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  )}
                 </div>
               </div>
-              
-              {/* AI Insights - modernized with better styling */}
-              {aiInsights.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200/60 dark:border-[#2d437a]/50">
-                  <div className="min-h-[100px] max-h-[100px] overflow-hidden">
-                    {aiLoading ? (
-                      <div className="animate-pulse space-y-2">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                      </div>
-                    ) : aiError ? (
-                      <div className="pb-4">
-                        <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
-                        <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
-                          {aiError}
-                          <button 
-                            onClick={fetchAiInsights}
-                            className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
-                          >
-                            Retry
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="pb-4">
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
-                          {aiInsights[currentInsightIndex]?.title}
-                        </h4>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pr-1">
-                          {aiInsights[currentInsightIndex]?.content}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Navigation positioned at very bottom of entire card */}
-              {!aiLoading && aiInsights.length > 0 && (
-                <div className="absolute left-0 right-0 bottom-3 flex items-center justify-center">
-                  <div className="flex items-center space-x-2">
-                    {aiInsights.length > 1 && (
-                      <button
-                        onClick={goToPrevious}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        aria-label="Previous insight"
-                      >
-                        <ChevronLeftIcon className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
-                    <div className="flex space-x-1">
-                      {aiInsights.map((_, index) => (
-                        <div
-                          key={index}
-                          className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                            index === currentInsightIndex ? 'bg-[#2A3990]' : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {aiInsights.length > 1 && (
-                      <button
-                        onClick={goToNext}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        aria-label="Next insight"
-                      >
-                        <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Subtle gradient accent at bottom */}
-              <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
-            </div>
-          </div>
+            )}
+          </>
         ) : (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-900">
-              No Current Event
-            </h3>
-            <p className="text-sm text-gray-500">
-              No event is currently selected. Create a new event to get started.
-            </p>
-            <div>
-              <button
-                onClick={() => setShowModal(true)}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-[#2A3990] hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
-              >
-                Create Event
-              </button>
+          <CardContent>
+            <div className="space-y-3">
+              <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
+                No Current Event
+              </CardTitle>
+              <CardDescription>
+                No event is currently selected. Create a new event to get started.
+              </CardDescription>
+              <div>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-[#2A3990] hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
+                >
+                  Create Event
+                </button>
+              </div>
             </div>
-          </div>
+          </CardContent>
         )}
-      </div>
+      </Card>
 
       <EventCreationModal
         isOpen={showModal && !currentEvent}

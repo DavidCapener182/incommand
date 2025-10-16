@@ -10,6 +10,7 @@ import {
   ExclamationTriangleIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface HourlyForecast {
   time: string;
@@ -141,53 +142,60 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // Loading state
   if (loading) {
     return (
-      <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-        <div className="flex flex-col items-center justify-center animate-pulse">
-          <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-1"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
-        </div>
-      </div>
+      <Card className="h-[130px] animate-pulse bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl">
+        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center">
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-1"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // Error state with retry
   if (error) {
     return (
-      <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-        <div className="flex flex-col items-center justify-center text-center">
-          <ExclamationTriangleIcon className="h-8 w-8 text-red-400 mb-2" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
-          <p className="text-xs text-red-500 mb-2">{error}</p>
-          {retryCount < 3 && (
-            <button
-              onClick={fetchWeather}
-              className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
-            >
-              Retry
-            </button>
-          )}
-        </div>
-      </div>
+      <Card className="h-[130px] bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center text-center">
+            <ExclamationTriangleIcon className="h-8 w-8 text-red-400 mb-2" />
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
+            <p className="text-xs text-red-500 mb-2">{error}</p>
+            {retryCount < 3 && (
+              <button
+                onClick={fetchWeather}
+                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // No weather data
   if (!weather) {
     return (
-      <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-        <div className="flex flex-col items-center justify-center text-center">
-          <CloudIcon className="h-8 w-8 text-gray-400 mb-2" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">No data available</p>
-        </div>
-      </div>
+      <Card className="h-[130px] bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center text-center">
+            <CloudIcon className="h-8 w-8 text-gray-400 mb-2" />
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">No data available</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="h-[130px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-4 flex flex-col items-center justify-center hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-      <div className="w-full h-full flex flex-col items-center justify-center">
+    <Card className="h-[130px]">
+      <CardContent className="p-4 h-full flex flex-col items-center justify-center">
+        <div className="w-full h-full flex flex-col items-center justify-center">
         {/* Location name */}
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 text-center font-medium truncate w-full">
           {locationName || `${lat.toFixed(2)}, ${lon.toFixed(2)}`}
@@ -221,7 +229,8 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
             <span>{weather.humidity}%</span>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 

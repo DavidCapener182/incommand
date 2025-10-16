@@ -11,19 +11,10 @@ import {
 } from '@heroicons/react/24/outline'
 
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 export type SummaryStatus = 'open' | 'in_progress' | 'closed'
-
-// Shared card base styling for consistency
-const cardBase = `
-  bg-white/90 dark:bg-[#1e2a78]/90
-  backdrop-blur-lg
-  shadow-md hover:shadow-lg
-  transition-all duration-300
-  border border-gray-200/60 dark:border-[#2d437a]/50
-  rounded-2xl
-  p-5 sm:p-6
-`
 
 interface IncidentSummaryBarProps {
   onFilter?: (status: SummaryStatus | null) => void
@@ -151,49 +142,62 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
     >
-      <div className={`${cardBase} flex flex-col justify-between h-full`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Summary</h2>
-          <span className="text-xs text-gray-400 dark:text-gray-300">{formattedUpdated}</span>
-        </div>
+      <Card className="h-full flex flex-col justify-between bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-lg font-semibold tracking-tight">
+            <span>Incident Summary</span>
+            <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+              </span>
+              LIVE
+            </span>
+          </CardTitle>
+          <CardDescription>{formattedUpdated}</CardDescription>
+        </CardHeader>
         
-        <div className="grid grid-cols-2 gap-4 mt-2">
-          {statusItems.map(({ label, value, color, icon, key }) => {
-            const isActive = key !== 'total' && activeStatus === key
-            const isChanged = key !== 'total' && changedStatuses.has(key as SummaryStatus)
-            const isTotal = key === 'total'
-            
-            return (
-              <motion.button
-                key={label}
-                type="button"
-                onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
-                className={`
-                  flex items-center justify-between px-4 py-3 rounded-xl shadow-sm transition-all duration-200 
-                  hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
-                  ${color}
-                  ${isActive ? 'ring-2 ring-blue-400/50 shadow-md' : ''}
-                  ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
-                  ${isTotal ? 'cursor-default' : 'cursor-pointer'}
-                `}
-                aria-pressed={isActive}
-                whileHover={!isTotal ? { scale: 1.02 } : {}}
-                whileTap={!isTotal ? { scale: 0.98 } : {}}
-              >
-                <div className="flex items-center gap-2 font-medium">
-                  {icon} 
-                  <span className="text-sm">{label}</span>
-                </div>
-                <span className="text-lg font-bold">{value}</span>
-              </motion.button>
-            )
-          })}
-        </div>
-        
-        {/* Subtle gradient accent at bottom */}
-        <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mt-4" />
-      </div>
+        <CardContent>
+          <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">
+            Incident Overview
+          </h4>
+          <div className="grid grid-cols-2 gap-4">
+            {statusItems.map(({ label, value, color, icon, key }) => {
+              const isActive = key !== 'total' && activeStatus === key
+              const isChanged = key !== 'total' && changedStatuses.has(key as SummaryStatus)
+              const isTotal = key === 'total'
+              
+              return (
+                <motion.button
+                  key={label}
+                  type="button"
+                  onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
+                  className={`
+                    flex flex-col items-center justify-center px-4 py-4 rounded-xl shadow-sm transition-all duration-200 
+                    hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
+                    ${color}
+                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-md' : ''}
+                    ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
+                    ${isTotal ? 'cursor-default' : 'cursor-pointer'}
+                  `}
+                  aria-pressed={isActive}
+                  whileHover={!isTotal ? { scale: 1.02 } : {}}
+                  whileTap={!isTotal ? { scale: 0.98 } : {}}
+                >
+                  <div className="flex items-center gap-2 font-medium mb-1">
+                    {icon} 
+                    <span className="text-sm">{label}</span>
+                  </div>
+                         <span className="text-2xl font-extrabold">{value}</span>
+                </motion.button>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   )
 }
