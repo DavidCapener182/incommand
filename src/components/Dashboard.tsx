@@ -357,17 +357,17 @@ const StatCard: React.FC<StatCardProps> = ({
       <CardContent className="p-3 md:p-4">
         <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
           <div className="flex flex-col flex-1 gap-1">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <motion.div 
                 key={value}
                 initial={{ scale: 1.1, opacity: 0.8 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white"
+                className="text-2xl font-bold text-gray-900 dark:text-white"
               >
                 {value}
               </motion.div>
-              <span className="text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 leading-tight whitespace-nowrap">
+              <span className="text-sm font-medium text-muted-foreground leading-tight whitespace-nowrap">
                 {title}
               </span>
             </div>
@@ -1429,330 +1429,299 @@ export default function Dashboard() {
 
       {/* Incident Dashboard */}
       <div className="mb-4 rounded-2xl bg-gray-50/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
-        <div className="mb-3">
-          <div className="flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-3">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-gray-900 dark:text-white" data-tour="dashboard">
-              <span className="h-6 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
+            <h2
+              className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+              data-tour="dashboard"
+            >
+              <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
               Incident Dashboard
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Track and manage security incidents in real-time.
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track and manage security incidents in real time.
             </p>
           </div>
-            {/* Live indicator aligned right */}
-            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-              </span>
-              Live <span className="text-muted-foreground ml-1">Updated {typeof currentTime === 'string' ? currentTime : new Date().toLocaleTimeString()}</span>
-            </div>
-          </div>
-            
-            {/* Real-time Status and Alerts */}
-            {currentEvent && (
-              <div className="mt-4 flex flex-col lg:flex-row gap-4">
-                <div className="flex-1">
-                  <RealtimeStatusIndicator
-                    isConnected={realtimeAnalytics.isConnected}
-                    error={realtimeAnalytics.error}
-                    lastUpdated={realtimeAnalytics.data.lastUpdated}
-                    updateCount={realtimeAnalytics.data.updateCount}
-                    onRefresh={realtimeAnalytics.refresh}
-                  />
-                </div>
-                <div className="lg:w-96">
-                  <RealtimeAlertBanner
-                    alerts={realtimeAnalytics.alerts}
-                    onDismiss={realtimeAnalytics.dismissAlert}
-                    onClearAll={realtimeAnalytics.clearAlerts}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
         </div>
 
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 hidden md:block">
-          Operational Metrics
-        </h3>
-
-        {/* Stats Grid - Desktop Only (Hidden on Mobile) */}
-        <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 mb-6 md:mb-8">
-          {loadingCurrentEvent ? (
-            // Show skeleton loading states
-            Array.from({ length: 8 }).map((_, index) => (
-              <StatCardSkeleton key={index} />
-            ))
-          ) : (
-            <>
-              <StatCard
-                title="High Priority"
-                value={incidentStats.high}
-                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-                isSelected={filters.types.some(type => ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type))}
-                onClick={() => setFilters(prev => ({ 
-                  ...prev, 
-                  types: ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'],
-                  statuses: [],
-                  priorities: []
-                }))}
-                isFilterable={true}
-                color="red"
-                tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
-                showPulse={incidentStats.hasOpenHighPrio}
-                index={0}
-              />
-              <StatCard
-                title="Medicals"
-                value={incidentStats.medicals}
-                icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
-                isSelected={filters.types.includes('Medical')}
-                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'] }))}
-                isFilterable={true}
-                tooltip="Medical-related incidents."
-                index={1}
-              />
-              <StatCard
-                title="Open"
-                value={incidentStats.open}
-                icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
-                isSelected={filters.statuses.includes('open')}
-                onClick={() => setFilters(prev => ({ 
-                  ...prev, 
-                  statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'],
-                  types: [],
-                  priorities: []
-                }))}
-                isFilterable={true}
-                color="yellow"
-                tooltip="Incidents that are currently open (is_closed = false)."
-                index={2}
-              />
-              <StatCard
-                title="Ejections"
-                value={incidentStats.ejections}
-                icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={filters.types.includes('Ejection')}
-                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Ejection') ? prev.types.filter(t => t !== 'Ejection') : ['Ejection'] }))}
-                isFilterable={true}
-                tooltip="Incidents where someone was ejected."
-                index={3}
-              />
-              <StatCard
-                title="Refusals"
-                value={incidentStats.refusals}
-                icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={filters.types.includes('Refusal')}
-                onClick={() => setFilters(prev => ({ ...prev, types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'] }))}
-                isFilterable={true}
-                tooltip="Incidents where entry was refused."
-                index={4}
-              />
-              <StatCard
-                title="Total"
-                value={incidentStats.total}
-                icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
-                onClick={resetToTotal}
-                isFilterable={true}
-                tooltip="All incidents (excluding Attendance and Sit Reps)."
-                index={5}
-              />
-              <StatCard
-                title="Closed"
-                value={incidentStats.closed}
-                icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
-                isSelected={filters.statuses.includes('closed')}
-                onClick={() => setFilters(prev => ({ 
-                  ...prev, 
-                  statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'],
-                  types: [],
-                  priorities: []
-                }))}
-                isFilterable={true}
-                color="green"
-                tooltip="Incidents that have been closed (is_closed = true)."
-                index={6}
-              />
-              <StatCard
-                title="Other"
-                value={incidentStats.other}
-                icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
-                isSelected={filters.types.length > 0 && !['Refusal','Ejection','Medical'].some(t => filters.types.includes(t))}
-                onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
-                isFilterable={true}
-                tooltip="All other incident types."
-                index={7}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Analytics KPI Cards - Desktop Only */}
         {currentEvent && (
-          <div className="hidden md:block">
-            <div data-tour="analytics">
-            <AnalyticsKPICards 
-              eventId={currentEvent.id}
-              className="mb-6"
-            />
+          <div className="mt-4 flex flex-col gap-4 lg:flex-row">
+            <div className="flex-1">
+              <RealtimeStatusIndicator
+                isConnected={realtimeAnalytics.isConnected}
+                error={realtimeAnalytics.error}
+                lastUpdated={realtimeAnalytics.data.lastUpdated}
+                updateCount={realtimeAnalytics.data.updateCount}
+                onRefresh={realtimeAnalytics.refresh}
+              />
+            </div>
+            <div className="lg:w-96">
+              <RealtimeAlertBanner
+                alerts={realtimeAnalytics.alerts}
+                onDismiss={realtimeAnalytics.dismissAlert}
+                onClearAll={realtimeAnalytics.clearAlerts}
+              />
             </div>
           </div>
         )}
 
-        {/* Stats Grid - Second Row */}
-        <div>
-          {/* Mobile: Venue Occupancy full width */}
-          <div className="block md:hidden mb-4">
-            {loadingCurrentEvent ? (
-              <CardSkeleton />
-            ) : (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                whileHover={{ y: -4, scale: 1.03 }}
-                className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 w-full text-gray-900 dark:text-gray-100" 
-                onClick={() => setIsOccupancyModalOpen(true)}
-              >
-                <VenueOccupancy currentEventId={currentEventId} />
-              </motion.div>
-            )}
-          </div>
-          {/* Mobile: W3W and Top 3 - HIDDEN ON MOBILE */}
-          <div className="hidden md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            {loadingCurrentEvent ? (
-              <>
-                <CardSkeleton />
-                <CardSkeleton />
-              </>
-            ) : (
-              <>
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ y: -4, scale: 1.03 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <What3WordsSearchCard 
-                    lat={coordinates.lat} 
-                    lon={coordinates.lon} 
-                    venueAddress={currentEvent?.venue_address || ''} 
-                    singleCard
-                    largeLogo={false}
+        <div className="mt-4 space-y-6">
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
+            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#15192c]/60 sm:-mx-5 sm:px-5 sm:pt-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Operational Metrics
+              </h3>
+            </div>
+            <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 md:mb-8">
+              {loadingCurrentEvent ? (
+                Array.from({ length: 8 }).map((_, index) => <StatCardSkeleton key={index} />)
+              ) : (
+                <>
+                  <StatCard
+                    title="High Priority"
+                    value={incidentStats.high}
+                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                    isSelected={filters.types.some(type =>
+                      ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
+                    )}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        types: ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'],
+                        statuses: [],
+                        priorities: [],
+                      }))
+                    }
+                    isFilterable
+                    color="red"
+                    tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+                    showPulse={incidentStats.hasOpenHighPrio}
+                    index={0}
                   />
-                </motion.div>
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ y: -4, scale: 1.03 }}
-                  className="h-[130px] bg-white/95 dark:bg-[#1b203b] backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-4 flex flex-col items-center justify-center text-gray-900 dark:text-gray-100 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <TopIncidentTypesCard 
-                    incidents={incidents} 
-                    onTypeClick={(type: string) => {
-                      setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
-                    }} 
-                    selectedType={filters.types[0] || null}
+                  <StatCard
+                    title="Medicals"
+                    value={incidentStats.medicals}
+                    icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                    isSelected={filters.types.includes('Medical')}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        types: prev.types.includes('Medical') ? prev.types.filter(t => t !== 'Medical') : ['Medical'],
+                      }))
+                    }
+                    isFilterable
+                    tooltip="Medical-related incidents."
+                    index={1}
                   />
-                </motion.div>
-              </>
+                  <StatCard
+                    title="Open"
+                    value={incidentStats.open}
+                    icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+                    isSelected={filters.statuses.includes('open')}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        statuses: prev.statuses.includes('open') ? prev.statuses.filter(s => s !== 'open') : ['open'],
+                        types: [],
+                        priorities: [],
+                      }))
+                    }
+                    isFilterable
+                    color="yellow"
+                    tooltip="Incidents that are currently open (is_closed = false)."
+                    index={2}
+                  />
+                  <StatCard
+                    title="Ejections"
+                    value={incidentStats.ejections}
+                    icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    isSelected={filters.types.includes('Ejection')}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        types: prev.types.includes('Ejection') ? prev.types.filter(t => t !== 'Ejection') : ['Ejection'],
+                      }))
+                    }
+                    isFilterable
+                    tooltip="Incidents where someone was ejected."
+                    index={3}
+                  />
+                  <StatCard
+                    title="Refusals"
+                    value={incidentStats.refusals}
+                    icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    isSelected={filters.types.includes('Refusal')}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        types: prev.types.includes('Refusal') ? prev.types.filter(t => t !== 'Refusal') : ['Refusal'],
+                      }))
+                    }
+                    isFilterable
+                    tooltip="Incidents where entry was refused."
+                    index={4}
+                  />
+                  <StatCard
+                    title="Total"
+                    value={incidentStats.total}
+                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
+                    onClick={resetToTotal}
+                    isFilterable
+                    tooltip="All incidents (excluding Attendance and Sit Reps)."
+                    index={5}
+                  />
+                  <StatCard
+                    title="Closed"
+                    value={incidentStats.closed}
+                    icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+                    isSelected={filters.statuses.includes('closed')}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        statuses: prev.statuses.includes('closed') ? prev.statuses.filter(s => s !== 'closed') : ['closed'],
+                        types: [],
+                        priorities: [],
+                      }))
+                    }
+                    isFilterable
+                    color="green"
+                    tooltip="Incidents that have been closed (is_closed = true)."
+                    index={6}
+                  />
+                  <StatCard
+                    title="Other"
+                    value={incidentStats.other}
+                    icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    isSelected={filters.types.length > 0 && !['Refusal', 'Ejection', 'Medical'].some(t => filters.types.includes(t))}
+                    onClick={() =>
+                      setFilters(prev => ({
+                        ...prev,
+                        types: [],
+                      }))
+                    }
+                    isFilterable
+                    tooltip="All other incident types."
+                    index={7}
+                  />
+                </>
+              )}
+            </div>
+            {currentEvent && (
+              <div className="hidden md:block" data-tour="analytics">
+                <AnalyticsKPICards eventId={currentEvent.id} className="mt-2" />
+              </div>
             )}
-          </div>
-          {/* Desktop: Venue, Weather, W3W, Top 3, Social Media in responsive grid */}
-          <div className="hidden md:block mb-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Support Tools
-            </h3>
-          </div>
-          <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {loadingCurrentEvent ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <CardSkeleton key={index} />
-              ))
-            ) : (
-              <>
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="h-[130px] cursor-pointer hover:shadow-lg transition-all duration-300 col-span-1" 
-                  onClick={() => setIsOccupancyModalOpen(true)}
-                >
-                  <Card className="h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
-                    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-                      <VenueOccupancy currentEventId={currentEventId} />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                {/* WeatherCard: render only the WeatherCard, no extra card container */}
-                {currentEvent?.venue_address && (
+          </section>
+
+          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-200/60 to-transparent dark:via-gray-700/40" />
+
+          <section className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
+            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#15192c]/60 sm:-mx-5 sm:px-5 sm:pt-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Support Tools
+              </h3>
+            </div>
+            <div>
+              <div className="mb-4 block md:hidden">
+                {loadingCurrentEvent ? (
+                  <CardSkeleton />
+                ) : (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    whileHover={{ y: -4, scale: 1.03 }}
+                    className="flex h-[130px] w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-gray-200/60 bg-white/95 text-gray-900 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-gray-700/50 dark:bg-[#1b203b] dark:text-gray-100"
+                    onClick={() => setIsOccupancyModalOpen(true)}
                   >
-                    <WeatherCard 
-                      lat={coordinates?.lat} 
-                      lon={coordinates?.lon}
-                      locationName={currentEvent.venue_address}
-                      eventDate={currentEvent.event_date ?? ''} 
-                      startTime={currentEvent.main_act_start_time ?? ''}
-                      curfewTime={currentEvent.curfew_time ?? ''}
-                    />
+                    <VenueOccupancy currentEventId={currentEventId} />
                   </motion.div>
                 )}
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="h-[130px] cursor-pointer hover:shadow-lg transition-all duration-300 col-span-1"
-                >
-                  <Card className="h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
-                    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-                      <What3WordsSearchCard 
-                        lat={coordinates.lat} 
-                        lon={coordinates.lon} 
-                        venueAddress={currentEvent?.venue_address || ''} 
-                        singleCard={true}
-                        largeLogo={false}
+              </div>
+              <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {loadingCurrentEvent ? (
+                  Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
+                ) : (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
+                      onClick={() => setIsOccupancyModalOpen(true)}
+                    >
+                      <Card className="h-full rounded-2xl border border-gray-200/60 bg-white/90 shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700/50 dark:bg-[#1b203b]">
+                        <CardContent className="flex h-full flex-col items-center justify-center p-4">
+                          <VenueOccupancy currentEventId={currentEventId} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                    {currentEvent?.venue_address && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        whileHover={{ y: -4, scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <WeatherCard
+                          lat={coordinates?.lat}
+                          lon={coordinates?.lon}
+                          locationName={currentEvent.venue_address}
+                          eventDate={currentEvent.event_date ?? ''}
+                          startTime={currentEvent.main_act_start_time ?? ''}
+                          curfewTime={currentEvent.curfew_time ?? ''}
+                        />
+                      </motion.div>
+                    )}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
+                    >
+                      <Card className="h-full rounded-2xl border border-gray-200/60 bg-white/90 shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700/50 dark:bg-[#1b203b]">
+                        <CardContent className="flex h-full flex-col items-center justify-center p-4">
+                          <What3WordsSearchCard
+                            lat={coordinates.lat}
+                            lon={coordinates.lon}
+                            venueAddress={currentEvent?.venue_address || ''}
+                            singleCard
+                            largeLogo={false}
+                          />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.5 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
+                    >
+                      <TopIncidentTypesCard
+                        incidents={incidents}
+                        onTypeClick={(type: string) => {
+                          setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
+                        }}
+                        selectedType={filters.types[0] || null}
                       />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.5 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="h-[130px] hover:shadow-lg transition-all duration-300 col-span-1"
-                >
-                  <TopIncidentTypesCard 
-                    incidents={incidents} 
-                    onTypeClick={(type: string) => {
-                      setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
-                    }} 
-                    selectedType={filters.types[0] || null}
-                  />
-                </motion.div>
-              </>
-            )}
-          </div>
+                    </motion.div>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
+      </div>
 
-        {/* Incident Table and Staff Deployment */}
+      {/* Incident Table and Staff Deployment */}
         <main 
           id="main-content" 
           className=""

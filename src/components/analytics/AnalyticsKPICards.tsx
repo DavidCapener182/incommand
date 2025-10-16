@@ -118,12 +118,12 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <SparklesIcon className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                <span className="text-sm font-medium text-muted-foreground">
                   Log Quality
                 </span>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className={`text-3xl font-bold ${getScoreColor(stats.qualityScore)}`}>
+                <span className={`text-2xl font-bold ${getScoreColor(stats.qualityScore)}`}>
                   {stats.qualityScore}
                 </span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">/100</span>
@@ -169,12 +169,12 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <ShieldCheckIcon className="h-4 w-4 text-green-500" />
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                <span className="text-sm font-medium text-muted-foreground">
                   Compliance
                 </span>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className={`text-3xl font-bold ${getGradeColor(stats.complianceGrade)}`}>
+                <span className={`text-2xl font-bold ${getGradeColor(stats.complianceGrade)}`}>
                   {stats.complianceGrade}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -210,12 +210,12 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <ClockIcon className="h-4 w-4 text-purple-500" />
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                <span className="text-sm font-medium text-muted-foreground">
                   Avg Response
                 </span>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {stats.avgResponseTime}
                 </span>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -240,13 +240,13 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                   <ChartBarIcon className="h-4 w-4 text-orange-500 relative" />
                 </div>
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                <span className="text-sm font-medium text-muted-foreground">
                   Active Now
                 </span>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span
-                  className={`text-3xl font-bold ${
+                  className={`text-2xl font-bold ${
                     stats.activeIncidents === 0 ? 'text-green-600 dark:text-green-400'
                       : stats.activeIncidents < 5 ? 'text-blue-600 dark:text-blue-400'
                       : stats.activeIncidents < 10 ? 'text-amber-600 dark:text-amber-400'
