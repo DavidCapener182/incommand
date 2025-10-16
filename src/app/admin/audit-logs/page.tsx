@@ -14,6 +14,14 @@ import {
 import { useRole } from '../../../hooks/useRole';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface AuditLog {
   id: string;
@@ -425,78 +433,104 @@ export default function AuditLogsPage() {
               <p className="mt-2 text-gray-600 dark:text-gray-300">Loading audit logs...</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="border border-gray-200 dark:border-[#2d437a] rounded-lg p-4 space-y-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2d437a] transition-colors"
-                  onClick={() => setSelectedLog(log)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        {getCategoryIcon(log.category ?? 'system')}
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{log.action}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(log.severity || 'low')}`}>
-                          {log.severity || 'low'}
-                        </span>
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
-                          {(log.category ?? 'system')}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                        <p><strong>User:</strong> {log.userName}</p>
-                        <p><strong>Resource:</strong> {log.resource} {log.resourceId && `(${log.resourceId})`}</p>
-                        <p><strong>Time:</strong> {formatTimestamp(log.created_at)}</p>
-                        {log.ip_address && (
-                          <p><strong>IP:</strong> {log.ip_address}</p>
-                        )}
-                        <p><strong>Details:</strong> {truncateText(JSON.stringify(log.details))}</p>
-                      </div>
-                    </div>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-100 dark:bg-[#1a2a57] border-b border-gray-200 dark:border-[#2d437a] hover:bg-gray-100 dark:hover:bg-[#1a2a57]">
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">Category</TableHead>
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">Action</TableHead>
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">User</TableHead>
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">Resource</TableHead>
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">Severity</TableHead>
+                    <TableHead className="text-gray-700 dark:text-blue-100 font-semibold">Timestamp</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-blue-100 font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs.length > 0 ? (
+                    filteredLogs.map((log, index) => (
+                      <TableRow
+                        key={log.id}
+                        className={`cursor-pointer transition-colors ${
+                          index % 2 === 0 
+                            ? 'bg-gray-50 dark:bg-[#1a2a4f]' 
+                            : 'bg-white dark:bg-[#23408e]'
+                        } hover:bg-gray-100 dark:hover:bg-[#2d437a] border-gray-200 dark:border-[#2d437a]`}
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getCategoryIcon(log.category ?? 'system')}
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
+                              {(log.category ?? 'system')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-900 dark:text-white">
+                          {log.action}
+                        </TableCell>
+                        <TableCell className="text-gray-900 dark:text-white">
+                          {log.userName}
+                        </TableCell>
+                        <TableCell className="text-gray-900 dark:text-white">
+                          {log.resource} {log.resourceId && <span className="text-gray-500 dark:text-gray-400">({log.resourceId})</span>}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(log.severity || 'low')}`}>
+                            {log.severity || 'low'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-gray-900 dark:text-white whitespace-nowrap">
+                          {formatTimestamp(log.created_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLog(log);
+                            }}
+                            className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No audit logs found matching your criteria.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Page {page} of {totalPages}
+                  </div>
+                  <div className="flex gap-2">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedLog(log);
-                      }}
-                      className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                      disabled={page === 1}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <EyeIcon className="w-4 h-4" />
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={page === totalPages}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
                     </button>
                   </div>
                 </div>
-              ))}
-              {filteredLogs.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No audit logs found matching your criteria.
-                </div>
               )}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Page {page} of {totalPages}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                  disabled={page === 1}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={page === totalPages}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            </>
           )}
         </div>
       </div>

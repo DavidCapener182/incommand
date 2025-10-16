@@ -32,6 +32,14 @@ import EnhancedSearch from './EnhancedSearch'
 import { useBestPractice } from '@/hooks/useBestPractice'
 import { featureFlags } from '@/config/featureFlags'
 import { BestPracticePayload } from '@/types/bestPractice'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 interface Incident {
   id: number
@@ -1246,161 +1254,166 @@ export default function IncidentTable({
           {/* Enhanced Desktop Table Layout */}
           <div
             ref={tableContainerRef}
-            className="hidden md:flex flex-col border border-gray-200 dark:border-[#2d437a] rounded-2xl overflow-y-auto scroll-smooth"
+            className="hidden md:block border border-gray-200 dark:border-[#2d437a] rounded-2xl"
             style={{
-              maxHeight: 'calc(100vh - 260px)'
+              height: 'calc(100vh - 260px)',
+              overflow: 'hidden'
             }}
           >
-            {/* Enhanced Desktop Table Header */}
-          <div className="sticky top-0 z-20 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
-              <div className="grid items-center w-full" style={{ gridTemplateColumns: '6% 6% 6% 25% 15% 35% 7%' }}>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Log/Time</div>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">From</div>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">To</div>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Occurrence</div>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Type</div>
-                <div className="px-3 py-2 text-left text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider">Action</div>
-                <div className="py-2 text-right text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider pr-3">Status</div>
-              </div>
-            </div>
-            
-            {/* Enhanced Desktop Table Body */}
-            <div className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
-              {sortedIncidents.map((incident, idx) => {
-                const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
-                const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
-                let rowColor = getRowStyle(incident);
-                if (rowColor === 'hover:bg-gray-50') {
-                  rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
-                }
-                return (
-                  <div
-                    key={incident.id} 
-                    className={`relative grid items-center px-0 py-2 cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg mx-2 my-0.5 ${
-                      isHighPriorityAndOpen(incident)
-                        ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
-                        : 'hover:border-blue-300 dark:hover:border-blue-500'
-                    }`}
-                    style={{ 
-                      gridTemplateColumns: '6% 6% 6% 25% 15% 35% 7%',
-                      minHeight: '40px'
-                    }}
-                    onClick={(e) => {
-                      // Only open modal if not clicking on a button
-                      if (!(e.target as HTMLElement).closest('button')) {
-                        handleIncidentClick(incident);
-                      }
-                    }}
-                  >
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex flex-col items-start gap-0.5">
-                      <div className="flex items-center gap-1">
-                        {isHighPriorityAndOpen(incident) && (
-                          <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
-                        )}
-                        <span className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold">
-                          {(() => {
-                            const match = incident.log_number.match(/(\d{3,})$/);
-                            return match ? match[1] : incident.log_number;
-                          })()}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                        {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex items-center">
-                      <span
-                        title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
-                        className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
-                      >
-                        {incident.callsign_from}
-                      </span>
-                    </div>
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex items-center">
-                      <span
-                        title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
-                        className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
-                      >
-                        {incident.callsign_to}
-                      </span>
-                    </div>
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex items-center leading-tight" style={{
-                      lineHeight: '1.3',
-                      maxHeight: '2.6em',
-                      overflow: 'hidden',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    }}>
-                      <span style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {incident.occurrence}
-                      </span>
-                    </div>
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex items-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
-                        <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
-                        <span>{incident.incident_type}</span>
-                      </span>
-                    </div>
-                    <div className="px-3 text-xs text-gray-600 dark:text-gray-300 flex items-center leading-tight" style={{
-                      lineHeight: '1.3',
-                      maxHeight: '2.6em',
-                      overflow: 'hidden',
-                      wordWrap: 'break-word',
-                      hyphens: 'auto'
-                    }}>
-                      <span style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {incident.action_taken}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 text-xs text-gray-600 dark:text-gray-300 pr-3">
-                      <div className="flex gap-1 items-center">
-                        <PriorityBadge priority={incident.priority} />
-                        {incident.entry_type === 'retrospective' && (
-                          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-semibold" title="Retrospective entry">
-                            🕓
-                          </span>
-                        )}
-                        {incident.is_amended && (
-                          <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold" title="This log has been amended">
-                            AMENDED
-                          </span>
-                        )}
-                      </div>
-                      {incident.incident_type === 'Attendance' ? (
-                        <span className="px-2 py-0.5 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
-                          Logged
-                        </span>
-                      ) : (
-                        <motion.button
-                          onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                          className={`px-2 py-0.5 inline-flex text-xs font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 touch-target ${
-                            incident.is_closed 
-                              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-                              : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
-                          }`}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+            <div 
+              className="overflow-auto"
+              style={{
+                height: '100%'
+              }}
+            >
+              <table className="w-full caption-bottom text-sm">
+                <thead className="sticky top-0 z-30 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
+                  <tr className="hover:bg-transparent border-none">
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">LOG</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">From</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">To</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[25%]">Occurrence</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[15%]">Type</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[35%]">Action</th>
+                    <th className="h-12 px-4 text-right align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[7%]">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                {sortedIncidents.map((incident, idx) => {
+                  const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
+                  const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
+                  let rowColor = getRowStyle(incident);
+                  if (rowColor === 'hover:bg-gray-50') {
+                    rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
+                  }
+                  return (
+                    <tr
+                      key={incident.id} 
+                      className={`cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
+                        isHighPriorityAndOpen(incident)
+                          ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
+                          : 'hover:border-blue-300 dark:hover:border-blue-500'
+                      }`}
+                      onClick={(e) => {
+                        // Only open modal if not clicking on a button
+                        if (!(e.target as HTMLElement).closest('button')) {
+                          handleIncidentClick(incident);
+                        }
+                      }}
+                    >
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
+                        <div className="flex flex-col items-start gap-0.5">
+                          <div className="flex items-center gap-1">
+                            {isHighPriorityAndOpen(incident) && (
+                              <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
+                            )}
+                            <span className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold">
+                              {(() => {
+                                const match = incident.log_number.match(/(\d{3,})$/);
+                                return match ? match[1] : incident.log_number;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                            {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
+                        <span
+                          title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
+                          className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
                         >
-                          {incident.is_closed ? 'Closed' : 'Open'}
-                        </motion.button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                          {incident.callsign_from}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
+                        <span
+                          title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
+                          className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                        >
+                          {incident.callsign_to}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-tight" style={{
+                        lineHeight: '1.3',
+                        maxHeight: '2.6em',
+                        overflow: 'hidden',
+                        wordWrap: 'break-word',
+                        hyphens: 'auto'
+                      }}>
+                        <span style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {incident.occurrence}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                          <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
+                          <span>{incident.incident_type}</span>
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-tight" style={{
+                        lineHeight: '1.3',
+                        maxHeight: '2.6em',
+                        overflow: 'hidden',
+                        wordWrap: 'break-word',
+                        hyphens: 'auto'
+                      }}>
+                        <span style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {incident.action_taken}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                        <div className="flex flex-col items-end gap-1 text-xs text-gray-600 dark:text-gray-300">
+                          <div className="flex gap-1 items-center">
+                            <PriorityBadge priority={incident.priority} />
+                            {incident.entry_type === 'retrospective' && (
+                              <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-semibold" title="Retrospective entry">
+                                🕓
+                              </span>
+                            )}
+                            {incident.is_amended && (
+                              <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold" title="This log has been amended">
+                                AMENDED
+                              </span>
+                            )}
+                          </div>
+                          {incident.incident_type === 'Attendance' ? (
+                            <span className="px-2 py-0.5 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
+                              Logged
+                            </span>
+                          ) : (
+                            <motion.button
+                              onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                              className={`px-2 py-0.5 inline-flex text-xs font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 touch-target ${
+                                incident.is_closed 
+                                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                                  : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
+                              }`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {incident.is_closed ? 'Closed' : 'Open'}
+                            </motion.button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                </tbody>
+              </table>
             </div>
-            
-
           </div>
           
           {isDetailsModalOpen && selectedIncidentId && (
