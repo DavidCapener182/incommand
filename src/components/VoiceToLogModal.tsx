@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from './ui/button'
 import { 
   MicrophoneIcon, 
   StopIcon, 
@@ -372,37 +373,45 @@ export default function VoiceToLogModal({ isOpen, onClose, onIncidentExtracted }
           <div className="flex gap-3 pt-4">
             {!extractedData ? (
               <>
-                <button
+                <Button
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  variant="outline"
+                  size="md"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
+                </Button>
                 {transcript && !isListening && (
-                  <button
+                  <Button
                     onClick={processTranscript}
                     disabled={isProcessing}
-                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                    variant="primary"
+                    size="md"
+                    className="flex-1"
                   >
                     {isProcessing ? 'Processing...' : 'Process Voice Input'}
-                  </button>
+                  </Button>
                 )}
               </>
             ) : (
               <>
-                <button
+                <Button
                   onClick={handleRetry}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  variant="outline"
+                  size="md"
+                  className="flex-1"
                 >
                   Retry
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleConfirm}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                  variant="primary"
+                  size="md"
+                  className="flex-1"
                 >
                   <CheckIcon className="h-5 w-5" />
                   Confirm & Create Incident
-                </button>
+                </Button>
               </>
             )}
           </div>

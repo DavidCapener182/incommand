@@ -7,6 +7,7 @@ import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from './ui/button';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -964,13 +965,14 @@ export default function StaffCommandCentre() {
                 </div>
 
                 <div className="mt-6 flex justify-between items-center">
-                  <button
+                  <Button
                     onClick={handleSaveAll}
                     disabled={saving}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="primary"
+                    size="md"
                   >
                     {saving ? "Saving..." : "Save All Assignments"}
-                  </button>
+                  </Button>
                   {saveStatus && (
                     <span className="text-sm text-gray-600 dark:text-gray-400">{saveStatus}</span>
                   )}

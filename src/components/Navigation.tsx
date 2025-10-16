@@ -8,14 +8,36 @@ import { useAuth } from '../contexts/AuthContext'
 import { ROLES } from '../types/auth'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
-import ProfileCard from './ProfileCard'
+import ProfileMenu from './ProfileMenu'
 import NotificationDrawer from './NotificationDrawer'
-import './ProfileCard.css'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from './ui/navigation-menu'
 
 const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
+
+// Helper component for navigation list items
+function ListItem({ title, children, href, ...props }: React.ComponentPropsWithoutRef<'li'> & { href: string }) {
+  return (
+    <li {...props}>
+      <NavigationMenuLink asChild>
+        <Link href={href}>
+          <div className="text-sm leading-none font-medium">{title}</div>
+          <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">{children}</p>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+}
 
 function getRandomGreeting() {
   if (typeof window !== 'undefined') {
@@ -68,9 +90,9 @@ function useTheme() {
 export default function Navigation() {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
-  const [reportsOpen, setReportsOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [showNoEventModal, setShowNoEventModal] = useState(false);
   const [showEventCreation, setShowEventCreation] = useState(false);
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean | null>(null);
@@ -194,11 +216,10 @@ export default function Navigation() {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         setMobileMenuOpen(false);
       }
-      if (profileDropdownOpen) setProfileDropdownOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [mobileMenuOpen, profileDropdownOpen]);
+  }, [mobileMenuOpen]);
 
   // Get last viewed timestamp for filtering notifications
   const getLastViewedTimestamp = () => {
@@ -294,78 +315,143 @@ export default function Navigation() {
                 />
               </Link>
               {/* Desktop Nav */}
-              <div className="hidden xl:ml-12 xl:flex xl:space-x-12 items-center">
-                <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Incidents
-                </Link>
-                {/* Reports Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      if (!hasCurrentEvent) {
-                        setShowNoEventModal(true);
-                        return;
-                      }
-                      setReportsOpen((open) => !open);
-                    }}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium focus:outline-none ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? 'border-red-500 text-white' : 'border-transparent text-white hover:border-white hover:text-gray-100'} ${!hasCurrentEvent ? 'opacity-50' : ''}`}
-                    aria-haspopup="true"
-                    aria-expanded={reportsOpen}
-                  >
-                    Reports
-                    <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {reportsOpen && hasCurrentEvent && (
-                    <div className="absolute left-0 mt-2 w-48 bg-white rounded shadow-lg z-10">
-                      <Link href="/analytics" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setReportsOpen(false)}>Analytics</Link>
-                      <Link href="/reports" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setReportsOpen(false)}>End of Event Report</Link>
-                    </div>
-                  )}
-                </div>
-                <Link 
-                  href="/staffing" 
-                  className={`${isActive('/staffing')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${!hasCurrentEvent ? 'opacity-50' : ''}`}
-                >
-                  Staff
-                </Link>
-                <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Help & Glossary
-                </Link>
-                <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Settings
-                </Link>
-                {/* More Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setMoreOpen((open) => !open)}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium focus:outline-none ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') ? 'border-red-500 text-white' : 'border-transparent text-white hover:border-white hover:text-gray-100'}`}
-                    aria-haspopup="true"
-                    aria-expanded={moreOpen}
-                  >
-                    More
-                    <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {moreOpen && (
-                    <div className="absolute left-0 mt-2 w-48 bg-white rounded shadow-lg z-10">
-                      <Link href="/features" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Features</Link>
-                      <Link href="/pricing" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Pricing</Link>
-                      <Link href="/about" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>About</Link>
-                      <Link href="/blog" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Blog</Link>
-                      <Link href="/careers" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Careers</Link>
-                      <Link href="/status" className="block px-4 py-2 text-gray-800 hover:bg-gray-100" onClick={() => setMoreOpen(false)}>Status</Link>
-                    </div>
-                  )}
-                </div>
-                {/* Admin Button - only show for admin users */}
-                {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-                  <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                    Admin
-                  </Link>
-                )}
+              <div className="hidden xl:ml-16 xl:flex xl:items-center">
+                <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                  <NavigationMenuList className="gap-8">
+                    <NavigationMenuItem>
+                      <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                        Incidents
+                      </Link>
+                    </NavigationMenuItem>
+                    
+                    {/* Reports Dropdown */}
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger 
+                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500' : ''} ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                        onClick={() => {
+                          if (!hasCurrentEvent) {
+                            setShowNoEventModal(true);
+                            return;
+                          }
+                        }}
+                      >
+                        Reports
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent className="!bg-[#2A3990] !border-[#1e2a6a] !text-white" style={{ backgroundColor: '#2A3990', borderColor: '#1e2a6a' }}>
+                        <ul className="grid w-[300px] gap-4 p-4">
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/analytics" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Analytics</div>
+                                <div className="text-gray-200">View event analytics and insights.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/reports" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">End of Event Report</div>
+                                <div className="text-gray-200">Generate comprehensive event reports.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <Link 
+                        href="/staffing" 
+                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                      >
+                        Staff
+                      </Link>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                        Help & Glossary
+                      </Link>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                        Settings
+                      </Link>
+                    </NavigationMenuItem>
+
+                    {/* More Dropdown */}
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger 
+                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') ? '!border-red-500' : ''}`}
+                      >
+                        More
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent className="!bg-[#2A3990] !border-[#1e2a6a] !text-white" style={{ backgroundColor: '#2A3990', borderColor: '#1e2a6a' }}>
+                        <ul className="grid w-[300px] gap-4 p-4">
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/features" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Features</div>
+                                <div className="text-gray-200">Explore all platform features.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/pricing" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Pricing</div>
+                                <div className="text-gray-200">View pricing plans and options.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/about" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">About</div>
+                                <div className="text-gray-200">Learn about our company and mission.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/blog" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Blog</div>
+                                <div className="text-gray-200">Read our latest blog posts.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/careers" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Careers</div>
+                                <div className="text-gray-200">Join our team.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/status" className="block p-2 rounded hover:bg-[#3b4a9b] transition-colors">
+                                <div className="font-medium text-white">Status</div>
+                                <div className="text-gray-200">Check system status and uptime.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+
+                    {/* Admin Button - only show for admin users */}
+                    {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+                      <NavigationMenuItem>
+                        <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                          Admin
+                        </Link>
+                      </NavigationMenuItem>
+                    )}
+                  </NavigationMenuList>
+                </NavigationMenu>
+
                 {/* Theme Toggle Button */}
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -497,24 +583,42 @@ export default function Navigation() {
           >
             <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
 
-            <button
-              onClick={() => {
-                if (!hasCurrentEvent) {
-                  setShowNoEventModal(true);
-                  return;
-                }
-                setReportsOpen((open) => !open);
-              }}
-              className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent ? 'opacity-50' : ''}`}
-            >
-              Reports
-            </button>
-            {reportsOpen && hasCurrentEvent && (
-              <div className="pl-4 space-y-1 py-2">
-                <Link href="/analytics" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Analytics</Link>
-                <Link href="/reports" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>End of Event Report</Link>
-              </div>
-            )}
+            {/* Reports Dropdown for Mobile */}
+            <div>
+              <button
+                onClick={() => {
+                  if (!hasCurrentEvent) {
+                    setShowNoEventModal(true);
+                    return;
+                  }
+                  setMobileReportsOpen(!mobileReportsOpen);
+                }}
+                className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              >
+                <span>Reports</span>
+                <svg className={`w-5 h-5 transition-transform duration-200 ${mobileReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {mobileReportsOpen && hasCurrentEvent && (
+                <div className="pl-6 space-y-1 py-2">
+                  <Link 
+                    href="/analytics" 
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Analytics
+                  </Link>
+                  <Link 
+                    href="/reports" 
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    End of Event Report
+                  </Link>
+                </div>
+              )}
+            </div>
 
             <Link 
               href="/staffing" 
@@ -526,22 +630,28 @@ export default function Navigation() {
             <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help & Glossary</Link>
             <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
             
-            <button
-              onClick={() => setMoreOpen((open) => !open)}
-              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center"
-            >
-              More
-            </button>
-            {moreOpen && (
-              <div className="pl-4 space-y-1 py-2">
-                <Link href="/features" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Features</Link>
-                <Link href="/pricing" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
-                <Link href="/about" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>About</Link>
-                <Link href="/blog" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                <Link href="/careers" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Careers</Link>
-                <Link href="/status" className="touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center" onClick={() => setMobileMenuOpen(false)}>Status</Link>
-              </div>
-            )}
+            {/* More Dropdown for Mobile */}
+            <div>
+              <button
+                onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+                className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between"
+              >
+                <span>More</span>
+                <svg className={`w-5 h-5 transition-transform duration-200 ${mobileMoreOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {mobileMoreOpen && (
+                <div className="pl-6 space-y-1 py-2">
+                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
+                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>About</Link>
+                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
+                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
+                </div>
+              )}
+            </div>
             
             {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
               <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
@@ -677,12 +787,12 @@ export default function Navigation() {
       
       {showProfileCard && user && profile && (
         <>
-          {/* Overlay to close the card when clicking outside */}
+          {/* Overlay to close the menu when clicking outside */}
           <div
             className="fixed inset-0 bg-black bg-opacity-30 z-40"
             onClick={() => setShowProfileCard(false)}
           />
-          {/* Dropdown ProfileCard below profile photo, fully inside screen */}
+          {/* Dropdown ProfileMenu below profile photo, fully inside screen */}
           <div
             className="fixed z-50"
             style={{
@@ -699,21 +809,7 @@ export default function Navigation() {
             }}
           >
             <div style={{ pointerEvents: 'auto', width: '100%' }}>
-        <ProfileCard 
-          name={profile.full_name || 'User'}
-          title={profile.company || 'No company'}
-          handle={user.email}
-          status="Online"
-          contactText="Edit Profile"
-          avatarUrl={profile.avatar_url || ''}
-          showUserInfo={true}
-          enableTilt={true}
-                className=""
-          onContactClick={() => {
-             setShowProfileCard(false);
-             router.push('/profile');
-           }}
-        />
+              <ProfileMenu />
             </div>
           </div>
         </>

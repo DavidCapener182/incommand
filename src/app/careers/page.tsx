@@ -101,7 +101,7 @@ export default function CareersPage() {
             </span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-            We're building a talented team passionate about creating tools that make events safer and more efficient.
+            We&apos;re building a talented team passionate about creating tools that make events safer and more efficient.
           </p>
         </motion.div>
       </div>
@@ -261,10 +261,10 @@ export default function CareersPage() {
           className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg p-8 sm:p-12 text-center"
         >
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Don't See the Right Role?
+            Don&apos;t See the Right Role?
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-            We're always looking for talented people. Send us your CV and tell us how you'd like to contribute.
+            We&apos;re always looking for talented people. Send us your CV and tell us how you&apos;d like to contribute.
           </p>
           <a
             href="mailto:careers@incommand.uk?subject=General Application"

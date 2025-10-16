@@ -8,6 +8,7 @@ import Link from "next/link";
 import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
 const RadioSignOut = dynamic(() => import('../radio-sign-out/page'), { ssr: false });
 
 // Initial groupings and roles as per user specification
@@ -912,18 +913,30 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
 
             {/* Enhanced Action Buttons */}
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowAddPositionModal(true)} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg shadow">
+              <Button 
+                onClick={() => setShowAddPositionModal(true)} 
+                variant="primary"
+                size="sm"
+              >
                 <PlusIcon className="w-4 h-4" />
                 Position
-              </button>
-              <button onClick={() => setShowAddCategoryModal(true)} className="inline-flex items-center gap-1.5 bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a] py-2 px-3 rounded-lg shadow-sm hover:shadow">
+              </Button>
+              <Button 
+                onClick={() => setShowAddCategoryModal(true)} 
+                variant="outline"
+                size="sm"
+              >
                 <PlusIcon className="w-4 h-4" />
                 Department
-              </button>
-              <button onClick={() => setBulkMode(!bulkMode)} className={`inline-flex items-center gap-1.5 py-2 px-3 rounded-lg shadow-sm hover:shadow ${bulkMode ? 'bg-green-600 text-white' : 'bg-white dark:bg-[#23408e] text-gray-700 dark:text-white border border-gray-200 dark:border-[#2d437a]'}`}>
+              </Button>
+              <Button 
+                onClick={() => setBulkMode(!bulkMode)} 
+                variant={bulkMode ? "primary" : "outline"}
+                size="sm"
+              >
                 <Squares2X2Icon className="w-4 h-4" />
                 Bulk Mode
-              </button>
+              </Button>
             </div>
           </div>
             </div>

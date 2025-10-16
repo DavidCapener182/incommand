@@ -97,7 +97,7 @@ export default function AboutPage() {
             Our Mission
           </h2>
           <p className="text-lg text-gray-700 dark:text-gray-300 text-center max-w-4xl mx-auto mb-6">
-            We empower event teams to respond faster, communicate better, and keep events safe. Through innovative technology and AI-powered insights, we're transforming how incidents are managed and how event safety is maintained.
+            We empower event teams to respond faster, communicate better, and keep events safe. Through innovative technology and AI-powered insights, we&apos;re transforming how incidents are managed and how event safety is maintained.
           </p>
           <p className="text-lg text-gray-700 dark:text-gray-300 text-center max-w-4xl mx-auto">
             From small community gatherings to large-scale festivals, InCommand provides the tools that safety teams need to protect attendees and ensure successful events.
