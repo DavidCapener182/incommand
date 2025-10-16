@@ -149,13 +149,6 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg font-semibold tracking-tight">
             <span>Incident Summary</span>
-            <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-              </span>
-              LIVE
-            </span>
           </CardTitle>
           <CardDescription>{formattedUpdated}</CardDescription>
         </CardHeader>

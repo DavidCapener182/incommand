@@ -782,7 +782,7 @@ export default function IncidentTable({
   useEffect(() => {
     const handleScroll = () => {
       if (tableContainerRef.current) {
-
+        // Handle scroll logic here if needed
       }
     };
     const ref = tableContainerRef.current;
@@ -1103,11 +1103,9 @@ export default function IncidentTable({
             </AnimatePresence>
 
             {/* Enhanced Mobile Table Header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] flex items-center px-3 py-2.5 text-[10px] sm:text-xs font-bold text-white dark:text-gray-100 uppercase tracking-wider shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
-              <div className="basis-[28%]">Log #</div>
-              <div className="basis-[24%] text-center">Type</div>
-              <div className="basis-[24%] text-center">Time</div>
-              <div className="basis-[24%] text-right">Status</div>
+            <div className="sticky top-0 z-10 bg-[#f8f9fb] dark:bg-[#1a1f2d] flex items-center px-3 py-2.5 text-[10px] sm:text-xs font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider shadow-sm border-b border-border/60">
+              <div className="basis-[50%]">Log #</div>
+              <div className="basis-[50%] text-right">Status</div>
             </div>
             
             {sortedIncidents.map((incident) => {
@@ -1161,15 +1159,11 @@ export default function IncidentTable({
                       🕓
                     </span>
                   )}
-                  {incident.is_amended && (
-                    <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded font-bold" title="This log has been amended">
-                      AMENDED
-                    </span>
-                  )}
                 </div>
                 <div className="p-3 space-y-1">
-                  {/* Compact Header Row - All metadata on one line */}
-                  <div className="flex items-center justify-between">
+                  {/* Top Row: Log # + Icon + Type Name (Left), Time (Center), Status Chips (Right) */}
+                  <div className="flex items-center justify-between w-full">
+                    {/* Left Group: Log #, Icon, Type Name, Priority Pin */}
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                         {(() => {
@@ -1178,34 +1172,51 @@ export default function IncidentTable({
                         })()}
                       </span>
                       <IncidentTypeIcon size={16} aria-hidden className="w-4 h-4 text-gray-400" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{incident.incident_type}</span>
                       {isHighPriorityAndOpen(incident) && (
                         <MapPinIcon className="h-4 w-4 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="text-sm">
+
+                    {/* Center: Time */}
+                    <div className="flex-grow text-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </span>
+                    </div>
+
+                    {/* Right Group: Status Chips - Fixed spacing to prevent overlap */}
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       {incident.incident_type !== 'Attendance' && (
                         <PriorityBadge priority={incident.priority} />
                       )}
-                      {incident.incident_type === 'Attendance' ? (
-                        <span className="px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
-                          Logged
-                        </span>
-                      ) : (
+                      {incident.is_amended && (
                         <motion.span
-                          className={`px-2 py-1 rounded-full text-xs font-bold cursor-pointer shadow-sm transition-all duration-200 ${
-                            incident.is_closed 
-                              ? 'bg-gradient-to-r from-green-500 to-green-600 text-white active:from-green-600 active:to-green-700' 
-                              : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white active:from-yellow-600 active:to-yellow-700'
-                          }`}
-                          onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                          className="px-2 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm"
+                          title="This log has been amended"
                         >
-                          {incident.is_closed ? 'Closed' : 'Open'}
+                          AMENDED
                         </motion.span>
+                      )}
+                      {incident.incident_type === 'Attendance' ? (
+                        // Hide "Logged" chip for Attendance incidents
+                        null
+                      ) : (
+                        // Hide "Closed" chip, only show "Open" chip
+                        !incident.is_closed && (
+                          <motion.span
+                            className="px-2 py-1 rounded-full text-xs font-bold cursor-pointer shadow-sm transition-all duration-200 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white active:from-yellow-600 active:to-yellow-700"
+                            onClick={e => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            Open
+                          </motion.span>
+                        )
                       )}
                     </div>
                   </div>
@@ -1215,10 +1226,7 @@ export default function IncidentTable({
                     Occurrence
                   </div>
                   <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">
-                    {incident.occurrence.length > 120 
-                      ? `${incident.occurrence.substring(0, 120)}...` 
-                      : incident.occurrence
-                    }
+                    {incident.occurrence}
                   </p>
                   
                   {expandedIncidentId === incident.id && (
@@ -1266,16 +1274,16 @@ export default function IncidentTable({
                 height: '100%'
               }}
             >
-              <table className="w-full caption-bottom text-sm">
-                <thead className="sticky top-0 z-30 bg-gradient-to-r from-gray-600 to-gray-700 dark:from-[#1e293b] dark:to-[#334155] shadow-sm border-b border-gray-200 dark:border-[#2d437a]">
+              <table className="w-full caption-bottom text-sm table-fixed">
+                <thead className="sticky top-0 z-30 bg-[#f8f9fb] dark:bg-[#1a1f2d] shadow-sm border-b border-border/60">
                   <tr className="hover:bg-transparent border-none">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">LOG</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">From</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[6%]">To</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[25%]">Occurrence</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[15%]">Type</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[35%]">Action</th>
-                    <th className="h-12 px-4 text-right align-middle font-medium text-white dark:text-gray-100 font-bold uppercase tracking-wider w-[7%]">Status</th>
+                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[3%] border-b border-border/60 border-r border-border/30">LOG</th>
+                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">From</th>
+                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">To</th>
+                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[48%] xl:flex-grow border-b border-border/60 border-r border-border/30">Occurrence</th>
+                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60 border-r border-border/30">Type</th>
+                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[23%] xl:flex-grow border-b border-border/60 border-r border-border/30">Action</th>
+                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
@@ -1289,7 +1297,7 @@ export default function IncidentTable({
                   return (
                     <tr
                       key={incident.id} 
-                      className={`cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
+                      className={`cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
                         isHighPriorityAndOpen(incident)
                           ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
                           : 'hover:border-blue-300 dark:hover:border-blue-500'
@@ -1301,9 +1309,9 @@ export default function IncidentTable({
                         }
                       }}
                     >
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
-                        <div className="flex flex-col items-start gap-0.5">
-                          <div className="flex items-center gap-1">
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && (
                               <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
                             )}
@@ -1314,28 +1322,52 @@ export default function IncidentTable({
                               })()}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">
                             {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
-                        <span
-                          title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
-                          className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
-                        >
-                          {incident.callsign_from}
-                        </span>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                        <div className="max-w-[80px] mx-auto">
+                          <span
+                            title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
+                            className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
+                              lineHeight: '1.3',
+                              textAlign: 'center'
+                            }}
+                          >
+                            {incident.callsign_from}
+                          </span>
+                        </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
-                        <span
-                          title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
-                          className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
-                        >
-                          {incident.callsign_to}
-                        </span>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                        <div className="max-w-[80px] mx-auto">
+                          <span
+                            title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
+                            className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
+                              lineHeight: '1.3',
+                              textAlign: 'center'
+                            }}
+                          >
+                            {incident.callsign_to}
+                          </span>
+                        </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-tight" style={{
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1351,13 +1383,15 @@ export default function IncidentTable({
                           {incident.occurrence}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
-                          <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
-                          <span>{incident.incident_type}</span>
-                        </span>
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                        <div className="flex items-center justify-center">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                            <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
+                            <span>{incident.incident_type}</span>
+                          </span>
+                        </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-tight" style={{
+                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1373,38 +1407,51 @@ export default function IncidentTable({
                           {incident.action_taken}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-right">
-                        <div className="flex flex-col items-end gap-1 text-xs text-gray-600 dark:text-gray-300">
-                          <div className="flex gap-1 items-center">
+                      <td className="p-4 align-middle text-center">
+                        <div className="flex flex-col items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                          <div className="flex flex-wrap gap-1.5 items-center justify-center">
                             <PriorityBadge priority={incident.priority} />
                             {incident.entry_type === 'retrospective' && (
-                              <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-semibold" title="Retrospective entry">
+                              <motion.span 
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded-full font-semibold" 
+                                title="Retrospective entry"
+                              >
                                 🕓
-                              </span>
+                              </motion.span>
                             )}
                             {incident.is_amended && (
-                              <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold" title="This log has been amended">
+                              <motion.span 
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold" 
+                                title="This log has been amended"
+                              >
                                 AMENDED
-                              </span>
+                              </motion.span>
                             )}
                           </div>
                           {incident.incident_type === 'Attendance' ? (
-                            <span className="px-2 py-0.5 inline-flex text-xs font-bold rounded-full bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-sm">
-                              Logged
-                            </span>
+                            // Hide "Logged" chip for Attendance incidents (desktop/tablet only)
+                            null
                           ) : (
-                            <motion.button
-                              onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
-                              className={`px-2 py-0.5 inline-flex text-xs font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 touch-target ${
-                                incident.is_closed 
-                                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-                                  : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700'
-                              }`}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              {incident.is_closed ? 'Closed' : 'Open'}
-                            </motion.button>
+                            // Hide "Closed" chip, only show "Open" chip
+                            !incident.is_closed && (
+                              <motion.button
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                onClick={(e) => { e.stopPropagation(); toggleIncidentStatus(incident, e); }}
+                                className="px-2 py-0.5 inline-flex text-xs font-bold rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 touch-target bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                Open
+                              </motion.button>
+                            )
                           )}
                         </div>
                       </td>
@@ -1424,15 +1471,15 @@ export default function IncidentTable({
             />
           )}
           </div>
-          
-          {/* Stats Sidebar */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
-            <IncidentStatsSidebar 
-              incidents={sortedIncidents}
-            />
-          </div>
         </div>
           )}
+        
+        {/* Stats Sidebar - Below table on smaller screens, hidden on desktop */}
+        <div className="block lg:hidden mt-6">
+          <IncidentStatsSidebar 
+            incidents={sortedIncidents}
+          />
+        </div>
         </>
       ) : viewMode === 'board' ? (
         <>

@@ -18,12 +18,20 @@ interface Event {
   event_brief?: string
 }
 
+interface EventTiming {
+  title: string
+  time: string
+  isNext?: boolean
+  isActuallyHappeningNow?: boolean
+}
+
 interface CurrentEventProps {
   currentTime?: string;
   currentEvent: Event | null;
   loading: boolean;
   error: string | null;
   onEventCreated: () => void;
+  eventTimings: EventTiming[];
 }
 
 interface AIInsight {
@@ -37,6 +45,7 @@ export default function CurrentEvent({
   loading,
   error,
   onEventCreated,
+  eventTimings,
 }: CurrentEventProps) {
   const [showModal, setShowModal] = useState(false)
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([])
@@ -44,6 +53,31 @@ export default function CurrentEvent({
   const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState<string | null>(null)
   const [autoAdvance, setAutoAdvance] = useState(true)
+
+  // Function to check if current time is between first and last event timing
+  const isEventLive = () => {
+    if (!eventTimings || eventTimings.length === 0) return false
+    
+    const now = new Date()
+    const today = now.toDateString()
+    
+    // Get first and last timing
+    const sortedTimings = [...eventTimings].sort((a, b) => {
+      const timeA = new Date(`${today} ${a.time}`).getTime()
+      const timeB = new Date(`${today} ${b.time}`).getTime()
+      return timeA - timeB
+    })
+    
+    if (sortedTimings.length === 0) return false
+    
+    const firstTiming = sortedTimings[0]
+    const lastTiming = sortedTimings[sortedTimings.length - 1]
+    
+    const startTime = new Date(`${today} ${firstTiming.time}`)
+    const endTime = new Date(`${today} ${lastTiming.time}`)
+    
+    return now >= startTime && now <= endTime
+  }
 
   // Function to extract a title from a paragraph
   const extractTitleFromParagraph = (paragraph: string): string => {
@@ -230,13 +264,15 @@ export default function CurrentEvent({
                   <div>
                     <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
                       Current Event
-                      <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+                      {isEventLive() && (
+                        <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+                          </span>
+                          LIVE
                         </span>
-                        LIVE
-                      </span>
+                      )}
                     </CardTitle>
                     <CardDescription className="mt-1">
                       <span className="text-base font-semibold text-gray-900 dark:text-white">

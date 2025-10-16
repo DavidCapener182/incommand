@@ -185,13 +185,6 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             Current Time
-            <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-              </span>
-              LIVE
-            </span>
           </CardTitle>
           <CardDescription>Time Since Last Incident</CardDescription>
         </CardHeader>
@@ -1342,7 +1335,7 @@ export default function Dashboard() {
           Event Overview
         </h3>
         {/* Desktop view */}
-        <section className="hidden md:block rounded-2xl bg-gray-50/70 dark:bg-[#1a1f3d]/60 p-4 border border-gray-100 dark:border-gray-800">
+        <section className="hidden md:block rounded-2xl bg-gray-100/70 dark:bg-[#1a1f3d]/60 p-4 border border-gray-100 dark:border-gray-800">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           <CurrentEvent
             currentTime={currentTime}
@@ -1350,6 +1343,7 @@ export default function Dashboard() {
             loading={loadingCurrentEvent}
             error={error}
             onEventCreated={fetchCurrentEvent}
+            eventTimings={eventTimings}
           />
           {loadingCurrentEvent ? (
             <TimeCardSkeleton />
@@ -1428,7 +1422,7 @@ export default function Dashboard() {
       </div>
 
       {/* Incident Dashboard */}
-      <div className="mb-4 rounded-2xl bg-gray-50/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
+      <div className="mb-4 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
         <div className="mb-3 flex flex-col gap-3">
           <div>
             <h2
@@ -1466,13 +1460,13 @@ export default function Dashboard() {
         )}
 
         <div className="mt-4 space-y-6">
-          <section className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
-            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#15192c]/60 sm:-mx-5 sm:px-5 sm:pt-5">
+          <section className="rounded-2xl border border-gray-100 bg-gray-100/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
+            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#101426]/60 sm:-mx-5 sm:px-5 sm:pt-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Operational Metrics
               </h3>
             </div>
-            <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 md:mb-8">
+            <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 pt-2 md:mb-8">
               {loadingCurrentEvent ? (
                 Array.from({ length: 8 }).map((_, index) => <StatCardSkeleton key={index} />)
               ) : (
@@ -1616,12 +1610,16 @@ export default function Dashboard() {
 
           <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-200/60 to-transparent dark:via-gray-700/40" />
 
-          <section className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
-            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#15192c]/60 sm:-mx-5 sm:px-5 sm:pt-5">
+          <section className="rounded-2xl border border-gray-100 bg-gray-100/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
+            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#101426]/60 sm:-mx-5 sm:px-5 sm:pt-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Support Tools
               </h3>
             </div>
+            
+            {/* Subtle dividing line above Support Tools cards */}
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-200/60 to-transparent dark:via-gray-700/40 mb-2" />
+            
             <div>
               <div className="mb-4 block md:hidden">
                 {loadingCurrentEvent ? (
@@ -1639,7 +1637,7 @@ export default function Dashboard() {
                   </motion.div>
                 )}
               </div>
-              <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
                 {loadingCurrentEvent ? (
                   Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
                 ) : (
@@ -1721,15 +1719,21 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Visual separator and spacing above incident table section */}
+      <div className="mt-8 lg:mt-10">
+        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border/60 to-transparent dark:via-gray-700/40" />
+      </div>
+
       {/* Incident Table and Staff Deployment */}
-        <main 
-          id="main-content" 
-          className=""
-          role="main"
-          aria-label="Incident logs"
-          tabIndex={-1}
-        >
-          <div id="incidents-table" className="">
+      <main 
+        id="main-content" 
+        className="mt-8 lg:mt-10"
+        role="main"
+        aria-label="Incident logs"
+        tabIndex={-1}
+      >
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-background dark:bg-[#101426] dark:border-[#1c2333]">
+          <CardContent className="p-0">
             <IncidentTable
               key={refreshKey}
               filters={filters}
@@ -1742,10 +1746,11 @@ export default function Dashboard() {
               currentEventId={currentEventId || undefined}
               currentEvent={currentEvent}
             />
-          </div>
-          
-          {/* Staff Deployment Overview hidden intentionally */}
-        </main>
+          </CardContent>
+        </Card>
+        
+        {/* Staff Deployment Overview hidden intentionally */}
+      </main>
 
         <IncidentCreationModal
           isOpen={isIncidentModalOpen}

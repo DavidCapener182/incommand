@@ -215,11 +215,15 @@ export function formatDualTimestamp(
   timeLogged: string,
   entryType: EntryType
 ): DualTimestamp {
-  const occurred = new Date(timeOfOccurrence)
-  const logged = new Date(timeLogged)
+  const occurredDate = new Date(timeOfOccurrence)
+  const loggedDate = new Date(timeLogged)
 
-  const deltaMs = logged.getTime() - occurred.getTime()
-  const deltaMinutes = Math.floor(deltaMs / (1000 * 60))
+  const occurredInvalid = Number.isNaN(occurredDate.getTime())
+  const loggedInvalid = Number.isNaN(loggedDate.getTime())
+
+  const deltaMinutes = occurredInvalid || loggedInvalid
+    ? 0
+    : Math.floor((loggedDate.getTime() - occurredDate.getTime()) / (1000 * 60))
 
   const formatOptions: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
@@ -230,9 +234,16 @@ export function formatDualTimestamp(
     year: 'numeric'
   }
 
+  const occurred = occurredInvalid
+    ? 'Timestamp unavailable'
+    : occurredDate.toLocaleString('en-GB', formatOptions)
+  const logged = loggedInvalid
+    ? 'Timestamp unavailable'
+    : loggedDate.toLocaleString('en-GB', formatOptions)
+
   return {
-    occurred: occurred.toLocaleString('en-GB', formatOptions),
-    logged: logged.toLocaleString('en-GB', formatOptions),
+    occurred,
+    logged,
     deltaMinutes,
     isRetrospective: entryType === 'retrospective',
     entryType
@@ -249,19 +260,24 @@ export function formatAmendmentDiff(revision: LogRevisionWithDetails): Amendment
     return String(value)
   }
 
+  const changedAtDate = new Date(revision.changed_at)
+  const changedAt = Number.isNaN(changedAtDate.getTime())
+    ? 'Timestamp unavailable'
+    : changedAtDate.toLocaleString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+
   return {
     field: FIELD_LABELS[revision.field_changed as AmendableField] || revision.field_changed,
     oldValue: formatValue(revision.old_value),
     newValue: formatValue(revision.new_value),
     changedBy: revision.changed_by_name || revision.changed_by_email || 'Unknown',
-    changedAt: new Date(revision.changed_at).toLocaleString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }),
+    changedAt,
     reason: revision.change_reason,
     changeType: revision.change_type
   }
@@ -550,4 +566,3 @@ export function getAmendmentBadgeConfig(
     tooltip: `This log has been amended ${revisionCount} time${revisionCount === 1 ? '' : 's'}`
   }
 }
-

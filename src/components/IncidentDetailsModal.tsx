@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
@@ -18,6 +19,7 @@ import {
   MapPinIcon,
   ClipboardDocumentIcon
 } from '@heroicons/react/24/outline'
+import { motion, AnimatePresence } from 'framer-motion'
 import PriorityBadge from './PriorityBadge'
 import EscalationModal, { type EscalationResponse } from './EscalationModal'
 import IncidentRevisionHistory from './IncidentRevisionHistory'
@@ -103,6 +105,12 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [isAmendmentModalOpen, setIsAmendmentModalOpen] = useState(false)
   const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false)
   const [revisionCount, setRevisionCount] = useState(0)
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return 'Timestamp unavailable'
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? 'Timestamp unavailable' : date.toLocaleString()
+  }
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -442,116 +450,143 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     );
   };
 
+  // Scroll lock effect
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = 'unset'
+      }
+    }
+  }, [isOpen])
+
+  // Keyboard accessibility - Escape key to close
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose()
+      }
+    }
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape)
+      return () => document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm"
+          onClick={(e) => {
+            // Close modal when clicking backdrop
+            if (e.target === e.currentTarget) {
+              onClose()
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-card border border-border/60 rounded-2xl shadow-xl max-w-[1280px] w-[92%] sm:w-[95%] mx-auto relative overflow-hidden flex flex-col"
+            style={{
+              transform: 'translateY(-2%)',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+              maxHeight: '94vh',
+              height: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <DocumentTextIcon className="h-6 w-6" />
-              <div>
-                <h2 className="text-xl font-bold">
-                  Incident #{incident?.log_number}
-                </h2>
-                <div className="flex items-center gap-2 text-blue-100 text-sm flex-wrap">
-                  <span>{incident?.incident_type}</span>
-                  {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type && (
-                    <>
-                      <span>•</span>
-                      <span>
-                        {formatDualTimestamp(
-                          incident.time_of_occurrence,
-                          incident.time_logged,
-                          incident.entry_type as any
-                        ).isRetrospective ? (
-                          <>
-                            <span className="mr-1">🕓</span>
-                            Occurred: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred} | 
-                            Logged: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).logged}
-                          </>
-                        ) : (
-                          <span>
-                            {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred}
-                          </span>
-                        )}
-                      </span>
-                      {incident.is_amended && (
-                        <>
-                          <span>•</span>
-                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-100 rounded-full text-xs font-semibold border border-amber-400/30">
-                            AMENDED ({revisionCount})
-                          </span>
-                        </>
-                      )}
-                    </>
-                  )}
-                  {!incident?.time_of_occurrence && (
-                    <span>• {new Date(incident?.timestamp || '').toLocaleString()}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              {incident && !incident.is_closed && incident.incident_type !== 'Sit Rep' && (
-                <button
-                  type="button"
-                  onClick={() => setIsEscalationModalOpen(true)}
-                  className="flex items-center space-x-2 rounded-full bg-red-500/90 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:scale-105 hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-200"
-                  aria-haspopup="dialog"
-                >
-                  <LuSiren className="h-4 w-4" aria-hidden />
-                  <span>Escalate</span>
-                </button>
+        <div className="bg-[#1d2b90] text-white flex items-center justify-between px-6 py-3 h-14 border-b border-border/40">
+          <div>
+            <h2 className="text-lg font-semibold leading-none">
+              Incident #{incident?.log_number}
+            </h2>
+            <p className="text-sm text-white/80">
+              {incident?.incident_type} · {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type ? (
+                formatDualTimestamp(
+                  incident.time_of_occurrence,
+                  incident.time_logged,
+                  incident.entry_type as any
+                ).isRetrospective ? (
+                  <>
+                    <span className="mr-1">🕓</span>
+                    Occurred: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred} | 
+                    Logged: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).logged}
+                  </>
+                ) : (
+                  formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred
+                )
+              ) : (
+                formatDateTime(incident?.timestamp)
               )}
-              {/* Status Badge */}
-              {incident && incident.incident_type !== 'Sit Rep' && (
-                <button
-                  onClick={handleStatusChange}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105 ${
-                    incident.is_closed
-                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                      : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                  }`}
-                >
-                  {getStatusIcon(incident.is_closed)}
-                  <span>{incident.is_closed ? 'Closed' : 'Open'}</span>
-                </button>
-              )}
-              
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {incident && incident.incident_type !== 'Sit Rep' && (
               <button
-                onClick={onClose}
-                className="text-white hover:text-blue-100 transition-colors p-2 rounded-full hover:bg-white hover:bg-opacity-10"
+                onClick={handleStatusChange}
+                className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 ${
+                  incident.is_closed
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                }`}
               >
-                <XMarkIcon className="h-6 w-6" />
+                {getStatusIcon(incident.is_closed)}
+                <span>{incident.is_closed ? 'Closed' : 'Open'}</span>
               </button>
-            </div>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/70 hover:text-white transition-colors p-1 rounded"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : error ? (
-            <div className="text-red-500 text-center py-8 bg-red-50 rounded-lg">
-              <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-4 text-red-400" />
-              <p className="text-lg font-semibold">{error}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              {/* Main Details */}
-              <div className="lg:col-span-3 space-y-4">
+        <div className="flex h-[calc(90vh-80px)]">
+          {/* Left Column - Main Content (no scroll, just fits) */}
+          <div className="flex-1 px-4 sm:px-6 py-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500 text-center py-8 bg-red-50 rounded-lg">
+                <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-4 text-red-400" />
+                <p className="text-lg font-semibold">{error}</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
                 {/* Incident Type & Priority */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                     style={{
+                       boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                       transition: 'box-shadow 0.25s ease'
+                     }}
+                     onMouseEnter={(e) => {
+                       if (window.innerWidth >= 768) {
+                         e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
+                       }
+                     }}
+                     onMouseLeave={(e) => {
+                       e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
+                     }}>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-600" />
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center">
+                      <DocumentTextIcon className="h-4 w-4 mr-2 text-blue-600" />
                       Incident Information
                     </h3>
                     <button
@@ -650,7 +685,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                             <span className="text-sm font-medium text-gray-700">Time</span>
                           </div>
                           <p className="text-gray-900 font-medium text-sm">
-                            {new Date(incident?.timestamp || '').toLocaleString()}
+                            {formatDateTime(incident?.timestamp)}
                           </p>
                         </div>
                         
@@ -758,91 +793,24 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                   )}
                 </div>
 
-                {/* Revision History Section */}
-                {incident && (
-                  <IncidentRevisionHistory
-                    incidentId={String(incident.id)}
-                    incident={incident as any}
-                  />
-                )}
-
-                {/* Updates Timeline */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2 text-blue-600" />
-                    Updates & Audit Trail
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {updates.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500">
-                        <ChatBubbleLeftRightIcon className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                        <p>No updates yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {updates.map((update, index) => (
-                          <div key={update.id} className="relative">
-                            {/* Timeline line */}
-                            {index < updates.length - 1 && (
-                              <div className="absolute left-5 top-10 w-0.5 h-6 bg-gray-200"></div>
-                            )}
-                            
-                            <div className="flex space-x-3">
-                              {/* Timeline dot */}
-                              <div className="flex-shrink-0">
-                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <UserIcon className="h-5 w-5 text-blue-600" />
-                                </div>
-                              </div>
-                              
-                              {/* Update content */}
-                              <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {update.updated_by}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {new Date(update.created_at).toLocaleString()}
-                                  </span>
-                                </div>
-                                <p className="text-gray-700 text-sm">{update.update_text}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* New Update Input */}
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Add Update</h4>
-                      <textarea
-                        value={newUpdate}
-                        onChange={(e) => setNewUpdate(e.target.value)}
-                        placeholder="Add an update to this incident..."
-                        className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        rows={3}
-                      />
-                      <button
-                        onClick={handleUpdateSubmit}
-                        disabled={!newUpdate.trim()}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-                      >
-                        Add Update
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sidebar */}
-              <div className="space-y-4">
+                <div className="space-y-5">
                 {/* Assignment Info */}
                 {incident?.assigned_staff_ids && incident.assigned_staff_ids.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                       style={{
+                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                         transition: 'box-shadow 0.25s ease'
+                       }}
+                       onMouseEnter={(e) => {
+                         if (window.innerWidth >= 768) {
+                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
+                         }
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
+                       }}>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
+                      <UserIcon className="h-4 w-4 mr-2 text-blue-600" />
                       Assigned Staff
                     </h3>
                     <div className="space-y-2">
@@ -867,9 +835,21 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
                 {/* Dependencies */}
                 {incident?.dependencies && incident.dependencies.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <ClipboardDocumentIcon className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                       style={{
+                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                         transition: 'box-shadow 0.25s ease'
+                       }}
+                       onMouseEnter={(e) => {
+                         if (window.innerWidth >= 768) {
+                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
+                         }
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
+                       }}>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
+                      <ClipboardDocumentIcon className="h-4 w-4 mr-2 text-blue-600" />
                       Dependencies
                     </h3>
                     <div className="space-y-2">
@@ -884,9 +864,21 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
                 {/* Photo Attachment */}
                 {incident && incident.photo_url && photoUrl && isAdmin && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                      <PhotoIcon className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                       style={{
+                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                         transition: 'box-shadow 0.25s ease'
+                       }}
+                       onMouseEnter={(e) => {
+                         if (window.innerWidth >= 768) {
+                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
+                         }
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
+                       }}>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
+                      <PhotoIcon className="h-4 w-4 mr-2 text-blue-600" />
                       Photo Attachment
                     </h3>
                     <div className="relative h-32">
@@ -930,33 +922,156 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                   </div>
                 )}
               </div>
+
+              {/* Add Update Form */}
+              <div
+                className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                style={{
+                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                  transition: 'box-shadow 0.25s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (window.innerWidth >= 768) {
+                    e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)'
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2 text-blue-600" />
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Add Update</h3>
+                  </div>
+                  <button
+                    onClick={handleUpdateSubmit}
+                    disabled={!newUpdate.trim()}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    Add Update
+                  </button>
+                </div>
+                <textarea
+                  value={newUpdate}
+                  onChange={(e) => setNewUpdate(e.target.value)}
+                  placeholder="Add an update to this incident..."
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  rows={4}
+                />
+              </div>
             </div>
           )}
-        </div>
-      </div>
-      {incident && (
-        <EscalationModal
-          incidentId={String(incident.id)}
-          incidentType={incident.incident_type}
-          incidentPriority={incident.priority}
-          isOpen={isEscalationModalOpen}
-          onClose={() => setIsEscalationModalOpen(false)}
-          onSuccess={handleEscalationSuccess}
-        />
-      )}
+          </div>
 
-      {/* Amendment Modal */}
-      {incident && (
-        <IncidentAmendmentModal
-          isOpen={isAmendmentModalOpen}
-          onClose={() => setIsAmendmentModalOpen(false)}
-          incident={incident as any}
-          onAmendmentCreated={() => {
-            // Refresh incident data
-            fetchIncidentDetails()
-          }}
-        />
+          {/* Right Column - Revision History & Updates with scrolling */}
+          <div className="w-80 border-l border-border/30 px-4 sm:px-6 py-6 overflow-y-auto">
+            <div className="space-y-6">
+              {incident && (
+                <IncidentRevisionHistory
+                  incidentId={String(incident.id)}
+                  incident={incident as any}
+                />
+              )}
+
+              <div
+                className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
+                style={{
+                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+                  transition: 'box-shadow 0.25s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (window.innerWidth >= 768) {
+                    e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)'
+                }}
+              >
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 flex items-center">
+                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2 text-blue-600" />
+                  Updates & Audit Trail
+                </h3>
+                
+                <div className="space-y-3">
+                  {updates.length === 0 ? (
+                    <div className="text-center py-6 text-gray-500">
+                      <ChatBubbleLeftRightIcon className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                      <p>No updates yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {updates.map((update, index) => (
+                        <div key={update.id} className="relative">
+                          {/* Timeline line */}
+                          {index < updates.length - 1 && (
+                            <div className="absolute left-5 top-10 w-0.5 h-6 bg-gray-200"></div>
+                          )}
+                          
+                          <div className="flex space-x-3">
+                            {/* Timeline dot */}
+                            <div className="flex-shrink-0">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <UserIcon className="h-5 w-5 text-blue-600" />
+                              </div>
+                            </div>
+                            
+                            {/* Update content */}
+                            <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {update.updated_by}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {formatDateTime(update.created_at)}
+                                </span>
+                              </div>
+                              <p className="text-gray-700 text-sm">{update.update_text}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Child Modals - Escalation */}
+        {incident && (
+          <EscalationModal
+            incidentId={String(incident.id)}
+            incidentType={incident.incident_type}
+            incidentPriority={incident.priority}
+            isOpen={isEscalationModalOpen}
+            onClose={() => setIsEscalationModalOpen(false)}
+            onSuccess={handleEscalationSuccess}
+          />
+        )}
+
+        {/* Amendment Modal */}
+        {incident && (
+          <IncidentAmendmentModal
+            isOpen={isAmendmentModalOpen}
+            onClose={() => setIsAmendmentModalOpen(false)}
+            incident={incident as any}
+            onAmendmentCreated={() => {
+              // Refresh incident data
+              fetchIncidentDetails()
+            }}
+          />
+        )}
+      </motion.div>
+    </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   )
+
+  // Render modal using React Portal to body
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null
 } 

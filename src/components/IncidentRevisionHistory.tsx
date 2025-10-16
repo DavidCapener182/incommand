@@ -49,6 +49,12 @@ export default function IncidentRevisionHistory({
   const [error, setError] = useState<string | null>(null)
   const [selectedRevision, setSelectedRevision] = useState<number | null>(null)
 
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return 'Timestamp unavailable'
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? 'Timestamp unavailable' : date.toLocaleString('en-GB')
+  }
+
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen
   const handleToggle = () => {
     if (onToggle) {
@@ -143,7 +149,7 @@ export default function IncidentRevisionHistory({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-6 bg-white dark:bg-[#23408e]">
+            <div className="p-6 bg-white dark:bg-[#23408e] lg:max-h-[calc(90vh-260px)] lg:overflow-y-auto lg:pr-2">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -153,22 +159,26 @@ export default function IncidentRevisionHistory({
                   <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
                 </div>
               ) : revisions.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircleIcon className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                  <p className="text-gray-600 dark:text-gray-300 font-medium">No amendments</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                    This log has not been amended
-                  </p>
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-3 min-h-[220px]">
+                  <div className="h-20 w-20 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center shadow-inner">
+                    <CheckCircleIcon className="h-9 w-9 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-gray-700 dark:text-gray-200 font-semibold">No revisions recorded</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      This incident log has not been amended yet.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {/* Summary */}
-                  {summary.lastAmendedAt && (
+                  {summary.lastAmendedAt && formatDateTime(summary.lastAmendedAt) !== 'Timestamp unavailable' && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center gap-3 text-sm">
                       <InformationCircleIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                       <div>
                         <span className="text-blue-800 dark:text-blue-200 font-medium">
-                          Last amended {new Date(summary.lastAmendedAt).toLocaleString('en-GB')}
+                          Last amended {formatDateTime(summary.lastAmendedAt)}
                         </span>
                         {summary.lastAmendedBy && (
                           <span className="text-blue-600 dark:text-blue-300"> by {summary.lastAmendedBy}</span>
@@ -295,4 +305,3 @@ export default function IncidentRevisionHistory({
     </div>
   )
 }
-
