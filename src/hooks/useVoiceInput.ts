@@ -54,6 +54,16 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Keep latest callbacks in refs to avoid effect re-subscribing on every render
+  const onResultRef = useRef<typeof onResult | undefined>(onResult)
+  const onEndRef = useRef<typeof onEnd | undefined>(onEnd)
+  const onErrorRef = useRef<typeof onError | undefined>(onError)
+  const onSilenceDetectedRef = useRef<typeof onSilenceDetected | undefined>(onSilenceDetected)
+
+  onResultRef.current = onResult
+  onEndRef.current = onEnd
+  onErrorRef.current = onError
+  onSilenceDetectedRef.current = onSilenceDetected
 
   // Initialize speech recognition
   useEffect(() => {
@@ -102,7 +112,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
         silenceTimerRef.current = setTimeout(() => {
           if (recognitionRef.current && state.isListening) {
             console.log('Stopping due to silence detection')
-            onSilenceDetected?.()
+            onSilenceDetectedRef.current?.()
             recognition.stop()
           }
         }, silenceTimeout)
@@ -136,13 +146,13 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
             transcript: prev.transcript + finalTranscriptText,
             interimTranscript: ''
           }))
-          onResult?.(finalTranscriptText.trim(), true, 1.0)
+          onResultRef.current?.(finalTranscriptText.trim(), true, 1.0)
         } else if (interimTranscriptText) {
           setState(prev => ({
             ...prev,
             interimTranscript: interimTranscriptText
           }))
-          onResult?.(interimTranscriptText, false, 1.0)
+          onResultRef.current?.(interimTranscriptText, false, 1.0)
         }
       }
     }
@@ -176,13 +186,13 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
         isListening: false,
         error: errorMessage
       }))
-      onError?.(errorMessage)
+      onErrorRef.current?.(errorMessage)
     }
 
     recognition.onend = () => {
       console.log('Voice recognition ended')
       setState(prev => ({ ...prev, isListening: false }))
-      onEnd?.()
+      onEndRef.current?.()
 
       // Auto-restart if continuous mode and still should be listening
       if (continuous && state.isListening) {
@@ -210,7 +220,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
         recognitionRef.current.stop()
       }
     }
-  }, [language, continuous, interimResults, maxAlternatives, silenceTimeout, noiseThreshold, onResult, onEnd, onError, onSilenceDetected])
+  }, [language, continuous, interimResults, maxAlternatives, silenceTimeout, noiseThreshold])
 
   // Start listening
   const startListening = useCallback(() => {
