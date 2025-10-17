@@ -9,7 +9,6 @@ import { useLogRevisions } from '../hooks/useLogRevisions'
 import { ArrowUpIcon, MapPinIcon, MagnifyingGlassIcon, XMarkIcon, ViewColumnsIcon, TableCellsIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { ToastMessage } from './Toast'
 import { CollaborationBoard } from './CollaborationBoard'
-import IncidentTimeline from './IncidentTimeline'
 import {
   getIncidentTypeStyle,
   getPriorityBorderClass,
@@ -123,8 +122,8 @@ export default function IncidentTable({
   filters: FilterState;
   onDataLoaded?: (data: Incident[]) => void;
   onToast?: (toast: Omit<ToastMessage, 'id'>) => void;
-  viewMode?: 'table' | 'board' | 'timeline' | 'staff';
-  onViewModeChange?: (mode: 'table' | 'board' | 'timeline' | 'staff') => void;
+  viewMode?: 'table' | 'board' | 'staff';
+  onViewModeChange?: (mode: 'table' | 'board' | 'staff') => void;
   currentUser?: any;
   currentEventId?: string;
   currentEvent?: any;
@@ -848,17 +847,6 @@ export default function IncidentTable({
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
               </motion.button>
-              <motion.button
-                onClick={() => onViewModeChange('timeline')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
-                  viewMode === 'timeline' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="text-base leading-none">⏱️</span>
-                Timeline
-              </motion.button>
               {/* Staff toggle hidden intentionally */}
             </div>
           )}
@@ -904,17 +892,6 @@ export default function IncidentTable({
                 whileTap={{ scale: 0.95 }}
               >
                 <ViewColumnsIcon className="h-4 w-4" /> Board
-              </motion.button>
-              <motion.button
-                onClick={() => onViewModeChange('timeline')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
-                  viewMode === 'timeline' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="text-base leading-none">⏱️</span>
-                Timeline
               </motion.button>
             </div>
           )}
@@ -1529,14 +1506,9 @@ export default function IncidentTable({
       </>
     ) : (
       <>
-        <IncidentTimeline
-          incidents={incidents}
-          displayedIncidents={chronologicalIncidents}
-          filters={filters}
-          onFiltersChange={onFiltersChange}
-          currentEvent={currentEvent}
-          onIncidentSelect={handleIncidentClick}
-        />
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          Timeline view has been temporarily removed
+        </div>
 
         {isDetailsModalOpen && selectedIncidentId && (
           <IncidentDetailsModal

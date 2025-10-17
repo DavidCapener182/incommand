@@ -501,7 +501,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             style={{
               transform: 'translateY(-2%)',
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
-              maxHeight: '94vh',
+              maxHeight: 'calc(100vh - 48px)',
               height: 'auto'
             }}
             onClick={(e) => e.stopPropagation()}

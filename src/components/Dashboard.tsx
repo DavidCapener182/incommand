@@ -723,7 +723,7 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentSlot, setCurrentSlot] = useState<EventTiming | null>(null);
   const [nextSlot, setNextSlot] = useState<EventTiming | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'board' | 'timeline' | 'staff'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'board' | 'staff'>('table');
   const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
   
   // Staff availability hook
@@ -1719,10 +1719,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Visual separator and spacing above incident table section */}
-      <div className="mt-8 lg:mt-10">
-        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border/60 to-transparent dark:via-gray-700/40" />
-      </div>
 
       {/* Incident Table and Staff Deployment */}
       <main 
