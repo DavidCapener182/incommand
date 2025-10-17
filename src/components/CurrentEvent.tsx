@@ -231,7 +231,7 @@ export default function CurrentEvent({
 
   if (loading) {
     return (
-      <div className="bg-white shadow sm:rounded-lg p-6">
+      <div className="card-depth p-6">
         <div className="animate-pulse flex space-x-4">
           <div className="flex-1 space-y-4 py-1">
             <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -254,7 +254,7 @@ export default function CurrentEvent({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-           <Card className="h-full flex flex-col justify-between relative bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+           <Card className="h-full flex flex-col justify-between relative card-depth">
         {currentEvent ? (
           <>
             <CardHeader>

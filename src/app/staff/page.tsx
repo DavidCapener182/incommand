@@ -49,7 +49,7 @@ export default function StaffPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="min-h-screen p-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-6"></div>
           <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -80,7 +80,7 @@ export default function StaffPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       {/* Mobile Notice - Simplified Staff View */}
       <div className="block md:hidden bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -189,7 +189,7 @@ export default function StaffPage() {
                 className="mb-8"
               />
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <div className="card-alt p-8 text-center">
                 <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   No Active Event
@@ -208,7 +208,7 @@ export default function StaffPage() {
                 className="mb-8"
               />
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <div className="card-alt p-8 text-center">
                 <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   No Active Event
@@ -223,7 +223,7 @@ export default function StaffPage() {
 
         {/* Quick Stats - Mobile Optimized */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
+          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <UserGroupIcon className="h-8 w-8 text-blue-600" />
@@ -239,7 +239,7 @@ export default function StaffPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
+          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <AcademicCapIcon className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
@@ -255,7 +255,7 @@ export default function StaffPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
+          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <ChartBarIcon className="h-8 w-8 text-purple-600" />

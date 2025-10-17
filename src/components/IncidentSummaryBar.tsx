@@ -142,10 +142,8 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
     >
-      <Card className="h-full flex flex-col justify-between bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="card-depth h-full flex flex-col justify-between">
         <CardHeader>
           <CardTitle className="flex items-center justify-between text-lg font-semibold tracking-tight">
             <span>Incident Summary</span>
@@ -169,16 +167,14 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
                   type="button"
                   onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
                   className={`
-                    flex flex-col items-center justify-center px-4 py-4 rounded-xl shadow-sm transition-all duration-200 
-                    hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
+                    flex flex-col items-center justify-center px-4 py-4 rounded-xl shadow-1 transition-shadow duration-200 
+                    hover:shadow-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
                     ${color}
-                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-md' : ''}
+                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-2' : ''}
                     ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
                     ${isTotal ? 'cursor-default' : 'cursor-pointer'}
                   `}
                   aria-pressed={isActive}
-                  whileHover={!isTotal ? { scale: 1.02 } : {}}
-                  whileTap={!isTotal ? { scale: 0.98 } : {}}
                 >
                   <div className="flex items-center gap-2 font-medium mb-1">
                     {icon} 

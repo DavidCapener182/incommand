@@ -322,7 +322,7 @@ export default function BackupRestorePage() {
 
       {/* Create Backup Form */}
       {backupForm.name === '' && (
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Create New Backup</h2>
           </div>
@@ -504,7 +504,7 @@ export default function BackupRestorePage() {
 
       {/* Restore Jobs */}
       {restoreJobs.length > 0 && (
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
               <ArrowUpTrayIcon className="w-5 h-5" />

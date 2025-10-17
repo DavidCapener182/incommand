@@ -215,7 +215,7 @@ const PreferencesPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Green Guide Assistance */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <ShieldCheckIcon className="h-6 w-6 text-emerald-600 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -245,7 +245,7 @@ const PreferencesPage: React.FC = () => {
             </div>
           </div>
           {/* Theme Preferences */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <SunIcon className="h-6 w-6 text-yellow-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -294,7 +294,7 @@ const PreferencesPage: React.FC = () => {
           </div>
 
           {/* Notification Preferences */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <BellIcon className="h-6 w-6 text-green-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -377,7 +377,7 @@ const PreferencesPage: React.FC = () => {
           </div>
 
           {/* UI Preferences */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <Cog6ToothIcon className="h-6 w-6 text-blue-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -442,7 +442,7 @@ const PreferencesPage: React.FC = () => {
           </div>
 
           {/* Accessibility Settings */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <EyeIcon className="h-6 w-6 text-purple-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -506,7 +506,7 @@ const PreferencesPage: React.FC = () => {
           </div>
 
           {/* Privacy Settings */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <ShieldCheckIcon className="h-6 w-6 text-red-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -572,7 +572,7 @@ const PreferencesPage: React.FC = () => {
           </div>
 
           {/* Dashboard Layout Info */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="card-alt p-6">
             <div className="flex items-center mb-4">
               <Cog6ToothIcon className="h-6 w-6 text-indigo-500 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

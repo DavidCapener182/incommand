@@ -95,7 +95,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
     return (
       <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl">
+          <Card key={i} className="card-skeleton">
             <CardContent className="p-3">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-2"></div>
               <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-1"></div>
@@ -112,7 +112,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
   return (
     <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
       {/* Log Quality Score */}
-      <Card className="bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 group">
+      <Card className="card-depth group">
         <CardContent className="p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
@@ -163,7 +163,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Compliance Grade */}
-      <Card className="bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 group">
+      <Card className="card-depth group">
         <CardContent className="p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
@@ -204,7 +204,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Response Time */}
-      <Card className="bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 group">
+      <Card className="card-depth group">
         <CardContent className="p-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -231,7 +231,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Active Incidents */}
-      <Card className="bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 group">
+      <Card className="card-depth group">
         <CardContent className="p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">

@@ -55,8 +55,68 @@
 
   .card-mobile {
     @apply bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700;
-    @apply shadow-sm hover:shadow-md transition-all duration-200;
+    @apply shadow-1 hover:shadow-2 transition-all duration-200;
     @apply p-4 sm:p-6;
+  }
+
+  /* Soft Depth Card System - Centralized Card Design */
+  
+  /* Base card styling - default for most cards */
+  .card-depth {
+    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
+    @apply shadow-2 hover:shadow-3 transition-shadow duration-300;
+  }
+
+  /* Interactive cards (same as base, kept for semantic clarity) */
+  .card-depth-interactive {
+    @apply card-depth;
+  }
+
+  /* Subtle cards - for nested cards or less prominent elements */
+  .card-depth-subtle {
+    @apply bg-white dark:bg-[#1b203b] rounded-xl;
+    @apply shadow-1 hover:shadow-2 transition-shadow duration-200;
+  }
+
+  /* Table row cards - minimal shadow for dense layouts */
+  .card-table-row {
+    @apply bg-white dark:bg-[#23408e] rounded-xl;
+    @apply shadow-1 hover:shadow-2 transition-shadow duration-200;
+  }
+
+  /* Modal/Dialog cards - prominent depth */
+  .card-modal {
+    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
+    @apply shadow-3;
+  }
+
+  /* Skeleton/Loading cards */
+  .card-skeleton {
+    @apply card-depth animate-pulse;
+  }
+
+  /* Time/Status cards - special colored background variants */
+  .card-time {
+    @apply bg-white dark:bg-[#23408e] rounded-2xl;
+    @apply shadow-2 hover:shadow-3 transition-shadow duration-300;
+  }
+
+  /* View toggle/control cards */
+  .card-control {
+    @apply bg-white dark:bg-[#1b203b] rounded-lg;
+    @apply shadow-2;
+  }
+
+  /* Board view container cards */
+  .card-board {
+    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
+    @apply shadow-3;
+  }
+
+  /* Alternative dark background cards (gray-800) - for specialized components */
+  .card-alt {
+    @apply bg-white dark:bg-gray-800 rounded-xl;
+    @apply shadow-1 hover:shadow-2 transition-shadow duration-300;
   }
 }
 
@@ -842,6 +902,10 @@ input:-webkit-autofill {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --bg-light: 240 6% 96%;
+    --bg-dark: 220 13% 91%;
+    --bg-light-dark: 223 47% 11%;
+    --bg-dark-dark: 224 45% 8%;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -876,6 +940,34 @@ input:-webkit-autofill {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-blue-200 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] text-foreground !important;
   }
-} 
+  
+  html {
+    @apply bg-blue-200 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] !important;
+  }
+  
+  /* Force background on page containers only - exclude table elements and login page */
+  main:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
+  .min-h-screen:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
+  .flex-grow:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]) {
+    background-color: #dbeafe !important; /* blue-200 equivalent */
+  }
+  
+  /* Additional specificity for staff page */
+  div.min-h-screen:not([class*="bg-[#23408e]"]) {
+    background-color: #dbeafe !important; /* blue-200 equivalent */
+  }
+  
+  /* Override for dark mode */
+  .dark main:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
+  .dark .min-h-screen:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
+  .dark .flex-grow:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]) {
+    background: linear-gradient(135deg, #0f172a, #1e293b, #334155) !important;
+  }
+  
+  /* Additional specificity for staff page dark mode */
+  .dark div.min-h-screen:not([class*="bg-[#23408e]"]) {
+    background: linear-gradient(135deg, #0f172a, #1e293b, #334155) !important;
+  }
+}

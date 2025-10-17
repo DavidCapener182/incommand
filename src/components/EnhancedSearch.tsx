@@ -304,7 +304,7 @@ export default function EnhancedSearch({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute z-50 mt-2 w-full bg-white dark:bg-[#1a2a57] rounded-xl shadow-2xl border border-gray-200 dark:border-[#2d437a] overflow-hidden"
+            className="absolute z-50 mt-2 w-full card-depth-subtle shadow-3 dark:bg-[#1a2a57] dark:border-[#2d437a] overflow-hidden"
           >
             <div className="max-h-96 overflow-y-auto custom-scrollbar">
               {suggestions.map((suggestion, index) => {

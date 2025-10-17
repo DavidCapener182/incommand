@@ -39,7 +39,7 @@ export default function GreenGuideTools() {
   }
 
   return (
-    <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6">
+    <div className="card-depth text-gray-900 dark:text-gray-100 p-6">
       <div className="mb-4">
         <a href="/green-guide" target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">Open Green Guide (PDF)</a>
       </div>

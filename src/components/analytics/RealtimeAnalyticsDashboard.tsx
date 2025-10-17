@@ -203,7 +203,7 @@ export default function RealtimeAnalyticsDashboard({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3"
+              className="card-depth p-3"
             >
               <div className="flex items-center justify-between mb-2">
                 <MetricIcon className={`h-5 w-5 ${metric.color}`} />
@@ -226,7 +226,7 @@ export default function RealtimeAnalyticsDashboard({
 
       {/* Chart */}
       {chartData.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div className="card-depth p-4">
           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Incident Trend (Last 6 Hours)
           </h4>

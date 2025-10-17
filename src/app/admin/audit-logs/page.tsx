@@ -297,7 +297,7 @@ export default function AuditLogsPage() {
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200">Filter Audit Logs</h2>
           </div>

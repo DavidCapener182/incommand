@@ -91,7 +91,7 @@ export default function BulkActionsToolbar({
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 ${className}`}
         >
-          <div className="bg-white dark:bg-[#1a2a57] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2d437a] px-6 py-4 flex items-center gap-4">
+          <div className="card-depth shadow-3 dark:bg-[#1a2a57] dark:border-[#2d437a] px-6 py-4 flex items-center gap-4">
             {/* Selection Info */}
             <div className="flex items-center gap-3 border-r border-gray-200 dark:border-gray-700 pr-4">
               <div className="flex items-center justify-center w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full">

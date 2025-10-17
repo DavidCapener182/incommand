@@ -90,7 +90,7 @@ const AdminPage = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] flex items-center justify-center">
-        <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-8 max-w-md w-full mx-4">
+        <div className="card-time p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-300">Checking permissions...</p>
@@ -103,7 +103,7 @@ const AdminPage = () => {
   if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] flex items-center justify-center">
-        <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-8 max-w-md w-full mx-4">
+        <div className="card-time p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 mb-4">
               <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,28 +199,28 @@ const AdminPage = () => {
           
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+            <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
               <div className="flex items-center gap-2 mb-2">
                 <BuildingOfficeIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                 <span className="font-semibold text-lg">Total Companies</span>
               </div>
               <span className="text-2xl font-bold">{companies.length}</span>
             </div>
-            <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+            <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
               <div className="flex items-center gap-2 mb-2">
                 <UserGroupIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                 <span className="font-semibold text-lg">Total Users</span>
               </div>
               <span className="text-2xl font-bold">{users.length}</span>
             </div>
-            <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+            <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
               <div className="flex items-center gap-2 mb-2">
                 <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                 <span className="font-semibold text-lg">Total Events</span>
               </div>
               <span className="text-2xl font-bold">{events.length}</span>
             </div>
-            <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+            <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
               <div className="flex items-center gap-2 mb-2">
                 <UserIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                 <span className="font-semibold text-lg">Current User</span>
@@ -239,7 +239,7 @@ const AdminPage = () => {
           </div>
           
           {/* Simple User Info */}
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-xl border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth mt-6 p-4 dark:bg-[#1a2a57] dark:border-[#2d437a]">
             <h3 className="font-semibold text-gray-800 dark:text-blue-200 mb-2">Current User Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
@@ -299,14 +299,14 @@ const AdminPage = () => {
             <p className="text-gray-600 dark:text-blue-100 mb-4">Superadmin-only development and debugging tools.</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+              <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
                 <div className="flex items-center gap-2 mb-2">
                   <CodeBracketIcon className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                   <span className="font-semibold text-lg">Debug Tools</span>
                 </div>
                 <span className="text-sm text-gray-600 dark:text-gray-300">Access advanced debugging and development features</span>
               </div>
-              <div className="bg-gray-50 dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 rounded-xl border border-gray-200 dark:border-[#2d437a] p-4 flex flex-col items-start">
+              <div className="card-depth text-gray-900 dark:text-gray-100 p-4 flex flex-col items-start dark:bg-[#1a2a57] dark:border-[#2d437a]">
                 <div className="flex items-center gap-2 mb-2">
                   <ServerIcon className="h-6 w-6 text-green-600 dark:text-green-300" />
                   <span className="font-semibold text-lg">Database Setup</span>

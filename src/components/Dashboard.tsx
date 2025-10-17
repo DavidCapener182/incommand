@@ -11,6 +11,7 @@ import IncidentCreationModal, {
 import VenueOccupancy from './VenueOccupancy'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { cn } from '@/lib/utils'
 import {
   UsersIcon,
   ExclamationTriangleIcon,
@@ -79,7 +80,7 @@ const EVENT_TYPES = [
 
 // Skeleton Loading Components
 const StatCardSkeleton = () => (
-  <Card className="animate-pulse">
+  <Card className="card-skeleton">
     <CardContent className="p-3 md:p-4">
       <div className="flex flex-row items-center justify-between w-full">
         <div className="flex flex-col items-start">
@@ -93,7 +94,7 @@ const StatCardSkeleton = () => (
 );
 
 const TimeCardSkeleton = () => (
-  <div className="relative bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-xl rounded-2xl border border-gray-200 dark:border-[#2d437a] p-6 animate-pulse">
+  <div className="card-time animate-pulse p-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="md:block relative">
         <div className="hidden md:block">
@@ -119,7 +120,7 @@ const TimeCardSkeleton = () => (
 );
 
 const CardSkeleton = () => (
-  <Card className="h-[130px] animate-pulse bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl">
+  <Card className="h-[130px] card-skeleton">
     <CardContent className="p-4 h-full flex flex-col items-center justify-center">
       <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
       <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
@@ -160,16 +161,8 @@ interface TimeCardProps {
   timeSinceLastIncident: string;
 }
 
-// Shared card base styling for consistency
-const cardBase = `
-  bg-white/90 dark:bg-[#1e2a78]/90
-  backdrop-blur-lg
-  shadow-md hover:shadow-lg
-  transition-all duration-300
-  border border-gray-200/60 dark:border-[#2d437a]/50
-  rounded-2xl
-  p-5 sm:p-6
-`
+// Card styling is now centralized in globals.css using utility classes:
+// .card-depth, .card-depth-subtle, .card-time, .card-skeleton, etc.
 
 const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
   return (
@@ -178,10 +171,8 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="h-full"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
     >
-      <Card className="h-full flex flex-col relative bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="card-time h-full flex flex-col relative">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             Current Time
@@ -340,13 +331,13 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   const content = (
-    <Card className={`
-      relative transition-all duration-300 bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md
-      ${isFilterable ? 'cursor-pointer touch-target' : ''}
-      ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg scale-[1.02] md:scale-105' : 'hover:shadow-md active:scale-[0.98]'}
-      ${pulse ? 'animate-pulse' : ''}
-      ${className || ''}
-    `}>
+    <Card className={cn(
+      'card-depth relative',
+      isFilterable && 'cursor-pointer touch-target',
+      isSelected && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg',
+      pulse && 'animate-pulse',
+      className
+    )}>
       <CardContent className="p-3 md:p-4">
         <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
           <div className="flex flex-col flex-1 gap-1">
@@ -500,7 +491,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
     if (sorted.length === 0) {
       return (
-        <Card className="w-full h-full bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+        <Card className="card-depth w-full h-full">
           <CardContent className="p-2 h-full flex flex-col items-center justify-center">
             <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
@@ -1319,7 +1310,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] p-3 sm:p-6 md:p-8">
+    <div className="min-h-screen p-3 sm:p-6 md:p-8">
       {/* Accessibility: Skip Links */}
       <SkipLinks />
       
@@ -1335,7 +1326,7 @@ export default function Dashboard() {
           Event Overview
         </h3>
         {/* Desktop view */}
-        <section className="hidden md:block rounded-2xl bg-gray-100/70 dark:bg-[#1a1f3d]/60 p-4 border border-gray-100 dark:border-gray-800">
+        <section className="hidden md:block rounded-2xl p-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
           <CurrentEvent
             currentTime={currentTime}
@@ -1629,8 +1620,8 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    whileHover={{ y: -4, scale: 1.03 }}
-                    className="flex h-[130px] w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-gray-200/60 bg-white/95 text-gray-900 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl dark:border-gray-700/50 dark:bg-[#1b203b] dark:text-gray-100"
+
+                    className="card-depth flex h-[130px] w-full cursor-pointer flex-col items-center justify-center"
                     onClick={() => setIsOccupancyModalOpen(true)}
                   >
                     <VenueOccupancy currentEventId={currentEventId} />
@@ -1651,7 +1642,7 @@ export default function Dashboard() {
                       className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
                       onClick={() => setIsOccupancyModalOpen(true)}
                     >
-                      <Card className="h-full rounded-2xl border border-gray-200/60 bg-white/90 shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700/50 dark:bg-[#1b203b]">
+                      <Card className="card-depth h-full">
                         <CardContent className="flex h-full flex-col items-center justify-center p-4">
                           <VenueOccupancy currentEventId={currentEventId} />
                         </CardContent>
@@ -1683,7 +1674,7 @@ export default function Dashboard() {
                       whileTap={{ scale: 0.98 }}
                       className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
                     >
-                      <Card className="h-full rounded-2xl border border-gray-200/60 bg-white/90 shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700/50 dark:bg-[#1b203b]">
+                      <Card className="card-depth h-full">
                         <CardContent className="flex h-full flex-col items-center justify-center p-4">
                           <What3WordsSearchCard
                             lat={coordinates.lat}

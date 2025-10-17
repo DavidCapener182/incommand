@@ -1,7 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import {
+  Shield,
+  HeartPulse,
+  Users,
+  Cog,
+  Music,
+  Globe2,
+  FlaskConical,
+  ClipboardList,
+} from 'lucide-react'
 import { getIncidentTypeIcon } from '@/utils/incidentIcons'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface IncidentTypeCategoriesProps {
   selectedType: string
@@ -72,25 +83,23 @@ const INCIDENT_CATEGORIES = {
   }
 } as const
 
+const CATEGORY_ICONS: Record<keyof typeof INCIDENT_CATEGORIES, React.ComponentType<{ className?: string }>> = {
+  Security: Shield,
+  'Medical & Welfare': HeartPulse,
+  'Crowd & Safety': Users,
+  Operations: Cog,
+  Event: Music,
+  'Environment & Complaints': Globe2,
+  Substances: FlaskConical,
+  Other: ClipboardList,
+}
+
 export default function IncidentTypeCategories({ 
   selectedType, 
   onTypeSelect, 
   usageStats = {} 
 }: IncidentTypeCategoriesProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    Object.keys(INCIDENT_CATEGORIES).forEach(category => {
-      initial[category] = INCIDENT_CATEGORIES[category as keyof typeof INCIDENT_CATEGORIES].defaultExpanded
-    })
-    return initial
-  })
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }))
-  }
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
   // Auto-expand category when incident type is selected
   useEffect(() => {
@@ -102,10 +111,7 @@ export default function IncidentTypeCategories({
       
       if (categoryWithType) {
         const [categoryName] = categoryWithType
-        setExpandedCategories(prev => ({
-          ...prev,
-          [categoryName]: true
-        }))
+        setExpandedCategory(categoryName)
       }
     }
   }, [selectedType])
@@ -128,118 +134,100 @@ export default function IncidentTypeCategories({
   }, [usageStats])
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Incident Type
-        </h3>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {Object.keys(INCIDENT_CATEGORIES).length} categories
-        </div>
+    <div className="flex h-full flex-col space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-muted-foreground">Incident Categories</h3>
+        <p className="text-xs text-muted-foreground">
+          Choose the category that best matches this incident.
+        </p>
       </div>
 
-      {sortedCategories.map((category) => {
-        const isExpanded = expandedCategories[category.name]
-        const hasSelectedType = (category.types as unknown as string[]).includes(selectedType)
+      <Accordion
+        type="single"
+        collapsible
+        value={expandedCategory ?? undefined}
+        onValueChange={(value) => setExpandedCategory(value ?? null)}
+        className="space-y-3"
+      >
+        {sortedCategories.map((category) => {
+          const value = category.name
+          const Icon =
+            CATEGORY_ICONS[category.name as keyof typeof CATEGORY_ICONS] ?? ClipboardList
+          const isSelectedCategory = (category.types as string[]).includes(selectedType)
+          const isExpanded = expandedCategory === value
 
-        return (
-          <div
-            key={category.name}
-            className={`border rounded-lg transition-all duration-200 ${
-              hasSelectedType 
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
-            }`}
-          >
-            {/* Category Header */}
-            <button
-              onClick={() => toggleCategory(category.name)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          return (
+            <AccordionItem
+              key={value}
+              value={value}
+              className={cn(
+                'card-depth-subtle px-2',
+                isSelectedCategory || isExpanded
+                  ? 'border-primary/40 bg-muted/30'
+                  : 'border-border/50'
+              )}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{category.icon}</span>
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white">
-                    {category.name}
-                  </h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {category.types.length} types
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {hasSelectedType && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                )}
-                {isExpanded ? (
-                  <ChevronDownIcon className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ChevronRightIcon className="w-5 h-5 text-gray-400" />
-                )}
-              </div>
-            </button>
-
-            {/* Category Content */}
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="px-4 pb-4">
-                    <div className="grid grid-cols-1 gap-2">
-                      {category.types.map((type) => {
-                        const iconConfig = getIncidentTypeIcon(type)
-                        const IconComponent = iconConfig.icon
-                        const isSelected = selectedType === type
-                        const usageCount = usageStats[type] || 0
-
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => onTypeSelect(type)}
-                            className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all duration-200 touch-target ${
-                              isSelected
-                                ? 'bg-blue-500 text-white shadow-md'
-                                : 'bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
-                            }`}
-                          >
-                            <div className="flex-shrink-0">
-                              <IconComponent className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">
-                                {type}
-                              </div>
-                              {usageCount > 0 && (
-                                <div className={`text-xs ${
-                                  isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
-                                }`}>
-                                  {usageCount} uses
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        )
-                      })}
+              <AccordionTrigger className="px-2 py-3 text-left text-sm font-medium">
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <Icon className="size-4" />
+                    </span>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-foreground">{category.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {category.types.length} incident types
+                      </p>
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )
-      })}
+                  {isSelectedCategory && (
+                    <span className="text-xs font-medium text-primary">Selected</span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-2">
+                <div className="grid gap-2">
+                  {(category.types as string[]).map((type) => {
+                    const iconConfig = getIncidentTypeIcon(type)
+                    const IconComponent = iconConfig.icon
+                    const isSelected = selectedType === type
+                    const usageCount = usageStats[type] || 0
 
-      {/* Search/Filter (Future enhancement) */}
-      <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          💡 <strong>Tip:</strong> Categories are sorted by your usage frequency. 
-          Expand categories to see all available incident types.
-        </p>
+                    return (
+                      <Button
+                        key={type}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onTypeSelect(type)}
+                        className={cn(
+                          'justify-start gap-3 border border-transparent bg-transparent text-left font-medium transition-colors',
+                          'hover:border-border/60 hover:bg-muted/40',
+                          isSelected && 'border-primary/40 bg-muted/30 text-primary shadow-sm'
+                        )}
+                      >
+                        <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          <IconComponent className="size-4" />
+                        </span>
+                        <span className="flex-1 text-sm">{type}</span>
+                        {usageCount > 0 && (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {usageCount}×
+                          </span>
+                        )}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )
+        })}
+      </Accordion>
+
+      <div className="rounded-xl border border-dashed border-muted-foreground/20 bg-muted/30 p-3 text-xs text-muted-foreground">
+        Tip: Categories are sorted by your team&apos;s recent usage. Expand a category to review
+        all available incident types.
       </div>
     </div>
   )

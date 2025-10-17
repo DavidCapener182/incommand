@@ -209,7 +209,7 @@ export default function GeneralSettingsPage() {
 
       <div className="space-y-4 sm:space-y-6">
         {/* Profile Information */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
               <UserIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -293,7 +293,7 @@ export default function GeneralSettingsPage() {
 
         {/* Company Information */}
         {company && (
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-time p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-green-100 dark:bg-[#1a2a57] rounded-lg">
                 <BuildingOfficeIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -327,7 +327,7 @@ export default function GeneralSettingsPage() {
         )}
 
         {/* Password Change */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-red-100 dark:bg-[#1a2a57] rounded-lg">
               <KeyIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -382,7 +382,7 @@ export default function GeneralSettingsPage() {
         </div>
 
         {/* Preferences */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-purple-100 dark:bg-[#1a2a57] rounded-lg">
               <CogIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -564,7 +564,7 @@ export default function GeneralSettingsPage() {
         <PWAStatus />
         
         {/* Settings Navigation */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
               <CogIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -627,7 +627,7 @@ export default function GeneralSettingsPage() {
 
         {/* Sync Status */}
         {preferences && (
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-time p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <CheckIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -641,7 +641,7 @@ export default function GeneralSettingsPage() {
         )}
 
         {/* Account Actions */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-time p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-yellow-100 dark:bg-[#1a2a57] rounded-lg">
               <ShieldCheckIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />

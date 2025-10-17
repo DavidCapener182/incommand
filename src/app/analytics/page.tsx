@@ -452,11 +452,11 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       {/* Mobile Analytics */}
       {!isDesktop && (
         <div className="block md:hidden">
-        <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 card-depth border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
@@ -511,7 +511,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               {/* All Analytics Cards in One View - Using Real Data */}
               <div className="space-y-4">
                 {createAnalyticsCards(incidentData, eventData).map((card, index) => (
-                  <div key={card.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  <div key={card.id} className="card-depth p-4">
                     {card.type === 'chart' && (
                       <MobileOptimizedChart
                         data={card.data.chartData || []}
@@ -569,7 +569,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
 
               {/* Real-time Analytics - Using Real Data */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div className="card-depth p-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -632,7 +632,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
           {selectedMobileView === 'realtime' && (
             <div className="space-y-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div className="card-depth p-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -732,7 +732,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 </div>
 
         {/* Tabs - Mobile Optimized with Horizontal Scroll */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1.5 sm:p-2 mb-4 sm:mb-6 shadow-sm overflow-x-auto">
+        <div className="card-depth p-1.5 sm:p-2 mb-4 sm:mb-6 shadow-sm overflow-x-auto">
           <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('operational')}
@@ -941,7 +941,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           <>
         {/* Top Level Metrics - 6 Cards - Mobile Optimized */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
@@ -952,7 +952,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
@@ -963,7 +963,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
@@ -974,7 +974,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
@@ -985,7 +985,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
@@ -998,7 +998,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
@@ -1015,7 +1015,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards - Mobile Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Live Watch */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
@@ -1039,7 +1039,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Response Quality */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
@@ -1062,7 +1062,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Ingress Snapshot */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
@@ -1090,7 +1090,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards - Mobile Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Attendance Timeline */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Timeline</h3>
             {attendanceData.length > 0 ? (
               <div className="h-40 sm:h-48">
@@ -1117,7 +1117,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Attendance Log */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Log</h3>
             {attendanceData.length > 0 ? (
               <div className="space-y-4">
@@ -1153,7 +1153,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </div>
 
           {/* Live Incident Status */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
               <div className="flex items-center gap-2">
@@ -1175,7 +1175,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             {/* Row 1: Incident Volume & Type Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Incident Volume Over Time */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
@@ -1201,7 +1201,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
 
               {/* Incident Type Breakdown */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
@@ -1233,7 +1233,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             {/* Row 2: Response Time Distribution & Ejection Patterns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Response Time Distribution */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
@@ -1252,7 +1252,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
 
               {/* Ejection/Refusal Patterns */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+              <div className="card-depth p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <UserX className="w-6 h-6 text-red-600" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ejection/Refusal Patterns</h3>
@@ -1287,7 +1287,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
         {/* AI Summary Section */}
         {aiSummary && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-8">
+          <div className="card-depth p-6 shadow-sm mb-8">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-blue-600" />
@@ -1320,7 +1320,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         )}
 
         {/* Recent Incidents Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="card-depth shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
           </div>

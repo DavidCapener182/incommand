@@ -750,7 +750,7 @@ export default function Navigation() {
       {/* No Event Selected Modal */}
       {showNoEventModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full">
+          <div className="card-modal shadow-3 p-8 max-w-sm w-full">
             <h3 className="text-xl font-bold mb-4 text-gray-900">No Event Selected</h3>
             <p className="text-gray-700 mb-6">You must select a current event to access this feature.</p>
             <div className="flex justify-end space-x-4">

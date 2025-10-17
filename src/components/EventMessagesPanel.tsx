@@ -473,7 +473,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
 
   // DEFAULT COMBINED MODE (existing behavior)
   return (
-    <div className={`grid grid-cols-1 ${sidebarOpen ? 'md:grid-cols-[200px_minmax(0,1fr)]' : 'md:grid-cols-1'} h-full min-h-0 rounded-2xl border bg-white overflow-hidden shadow-sm`}>
+    <div className={`card-depth grid grid-cols-1 ${sidebarOpen ? 'md:grid-cols-[200px_minmax(0,1fr)]' : 'md:grid-cols-1'} h-full min-h-0 overflow-hidden`}>
       {/* Sidebar */}
       <aside id="messages-sidebar" className={`hidden md:flex ${!sidebarOpen ? 'md:hidden' : ''} flex-col border-r bg-white`} aria-label="Conversations Sidebar">
         <div className="sticky top-0 z-10 bg-white border-b p-3">

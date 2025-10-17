@@ -12,7 +12,9 @@ module.exports = {
   			'pulse-border': 'pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
   			'slide-up': 'slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   			'slide-down': 'slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'fade-in': 'fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+  			'fade-in': 'fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  			'accordion-down': 'accordion-down 0.2s ease-out',
+  			'accordion-up': 'accordion-up 0.2s ease-out'
   		},
   		keyframes: {
   			'pulse-border': {
@@ -50,6 +52,22 @@ module.exports = {
   				'100%': {
   					opacity: 1
   				}
+  			},
+  			'accordion-down': {
+  				from: {
+  					height: '0'
+  				},
+  				to: {
+  					height: 'var(--radix-accordion-content-height)'
+  				}
+  			},
+  			'accordion-up': {
+  				from: {
+  					height: 'var(--radix-accordion-content-height)'
+  				},
+  				to: {
+  					height: '0'
+  				}
   			}
   		},
   		spacing: {
@@ -66,9 +84,15 @@ module.exports = {
   			touch: '44px',
   			'touch-large': '48px'
   		},
-  		boxShadow: {
-  			'3xl': '0 35px 60px -12px rgba(0, 0, 0, 0.25)'
-  		},
+		boxShadow: {
+			'0': 'none',
+			'1': '0 1px 2px rgba(0, 0, 0, 0.05)',
+			'2': '0 4px 6px rgba(0, 0, 0, 0.08)',
+			'3': '0 8px 12px rgba(0, 0, 0, 0.12)',
+			'3xl': '0 35px 60px -12px rgba(0, 0, 0, 0.25)',
+			'neumorphic': '5px 5px 15px rgba(0, 0, 0, 0.1), -5px -5px 15px rgba(255, 255, 255, 0.7)',
+			'neumorphic-dark': '5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.05)'
+		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

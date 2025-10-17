@@ -826,7 +826,7 @@ export default function IncidentTable({
 
           {/* View Toggle - Center */}
           {onViewModeChange && (
-            <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
+            <div className="card-control flex items-center p-1">
               <motion.button
                 onClick={() => onViewModeChange('table')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
@@ -872,7 +872,7 @@ export default function IncidentTable({
         <div className="block md:hidden flex items-center justify-between gap-4 mb-2">
           {/* View Toggle - Left */}
           {onViewModeChange && (
-            <div className="flex items-center bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm rounded-lg border border-gray-200/50 dark:border-[#2d437a]/50 p-1">
+            <div className="card-control flex items-center p-1">
               <motion.button
                 onClick={() => onViewModeChange('table')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
@@ -1092,7 +1092,7 @@ export default function IncidentTable({
               return (
               <motion.div
                 key={incident.id}
-                className={`relative bg-white dark:bg-[#23408e] shadow-md rounded-xl border transition-all duration-200 active:shadow-xl active:scale-[0.99] cursor-pointer touch-target ${priorityBorderClass} ${getRowStyle(incident)} ${
+                className={`card-table-row relative cursor-pointer touch-target ${priorityBorderClass} ${getRowStyle(incident)} ${
                   isHighPriorityAndOpen(incident)
                     ? 'ring-2 ring-red-400 shadow-xl shadow-red-500/50 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
                     : 'border-gray-200 dark:border-[#2d437a] active:border-blue-400 dark:active:border-blue-500'
@@ -1127,8 +1127,6 @@ export default function IncidentTable({
                     }
                   }
                 }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
               >
                 <div className="absolute right-2 top-2 flex gap-1.5 items-center z-10">
                   {incident.entry_type === 'retrospective' && (
@@ -1461,7 +1459,7 @@ export default function IncidentTable({
       ) : viewMode === 'board' ? (
         <>
           {/* Board View */}
-      <div className="h-[700px] bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 p-6">
+      <div className="card-depth h-[700px] p-6 shadow-3">
         <CollaborationBoard
           eventId={propCurrentEventId || currentEventId || ''}
           currentUser={currentUser}

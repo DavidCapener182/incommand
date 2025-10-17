@@ -373,7 +373,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 bg-white dark:bg-[#23408e] shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+    <main className="max-w-3xl mx-auto px-4 py-8 card-time shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">End of Event Report</h1>
       <form onSubmit={handleSubmit} className="space-y-6" id="event-report-pdf">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

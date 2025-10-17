@@ -104,7 +104,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-[#101c36] transition-colors duration-300">
-        <div className="bg-white dark:bg-[#23408e] p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-[#2d437a] text-center text-gray-900 dark:text-gray-100">
+        <div className="card-time p-8 shadow-xl text-center text-gray-900 dark:text-gray-100">
           <p>You must be signed in to view your profile.</p>
           <button
             className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white rounded-lg shadow transition-colors duration-200"

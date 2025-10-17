@@ -160,7 +160,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
   }, [activeTab, newsFilter, isOpen]);
 
   return (
-    <div className="flex flex-col rounded-2xl border bg-white shadow-2xl overflow-hidden h-full">
+    <div className="flex flex-col card-modal shadow-3 overflow-hidden h-full">
       {/* Brand bar remains */}
       <div className="px-4 pt-4 pb-3 bg-[#2A3990] text-white border-b border-white/20">
         <div className="flex items-center justify-between">
@@ -385,7 +385,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
               {/* Expanded Article View */}
               {expandedArticle && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black bg-opacity-40">
-                  <div className="bg-white/90 dark:bg-[#232c43]/90 supports-[backdrop-filter]:backdrop-blur-md rounded-2xl shadow-2xl max-w-lg w-full p-8 md:p-10 relative flex flex-col items-center border border-white/40 dark:border-gray-600/40">
+                  <div className="card-modal max-w-lg w-full p-8 md:p-10 relative flex flex-col items-center shadow-3">
                     <button
                       className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                       onClick={() => setExpandedArticle(null)}
@@ -566,7 +566,7 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
               {/* Expanded Help Article Modal */}
               {expandedHelpArticle && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black bg-opacity-40">
-                  <div className="bg-white/90 dark:bg-[#232c43]/90 backdrop-blur-md rounded-2xl shadow-2xl max-w-lg w-full p-8 md:p-10 relative flex flex-col items-center border border-white/40 dark:border-gray-600/40">
+                  <div className="card-modal max-w-lg w-full p-8 md:p-10 relative flex flex-col items-center shadow-3">
                     <button
                       className="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                       onClick={() => { setExpandedHelpArticle(null); setExpandedHelpTitle(null); }}

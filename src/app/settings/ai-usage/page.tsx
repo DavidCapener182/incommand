@@ -172,7 +172,7 @@ export default function AIUsagePage() {
           {/* Usage Chart */}
           <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">Usage Over Time</h3>
-            <div className="w-full h-32 bg-gray-50 dark:bg-[#1a2a57] rounded-lg flex items-end p-2">
+            <div className="w-full h-32 card-depth dark:bg-[#1a2a57] flex items-end p-2">
               <svg width="100%" height="100%" viewBox="0 0 300 80" preserveAspectRatio="none">
                 {Object.entries(usageByDay).map(([date, { calls }], i) => (
                   <rect

@@ -174,7 +174,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   // If no eventId provided, show message to select an event
   if (!eventId || eventId === '') {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center ${className}`}>
+      <div className={`card-depth p-8 text-center ${className}`}>
         <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           No Event Selected

@@ -421,7 +421,7 @@ export default function NotificationSettingsPage() {
       <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Notification Management</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
+          <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 card-depth dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
             <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
               <DocumentTextIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>

@@ -88,7 +88,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {showNav && <Navigation />}
           <div className="flex flex-col min-h-screen">
             <main 
-              className="flex-grow bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-100/60 via-gray-100/40 to-gray-200/60 dark:from-[#101426]/60 dark:via-[#101426]/40 dark:to-[#0b0f1c]/60"
+              className="flex-grow"
               style={{
                 paddingTop: 'max(env(safe-area-inset-top), 0px)',
                 paddingLeft: 'max(env(safe-area-inset-left), 0px)',

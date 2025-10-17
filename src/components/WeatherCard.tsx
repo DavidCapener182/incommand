@@ -142,7 +142,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // Loading state
   if (loading) {
     return (
-      <Card className="h-[130px] animate-pulse bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl">
+      <Card className="h-[130px] card-skeleton">
         <CardContent className="p-4 h-full flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center">
             <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
@@ -157,7 +157,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // Error state with retry
   if (error) {
     return (
-      <Card className="h-[130px] bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="h-[130px] card-depth">
         <CardContent className="p-4 h-full flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
             <ExclamationTriangleIcon className="h-8 w-8 text-red-400 mb-2" />
@@ -180,7 +180,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // No weather data
   if (!weather) {
     return (
-      <Card className="h-[130px] bg-white/90 dark:bg-[#1b203b] border border-gray-200/60 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200">
+      <Card className="h-[130px] card-depth">
         <CardContent className="p-4 h-full flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
             <CloudIcon className="h-8 w-8 text-gray-400 mb-2" />

@@ -503,7 +503,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-2xl border border-gray-200/70 bg-white/90 p-6 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70 lg:flex-row lg:items-center lg:justify-between">
+      <header className="card-depth flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Staffing Centre</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -621,7 +621,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             className="mb-8"
           />
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="card-alt p-8 text-center">
             <Radio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No Active Event
@@ -647,7 +647,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             className="mb-8"
           />
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="card-alt p-8 text-center">
             <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No Active Event

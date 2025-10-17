@@ -497,10 +497,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="bg-card border border-border/60 rounded-2xl shadow-xl max-w-[1280px] w-[92%] sm:w-[95%] mx-auto relative overflow-hidden flex flex-col"
+            className="card-modal max-w-[1280px] w-[92%] sm:w-[95%] mx-auto relative overflow-hidden flex flex-col"
             style={{
               transform: 'translateY(-2%)',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
               maxHeight: 'calc(100vh - 48px)',
               height: 'auto'
             }}

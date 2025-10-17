@@ -200,7 +200,7 @@ const SystemSettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Maintenance Mode */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="card-alt p-6">
               <div className="flex items-center mb-4">
                 <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500 mr-2" />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -245,7 +245,7 @@ const SystemSettingsPage: React.FC = () => {
             </div>
 
             {/* Feature Flags */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="card-alt p-6">
               <div className="flex items-center mb-4">
                 <FlagIcon className="h-6 w-6 text-blue-500 mr-2" />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -290,7 +290,7 @@ const SystemSettingsPage: React.FC = () => {
             </div>
 
             {/* Notification Settings */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="card-alt p-6">
               <div className="flex items-center mb-4">
                 <BellIcon className="h-6 w-6 text-green-500 mr-2" />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -367,7 +367,7 @@ const SystemSettingsPage: React.FC = () => {
             </div>
 
             {/* Platform Configuration */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <div className="card-alt p-6">
               <div className="flex items-center mb-4">
                 <ShieldCheckIcon className="h-6 w-6 text-purple-500 mr-2" />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

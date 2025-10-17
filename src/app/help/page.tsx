@@ -28,8 +28,8 @@ import {
 
 const HelpPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300 pb-24">
-      <div className="max-w-6xl mx-auto bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl p-6 md:p-10 border border-gray-200 dark:border-[#2d437a]">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300 pb-24">
+      <div className="max-w-6xl mx-auto card-time text-gray-900 dark:text-gray-100 p-6 md:p-10">
         <header className="mb-10 border-b border-gray-200 dark:border-[#2d437a] pb-6 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-3">
             <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
@@ -103,7 +103,7 @@ const HelpPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Structured Template Guide */}
-            <div className="bg-white dark:bg-[#2d437a] p-6 rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm">
+            <div className="card-depth-subtle p-6 dark:bg-[#2d437a]">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
                 <DocumentTextIcon className="h-5 w-5 text-green-600" />
                 Structured Logging Template
@@ -157,7 +157,7 @@ const HelpPage = () => {
             </div>
 
             {/* Best Practices */}
-            <div className="bg-white dark:bg-[#2d437a] p-6 rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-sm">
+            <div className="card-depth-subtle p-6 dark:bg-[#2d437a]">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-100 mb-4 flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-blue-600" />
                 Best Practices
