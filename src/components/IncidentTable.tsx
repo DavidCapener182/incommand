@@ -170,6 +170,7 @@ export default function IncidentTable({
   const [pullToRefreshDistance, setPullToRefreshDistance] = useState(0)
   const [swipedIncidentId, setSwipedIncidentId] = useState<number | null>(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
   
   // Performance monitoring
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
@@ -218,6 +219,38 @@ export default function IncidentTable({
   useEffect(() => {
     onToastRef.current = onToast
   }, [onToast])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const updateMatch = () => setIsMobile(mediaQuery.matches)
+
+    updateMatch()
+
+    const listener = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', listener)
+    } else if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(listener)
+    }
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', listener)
+      } else if (typeof mediaQuery.removeListener === 'function') {
+        mediaQuery.removeListener(listener)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isMobile) return
+    if (viewMode !== 'table' && onViewModeChange) {
+      onViewModeChange('table')
+    }
+  }, [isMobile, onViewModeChange, viewMode])
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -868,49 +901,20 @@ export default function IncidentTable({
           </div>
         </div>
 
-        {/* Mobile: View Toggle and Last Updated */}
-        <div className="block md:hidden flex items-center justify-between gap-4 mb-2">
-          {/* View Toggle - Left */}
-          {onViewModeChange && (
-            <div className="card-control flex items-center p-1">
-              <motion.button
-                onClick={() => onViewModeChange('table')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
-                  viewMode === 'table' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <TableCellsIcon className="h-4 w-4" /> Table
-              </motion.button>
-              <motion.button
-                onClick={() => onViewModeChange('board')}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 touch-target ${
-                  viewMode === 'board' ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <ViewColumnsIcon className="h-4 w-4" /> Board
-              </motion.button>
+        {/* Mobile: Last Updated */}
+        <div className="block md:hidden mb-2">
+          {lastUpdated && (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium">Last Updated:</span> {lastUpdated.toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              })}
             </div>
           )}
-
-          {/* Last Updated Timestamp - Right side */}
-          <div className="flex items-center gap-3">
-            {lastUpdated && (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium">Last Updated:</span> {lastUpdated.toLocaleTimeString('en-GB', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric'
-                })}
-              </div>
-            )}
-          </div>
         </div>
         
         {onFiltersChange && (
@@ -1155,7 +1159,7 @@ export default function IncidentTable({
 
                     {/* Center: Time */}
                     <div className="flex-grow text-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 bg-transparent">
                         {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -1297,7 +1301,7 @@ export default function IncidentTable({
                               })()}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center bg-transparent">
                             {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -1457,51 +1461,57 @@ export default function IncidentTable({
         </div>
         </>
       ) : viewMode === 'board' ? (
-        <>
-          {/* Board View */}
-      <div className="card-depth h-[700px] p-6 shadow-3">
-        <CollaborationBoard
-          eventId={propCurrentEventId || currentEventId || ''}
-          currentUser={currentUser}
-          searchQuery={searchQuery}
-          incidents={incidents}
-          loading={loading}
-          error={error}
-          filters={filters}
-          updateIncident={async (id, updates) => {
-            // Find the incident and update it
-            const incident = incidents.find(inc => inc.id.toString() === id);
-            if (!incident) return;
-            
-            // Update the incident in the database
-            const { error: updateError } = await supabase
-              .from('incident_logs')
-              .update(updates)
-              .eq('id', incident.id);
-            
-            if (updateError) {
-              throw updateError;
-            }
-            
-            // Refresh the incidents list
-            await fetchIncidents();
-          }}
-          onIncidentSelect={(incident) => {
-            // Open the incident details modal when an incident is clicked on the board
-            handleIncidentClick(incident);
-          }}
-        />
-      </div>
-      
-        {/* Incident Details Modal for Board View */}
-        {isDetailsModalOpen && selectedIncidentId && (
-          <IncidentDetailsModal
-            isOpen={isDetailsModalOpen}
-            incidentId={selectedIncidentId}
-            onClose={handleCloseModal}
-          />
-        )}
-      </>
+        isMobile ? (
+          <div className="mt-6 rounded-3xl border border-dashed border-blue-300 bg-blue-50/60 p-6 text-center text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+            Board view is available on larger screens.
+          </div>
+        ) : (
+          <>
+            {/* Board View */}
+            <div className="card-depth h-[700px] p-6 shadow-3">
+              <CollaborationBoard
+                eventId={propCurrentEventId || currentEventId || ''}
+                currentUser={currentUser}
+                searchQuery={searchQuery}
+                incidents={incidents}
+                loading={loading}
+                error={error}
+                filters={filters}
+                updateIncident={async (id, updates) => {
+                  // Find the incident and update it
+                  const incident = incidents.find(inc => inc.id.toString() === id);
+                  if (!incident) return;
+
+                  // Update the incident in the database
+                  const { error: updateError } = await supabase
+                    .from('incident_logs')
+                    .update(updates)
+                    .eq('id', incident.id);
+
+                  if (updateError) {
+                    throw updateError;
+                  }
+
+                  // Refresh the incidents list
+                  await fetchIncidents();
+                }}
+                onIncidentSelect={(incident) => {
+                  // Open the incident details modal when an incident is clicked on the board
+                  handleIncidentClick(incident);
+                }}
+              />
+            </div>
+
+            {/* Incident Details Modal for Board View */}
+            {isDetailsModalOpen && selectedIncidentId && (
+              <IncidentDetailsModal
+                isOpen={isDetailsModalOpen}
+                incidentId={selectedIncidentId}
+                onClose={handleCloseModal}
+              />
+            )}
+          </>
+        )
     ) : (
       <>
         <div className="flex items-center justify-center h-64 text-gray-500">
