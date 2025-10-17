@@ -24,6 +24,7 @@ import PriorityBadge from './PriorityBadge'
 import EscalationModal, { type EscalationResponse } from './EscalationModal'
 import IncidentRevisionHistory from './IncidentRevisionHistory'
 import IncidentAmendmentModal from './IncidentAmendmentModal'
+import { cn } from '@/lib/utils'
 import {
   getIncidentTypeStyle,
   getPriorityBorderClass,
@@ -484,7 +485,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-stretch bg-black/40 backdrop-blur-sm sm:items-center sm:justify-center"
           onClick={(e) => {
             // Close modal when clicking backdrop
             if (e.target === e.currentTarget) {
@@ -497,12 +498,10 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="card-modal max-w-[1280px] w-[92%] sm:w-[95%] mx-auto relative overflow-hidden flex flex-col"
-            style={{
-              transform: 'translateY(-2%)',
-              maxHeight: 'calc(100vh - 48px)',
-              height: 'auto'
-            }}
+            className={cn(
+              'card-modal relative mx-auto flex h-full w-full flex-col overflow-hidden bg-background',
+              'max-h-screen rounded-none sm:h-auto sm:max-h-[calc(100vh-48px)] sm:w-[95%] sm:max-w-[1280px] sm:rounded-3xl'
+            )}
             onClick={(e) => e.stopPropagation()}
           >
         {/* Header */}
@@ -555,9 +554,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         </div>
 
         {/* Content */}
-        <div className="flex h-[calc(90vh-80px)]">
-          {/* Left Column - Main Content (no scroll, just fits) */}
-          <div className="flex-1 px-4 sm:px-6 py-6">
+        <div className="flex flex-1 min-h-0 flex-col overflow-y-auto md:h-[calc(90vh-80px)] md:flex-row md:overflow-hidden">
+          {/* Left Column - Main Content */}
+          <div className="flex-1 px-4 sm:px-6 py-6 md:min-h-0 md:overflow-y-auto">
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -964,7 +963,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           </div>
 
           {/* Right Column - Revision History & Updates with scrolling */}
-          <div className="w-80 border-l border-border/30 px-4 sm:px-6 py-6 overflow-y-auto">
+          <div className="w-full border-t border-border/30 px-4 sm:px-6 py-6 mt-6 md:mt-0 md:w-80 md:border-t-0 md:border-l md:min-h-0 md:overflow-y-auto">
             <div className="space-y-6">
               {incident && (
                 <IncidentRevisionHistory
