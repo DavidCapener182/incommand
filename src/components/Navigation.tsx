@@ -765,7 +765,7 @@ export default function Navigation() {
                   setShowNoEventModal(false);
                   setShowEventCreation(true);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-[#3b4a9b]"
               >
                 Create Event
               </button>

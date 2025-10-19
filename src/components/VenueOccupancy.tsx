@@ -300,8 +300,8 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           )}
         </div>
         {expectedAttendance > 0 && (
-          <div className="w-full space-y-0.5">
-            <div className="flex justify-between items-center px-1">
+          <div className="w-full space-y-0.5 px-3">
+            <div className="flex justify-between items-center">
               <span
                 className={`text-[10px] font-medium ${isCriticalCapacity ? 'text-red-500 animate-pulse font-bold' : currentCount > expectedAttendance ? 'text-red-500' : currentCount >= expectedAttendance * 0.9 ? 'text-amber-500' : currentCount >= expectedAttendance * 0.7 ? 'text-amber-500' : 'text-green-500'}`}
               >

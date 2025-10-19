@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Line } from 'react-chartjs-2';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -340,9 +342,9 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl mx-auto overflow-hidden">
+              <Dialog.Panel className="relative card-modal w-full max-w-7xl mx-auto overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
+                <div className="bg-blue-600 px-6 py-4 text-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <UsersIcon className="h-6 w-6" />
@@ -350,11 +352,6 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                         <Dialog.Title className="text-xl font-bold">
                           Venue Occupancy Dashboard
                         </Dialog.Title>
-                        {eventDetails && (
-                          <p className="text-blue-100 text-sm">
-                            {eventDetails.event_name} • {eventDetails.venue_name}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <button
@@ -383,58 +380,67 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                     <div className="space-y-6">
                       {/* Stats Cards */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Current</p>
-                              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                                {currentAttendance.toLocaleString()}
-                              </p>
+                        <Card className="card-depth">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Current</p>
+                                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                                  {currentAttendance.toLocaleString()}
+                                </p>
+                              </div>
+                              <UsersIcon className="h-8 w-8 text-blue-500" />
                             </div>
-                            <UsersIcon className="h-8 w-8 text-blue-500" />
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                         
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-green-600 dark:text-green-400">Peak</p>
-                              <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                                {peakAttendance.toLocaleString()}
-                              </p>
+                        <Card className="card-depth">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-green-600 dark:text-green-400">Peak</p>
+                                <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                                  {peakAttendance.toLocaleString()}
+                                </p>
+                              </div>
+                              <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
                             </div>
-                            <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                         
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200 dark:border-purple-700">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Average</p>
-                              <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                                {averageAttendance.toLocaleString()}
-                              </p>
+                        <Card className="card-depth">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Average</p>
+                                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                                  {averageAttendance.toLocaleString()}
+                                </p>
+                              </div>
+                              <ChartBarIcon className="h-8 w-8 text-purple-500" />
                             </div>
-                            <ChartBarIcon className="h-8 w-8 text-purple-500" />
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                         
-                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Median</p>
-                              <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                                {medianAttendance.toLocaleString()}
-                              </p>
+                        <Card className="card-depth">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Median</p>
+                                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                                  {medianAttendance.toLocaleString()}
+                                </p>
+                              </div>
+                              <ClockIcon className="h-8 w-8 text-orange-500" />
                             </div>
-                            <ClockIcon className="h-8 w-8 text-orange-500" />
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                       </div>
 
                       {/* Progress Bar for Expected Attendance */}
                       {eventDetails?.expected_attendance && (
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                        <Card className="card-depth">
+                          <CardContent className="p-6">
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Attendance Progress</h3>
                             <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -450,35 +456,36 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                           <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
                             {currentAttendance.toLocaleString()} of {expectedAttendance.toLocaleString()} expected attendees
                           </p>
-                        </div>
+                          </CardContent>
+                        </Card>
                       )}
 
                       {/* Chart and Table Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Attendance Timeline Chart */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                        <Card className="card-depth">
+                          <CardHeader>
+                            <CardTitle className="flex items-center">
                               <ChartBarIcon className="h-5 w-5 mr-2 text-blue-500" />
                               Attendance Timeline
-                            </h3>
-                          </div>
-                          <div className="p-6">
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
                             <div className="h-80">
                               <Line data={attendanceChartData} options={attendanceChartOptions} />
                             </div>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
 
                         {/* Recent Attendance Log */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                        <Card className="card-depth">
+                          <CardHeader>
+                            <CardTitle className="flex items-center">
                               <ClockIcon className="h-5 w-5 mr-2 text-green-500" />
                               Recent Activity
-                            </h3>
-                          </div>
-                          <div className="p-6">
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
                             <div className="space-y-3 max-h-80 overflow-y-auto">
                               {attendanceData.slice(-8).reverse().map((rec, index, arr) => {
                                 const prevRec = arr[index + 1];
@@ -522,8 +529,8 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
                                 );
                               })}
                             </div>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
                   )}

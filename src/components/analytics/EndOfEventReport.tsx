@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   DocumentTextIcon,
@@ -19,6 +19,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { generateEventReport, type EventReportData, type EventReportOptions } from '@/lib/analytics/eventReportGenerator'
 import { useToast } from '@/components/Toast'
+import { Card } from '@/components/ui/card'
 
 interface EndOfEventReportProps {
   eventId?: string
@@ -62,6 +63,65 @@ interface LessonsLearned {
   confidence: number
 }
 
+const buildIncidentSummary = (incidents: any[]): IncidentSummary => {
+  if (!incidents || incidents.length === 0) {
+    return {
+      total: 0,
+      byType: {},
+      byPriority: {},
+      avgResponseTime: 0,
+      resolved: 0,
+      open: 0
+    }
+  }
+
+  const resolvedIncidents = incidents.filter((incident) => incident.status === 'closed')
+  const incidentsWithResponse = incidents.filter((incident) => incident.updated_at && incident.created_at)
+  const avgResponseTime =
+    incidentsWithResponse.length > 0
+      ? incidentsWithResponse.reduce((acc, incident) => {
+          const responseTime =
+            new Date(incident.updated_at).getTime() - new Date(incident.created_at).getTime()
+          return acc + responseTime / (1000 * 60)
+        }, 0) / incidentsWithResponse.length
+      : 0
+
+  return {
+    total: incidents.length,
+    byType: incidents.reduce((acc: Record<string, number>, incident: any) => {
+      const key = incident.incident_type || 'unknown'
+      acc[key] = (acc[key] || 0) + 1
+      return acc
+    }, {}),
+    byPriority: incidents.reduce((acc: Record<string, number>, incident: any) => {
+      const key = incident.priority || 'unspecified'
+      acc[key] = (acc[key] || 0) + 1
+      return acc
+    }, {}),
+    avgResponseTime,
+    resolved: resolvedIncidents.length,
+    open: incidents.length - resolvedIncidents.length
+  }
+}
+
+const buildStaffPerformance = (
+  assignments: any[] | null,
+  radioSignouts: any[] | null,
+  summary: IncidentSummary | null
+): StaffPerformance => {
+  const totalAssignments = assignments?.length || 0
+  const assignedPositions = assignments?.filter((a) => a.staff_id).length || 0
+  const radiosOut = radioSignouts?.filter((r) => r.status === 'out').length || 0
+
+  return {
+    totalStaff: totalAssignments,
+    assignedPositions,
+    radioSignouts: radiosOut,
+    avgResponseTime: summary?.avgResponseTime || 0,
+    efficiencyScore: totalAssignments > 0 ? (assignedPositions / totalAssignments) * 100 : 0
+  }
+}
+
 export default function EndOfEventReport({ eventId, className = '' }: EndOfEventReportProps) {
   const { addToast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -81,120 +141,86 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   })
   const [isSendingEmail, setIsSendingEmail] = useState(false)
 
-  const fetchEventData = async () => {
+
+  const fetchEventData = useCallback(async () => {
+    if (!eventId) {
+      setEventData(null)
+      setIncidentSummary(null)
+      setStaffPerformance(null)
+      setLessonsLearned(null)
+      setAiInsights('')
+      setLoading(false)
+      return
+    }
+
+    // Prevent multiple simultaneous fetches
+    if (loading) {
+      return
+    }
+
     setLoading(true)
     try {
-      // Fetch event details
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select('*')
         .eq('id', eventId)
         .single()
 
-      if (eventError) throw eventError
+      if (eventError) {
+        throw eventError
+      }
+
       setEventData(event)
 
-      // Fetch incident summary
       const { data: incidents, error: incidentError } = await supabase
         .from('incident_logs')
         .select('incident_type, priority, status, created_at, updated_at')
         .eq('event_id', eventId)
 
-      if (!incidentError && incidents) {
-        const summary: IncidentSummary = {
-          total: incidents.length,
-          byType: incidents.reduce((acc, incident) => {
-            acc[incident.incident_type] = (acc[incident.incident_type] || 0) + 1
-            return acc
-          }, {} as Record<string, number>),
-          byPriority: incidents.reduce((acc, incident) => {
-            acc[incident.priority] = (acc[incident.priority] || 0) + 1
-            return acc
-          }, {} as Record<string, number>),
-          avgResponseTime: incidents
-            .filter(i => i.updated_at && i.created_at)
-            .reduce((acc, i) => {
-              const responseTime = new Date(i.updated_at).getTime() - new Date(i.created_at).getTime()
-              return acc + (responseTime / (1000 * 60)) // Convert to minutes
-            }, 0) / Math.max(incidents.filter(i => i.updated_at && i.created_at).length, 1),
-          resolved: incidents.filter(i => i.status === 'closed').length,
-          open: incidents.filter(i => i.status !== 'closed').length
-        }
-        setIncidentSummary(summary)
+      if (incidentError) {
+        console.warn('Incident summary error:', incidentError)
       }
 
-      // Fetch staff performance
-      const { data: staffAssignments, error: staffError } = await supabase
-        .from('position_assignments')
-        .select('*')
-        .eq('event_id', eventId)
+      const incidentRecords = incidents || []
+      const summary = buildIncidentSummary(incidentRecords)
+      setIncidentSummary(summary)
 
-      const { data: radioSignouts, error: radioError } = await supabase
-        .from('radio_signouts')
-        .select('*')
-        .eq('event_id', eventId)
+      const [staffAssignmentsResult, radioSignoutsResult] = await Promise.all([
+        supabase
+          .from('position_assignments')
+          .select('*')
+          .eq('event_id', eventId),
+        supabase
+          .from('radio_signouts')
+          .select('*')
+          .eq('event_id', eventId)
+      ])
 
-      if (!staffError && !radioError) {
-        const performance: StaffPerformance = {
-          totalStaff: staffAssignments?.length || 0,
-          assignedPositions: staffAssignments?.filter(a => a.staff_id).length || 0,
-          radioSignouts: radioSignouts?.filter(r => r.status === 'out').length || 0,
-          avgResponseTime: incidentSummary?.avgResponseTime || 0,
-          efficiencyScore: staffAssignments?.length ? 
-            (staffAssignments.filter(a => a.staff_id).length / staffAssignments.length) * 100 : 0
-        }
-        setStaffPerformance(performance)
+      if (staffAssignmentsResult.error) {
+        console.warn('Staff assignment error:', staffAssignmentsResult.error)
       }
 
-      // Generate AI insights and lessons learned
-      await generateAIInsights(event, incidents || [], staffAssignments || [])
+      if (radioSignoutsResult.error) {
+        console.warn('Radio sign-out error:', radioSignoutsResult.error)
+      }
 
-    } catch (error) {
-      console.error('Error fetching event data:', error)
-      addToast({
-        type: 'error',
-        title: 'Event Data Error',
-        message: 'Failed to load event data',
-        duration: 4000
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+      const performance = buildStaffPerformance(
+        staffAssignmentsResult.data || [],
+        radioSignoutsResult.data || [],
+        summary
+      )
+      setStaffPerformance(performance)
 
-  useEffect(() => {
-    if (eventId && eventId !== '') {
-      fetchEventData()
-    } else {
-      setLoading(false)
-      setEventData(null)
-    }
-  }, [eventId, fetchEventData])
-
-  // If no eventId provided, show message to select an event
-  if (!eventId || eventId === '') {
-    return (
-      <div className={`card-depth p-8 text-center ${className}`}>
-        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          No Event Selected
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Please select an event to generate the end-of-event report.
-        </p>
-      </div>
-    )
-  }
-
-  const generateAIInsights = async (event: EventData, incidents: any[], staffAssignments: any[]) => {
-    try {
-      const prompt = `Analyze this event data and provide insights:
+      // Generate AI insights inline to avoid circular dependency
+      try {
+        const resolvedCount = incidentRecords.filter((incident) => incident.status === 'closed').length
+        const prompt = `Analyze this event data and provide insights:
 
 Event: ${event.name}
 Date: ${event.event_date}
 Attendance: ${event.actual_attendance || 'Unknown'}/${event.max_capacity}
-Incidents: ${incidents.length} total (${incidents.filter(i => i.status === 'closed').length} resolved)
-Staff: ${staffAssignments?.length || 0} positions assigned
+Incidents: ${incidentRecords.length} total (${resolvedCount} resolved)
+Staff: ${staffAssignmentsResult.data?.length || 0} positions assigned
 
 Provide:
 1. 3 key strengths of this event
@@ -204,60 +230,157 @@ Provide:
 
 Format as JSON with keys: strengths, improvements, recommendations, confidence`
 
-      const response = await fetch('/api/v1/ai/prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, max_tokens: 500 })
-      })
+        const response = await fetch('/api/v1/ai/prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, max_tokens: 500 })
+        })
 
-      if (response.ok) {
-        const data = await response.json()
-        try {
-          const insights = JSON.parse(data.summary || '{}')
-          setLessonsLearned({
-            strengths: insights.strengths || ['Event completed successfully', 'Staff coordination effective', 'Incident response timely'],
-            improvements: insights.improvements || ['Increase staff training', 'Improve communication protocols', 'Enhance documentation'],
-            recommendations: insights.recommendations || ['Implement pre-event briefings', 'Use technology for better tracking', 'Regular performance reviews'],
-            confidence: insights.confidence || 85
-          })
-        } catch (parseError) {
-          // Fallback if JSON parsing fails
-          setLessonsLearned({
-            strengths: ['Event completed successfully', 'Staff coordination effective', 'Incident response timely'],
-            improvements: ['Increase staff training', 'Improve communication protocols', 'Enhance documentation'],
-            recommendations: ['Implement pre-event briefings', 'Use technology for better tracking', 'Regular performance reviews'],
-            confidence: 75
-          })
+        if (response.ok) {
+          const data = await response.json()
+          try {
+            // Clean the response - remove markdown formatting if present
+            let cleanResponse = data.summary || '{}'
+            
+            // Remove markdown code block formatting
+            if (cleanResponse.includes('```json')) {
+              cleanResponse = cleanResponse.replace(/```json\s*/, '').replace(/\s*```/, '')
+            }
+            if (cleanResponse.includes('```')) {
+              cleanResponse = cleanResponse.replace(/```\s*/, '').replace(/\s*```/, '')
+            }
+            
+            const insights = JSON.parse(cleanResponse)
+            setLessonsLearned({
+              strengths:
+                insights.strengths || [
+                  'Event completed successfully',
+                  'Staff coordination effective',
+                  'Incident response timely'
+                ],
+              improvements:
+                insights.improvements || [
+                  'Increase staff training',
+                  'Improve communication protocols',
+                  'Enhance documentation'
+                ],
+              recommendations:
+                insights.recommendations || [
+                  'Implement pre-event briefings',
+                  'Use technology for better tracking',
+                  'Regular performance reviews'
+                ],
+              confidence: insights.confidence || 85
+            })
+          } catch (parseError) {
+            console.warn('Unable to parse AI lessons learned response:', parseError)
+            setLessonsLearned({
+              strengths: [
+                'Event completed successfully',
+                'Staff coordination effective',
+                'Incident response timely'
+              ],
+              improvements: [
+                'Increase staff training',
+                'Improve communication protocols',
+                'Enhance documentation'
+              ],
+              recommendations: [
+                'Implement pre-event briefings',
+                'Use technology for better tracking',
+                'Regular performance reviews'
+              ],
+              confidence: 75
+            })
+          }
         }
-      }
 
-      // Generate overall AI summary
-      const summaryPrompt = `Provide a 2-paragraph executive summary for this event:
+        // Generate overall AI summary
+        const summaryPrompt = `Provide a concise executive summary for this event:
 
 Event: ${event.name}
-Incidents: ${incidents.length} (${incidents.filter(i => i.status === 'closed').length} resolved)
-Staff Performance: ${staffAssignments?.length || 0} positions
-Response Time: ${incidentSummary?.avgResponseTime.toFixed(1) || 'N/A'} minutes average
+Incidents: ${incidentRecords.length} (${resolvedCount} resolved)
+Staff Performance: ${staffAssignmentsResult.data?.length || 0} positions
+Response Time: ${summary?.avgResponseTime?.toFixed(1) || 'N/A'} minutes average
 
-Focus on operational effectiveness, key metrics, and overall success.`
+Focus on operational effectiveness, key metrics, and overall success. Provide two short paragraphs.`
 
-      const summaryResponse = await fetch('/api/v1/ai/prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: summaryPrompt, max_tokens: 200 })
-      })
+        const summaryResponse = await fetch('/api/v1/ai/prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: summaryPrompt, max_tokens: 200 })
+        })
 
-      if (summaryResponse.ok) {
-        const summaryData = await summaryResponse.json()
-        setAiInsights(summaryData.summary || 'AI insights not available')
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json()
+          setAiInsights(summaryData.summary || 'AI insights not available')
+        }
+      } catch (aiError) {
+        console.error('Error generating AI insights:', aiError)
+        // Don't show toast for AI insights failure, just log it
       }
-
     } catch (error) {
-      console.error('Error generating AI insights:', error)
+      console.error('Error fetching event data:', error)
+      
+      // Check if it's a network error
+      const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch')
+      const isResourceError = error instanceof Error && error.message.includes('ERR_INSUFFICIENT_RESOURCES')
+      
+      addToast({
+        type: 'error',
+        title: 'Event Data Error',
+        message: isNetworkError || isResourceError 
+          ? 'Network connection issue. Please check your connection and try again.'
+          : 'Failed to load event data',
+        duration: 4000
+      })
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [eventId, addToast, loading])
 
-  const generateReport = async (format: 'pdf' | 'csv' = 'pdf') => {
+  useEffect(() => {
+    // Debounce the fetch to prevent excessive calls
+    const timeoutId = setTimeout(() => {
+    fetchEventData()
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [fetchEventData])
+
+  const generateCSVReport = useCallback((): string => {
+    const rows = [
+      ['Event Report', eventData?.name || ''],
+      ['Date', eventData ? new Date(eventData.event_date).toLocaleDateString() : ''],
+      ['Venue', eventData?.venue_name || ''],
+      [''],
+      ['INCIDENT SUMMARY'],
+      ['Total Incidents', incidentSummary?.total || 0],
+      ['Resolved', incidentSummary?.resolved || 0],
+      ['Open', incidentSummary?.open || 0],
+      ['Average Response Time (min)', incidentSummary?.avgResponseTime.toFixed(1) || 'N/A'],
+      [''],
+      ['STAFF PERFORMANCE'],
+      ['Assigned Positions', staffPerformance?.assignedPositions || 0],
+      ['Radio Sign-outs', staffPerformance?.radioSignouts || 0],
+      ['Efficiency Score (%)', staffPerformance?.efficiencyScore.toFixed(0) || 0],
+      [''],
+      ['LESSONS LEARNED - STRENGTHS'],
+      ...((lessonsLearned?.strengths || []).map(s => ['', s])),
+      [''],
+      ['LESSONS LEARNED - IMPROVEMENTS'],
+      ...((lessonsLearned?.improvements || []).map(i => ['', i])),
+      [''],
+      ['LESSONS LEARNED - RECOMMENDATIONS'],
+      ...((lessonsLearned?.recommendations || []).map(r => ['', r])),
+      [''],
+      ['AI INSIGHTS'],
+      ['', aiInsights]
+    ]
+    return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+  }, [eventData, incidentSummary, staffPerformance, lessonsLearned, aiInsights])
+
+  const generateReport = useCallback(async (format: 'pdf' | 'csv' = 'pdf') => {
     if (!eventData || !incidentSummary || !staffPerformance || !lessonsLearned) {
       addToast({
         type: 'error',
@@ -309,41 +432,9 @@ Focus on operational effectiveness, key metrics, and overall success.`
     } finally {
       setGenerating(false)
     }
-  }
+  }, [eventData, incidentSummary, staffPerformance, lessonsLearned, generateCSVReport, addToast])
 
-  const generateCSVReport = (): string => {
-    const rows = [
-      ['Event Report', eventData?.name || ''],
-      ['Date', eventData ? new Date(eventData.event_date).toLocaleDateString() : ''],
-      ['Venue', eventData?.venue_name || ''],
-      [''],
-      ['INCIDENT SUMMARY'],
-      ['Total Incidents', incidentSummary?.total || 0],
-      ['Resolved', incidentSummary?.resolved || 0],
-      ['Open', incidentSummary?.open || 0],
-      ['Average Response Time (min)', incidentSummary?.avgResponseTime.toFixed(1) || 'N/A'],
-      [''],
-      ['STAFF PERFORMANCE'],
-      ['Assigned Positions', staffPerformance?.assignedPositions || 0],
-      ['Radio Sign-outs', staffPerformance?.radioSignouts || 0],
-      ['Efficiency Score (%)', staffPerformance?.efficiencyScore.toFixed(0) || 0],
-      [''],
-      ['LESSONS LEARNED - STRENGTHS'],
-      ...((lessonsLearned?.strengths || []).map(s => ['', s])),
-      [''],
-      ['LESSONS LEARNED - IMPROVEMENTS'],
-      ...((lessonsLearned?.improvements || []).map(i => ['', i])),
-      [''],
-      ['LESSONS LEARNED - RECOMMENDATIONS'],
-      ...((lessonsLearned?.recommendations || []).map(r => ['', r])),
-      [''],
-      ['AI INSIGHTS'],
-      ['', aiInsights]
-    ]
-    return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
-  }
-
-  const sendEmailReport = async () => {
+  const sendEmailReport = useCallback(async () => {
     if (!emailForm.recipients.trim()) {
       addToast({
         type: 'error',
@@ -404,11 +495,152 @@ Focus on operational effectiveness, key metrics, and overall success.`
     } finally {
       setIsSendingEmail(false)
     }
+  }, [emailForm, eventData, incidentSummary, staffPerformance, lessonsLearned, aiInsights, addToast])
+
+  // All useMemo hooks must also be before conditional returns
+  const computedMetrics = useMemo(() => {
+    const totalIncidents = incidentSummary?.total ?? 0
+    const resolvedIncidents = incidentSummary?.resolved ?? 0
+    const resolutionRate = totalIncidents > 0 ? (resolvedIncidents / totalIncidents) * 100 : 100
+    const avgResponse = incidentSummary?.avgResponseTime ?? 0
+    const highPriorityCount =
+      (incidentSummary?.byPriority?.high || 0) + (incidentSummary?.byPriority?.urgent || 0)
+    const topIncidentEntry =
+      incidentSummary && totalIncidents > 0
+        ? Object.entries(incidentSummary.byType).sort((a, b) => b[1] - a[1])[0]
+        : null
+    const attendanceFill =
+      eventData?.actual_attendance && eventData?.max_capacity
+        ? Math.round((eventData.actual_attendance / eventData.max_capacity) * 100)
+        : null
+    const staffingCoverage = staffPerformance
+      ? Math.round(staffPerformance.efficiencyScore)
+      : null
+
+    return {
+      totalIncidents,
+      resolvedIncidents,
+      resolutionRate,
+      avgResponse,
+      highPriorityCount,
+      topIncidentLabel: topIncidentEntry ? topIncidentEntry[0] : null,
+      topIncidentCount: topIncidentEntry ? topIncidentEntry[1] : 0,
+      attendanceFill,
+      staffingCoverage,
+      openIncidents: incidentSummary?.open ?? 0,
+      radiosOut: staffPerformance?.radioSignouts ?? 0
+    }
+  }, [eventData, incidentSummary, staffPerformance])
+
+  const priorityBreakdown = useMemo(() => {
+    if (!incidentSummary?.total) {
+      return []
+    }
+
+    return Object.entries(incidentSummary.byPriority)
+      .sort((a, b) => b[1] - a[1])
+      .map(([priority, count]) => ({
+        priority,
+        count,
+        percentage: Math.round((count / incidentSummary.total) * 100)
+      }))
+  }, [incidentSummary])
+
+  const incidentTypeBreakdown = useMemo(() => {
+    if (!incidentSummary?.total) {
+      return []
+    }
+
+    return Object.entries(incidentSummary.byType)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([type, count]) => ({
+        type,
+        count,
+        percentage: Math.round((count / incidentSummary.total) * 100)
+      }))
+  }, [incidentSummary])
+
+  const operationalHighlights = useMemo(() => {
+    type Highlight = {
+      title: string
+      value: string
+      description: string
+      Icon: React.ElementType
+      accent: string
+    }
+
+    const highlights: Highlight[] = []
+
+    if (computedMetrics.totalIncidents > 0) {
+      highlights.push({
+        title: 'Resolution Rate',
+        value: `${Math.round(computedMetrics.resolutionRate)}%`,
+        description: `${computedMetrics.resolvedIncidents} of ${computedMetrics.totalIncidents} incidents closed`,
+        Icon: CheckCircleIcon,
+        accent: 'text-green-600'
+      })
+      highlights.push({
+        title: 'Average Response',
+        value: `${computedMetrics.avgResponse.toFixed(1)} min`,
+        description: 'Mean time from incident creation to closure',
+        Icon: ClockIcon,
+        accent: 'text-blue-600'
+      })
+    }
+
+    if (computedMetrics.staffingCoverage !== null) {
+      highlights.push({
+        title: 'Staffing Coverage',
+        value: `${computedMetrics.staffingCoverage}%`,
+        description: 'Positions filled during the event',
+        Icon: UserGroupIcon,
+        accent: 'text-purple-600'
+      })
+    }
+
+    highlights.push({
+      title: 'High Priority Incidents',
+      value: computedMetrics.highPriorityCount.toString(),
+      description: 'Critical and high-priority events recorded',
+      Icon: ExclamationTriangleIcon,
+      accent: 'text-amber-500'
+    })
+
+    if (computedMetrics.attendanceFill !== null && eventData) {
+      highlights.push({
+        title: 'Attendance Achieved',
+        value: `${computedMetrics.attendanceFill}%`,
+        description: `${eventData.actual_attendance?.toLocaleString() || '0'} of ${eventData.max_capacity?.toLocaleString() || 'N/A'} capacity`,
+        Icon: TrophyIcon,
+        accent: 'text-indigo-600'
+      })
+    }
+
+    return highlights
+  }, [computedMetrics, eventData])
+
+  // NOW we can have conditional returns, AFTER all hooks
+  
+  // If no eventId provided, show message to select an event
+  if (!eventId || eventId === '') {
+    return (
+      <Card className={`p-8 text-center ${className}`}>
+        <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          No Event Selected
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Please select an event to generate the end-of-event report.
+        </p>
+      </Card>
+    )
   }
 
+  // Show loading skeleton while fetching data
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 ${className}`}>
+      <Card className={`p-4 sm:p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
@@ -417,23 +649,22 @@ Focus on operational effectiveness, key metrics, and overall success.`
             ))}
           </div>
         </div>
-      </div>
+      </Card>
     )
   }
 
-  if (!eventData || !eventId || eventId === '') {
+  // If data couldn't be loaded after loading completed
+  if (!eventData) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
-        <div className="text-center">
-          <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No Event Selected
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Please select an event to generate the end-of-event report.
-          </p>
-        </div>
-      </div>
+      <Card className={`p-6 text-center ${className}`}>
+        <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Event data unavailable
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          We could not load the event details. Please refresh or try selecting a different event.
+        </p>
+      </Card>
     )
   }
 
@@ -487,8 +718,33 @@ Focus on operational effectiveness, key metrics, and overall success.`
         </div>
       </div>
 
+      {operationalHighlights.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {operationalHighlights.map((metric) => (
+            <Card key={metric.title} className="p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {metric.title}
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-1">
+                    {metric.value}
+                  </p>
+                </div>
+                <div className="rounded-full bg-gray-100 dark:bg-gray-800/80 p-3">
+                  <metric.Icon className={`h-6 w-6 ${metric.accent}`} />
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                {metric.description}
+              </p>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Event Overview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Event Overview</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="flex items-center gap-3">
@@ -526,109 +782,210 @@ Focus on operational effectiveness, key metrics, and overall success.`
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Incident Summary */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <ChartBarIcon className="h-6 w-6 text-red-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incidents</h3>
-          </div>
-          {incidentSummary ? (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Total:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{incidentSummary.total}</span>
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
+                <ChartBarIcon className="h-6 w-6 text-red-600" />
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Resolved:</span>
-                <span className="font-semibold text-green-600">{incidentSummary.resolved}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Avg Response:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {incidentSummary.avgResponseTime.toFixed(1)}m
-                </span>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Summary</h3>
             </div>
+            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+              {computedMetrics.totalIncidents} total
+            </span>
+          </div>
+
+          {incidentSummary ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Resolved</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {computedMetrics.resolvedIncidents}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Open</p>
+                  <p className="text-lg font-semibold text-orange-600">
+                    {computedMetrics.openIncidents}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Resolution Rate</p>
+                  <p className="text-lg font-semibold text-green-600">
+                    {Math.round(computedMetrics.resolutionRate)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Avg Response</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {computedMetrics.avgResponse.toFixed(1)} min
+                  </p>
+                </div>
+              </div>
+
+              {incidentTypeBreakdown.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                    Top incident patterns
+                  </p>
+                  <ul className="space-y-2">
+                    {incidentTypeBreakdown.map(({ type, count, percentage }) => (
+                      <li key={type} className="flex items-center gap-3 text-sm">
+                        <div className="flex-1">
+                          <div className="flex justify-between">
+                            <span className="font-medium text-gray-900 dark:text-white capitalize">
+                              {type.replace(/_/g, ' ')}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {count} • {percentage}%
+                            </span>
+                          </div>
+                          <div className="h-2 mt-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                            <div
+                              className="h-full rounded-full bg-red-500 dark:bg-red-600"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           ) : (
             <p className="text-gray-500 dark:text-gray-400">Loading incident data...</p>
           )}
-        </div>
+        </Card>
 
         {/* Staff Performance */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <UserGroupIcon className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Staff Performance</h3>
-          </div>
-          {staffPerformance ? (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Positions:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{staffPerformance.assignedPositions}</span>
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <UserGroupIcon className="h-6 w-6 text-blue-600" />
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Radio Sign-outs:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{staffPerformance.radioSignouts}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Efficiency:</span>
-                <span className="font-semibold text-green-600">{staffPerformance.efficiencyScore.toFixed(0)}%</span>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Staff Performance</h3>
             </div>
+            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+              {staffPerformance?.totalStaff || 0} roles
+            </span>
+          </div>
+
+          {staffPerformance ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Positions Filled</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {staffPerformance.assignedPositions}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Coverage</p>
+                  <p className="text-lg font-semibold text-green-600">
+                    {computedMetrics.staffingCoverage ?? 0}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Radio Sign-outs</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {computedMetrics.radiosOut}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Avg Response</p>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {computedMetrics.avgResponse.toFixed(1)} min
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-lg border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/10 p-3 text-sm text-blue-800 dark:text-blue-200">
+                Coverage maintained at {computedMetrics.staffingCoverage ?? 0}% with{' '}
+                {computedMetrics.radiosOut} radios deployed for the event.
+              </div>
+            </>
           ) : (
             <p className="text-gray-500 dark:text-gray-400">Loading staff data...</p>
           )}
-        </div>
+        </Card>
 
-        {/* Overall Assessment */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        {/* Risk & Priority */}
+        <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <TrophyIcon className="h-6 w-6 text-yellow-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Assessment</h3>
+            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+              <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Risk Profile</h3>
           </div>
-          {lessonsLearned ? (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                <span className="font-semibold text-green-600">Successful</span>
+
+          {priorityBreakdown.length > 0 ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                  Priority distribution
+                </p>
+                <ul className="space-y-2">
+                  {priorityBreakdown.map(({ priority, count, percentage }) => (
+                    <li key={priority} className="text-sm">
+                      <div className="flex justify-between">
+                        <span className="capitalize text-gray-900 dark:text-white">{priority}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {count} • {percentage}%
+                        </span>
+                      </div>
+                      <div className="h-2 mt-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div
+                          className="h-full rounded-full bg-amber-500 dark:bg-amber-600"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Confidence:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{lessonsLearned.confidence}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Grade:</span>
-                <span className="font-semibold text-blue-600">A-</span>
+
+              <div className="rounded-lg border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 p-3 text-sm text-amber-800 dark:text-amber-200">
+                {computedMetrics.highPriorityCount} high-priority incidents flagged with{' '}
+                {computedMetrics.openIncidents} open at close.
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">Generating assessment...</p>
+            <p className="text-gray-500 dark:text-gray-400">Priority breakdown unavailable.</p>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* AI Insights */}
       {aiInsights && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <SparklesIcon className="h-6 w-6 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Executive Summary</h3>
           </div>
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-              {aiInsights}
-            </p>
+            <div className="space-y-3 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+              {aiInsights
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+            </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Lessons Learned */}
       {lessonsLearned && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <LightBulbIcon className="h-6 w-6 text-yellow-600" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Lessons Learned</h3>
@@ -682,13 +1039,13 @@ Focus on operational effectiveness, key metrics, and overall success.`
               </ul>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Email Modal */}
       {isEmailModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto card-modal">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">

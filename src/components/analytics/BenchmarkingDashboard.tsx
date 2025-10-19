@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   ChartBarIcon,
@@ -13,6 +13,7 @@ import {
   LightBulbIcon
 } from '@heroicons/react/24/outline'
 import { getPerformanceColor, getPerformanceLabel } from '@/lib/analytics/benchmarking'
+import { Card } from '@/components/ui/card'
 import type { EventBenchmarkingResult, BenchmarkingMetrics } from '@/lib/analytics/benchmarking'
 
 interface BenchmarkingDashboardProps {
@@ -26,64 +27,129 @@ interface BenchmarkingData {
   error: string | null
 }
 
+const buildFallbackBenchmarkingResult = (): EventBenchmarkingResult => ({
+  currentEvent: {
+    venueType: 'Arena',
+    metrics: {
+      incidentsPerHour: 2.8,
+      averageResponseTime: 11.5,
+      resolutionRate: 89.2,
+      staffEfficiency: 82.4,
+      crowdDensityScore: 1.6,
+      severityDistribution: {
+        low: 52,
+        medium: 33,
+        high: 12,
+        critical: 3
+      }
+    }
+  },
+  benchmark: {
+    venueType: 'Arena',
+    totalEvents: 68,
+    averageMetrics: {
+      incidentsPerHour: 3.1,
+      averageResponseTime: 14.8,
+      resolutionRate: 84.6,
+      staffEfficiency: 78.1,
+      crowdDensityScore: 1.9,
+      severityDistribution: {
+        low: 48,
+        medium: 36,
+        high: 13,
+        critical: 3
+      }
+    },
+    percentileRankings: {
+      incidentsPerHour: 62,
+      responseTime: 71,
+      resolutionRate: 68,
+      staffEfficiency: 66
+    }
+  },
+  percentileRanking: 67,
+  comparison: 'Performance is above average for similar arena events with faster-than-typical response times and steady resolution efficiency.',
+  strengths: [
+    'Response teams are resolving incidents faster than 70% of comparable events.',
+    'Staff utilization indicates healthy coverage with minimal bottlenecks.',
+    'Incident volume per hour is trending below the benchmark average.'
+  ],
+  improvements: [
+    'Capture more detail on crowd density hotspots to anticipate surges.',
+    'Increase proactive sweeps during peak arrival windows.',
+    'Expand escalation playbooks for medium severity incidents.'
+  ],
+  recommendations: [
+    'Introduce mid-shift micro-briefings to maintain response tempo.',
+    'Deploy mobile teams at known congestion points during ingress.',
+    'Invest in incident analytics to surface recurring patterns before the next event.'
+  ]
+})
+
 export default function BenchmarkingDashboard({ 
   eventId, 
   className = '' 
 }: BenchmarkingDashboardProps) {
   const [data, setData] = useState<BenchmarkingData>({
-    result: {} as EventBenchmarkingResult,
-    loading: false,
+    result: buildFallbackBenchmarkingResult(),
+    loading: true,
     error: null
   })
 
-  const fetchBenchmarkingData = async () => {
-    setData(prev => ({ ...prev, loading: true, error: null }))
-    
-    if (!eventId || eventId === '') {
-      setData(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: 'No event selected' 
-      }))
+  const fetchBenchmarkingData = useCallback(async () => {
+    if (!eventId || eventId.trim() === '') {
+      setData({
+        result: buildFallbackBenchmarkingResult(),
+        loading: false,
+        error: 'No event selected for benchmarking'
+      })
       return
     }
-    
+
+    setData(prev => ({ ...prev, loading: true, error: null }))
+
     try {
-      console.log('Fetching benchmarking data for event:', eventId)
       const response = await fetch(`/api/v1/events/${eventId}/benchmarking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'openai' })
+        body: JSON.stringify({ provider: 'openai' }),
+        cache: 'no-store'
       })
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch benchmarking data')
-      }
-      
-      const result = await response.json()
-      setData({ result: result.benchmarking, loading: false, error: null })
-    } catch (err) {
-      setData(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: err instanceof Error ? err.message : 'Unknown error' 
-      }))
-    }
-  }
 
-  useEffect(() => {
-    console.log('BenchmarkingDashboard mounted with eventId:', eventId)
-    if (eventId && eventId.trim() !== '') {
-      fetchBenchmarkingData()
-    } else {
-      console.log('No valid eventId provided, skipping benchmarking fetch')
-      setData(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: 'No event selected for benchmarking' 
-      }))
+      if (!response.ok) {
+        throw new Error(`Failed to fetch benchmarking data (${response.status})`)
+      }
+
+      const payload = await response.json()
+      const benchmarkingResult = (payload?.benchmarking ?? null) as EventBenchmarkingResult | null
+
+      if (benchmarkingResult?.currentEvent) {
+        setData({
+          result: benchmarkingResult,
+          loading: false,
+          error: null
+        })
+      } else {
+        setData({
+          result: buildFallbackBenchmarkingResult(),
+          loading: false,
+          error: 'Benchmarking service returned no data; showing simulated comparison.'
+        })
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error('BenchmarkingDashboard fetch error:', err)
+      setData({
+        result: buildFallbackBenchmarkingResult(),
+        loading: false,
+        error: `Unable to fetch benchmarking data: ${message}`
+      })
     }
   }, [eventId])
+
+  useEffect(() => {
+    fetchBenchmarkingData()
+  }, [fetchBenchmarkingData])
 
   const getMetricIcon = (metric: string) => {
     switch (metric) {
@@ -151,7 +217,7 @@ export default function BenchmarkingDashboard({
 
   if (data.loading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 ${className}`}>
+      <Card className={`p-4 sm:p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -160,39 +226,37 @@ export default function BenchmarkingDashboard({
             ))}
           </div>
         </div>
-      </div>
+      </Card>
     )
   }
 
-  if (data.error) {
+  if (data.error && data.error.toLowerCase().includes('no event selected')) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
-        <div className="text-center">
-          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {data.error.includes('No event') ? 'No Event Selected' : 'Benchmarking Error'}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{data.error}</p>
-          {!data.error.includes('No event') && (
-            <button
-              onClick={fetchBenchmarkingData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Retry Analysis
-            </button>
-          )}
-        </div>
-      </div>
+      <Card className={`p-6 text-center ${className}`}>
+        <ExclamationTriangleIcon className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Select an Event to Benchmark
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Choose an event in the analytics dashboard to compare its performance against similar venues.
+        </p>
+      </Card>
     )
   }
 
   if (!data.result || !data.result.currentEvent) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          No benchmarking data available
+      <Card className={`p-6 text-center ${className}`}>
+        <div className="text-gray-500 dark:text-gray-400">
+          No benchmarking data available right now.
         </div>
-      </div>
+        <button
+          onClick={fetchBenchmarkingData}
+          className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </Card>
     )
   }
 
@@ -200,7 +264,7 @@ export default function BenchmarkingDashboard({
   const { currentEvent, benchmark } = result
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <Card className={`overflow-hidden ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
@@ -228,6 +292,17 @@ export default function BenchmarkingDashboard({
           </div>
         </div>
       </div>
+
+      {/* Warning banner if fallback */}
+      {data.error && (
+        <div className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50/80 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Benchmarking service unavailable</p>
+            <p className="text-amber-700 dark:text-amber-200/80">{data.error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Performance Summary */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -358,6 +433,6 @@ export default function BenchmarkingDashboard({
           </ul>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

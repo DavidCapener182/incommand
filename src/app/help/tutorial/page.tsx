@@ -3,30 +3,32 @@
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import dynamic from 'next/dynamic'
-
-const JoyrideLazy = dynamic(() => import('@/components/OnboardingTooltips'), { ssr: false })
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mb-8" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-        {title}
-      </h2>
-      <div className="bg-white/90 dark:bg-[#1e2a78]/90 backdrop-blur-lg rounded-2xl border border-gray-200/60 dark:border-[#2d437a]/50 p-4">
-        {children}
-      </div>
+      <Card className="card-depth">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {children}
+        </CardContent>
+      </Card>
     </section>
   )
 }
 
 export default function TutorialPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6">
       <div className="max-w-6xl mx-auto">
         {/* Sticky TOC */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <nav className="lg:col-span-1 lg:sticky lg:top-4 self-start bg-white/80 dark:bg-[#1e2a78]/80 backdrop-blur-md rounded-2xl p-4 border border-gray-200/60 dark:border-[#2d437a]/50">
+          <nav className="lg:col-span-1 lg:sticky lg:top-4 self-start card-depth p-4">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Contents</h2>
             <ul className="space-y-2 text-sm">
               {[
@@ -45,9 +47,11 @@ export default function TutorialPage() {
                 ['technical', 'Technical Details'],
               ].map(([id, label]) => (
                 <li key={id}>
-                  <a href={`#${id}`} className="text-blue-700 dark:text-blue-300 hover:underline">
-                    {label}
-                  </a>
+                  <Button variant="ghost" asChild className="w-full justify-start text-left">
+                    <a href={`#${id}`}>
+                      {label}
+                    </a>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -60,15 +64,16 @@ export default function TutorialPage() {
                 analytics, and real‑time risk awareness. This tutorial guides new users through the core features
                 and operational best practices.
               </p>
-              <div className="mt-3 flex gap-2 text-sm">
-                <Link href="/settings/events" className="text-blue-600 hover:underline">Create Event</Link>
-                <span className="text-gray-400">•</span>
-                <Link href="/incidents" className="text-blue-600 hover:underline">Log Incident</Link>
-                <span className="text-gray-400">•</span>
-                <Link href="/" className="text-blue-600 hover:underline">View Dashboard</Link>
-              </div>
-              <div className="mt-4">
-                <JoyrideLazy run />
+              <div className="mt-3 flex gap-2 flex-wrap">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/settings/events">Create Event</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/incidents">Log Incident</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/">View Dashboard</Link>
+                </Button>
               </div>
             </Section>
 
@@ -83,9 +88,12 @@ export default function TutorialPage() {
                 <figcaption className="text-xs text-gray-500 mt-1">Dashboard Overview</figcaption>
               </figure>
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/60 dark:border-blue-800/40 text-sm">
-                Best practice: Keep filters minimal during peak operations for clarity.
+                <p className="font-semibold text-blue-800 dark:text-blue-200">Best practice:</p>
+                <p className="text-blue-700 dark:text-blue-300">Keep filters minimal during peak operations for clarity.</p>
               </div>
-              <div className="mt-2 text-xs"><Link href="#onboarding">Related tooltip: Dashboard</Link></div>
+              <div className="mt-2">
+                <Badge variant="secondary">Dashboard</Badge>
+              </div>
             </Section>
 
             <Section id="events" title="Event Management">

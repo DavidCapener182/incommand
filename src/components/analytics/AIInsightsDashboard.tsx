@@ -162,7 +162,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -190,7 +190,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
       </div>
 
       {/* Confidence Metrics */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6 card-depth">
         <div className="flex items-center gap-3 mb-4">
           <TrophyIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Confidence Metrics</h3>
@@ -218,7 +218,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
       {/* Key Insights Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Incident Trend */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <ChartBarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <h3 className="font-semibold text-gray-900 dark:text-white">Incident Volume</h3>
@@ -246,7 +246,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
         </div>
 
         {/* Response Time Trend */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <ClockIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             <h3 className="font-semibold text-gray-900 dark:text-white">Response Times</h3>
@@ -274,7 +274,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
         </div>
 
         {/* Quality Trend */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <LightBulbIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
             <h3 className="font-semibold text-gray-900 dark:text-white">Log Quality</h3>
@@ -304,7 +304,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
       {/* Pattern Analysis Section */}
       {patterns.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <LightBulbIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pattern Analysis</h3>
@@ -337,7 +337,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
       {/* Anomalies Section */}
       {anomalies.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anomalies Detected</h3>
@@ -370,7 +370,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
       {/* Forecasts Section */}
       {forecasts.incident_count && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
           <div className="flex items-center gap-3 mb-4">
             <EyeIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Predictions</h3>
@@ -420,7 +420,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
       )}
 
       {/* Trend Visualization */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Trend Analysis</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">

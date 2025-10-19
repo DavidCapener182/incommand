@@ -60,11 +60,13 @@
   }
 
   /* Soft Depth Card System - Centralized Card Design */
-  
+
   /* Base card styling - default for most cards */
   .card-depth {
-    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
-    @apply shadow-2 hover:shadow-3 transition-shadow duration-300;
+    background-color: var(--dashboard-card-bg);
+    @apply dark:bg-[#1b203b] rounded-2xl;
+    box-shadow: var(--shadow-level-1);
+    @apply hover:shadow-level-2 transition-shadow duration-300;
   }
 
   /* Interactive cards (same as base, kept for semantic clarity) */
@@ -74,20 +76,25 @@
 
   /* Subtle cards - for nested cards or less prominent elements */
   .card-depth-subtle {
-    @apply bg-white dark:bg-[#1b203b] rounded-xl;
-    @apply shadow-1 hover:shadow-2 transition-shadow duration-200;
+    background-color: var(--alt-card-bg);
+    @apply dark:bg-[#1b203b] rounded-xl;
+    box-shadow: var(--shadow-level-1);
+    @apply hover:shadow-level-2 transition-shadow duration-200;
   }
 
   /* Table row cards - minimal shadow for dense layouts */
   .card-table-row {
-    @apply bg-white dark:bg-[#23408e] rounded-xl;
-    @apply shadow-1 hover:shadow-2 transition-shadow duration-200;
+    background-color: var(--metrics-card-bg);
+    @apply dark:bg-[#23408e] rounded-xl;
+    box-shadow: var(--shadow-level-1);
+    @apply hover:shadow-level-2 transition-shadow duration-200;
   }
 
   /* Modal/Dialog cards - prominent depth */
   .card-modal {
-    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
-    @apply shadow-3;
+    background-color: var(--modal-card-bg);
+    @apply dark:bg-[#1b203b] rounded-2xl;
+    box-shadow: var(--shadow-level-3);
   }
 
   /* Skeleton/Loading cards */
@@ -97,20 +104,24 @@
 
   /* Time/Status cards - special colored background variants */
   .card-time {
-    @apply bg-white dark:bg-[#23408e] rounded-2xl;
-    @apply shadow-2 hover:shadow-3 transition-shadow duration-300;
+    background-color: var(--dashboard-card-bg);
+    @apply dark:bg-[#23408e] rounded-2xl;
+    box-shadow: var(--shadow-level-2);
+    @apply hover:shadow-level-3 transition-shadow duration-300;
   }
 
   /* View toggle/control cards */
   .card-control {
-    @apply bg-white dark:bg-[#1b203b] rounded-lg;
-    @apply shadow-2;
+    background-color: var(--dashboard-card-bg);
+    @apply dark:bg-[#1b203b] rounded-lg;
+    box-shadow: var(--shadow-level-2);
   }
 
   /* Board view container cards */
   .card-board {
-    @apply bg-white dark:bg-[#1b203b] rounded-2xl;
-    @apply shadow-3;
+    background-color: var(--dashboard-card-bg);
+    @apply dark:bg-[#1b203b] rounded-2xl;
+    box-shadow: var(--shadow-level-3);
   }
 
   /* Alternative dark background cards (gray-800) - for specialized components */
@@ -392,6 +403,12 @@ input:-webkit-autofill {
   box-shadow: 
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+/* Modern dashboard card hover effects */
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
 }
 
 /* Mobile-optimized card hover */
@@ -906,6 +923,16 @@ input:-webkit-autofill {
     --bg-dark: 220 13% 91%;
     --bg-light-dark: 223 47% 11%;
     --bg-dark-dark: 224 45% 8%;
+    
+    /* Custom color variables for modern dashboard */
+    --page-bg: #DBEAFE;
+    --dashboard-card-bg: #FFFFFF;
+    --metrics-card-bg: #FFFFFF;
+    --modal-card-bg: #FDFDFE;
+    --alt-card-bg: #F8FAFC;
+    --shadow-level-1: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
+    --shadow-level-2: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
+    --shadow-level-3: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -940,23 +967,25 @@ input:-webkit-autofill {
     @apply border-border;
   }
   body {
-    @apply bg-blue-200 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] text-foreground !important;
+    background-color: var(--page-bg) !important;
+    @apply dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] text-foreground !important;
   }
   
   html {
-    @apply bg-blue-200 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] !important;
+    background-color: var(--page-bg) !important;
+    @apply dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] !important;
   }
   
   /* Force background on page containers only - exclude table elements and login page */
   main:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
   .min-h-screen:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]),
   .flex-grow:not(th):not(td):not(thead):not(tbody):not(tr):not([class*="bg-[#23408e]"]) {
-    background-color: #dbeafe !important; /* blue-200 equivalent */
+    background-color: var(--page-bg) !important;
   }
   
   /* Additional specificity for staff page */
   div.min-h-screen:not([class*="bg-[#23408e]"]) {
-    background-color: #dbeafe !important; /* blue-200 equivalent */
+    background-color: var(--page-bg) !important;
   }
   
   /* Override for dark mode */

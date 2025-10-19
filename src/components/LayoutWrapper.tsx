@@ -17,7 +17,6 @@ import OfflineIndicator from './OfflineIndicator'
 import PWAUpdateNotification from './PWAUpdateNotification'
 import PWASplashScreen from './PWASplashScreen'
 import FloatingActionButton from './FloatingActionButton'
-import OnboardingTooltips from './OnboardingTooltips'
 import { FooterSimple } from './FooterSimple'
 // FAB components removed (FloatingAIChat, Dock)
 
@@ -42,6 +41,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
+  if (pathname.startsWith('/style-lab')) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900">
+        {children}
+      </div>
+    );
+  }
   const showNav = !['/login', '/signup'].includes(pathname);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
   // Removed floating AI chat state
@@ -115,7 +121,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             />
           )}
           {showNav && <FloatingActionButton />}
-          {showNav && <OnboardingTooltips />}
           {isHelpCenterOpen && (
             <>
               {/* Click-outside overlay (no dim) */}

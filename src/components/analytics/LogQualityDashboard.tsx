@@ -149,7 +149,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
   return (
     <div className="space-y-6">
       {/* Overall Score Card */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border border-blue-100">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border border-blue-100" style={{ boxShadow: 'var(--shadow-level-2)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-700 mb-2">Overall Log Quality Score</h3>
@@ -199,7 +199,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
 
       {/* Score Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircleIcon className="h-5 w-5 text-green-600" />
             <h4 className="font-medium text-gray-900">Completeness</h4>
@@ -213,7 +213,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
           <p className="text-xs text-gray-600 mt-1">All required fields filled</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <ClockIcon className="h-5 w-5 text-blue-600" />
             <h4 className="font-medium text-gray-900">Timeliness</h4>
@@ -227,7 +227,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
           <p className="text-xs text-gray-600 mt-1">Logged promptly after occurrence</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <ChartBarIcon className="h-5 w-5 text-purple-600" />
             <h4 className="font-medium text-gray-900">Factual Language</h4>
@@ -245,7 +245,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quality Trend Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Quality Trend Over Time</h4>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trend}>
@@ -283,7 +283,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
         </div>
 
         {/* Score Breakdown Bar Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Score Components</h4>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={scoreBreakdown}>
@@ -319,7 +319,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
       {/* Entry Types Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pie Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Entry Type Distribution</h4>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -351,7 +351,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
         </div>
 
         {/* Field Breakdown */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Completeness by Field</h4>
           <div className="space-y-4">
             {metrics.breakdown.map((field, index) => (
@@ -381,7 +381,7 @@ export default function LogQualityDashboard({ startDate, endDate, eventId }: Log
       </div>
 
       {/* Top Performing Operators */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="rounded-lg border border-gray-200 p-6 card-depth">
         <div className="flex items-center gap-2 mb-4">
           <TrophyIcon className="h-5 w-5 text-amber-500" />
           <h4 className="font-medium text-gray-900">Top Performing Operators</h4>

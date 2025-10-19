@@ -24,10 +24,9 @@ export function useTooltipOnboarding() {
   const current = uiPrefs.onboarding || {}
 
   const shouldShow = useMemo(() => {
-    const show = current.show_tooltips !== false
-    const version = typeof current.tour_version === 'number' ? current.tour_version : 0
-    return show && version < TOUR_VERSION
-  }, [current.show_tooltips, current.tour_version])
+    // Always return false to disable popup tutorials
+    return false
+  }, [])
 
   const startTour = useCallback(async () => {
     const next = {

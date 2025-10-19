@@ -2523,7 +2523,7 @@ export default function IncidentCreationModal({
             </span>
           </div>
           {details.assignmentNotes && (
-            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+            <div className="card-depth p-3">
               <p className="text-sm text-gray-700 dark:text-gray-200">{details.assignmentNotes}</p>
             </div>
           )}
@@ -2541,7 +2541,7 @@ export default function IncidentCreationModal({
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+            <div className="card-depth p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Skill Match</span>
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -2555,7 +2555,7 @@ export default function IncidentCreationModal({
                 ></div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+            <div className="card-depth p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Availability</span>
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -2569,7 +2569,7 @@ export default function IncidentCreationModal({
                 ></div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+            <div className="card-depth p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Workload</span>
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -2583,7 +2583,7 @@ export default function IncidentCreationModal({
                 ></div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#182447] rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+            <div className="card-depth p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Distance</span>
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -4285,20 +4285,20 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         <CursorTracker users={presenceUsers} containerRef={modalRef} />
 
         {/* Header - Mobile Optimized */}
-        <header className="px-4 sm:px-6 pt-3 sm:pt-4 pb-2 border-b sticky top-0 bg-white dark:bg-[#23408e] z-30" style={{
-          paddingTop: 'max(env(safe-area-inset-top), 0.75rem)',
+        <header className="bg-blue-600 px-4 sm:px-6 py-4 sticky top-0 z-30" style={{
+          paddingTop: 'max(env(safe-area-inset-top), 1rem)',
         }}>
           <div className="flex justify-between items-center">
           <div className="flex items-center gap-3 sm:gap-4">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-lg">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white/20 flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-base sm:text-lg">🚨</span>
             </div>
             <div>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">New Incident</h3>
+                <h3 className="text-xl font-bold text-white">New Incident</h3>
                 <div className="flex items-center gap-4 mt-1">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Event:</span>
-                    <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                    <span className="text-xs font-medium text-blue-100">Event:</span>
+                    <span className="text-xs font-semibold text-white">
                   {(() => {
                     const chosen = events.find(e => e.id === selectedEventId)
                       || events.find(e => e.is_current)
@@ -4307,12 +4307,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     if (chosen?.event_name) return chosen.event_name;
                     return eventsLoading ? 'Loading...' : 'No events available';
                   })()}
-                </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Log #:</span>
-                    <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                    {nextLogNumber}
                   </span>
                 </div>
               </div>
@@ -4323,9 +4317,10 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               resetForm()
               onClose()
             }}
-              className="touch-target h-10 w-10 md:h-8 md:w-8 rounded-lg bg-gray-100 dark:bg-[#2d437a] hover:bg-gray-200 dark:hover:bg-[#1e3555] active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md"
+              className="rounded-full p-2 hover:bg-white/10 transition-colors"
+              aria-label="Close"
           >
-              <svg className="h-5 w-5 md:h-4 md:w-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -4576,7 +4571,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
             {/* Left Column - Incident Type (scrollable) */}
             <section className="lg:col-span-3 h-full">
-              <div className="bg-white rounded-lg shadow-sm border p-3 h-full flex flex-col">
+              <div className="card-depth p-3 h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-3 flex-shrink-0">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4600,7 +4595,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             {/* Middle Column - Callsign, Configuration, Detailed Info */}
             <section className="lg:col-span-5 space-y-3 h-full">
               {/* Callsign Information Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="callsign-title">
+              <div className="card-depth p-3" role="region" aria-labelledby="callsign-title">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4641,7 +4636,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </div>
 
               {/* Incident Configuration Card */}
-              <div className={`bg-white rounded-lg shadow-sm border p-4 ${
+              <div className={`card-depth p-4 ${
                 formData.priority === 'high' ? 'border-l-4 border-l-red-500' : ''
               }`} role="region" aria-labelledby="configuration-title">
                 <div className="flex items-center gap-2 mb-4">
@@ -4748,51 +4743,51 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     >
                       {showAdvancedTimestamps ? '▼' : '▶'} Advanced Timestamps
                     </button>
-                    {showAdvancedTimestamps && (
+                  {showAdvancedTimestamps && (
                       <div className="space-y-3">
-                        <div>
-                          <label htmlFor="time-occurred" className="block text-xs font-medium text-blue-800 mb-1">
-                            Time of Occurrence
-                          </label>
-                          <input
-                            id="time-occurred"
-                            type="datetime-local"
-                            value={formData.time_of_occurrence?.slice(0, 16) || ''}
-                            onChange={(e) => {
-                              const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                              setFormData({ ...formData, time_of_occurrence: newTime })
-                              
+                      <div>
+                        <label htmlFor="time-occurred" className="block text-xs font-medium text-blue-800 mb-1">
+                          Time of Occurrence
+                        </label>
+                        <input
+                          id="time-occurred"
+                          type="datetime-local"
+                          value={formData.time_of_occurrence?.slice(0, 16) || ''}
+                          onChange={(e) => {
+                            const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
+                            setFormData({ ...formData, time_of_occurrence: newTime })
+
                               // Validate entry type
-                              const validation = validateEntryType(
-                                new Date(newTime),
-                                new Date(formData.time_logged || new Date().toISOString()),
+                            const validation = validateEntryType(
+                              new Date(newTime),
+                              new Date(formData.time_logged || new Date().toISOString()),
                                 formData.entry_type || 'contemporaneous'
-                              )
-                              setEntryTypeWarnings(validation.warnings)
-                            }}
-                            className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="time-logged" className="block text-xs font-medium text-blue-800 mb-1">
-                            Time Logged
-                          </label>
-                          <input
-                            id="time-logged"
-                            type="datetime-local"
-                            value={formData.time_logged?.slice(0, 16) || ''}
-                            onChange={(e) => {
-                              const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                              setFormData({ ...formData, time_logged: newTime })
-                            }}
-                            className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                            disabled
-                          />
-                          <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
-                        </div>
+                            )
+                            setEntryTypeWarnings(validation.warnings)
+                          }}
+                          className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <label htmlFor="time-logged" className="block text-xs font-medium text-blue-800 mb-1">
+                          Time Logged
+                        </label>
+                        <input
+                          id="time-logged"
+                          type="datetime-local"
+                          value={formData.time_logged?.slice(0, 16) || ''}
+                          onChange={(e) => {
+                            const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
+                            setFormData({ ...formData, time_logged: newTime })
+                          }}
+                          className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          disabled
+                        />
+                        <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 )}
 
                 {/* Entry Type Warnings */}
@@ -4814,7 +4809,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
 
               {/* Detailed Information Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="detailed-info-title">
+              <div className="card-depth p-3" role="region" aria-labelledby="detailed-info-title">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4973,7 +4968,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                           📋 Preview of Log Entry
                           <span className="text-xs text-gray-500 font-normal">(How this will appear in the system)</span>
                         </h4>
-                        <div className="bg-white p-3 rounded border text-sm font-mono whitespace-pre-wrap text-gray-800">
+                        <div className="card-depth p-3 text-sm font-mono whitespace-pre-wrap text-gray-800">
                           {generateStructuredOccurrence(formData)}
                         </div>
                       </div>
@@ -4987,7 +4982,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             <section className="lg:col-span-4 space-y-3 h-full">
               {/* Green Guide Best Practices */}
               {(
-                <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="best-practices-title">
+                <div className="card-depth p-3" role="region" aria-labelledby="best-practices-title">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -5085,7 +5080,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
               )}
               {/* Location & Actions Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="location-actions-title">
+              <div className="card-depth p-3" role="region" aria-labelledby="location-actions-title">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5155,7 +5150,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </div>
 
               {/* Additional Options Card */}
-              <div className="bg-white rounded-lg shadow-sm border p-3" role="region" aria-labelledby="additional-options-title">
+              <div className="card-depth p-3" role="region" aria-labelledby="additional-options-title">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5256,15 +5251,6 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               >
                 Save as Draft
               </button>
-              {/* Debug button - only visible in development */}
-              {process.env.NODE_ENV === 'development' && (
-                <button
-                  onClick={() => setShowDebugger(!showDebugger)}
-                  className="touch-target w-full sm:w-auto px-4 py-2 text-sm bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  🐛 Debug
-                </button>
-              )}
               <button
                 onClick={handleSubmit}
                 className="touch-target w-full sm:w-auto px-6 py-3 sm:py-2 text-sm bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-lg"
@@ -5272,14 +5258,14 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-            Log Incident
-          </button>
-        </div>
+                Log Incident
+              </button>
+            </div>
           </div>
         </footer>
       </div>
-      </div>
-      
+    </div>
+
       {/* Debug component - only visible in development */}
       {process.env.NODE_ENV === 'development' && (
         <IncidentFormDebugger

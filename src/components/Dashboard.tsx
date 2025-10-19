@@ -1451,8 +1451,8 @@ export default function Dashboard() {
         )}
 
         <div className="mt-4 space-y-6">
-          <section className="rounded-2xl border border-gray-100 bg-gray-100/70 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5">
-            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#101426]/60 sm:-mx-5 sm:px-5 sm:pt-5">
+          <section className="rounded-2xl border border-gray-100 p-4 text-gray-900 transition-colors dark:border-gray-800 dark:bg-[#1a1f3d]/60 dark:text-white sm:p-5" style={{ backgroundColor: 'var(--dashboard-card-bg)' }}>
+            <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md sm:-mx-5 sm:px-5 sm:pt-5" style={{ backgroundColor: 'var(--metrics-card-bg)' }}>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Operational Metrics
               </h3>

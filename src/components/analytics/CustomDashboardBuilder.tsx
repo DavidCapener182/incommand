@@ -312,7 +312,7 @@ export default function CustomDashboardBuilder({
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4"
+            className="absolute inset-x-0 bottom-0 border-t border-gray-200 dark:border-gray-700 p-4 card-depth"
           >
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
               Add Widget
@@ -346,7 +346,7 @@ export default function CustomDashboardBuilder({
         <motion.div
           initial={{ opacity: 0, x: 300 }}
           animate={{ opacity: 1, x: 0 }}
-          className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto"
+          className="absolute right-0 top-0 bottom-0 w-80 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto card-depth"
         >
           <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">

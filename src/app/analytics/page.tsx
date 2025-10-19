@@ -27,6 +27,7 @@ import {
   Area,
   AreaChart
 } from 'recharts'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
 import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
 import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
@@ -43,6 +44,7 @@ import ComparativeAnalytics from '@/components/analytics/ComparativeAnalytics'
 import MobileOptimizedChart from '@/components/MobileOptimizedChart'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { Card } from '@/components/ui/card'
 
 interface IncidentRecord {
   id: string
@@ -456,7 +458,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
       {/* Mobile Analytics */}
       {!isDesktop && (
         <div className="block md:hidden">
-        <div className="p-4 card-depth border-b border-gray-200 dark:border-gray-700">
+        <Card className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
@@ -502,7 +504,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </button>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Mobile Content */}
         <div className="p-4 space-y-6">
@@ -511,7 +513,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               {/* All Analytics Cards in One View - Using Real Data */}
               <div className="space-y-4">
                 {createAnalyticsCards(incidentData, eventData).map((card, index) => (
-                  <div key={card.id} className="card-depth p-4">
+                  <Card key={card.id} className="p-4">
                     {card.type === 'chart' && (
                       <MobileOptimizedChart
                         data={card.data.chartData || []}
@@ -564,12 +566,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         </div>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 ))}
               </div>
 
               {/* Real-time Analytics - Using Real Data */}
-              <div className="card-depth p-4">
+              <Card className="p-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -618,7 +620,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                     <div className="text-xs text-purple-600 dark:text-purple-400">Response time</div>
                   </div>
                 </div>
-              </div>
+              </Card>
             </>
           )}
 
@@ -632,7 +634,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
           {selectedMobileView === 'realtime' && (
             <div className="space-y-4">
-              <div className="card-depth p-4">
+              <Card className="p-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -681,7 +683,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                     <div className="text-xs text-purple-600 dark:text-purple-400">Response time</div>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           )}
         </div>
@@ -732,7 +734,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 </div>
 
         {/* Tabs - Mobile Optimized with Horizontal Scroll */}
-        <div className="card-depth p-1.5 sm:p-2 mb-4 sm:mb-6 shadow-sm overflow-x-auto">
+        <Card className="p-1.5 sm:p-2 mb-4 sm:mb-6 overflow-x-auto">
           <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('operational')}
@@ -867,7 +869,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       </div>
                     </button>
           </nav>
-        </div>
+        </Card>
 
         {/* Tab Content */}
         {activeTab === 'quality' && (
@@ -941,7 +943,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           <>
         {/* Top Level Metrics - 6 Cards - Mobile Optimized */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
@@ -950,9 +952,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <AlertTriangle className="h-7 w-7 sm:h-8 sm:w-8 text-red-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
 
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
@@ -961,9 +963,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <AlertCircle className="h-7 w-7 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
 
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
@@ -972,9 +974,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
 
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
@@ -983,9 +985,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <Clock className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
 
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
@@ -996,9 +998,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <Lightbulb className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
 
-          <div className="card-depth p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
@@ -1009,13 +1011,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
               <Users className="h-7 w-7 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards - Mobile Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Live Watch */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
@@ -1036,10 +1038,10 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 <span className="text-gray-600 dark:text-gray-400"> (Peak window 13:00 - 14:00. {metrics.total} total)</span>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Response Quality */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
@@ -1059,10 +1061,10 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 <span className="text-gray-600 dark:text-gray-400"> ({metrics.total} with response data)</span>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Ingress Snapshot */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
@@ -1084,22 +1086,22 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 <span className="text-gray-600 dark:text-gray-400"> (No surge detected)</span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards - Mobile Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Attendance Timeline */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Timeline</h3>
             {attendanceData.length > 0 ? (
               <div className="h-40 sm:h-48">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={{}}>
                   <AreaChart data={chartData.attendanceTimelineData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                     <XAxis dataKey="time" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={40} />
                     <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip contentStyle={{ fontSize: '12px' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <Area 
                       type="monotone" 
                       dataKey="count" 
@@ -1109,15 +1111,15 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                       fillOpacity={0.6}
                     />
                   </AreaChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-sm">No attendance data to display.</p>
             )}
-          </div>
+          </Card>
 
           {/* Attendance Log */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Log</h3>
             {attendanceData.length > 0 ? (
               <div className="space-y-4">
@@ -1150,10 +1152,10 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-sm">No attendance data to display.</p>
             )}
-          </div>
+          </Card>
 
           {/* Live Incident Status */}
-          <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
               <div className="flex items-center gap-2">
@@ -1166,7 +1168,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               <h4 className="text-lg font-semibold text-green-600 mb-2">All Clear</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">No active incidents at this time</p>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Charts Section - Mobile Optimized */}
@@ -1175,13 +1177,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             {/* Row 1: Incident Volume & Type Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Incident Volume Over Time */}
-              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <Card className="p-4 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
                 </div>
                 <div className="h-48 sm:h-56 md:h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={{}}>
                     <BarChart data={chartData.incidentVolumeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                       <XAxis 
@@ -1193,21 +1195,21 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         interval="preserveStartEnd"
                       />
                       <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip contentStyle={{ fontSize: '12px' }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="count" fill="#3B82F6" />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
-              </div>
+              </Card>
 
               {/* Incident Type Breakdown */}
-              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
+              <Card className="p-4 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
                 </div>
                 <div className="h-48 sm:h-56 md:h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={{}}>
                     <RechartsPieChart>
                       <Pie
                         data={chartData.pieChartData}
@@ -1223,42 +1225,42 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <ChartTooltip content={<ChartTooltipContent />} />
                     </RechartsPieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Row 2: Response Time Distribution & Ejection Patterns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Response Time Distribution */}
-              <div className="card-depth p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
+              <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Clock className="w-6 h-6 text-orange-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
                 </div>
-                <div className="h-48 sm:h-56 md:h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData.responseTimeData} layout="horizontal">
+                <div className="h-64 w-full overflow-hidden">
+                  <ChartContainer config={{}}>
+                    <BarChart data={chartData.responseTimeData} layout="horizontal" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="bucket" type="category" width={80} />
-                      <Tooltip />
+                      <XAxis type="number" domain={['dataMin', 'dataMax']} />
+                      <YAxis dataKey="bucket" type="category" width={90} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="count" fill="#F59E0B" />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
-              </div>
+              </Card>
 
               {/* Ejection/Refusal Patterns */}
-              <div className="card-depth p-6 shadow-sm">
+              <Card className="p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <UserX className="w-6 h-6 text-red-600" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ejection/Refusal Patterns</h3>
                 </div>
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={{}}>
                     <LineChart data={chartData.ejectionPatternData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                       <XAxis 
@@ -1269,7 +1271,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         height={60}
                       />
                       <YAxis />
-                      <Tooltip />
+                      <ChartTooltip content={<ChartTooltipContent />} />
                       <Line 
                         type="monotone" 
                         dataKey="ejections" 
@@ -1278,16 +1280,16 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
                       />
                     </LineChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         )}
 
         {/* AI Summary Section */}
         {aiSummary && (
-          <div className="card-depth p-6 shadow-sm mb-8">
+          <Card className="p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-blue-600" />
@@ -1302,9 +1304,38 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </button>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                {aiSummary}
-              </p>
+              <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 space-y-3">
+                {aiSummary.split('\n').map((line, index) => {
+                  if (line.trim() === '') return null;
+                  
+                  // Clean up markdown formatting
+                  const cleanLine = line
+                    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+                    .replace(/\*(.*?)\*/g, '$1') // Remove italic
+                    .replace(/^[-*]\s+/, '• ') // Convert list items to bullets
+                    .trim();
+                  
+                  if (cleanLine.startsWith('•')) {
+                    return (
+                      <div key={index} className="ml-4">
+                        {cleanLine}
+                      </div>
+                    );
+                  } else if (cleanLine.includes(':')) {
+                    return (
+                      <div key={index} className="font-semibold text-gray-900 dark:text-white">
+                        {cleanLine}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div key={index}>
+                        {cleanLine}
+                      </div>
+                    );
+                  }
+                })}
+              </div>
             </div>
             {incidentData.length > 0 && (
               <div className="mt-3 flex gap-2 text-xs">
@@ -1316,11 +1347,11 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 </span>
               </div>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Recent Incidents Table */}
-        <div className="card-depth shadow-sm">
+        <Card className="mt-8">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
           </div>
@@ -1370,7 +1401,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
           </>
         )}
         </div>

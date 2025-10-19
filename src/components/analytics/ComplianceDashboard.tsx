@@ -153,7 +153,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
   return (
     <div className="space-y-6">
       {/* Legal Readiness Header */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-100">
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-100" style={{ boxShadow: 'var(--shadow-level-2)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-700 mb-2">JESIP/JDM Compliance Grade</h3>
@@ -192,7 +192,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
       {/* Compliance Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Audit Trail Completeness */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <DocumentCheckIcon className="h-5 w-5 text-blue-600" />
             <h4 className="font-medium text-gray-900">Audit Trail</h4>
@@ -212,7 +212,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
         </div>
 
         {/* Immutability Score */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <LockClosedIcon className="h-5 w-5 text-purple-600" />
             <h4 className="font-medium text-gray-900">Immutability</h4>
@@ -232,7 +232,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
         </div>
 
         {/* Timestamp Accuracy */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <ClockIcon className="h-5 w-5 text-green-600" />
             <h4 className="font-medium text-gray-900">Timestamps</h4>
@@ -247,7 +247,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
         </div>
 
         {/* Justification Rate */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircleIcon className="h-5 w-5 text-amber-600" />
             <h4 className="font-medium text-gray-900">Justifications</h4>
@@ -270,7 +270,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Compliance Trend */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Compliance Trend</h4>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trend}>
@@ -312,7 +312,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
         </div>
 
         {/* Compliance Breakdown */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Compliance Breakdown</h4>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={complianceBreakdown} layout="vertical">
@@ -350,7 +350,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
       </div>
 
       {/* Legal Readiness Checklist */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="rounded-lg border border-gray-200 p-6 card-depth">
         <div className="flex items-center gap-2 mb-4">
           <ShieldCheckIcon className="h-5 w-5 text-green-600" />
           <h4 className="font-medium text-gray-900">Legal Readiness Checklist</h4>
@@ -437,7 +437,7 @@ export default function ComplianceDashboard({ startDate, endDate, eventId }: Com
 
       {/* Recommendations */}
       {metrics.recommendations.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6" style={{ boxShadow: 'var(--shadow-level-2)' }}>
           <h4 className="font-medium text-blue-900 mb-3">📋 Recommendations</h4>
           <ul className="space-y-2">
             {metrics.recommendations.map((recommendation, index) => (

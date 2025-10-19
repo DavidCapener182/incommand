@@ -91,7 +91,11 @@ module.exports = {
 			'3': '0 8px 12px rgba(0, 0, 0, 0.12)',
 			'3xl': '0 35px 60px -12px rgba(0, 0, 0, 0.25)',
 			'neumorphic': '5px 5px 15px rgba(0, 0, 0, 0.1), -5px -5px 15px rgba(255, 255, 255, 0.7)',
-			'neumorphic-dark': '5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.05)'
+			'neumorphic-dark': '5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.05)',
+			// Custom shadow levels
+			'level-1': 'var(--shadow-level-1)',
+			'level-2': 'var(--shadow-level-2)',
+			'level-3': 'var(--shadow-level-3)'
 		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -138,7 +142,13 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			// Custom dashboard colors
+  			'page-bg': 'var(--page-bg)',
+  			'dashboard-card-bg': 'var(--dashboard-card-bg)',
+  			'metrics-card-bg': 'var(--metrics-card-bg)',
+  			'modal-card-bg': 'var(--modal-card-bg)',
+  			'alt-card-bg': 'var(--alt-card-bg)'
   		}
   	}
   },

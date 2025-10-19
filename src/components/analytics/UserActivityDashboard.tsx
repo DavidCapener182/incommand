@@ -176,7 +176,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <UserGroupIcon className="h-5 w-5 text-blue-600" />
             <h4 className="font-medium text-gray-900">Active Operators</h4>
@@ -189,7 +189,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
           <p className="text-xs text-gray-600 mt-1">Total logged entries</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <ChartBarIcon className="h-5 w-5 text-green-600" />
             <h4 className="font-medium text-gray-900">Avg Entries/Operator</h4>
@@ -205,7 +205,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
           <p className="text-xs text-gray-600 mt-1">Per operator</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <ClockIcon className="h-5 w-5 text-purple-600" />
             <h4 className="font-medium text-gray-900">Avg Handling Time</h4>
@@ -219,7 +219,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
           <p className="text-xs text-gray-600 mt-1">Per incident</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="rounded-lg border border-gray-200 p-5 card-depth">
           <div className="flex items-center gap-2 mb-3">
             <SparklesIcon className="h-5 w-5 text-amber-600" />
             <h4 className="font-medium text-gray-900">Top Quality Score</h4>
@@ -239,7 +239,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Incidents per Operator */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Incidents per Operator</h4>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={incidentsByOperator}>
@@ -278,7 +278,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
         </div>
 
         {/* Quality Scores by Operator */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 p-6 card-depth">
           <h4 className="font-medium text-gray-900 mb-4">Quality Scores by Operator</h4>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={incidentsByOperator}>
@@ -315,7 +315,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
       </div>
 
       {/* Detailed User Activity Table */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="rounded-lg border border-gray-200 p-6 card-depth">
         <div className="flex items-center gap-2 mb-4">
           <TrophyIcon className="h-5 w-5 text-amber-500" />
           <h4 className="font-medium text-gray-900">Operator Performance Details</h4>

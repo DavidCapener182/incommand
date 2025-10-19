@@ -505,12 +505,12 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             onClick={(e) => e.stopPropagation()}
           >
         {/* Header */}
-        <div className="bg-[#1d2b90] text-white flex items-center justify-between px-6 py-3 h-14 border-b border-border/40">
+        <div className="bg-blue-600 text-white flex items-center justify-between px-6 py-4 border-b border-border/40">
           <div>
-            <h2 className="text-lg font-semibold leading-none">
+            <h2 className="text-xl font-bold">
               Incident #{incident?.log_number}
             </h2>
-            <p className="text-sm text-white/80">
+            <p className="text-sm text-blue-100">
               {incident?.incident_type} · {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type ? (
                 formatDualTimestamp(
                   incident.time_of_occurrence,
