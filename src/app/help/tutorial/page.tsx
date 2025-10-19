@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -84,7 +85,7 @@ export default function TutorialPage() {
                 <li>Monitor live status indicators and alerts</li>
               </ul>
               <figure className="mt-3">
-                <img src="/assets/help/dashboard-overview.png" alt="Dashboard Overview" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/dashboard-overview.png" alt="Dashboard Overview" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Dashboard Overview</figcaption>
               </figure>
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/60 dark:border-blue-800/40 text-sm">
@@ -99,7 +100,7 @@ export default function TutorialPage() {
             <Section id="events" title="Event Management">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Define the current event and timings.</p>
               <figure className="mt-3">
-                <img src="/assets/help/event-management.png" alt="Event Management" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/event-management.png" alt="Event Management" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Event Management</figcaption>
               </figure>
             </Section>
@@ -107,7 +108,7 @@ export default function TutorialPage() {
             <Section id="incidents" title="Incident Management">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Create, review, and update incidents with audit trail.</p>
               <figure className="mt-3">
-                <img src="/assets/help/incident-management.png" alt="Incident Management" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/incident-management.png" alt="Incident Management" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Incident Management</figcaption>
               </figure>
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200/60 dark:border-blue-800/40 text-sm">
@@ -122,7 +123,7 @@ export default function TutorialPage() {
             <Section id="quickadd" title="Quick Add & AI Tools">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Rapid entry of structured logs via text or voice.</p>
               <figure className="mt-3">
-                <img src="/assets/help/quick-add.png" alt="Quick Add" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/quick-add.png" alt="Quick Add" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Quick Add</figcaption>
               </figure>
               <div className="mt-2 text-xs"><Link href="#onboarding">Related tooltip: Quick Add (AI)</Link></div>
@@ -131,7 +132,7 @@ export default function TutorialPage() {
             <Section id="attendance" title="Attendance & Occupancy">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Monitor capacity and thresholds.</p>
               <figure className="mt-3">
-                <img src="/assets/help/attendance.png" alt="Attendance" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/attendance.png" alt="Attendance" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Attendance</figcaption>
               </figure>
             </Section>
@@ -139,7 +140,7 @@ export default function TutorialPage() {
             <Section id="reports" title="Reports">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Export summaries for safety and compliance.</p>
               <figure className="mt-3">
-                <img src="/assets/help/reports.png" alt="Reports" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/reports.png" alt="Reports" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Reports</figcaption>
               </figure>
             </Section>
@@ -147,7 +148,7 @@ export default function TutorialPage() {
             <Section id="analytics" title="Analytics & Risk Pulse">
               <p className="text-gray-700 dark:text-gray-100 mb-2">Purpose: Identify trends, response times, and risk signals.</p>
               <figure className="mt-3">
-                <img src="/assets/help/analytics.png" alt="Analytics" className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
+                <Image src="/assets/help/analytics.png" alt="Analytics" width={800} height={450} className="rounded-xl border border-gray-200 dark:border-[#2d437a]" />
                 <figcaption className="text-xs text-gray-500 mt-1">Analytics</figcaption>
               </figure>
               <div className="mt-2 text-xs"><Link href="#onboarding">Related tooltip: Analytics & Risk Pulse</Link></div>
