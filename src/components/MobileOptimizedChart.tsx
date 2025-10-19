@@ -260,7 +260,7 @@ export default function MobileOptimizedChart({
 
   const isGlass = variant === 'glass'
   const containerClasses = isGlass
-    ? 'glass-card relative overflow-hidden rounded-2xl p-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+    ? 'glass-card relative overflow-hidden rounded-2xl p-0 shadow-sm'
     : 'relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700'
   const headerClasses = isGlass
     ? 'px-4 py-3 border-b border-white/40 dark:border-white/10'
@@ -272,7 +272,7 @@ export default function MobileOptimizedChart({
       {isGlass && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/15 to-transparent"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/25 via-white/10 to-transparent"
         />
       )}
 

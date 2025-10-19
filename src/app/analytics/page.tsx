@@ -518,12 +518,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#E8F0FE] dark:bg-slate-950 md:bg-transparent md:dark:bg-transparent">
       {/* Mobile Analytics */}
         {!isDesktop && (
         <div className="block md:hidden space-y-6 px-4 pb-10">
-          <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+          <div className="glass-card relative rounded-2xl p-5 shadow-sm">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/35 via-white/10 to-transparent pointer-events-none" />
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/40 bg-white/30 text-blue-600 dark:text-blue-300">
@@ -534,14 +534,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                   <p className="text-sm text-gray-600 dark:text-gray-300">Swipe through insights</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 rounded-xl border border-white/40 bg-white/20 px-1 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:bg-white/10 dark:border-white/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+              <div className="flex items-center gap-1 rounded-xl border border-white/40 bg-white/25 px-1 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:bg-white/10 dark:border-white/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
                 {mobileViewOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => setSelectedMobileView(option.value)}
                     className={`rounded-lg px-3 py-1 text-xs font-medium capitalize transition-all ${
                       selectedMobileView === option.value
-                        ? 'bg-white/80 text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.12)] dark:bg-white/10 dark:text-white dark:shadow-[0_2px_12px_rgba(0,0,0,0.45)]'
+                        ? 'bg-white/85 text-gray-900 shadow-md dark:bg-white/10 dark:text-white dark:shadow-[0_4px_18px_rgba(0,0,0,0.45)]'
                         : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
@@ -565,33 +565,33 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         type={card.data.chartType || 'line'}
                         height={200}
                         variant="glass"
-                        className="shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]"
+                        className="shadow-sm"
                       />
                     )
                   }
 
                   const isPrimaryMetric = card.type === 'metric' || card.type === 'trend' || card.type === 'progress'
-                  const elevationClass = isPrimaryMetric
-                    ? 'shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]'
-                    : 'shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]'
+                  const elevationClass = isPrimaryMetric ? 'shadow-md' : 'shadow-sm'
 
                   return (
                     <div
                       key={card.id}
                       className={`glass-card relative rounded-2xl p-5 ${elevationClass}`}
                     >
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
                       <div className="relative z-10 space-y-3">
                         {card.type === 'metric' && (
                           <>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                              {card.title}
-                            </p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                              {card.data.value}
-                            </p>
+                            <div className="flex items-start justify-between gap-4">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                                {card.title}
+                              </p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white text-right">
+                                {card.data.value}
+                              </p>
+                            </div>
                             {card.data.subtitle && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400">{card.data.subtitle}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 text-right">{card.data.subtitle}</p>
                             )}
                           </>
                         )}
@@ -607,18 +607,20 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
                           return (
                             <div className="flex items-start justify-between gap-4">
-                              <div>
+                              <div className="flex-1">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
                                   {card.title}
                                 </p>
-                                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{card.data.value}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{card.data.changeLabel}</p>
+                                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">{card.data.changeLabel}</p>
                               </div>
-                              <span
-                                className={`text-sm font-semibold ${isPositiveChange ? positiveClass : negativeClass}`}
-                              >
-                                {change > 0 ? '+' : ''}{change}%
-                              </span>
+                              <div className="text-right">
+                                <p className="text-3xl font-bold text-gray-900 dark:text-white">{card.data.value}</p>
+                                <span
+                                  className={`text-sm font-semibold ${isPositiveChange ? positiveClass : negativeClass}`}
+                                >
+                                  {change > 0 ? '+' : ''}{change}%
+                                </span>
+                              </div>
                             </div>
                           )
                         })()}
@@ -629,22 +631,26 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
                           return (
                             <>
-                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                                {card.title}
-                              </p>
-                              <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                                {card.data.current}
-                                <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                  / {card.data.target}{card.data.unit}
-                                </span>
-                              </p>
+                              <div className="flex items-start justify-between gap-4">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                                  {card.title}
+                                </p>
+                                <div className="text-right">
+                                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                                    {card.data.current}
+                                  </p>
+                                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    / {card.data.target}{card.data.unit}
+                                  </p>
+                                </div>
+                              </div>
                               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/30 dark:bg-white/10">
                                 <div
                                   className="h-full rounded-full bg-blue-600 dark:bg-blue-400 transition-all duration-300"
                                   style={{ width: `${progress}%` }}
                                 />
                               </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 text-right">
                                 {percentComplete}% complete
                               </p>
                             </>
@@ -656,33 +662,33 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 })}
               </div>
 
-              <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+              <div className="glass-card relative rounded-2xl p-5 shadow-sm">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
                 <div className="relative z-10">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                   <div className="grid grid-cols-2 gap-4">
                     {liveMetricCards.map((metric) => (
                       <div
                         key={metric.key}
-                        className="glass-card relative rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]"
+                        className="glass-card relative rounded-2xl p-4 shadow-md"
                       >
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
                         <div className="relative z-10 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
-                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
                               {metric.label}
                             </span>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white text-right">
+                              {metric.value}
+                              {metric.suffix && (
+                                <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                                  {metric.suffix}
+                                </span>
+                              )}
+                            </p>
                           </div>
-                          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                            {metric.value}
-                            {metric.suffix && (
-                              <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                {metric.suffix}
-                              </span>
-                            )}
-                          </p>
-                          <p className={`text-xs ${metric.footnoteClass}`}>{metric.footnote}</p>
+                          <p className={`text-xs ${metric.footnoteClass} text-right`}>{metric.footnote}</p>
                         </div>
                       </div>
                     ))}
@@ -696,39 +702,39 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             <ComparativeAnalytics
               currentEvent={comparisonData.current}
               previousEvent={comparisonData.previous}
-              className=""
+              className="shadow-sm"
             />
           )}
 
           {selectedMobileView === 'realtime' && (
             <div className="space-y-4">
-              <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+              <div className="glass-card relative rounded-2xl p-5 shadow-sm">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
                 <div className="relative z-10">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
                   <div className="grid grid-cols-2 gap-4">
                     {liveMetricCards.map((metric) => (
                       <div
                         key={metric.key}
-                        className="glass-card relative rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]"
+                        className="glass-card relative rounded-2xl p-4 shadow-md"
                       >
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
                         <div className="relative z-10 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
-                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300`}>
+                              <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
                               {metric.label}
                             </span>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white text-right">
+                              {metric.value}
+                              {metric.suffix && (
+                                <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                                  {metric.suffix}
+                                </span>
+                              )}
+                            </p>
                           </div>
-                          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                            {metric.value}
-                            {metric.suffix && (
-                              <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                                {metric.suffix}
-                              </span>
-                            )}
-                          </p>
-                          <p className={`text-xs ${metric.footnoteClass}`}>{metric.footnote}</p>
+                          <p className={`text-xs ${metric.footnoteClass} text-right`}>{metric.footnote}</p>
                         </div>
                       </div>
                     ))}
