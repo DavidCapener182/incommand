@@ -129,11 +129,13 @@ const CardSkeleton = () => (
   </Card>
 );
 
+type StatCardAccentColor = 'blue' | 'red' | 'yellow' | 'green' | 'purple' | 'slate'
+
 interface StatCardProps {
   title: string
   value: number
   icon: React.ReactNode
-  color?: string
+  color?: StatCardAccentColor
   isSelected?: boolean
   trendData?: number[]
   onClick?: () => void
@@ -258,13 +260,13 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
   )
 }
 
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  icon, 
-  color = 'blue', 
-  isSelected, 
-  onClick, 
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  icon,
+  color = 'blue',
+  isSelected,
+  onClick,
   isFilterable = false,
   className,
   tooltip,
@@ -272,102 +274,140 @@ const StatCard: React.FC<StatCardProps> = ({
   index = 0,
   trendData
 }) => {
-  const colorClasses = {
-    blue: 'text-blue-500',
-    red: 'text-red-500',
-    yellow: 'text-yellow-500',
-    green: 'text-green-500',
+  const accent = color ?? 'blue'
+
+  const accentBorders: Record<StatCardAccentColor, string> = {
+    blue: 'border-t-4 border-blue-500',
+    red: 'border-t-4 border-rose-500',
+    yellow: 'border-t-4 border-amber-500',
+    green: 'border-t-4 border-emerald-500',
+    purple: 'border-t-4 border-violet-500',
+    slate: 'border-t-4 border-slate-500'
+  }
+
+  const ringClasses: Record<StatCardAccentColor, string> = {
+    blue: 'ring-blue-500/40',
+    red: 'ring-rose-500/40',
+    yellow: 'ring-amber-500/40',
+    green: 'ring-emerald-500/40',
+    purple: 'ring-violet-500/40',
+    slate: 'ring-slate-500/40'
+  }
+
+  const iconAccentClasses: Record<StatCardAccentColor, string> = {
+    blue: 'bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-300',
+    red: 'bg-rose-50 text-rose-500 dark:bg-rose-900/30 dark:text-rose-300',
+    yellow: 'bg-amber-50 text-amber-500 dark:bg-amber-900/30 dark:text-amber-300',
+    green: 'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-300',
+    purple: 'bg-violet-50 text-violet-500 dark:bg-violet-900/30 dark:text-violet-300',
+    slate: 'bg-slate-100 text-slate-500 dark:bg-slate-800/40 dark:text-slate-300'
   }
 
   // Pulse animation when value changes
-  const [pulse, setPulse] = React.useState(false);
-  const prevValue = React.useRef(value);
+  const [pulse, setPulse] = React.useState(false)
+  const prevValue = React.useRef(value)
   React.useEffect(() => {
     if (prevValue.current !== value) {
-      setPulse(true);
-      const timeout = setTimeout(() => setPulse(false), 400);
-      prevValue.current = value;
-      return () => clearTimeout(timeout);
+      setPulse(true)
+      const timeout = setTimeout(() => setPulse(false), 400)
+      prevValue.current = value
+      return () => clearTimeout(timeout)
     }
-  }, [value]);
+  }, [value])
 
-  const [showTooltip, setShowTooltip] = React.useState(false);
-  const [isDesktop, setIsDesktop] = React.useState(true);
-  const [tooltipPosition, setTooltipPosition] = React.useState({ top: 0, left: 0 });
-  const cardRef = React.useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = React.useState(false)
+  const [isDesktop, setIsDesktop] = React.useState(true)
+  const [tooltipPosition, setTooltipPosition] = React.useState({ top: 0, left: 0 })
+  const cardRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     const checkScreen = () => {
       if (typeof window !== 'undefined') {
-        setIsDesktop(window.innerWidth >= 768);
+        setIsDesktop(window.innerWidth >= 768)
       }
-    };
-    checkScreen();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', checkScreen);
-      return () => window.removeEventListener('resize', checkScreen);
     }
-  }, []);
+    checkScreen()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkScreen)
+      return () => window.removeEventListener('resize', checkScreen)
+    }
+  }, [])
 
   const handleMouseEnter = () => {
     if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
+      const rect = cardRef.current.getBoundingClientRect()
       setTooltipPosition({
         top: rect.top - 10,
         left: rect.left + rect.width / 2
-      });
+      })
     }
-    setShowTooltip(true);
-  };
+    setShowTooltip(true)
+  }
+
+  let iconElement = icon
+  if (React.isValidElement(icon)) {
+    const sanitizedClassName = typeof icon.props.className === 'string'
+      ? icon.props.className
+        .split(' ')
+        .filter(cls => cls && !cls.startsWith('text-'))
+        .join(' ')
+      : undefined
+
+    iconElement = React.cloneElement(icon, {
+      className: cn('h-6 w-6 sm:h-7 sm:w-7 text-current', sanitizedClassName),
+      strokeWidth: (icon.props as any)?.strokeWidth ?? 1.6
+    })
+  }
 
   const content = (
-    <Card className={cn(
-      'card-depth relative',
-      isFilterable && 'cursor-pointer touch-target',
-      isSelected && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg',
-      pulse && 'animate-pulse',
-      className
-    )}>
+    <Card
+      className={cn(
+        'card-depth relative bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm transition-shadow',
+        accentBorders[accent],
+        isFilterable && 'cursor-pointer touch-target',
+        pulse && 'animate-pulse',
+        isSelected && cn('shadow-md ring-2 ring-offset-1 dark:ring-offset-[#0f172a]', ringClasses[accent]),
+        className
+      )}
+    >
       <CardContent className="p-3 md:p-4">
-        <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
+        <div className="flex items-start justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
           <div className="flex flex-col flex-1 gap-1">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <motion.div 
-                key={value}
-                initial={{ scale: 1.1, opacity: 0.8 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="text-2xl font-bold text-gray-900 dark:text-white"
-              >
-                {value}
-              </motion.div>
-              <span className="text-sm font-medium text-muted-foreground leading-tight whitespace-nowrap">
-                {title}
-              </span>
-            </div>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {title}
+            </span>
+            <motion.div
+              key={value}
+              initial={{ scale: 1.05, opacity: 0.85 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="text-2xl font-semibold text-gray-900 dark:text-gray-100 sm:text-3xl"
+            >
+              {value}
+            </motion.div>
             {trendData && trendData.length > 0 && (
               <div className="mt-1 hidden sm:block">
                 <MiniTrendChart data={trendData} height={20} width={60} />
               </div>
             )}
           </div>
-          <motion.div 
-            whileHover={{ rotate: 5, scale: 1.1 }}
+          <motion.div
+            whileHover={{ rotate: 5, scale: 1.05 }}
             transition={{ duration: 0.2 }}
-            className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}
+            className={cn('shrink-0 rounded-xl p-2 transition-colors shadow-sm', iconAccentClasses[accent])}
           >
-            {icon}
+            {iconElement}
           </motion.div>
           {showPulse && (
             <div className="absolute top-2 right-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-              <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+              <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full" />
             </div>
           )}
         </div>
       </CardContent>
     </Card>
-  );
+  )
 
   if (isFilterable) {
     return (
@@ -1300,7 +1340,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-3 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] p-3 sm:p-6 md:p-8">
       {/* Accessibility: Skip Links */}
       <SkipLinks />
       
@@ -1455,7 +1495,7 @@ export default function Dashboard() {
                   <StatCard
                     title="High Priority"
                     value={incidentStats.high}
-                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.types.some(type =>
                       ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
                     )}
@@ -1476,7 +1516,7 @@ export default function Dashboard() {
                   <StatCard
                     title="Medicals"
                     value={incidentStats.medicals}
-                    icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-red-400" />}
+                    icon={<HeartIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.types.includes('Medical')}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1485,13 +1525,14 @@ export default function Dashboard() {
                       }))
                     }
                     isFilterable
+                    color="red"
                     tooltip="Medical-related incidents."
                     index={1}
                   />
                   <StatCard
                     title="Open"
                     value={incidentStats.open}
-                    icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-400" />}
+                    icon={<FolderOpenIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.statuses.includes('open')}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1502,14 +1543,14 @@ export default function Dashboard() {
                       }))
                     }
                     isFilterable
-                    color="yellow"
+                    color="red"
                     tooltip="Incidents that are currently open (is_closed = false)."
                     index={2}
                   />
                   <StatCard
                     title="Ejections"
                     value={incidentStats.ejections}
-                    icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    icon={<UsersIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.types.includes('Ejection')}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1518,13 +1559,14 @@ export default function Dashboard() {
                       }))
                     }
                     isFilterable
+                    color="purple"
                     tooltip="Incidents where someone was ejected."
                     index={3}
                   />
                   <StatCard
                     title="Refusals"
                     value={incidentStats.refusals}
-                    icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    icon={<UserGroupIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.types.includes('Refusal')}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1533,23 +1575,25 @@ export default function Dashboard() {
                       }))
                     }
                     isFilterable
+                    color="slate"
                     tooltip="Incidents where entry was refused."
                     index={4}
                   />
                   <StatCard
                     title="Total"
                     value={incidentStats.total}
-                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    icon={<ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={(filters.types.length + filters.statuses.length + filters.priorities.length) === 0}
                     onClick={resetToTotal}
                     isFilterable
+                    color="blue"
                     tooltip="All incidents (excluding Attendance and Sit Reps)."
                     index={5}
                   />
                   <StatCard
                     title="Closed"
                     value={incidentStats.closed}
-                    icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-400" />}
+                    icon={<CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.statuses.includes('closed')}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1567,7 +1611,7 @@ export default function Dashboard() {
                   <StatCard
                     title="Other"
                     value={incidentStats.other}
-                    icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />}
+                    icon={<QuestionMarkCircleIcon className="h-6 w-6 md:h-8 md:w-8" />}
                     isSelected={filters.types.length > 0 && !['Refusal', 'Ejection', 'Medical'].some(t => filters.types.includes(t))}
                     onClick={() =>
                       setFilters(prev => ({
@@ -1576,6 +1620,7 @@ export default function Dashboard() {
                       }))
                     }
                     isFilterable
+                    color="slate"
                     tooltip="All other incident types."
                     index={7}
                   />

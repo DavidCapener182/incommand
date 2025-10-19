@@ -58,7 +58,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.supabase.co" />
         <link rel="dns-prefetch" href="https://api.supabase.co" />
       </head>
-      <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
+      <body className={"bg-slate-50 dark:bg-[#151d34] text-gray-900 dark:text-gray-100"}>
         <NightModeProvider>
           <AuthProvider>
             <NotificationDrawerProvider>

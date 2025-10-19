@@ -126,7 +126,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-label="Navigate to Home"
               aria-current={isActive('/incidents') ? 'page' : undefined}
               onClick={() => go('/incidents')}
-              className={`touch-target flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : 'text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60'}`}
+            className={`touch-target flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -135,7 +135,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                 animate={isActive('/incidents') ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <HomeIcon className="w-6 h-6" />
+                <HomeIcon className="w-6 h-6 sm:w-7 sm:h-7 text-current" strokeWidth={1.6} />
               </motion.div>
               <span className="text-sm font-semibold">Home</span>
             </motion.button>
@@ -232,7 +232,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-disabled={chatDisabled}
               title={chatDisabled ? 'Chat unavailable' : 'Open Help Center'}
               onClick={() => { if (onOpenHelpCenter) onOpenHelpCenter(); }}
-              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent ${isHelpCenterOpen ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : ''}`}
+              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent ${isHelpCenterOpen ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : ''}`}
               whileHover={!chatDisabled ? { scale: 1.02 } : {}}
               whileTap={!chatDisabled ? { scale: 0.98 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -241,7 +241,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                 animate={isHelpCenterOpen ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6 text-current" strokeWidth={1.6} />
               </motion.div>
               <span className="text-xs sm:text-sm font-semibold hidden sm:inline">Chat</span>
             </motion.button>
