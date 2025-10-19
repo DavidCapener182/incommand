@@ -190,8 +190,8 @@ const getIncidentColor = (type: string) => {
   }
 }
 
-const mergeSopAction = (existing: string | undefined, description: string): string => {
-  const cleaned = description.trim()
+const mergeSopAction = (existing: string | undefined, description?: string | null): string => {
+  const cleaned = (description ?? '').trim()
   if (!cleaned) {
     return existing || ''
   }
@@ -4097,15 +4097,22 @@ export default function IncidentCreationModal({
   }, [mapCoordinatesSource])
 
   const handleApplySopStep = useCallback((step: IncidentSOPStep) => {
+    const description = (step.description ?? '').trim()
+
     setFormData(prev => ({
       ...prev,
-      actions_taken: mergeSopAction(prev.actions_taken, step.description)
+      actions_taken: mergeSopAction(prev.actions_taken, description)
     }))
     setGuidedActionsGenerated(true)
     addToast({
       type: 'info',
       title: 'SOP Step Added',
-      message: step.description.length > 80 ? `${step.description.slice(0, 77)}…` : step.description,
+      message:
+        description.length === 0
+          ? 'SOP step added to actions.'
+          : description.length > 80
+            ? `${description.slice(0, 77)}…`
+            : description,
       duration: 2500
     })
   }, [addToast])
