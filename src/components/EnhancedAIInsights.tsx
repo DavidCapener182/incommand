@@ -552,7 +552,7 @@ export default function EnhancedAIInsights({
 
   if (insights.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <div className="card-depth p-6">
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
             <ChartBarIcon className="w-8 h-8 text-gray-400" />
@@ -565,7 +565,7 @@ export default function EnhancedAIInsights({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <div className="card-depth p-6">
       {/* Header with View Mode Toggle */}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Enhanced AI Insights</h3>

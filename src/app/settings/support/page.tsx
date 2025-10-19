@@ -307,7 +307,7 @@ export default function SupportPage() {
       <div className="space-y-4 sm:space-y-6">
         {/* Contact Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
                 <ChatBubbleLeftRightIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -325,7 +325,7 @@ export default function SupportPage() {
             </button>
           </div>
 
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-[#1a2a57] rounded-lg">
                 <EnvelopeIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -345,7 +345,7 @@ export default function SupportPage() {
         </div>
 
         {/* Emergency Support */}
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 sm:p-6">
+        <div className="card-depth p-4 sm:p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <div className="flex items-center gap-3 mb-3">
             <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
             <h2 className="text-lg font-semibold text-red-800 dark:text-red-200">Emergency Support</h2>
@@ -366,7 +366,7 @@ export default function SupportPage() {
         </div>
 
         {/* Help Resources */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-depth p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">Help Resources</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <a 
@@ -405,7 +405,7 @@ export default function SupportPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-depth p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <QuestionMarkCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Frequently Asked Questions</h2>
@@ -453,7 +453,7 @@ export default function SupportPage() {
 
         {/* My Support Tickets */}
         {userTickets.length > 0 && (
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth p-4 sm:p-6">
             <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">My Support Tickets</h2>
             <div className="space-y-3">
               {userTickets.map((ticket) => (
@@ -495,7 +495,7 @@ export default function SupportPage() {
         )}
 
         {/* Contact Form */}
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-depth p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">Send us a Message</h2>
           <form className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -542,7 +542,7 @@ export default function SupportPage() {
         </div>
 
         {/* Status Page Link */}
-        <div className="bg-gray-100 dark:bg-[#1a2a57] rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-[#2d437a]">
+        <div className="card-depth-subtle p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white">System Status</h3>

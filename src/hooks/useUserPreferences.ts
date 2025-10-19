@@ -163,7 +163,11 @@ export const useNotificationPreferences = () => {
     const keys = path.split('.')
     let current: any = updatedPrefs
     
+    // Ensure nested objects exist
     for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) {
+        current[keys[i]] = {}
+      }
       current = current[keys[i]]
     }
     
@@ -175,10 +179,10 @@ export const useNotificationPreferences = () => {
   return {
     notificationPreferences: notificationPrefs,
     updateNotificationPreference,
-    emailEnabled: notificationPrefs.email.enabled,
-    pushEnabled: notificationPrefs.push.enabled,
-    smsEnabled: notificationPrefs.sms.enabled,
-    quietHours: notificationPrefs.quiet_hours,
+    emailEnabled: notificationPrefs?.email?.enabled ?? false,
+    pushEnabled: notificationPrefs?.push?.enabled ?? false,
+    smsEnabled: notificationPrefs?.sms?.enabled ?? false,
+    quietHours: notificationPrefs?.quiet_hours,
   }
 }
 

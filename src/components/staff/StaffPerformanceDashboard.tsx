@@ -148,7 +148,7 @@ export default function StaffPerformanceDashboard({
     .slice(0, 3)
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`card-depth ${className}`}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">

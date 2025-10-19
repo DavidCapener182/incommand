@@ -228,7 +228,7 @@ export default function CommandHierarchy({
   }
 
   return (
-    <div className={`bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+    <div className={`card-depth-subtle p-6 ${className}`}>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Command Hierarchy
@@ -254,7 +254,7 @@ export default function CommandHierarchy({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+          className="mt-6 card-depth p-4"
         >
           <div className="flex items-start justify-between mb-3">
             <div>

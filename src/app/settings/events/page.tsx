@@ -82,9 +82,9 @@ export default function EventsSettingsPage() {
   };
 
   useEffect(() => {
-    logger.debug('useEffect for events/logs ran', { component: 'EventsSettingsPage', action: 'useEffect', currentEvent, selectedEvent });
+    logger.debug('useEffect for events ran', { component: 'EventsSettingsPage', action: 'useEffect' });
     fetchEvents(false);
-  }, [currentEvent, selectedEvent]);
+  }, []); // Only run once on mount
 
   useEffect(() => {
     if (selectedEvent) {
@@ -92,7 +92,7 @@ export default function EventsSettingsPage() {
     } else {
       setLogs([]);
     }
-  }, [selectedEvent, currentEvent]);
+  }, [selectedEvent]); // Only depend on selectedEvent, not currentEvent
 
   const handleEndEvent = async () => {
     if (!currentEvent) return;
@@ -268,7 +268,7 @@ export default function EventsSettingsPage() {
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-gray-900 dark:text-white">Event Settings</h1>
       
       <div className="space-y-4 sm:space-y-6">
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-3 sm:p-6">
+        <div className="card-depth text-gray-900 dark:text-gray-100 p-3 sm:p-6">
           <h2 className="text-base sm:text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200 flex items-center gap-2">
             Current Event
             {isRefreshing && <span className="ml-2 text-xs text-blue-500 dark:text-blue-300 animate-pulse">Refreshing…</span>}
@@ -336,7 +336,7 @@ export default function EventsSettingsPage() {
           )}
         </div>
         
-        <div className="bg-white dark:bg-[#23408e] text-gray-900 dark:text-gray-100 shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+        <div className="card-depth text-gray-900 dark:text-gray-100 p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200">Past Events</h2>
           {loading ? (
             <div className="text-gray-500 dark:text-blue-100">Loading events...</div>

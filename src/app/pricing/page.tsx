@@ -124,7 +124,7 @@ export default function PricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`bg-white dark:bg-[#1e2438] rounded-xl shadow-lg ${
+              className={`card-depth ${
                 plan.highlighted ? 'ring-2 ring-blue-600 dark:ring-blue-400 scale-105' : ''
               } p-8 flex flex-col`}
             >

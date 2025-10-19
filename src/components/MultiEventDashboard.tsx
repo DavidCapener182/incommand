@@ -181,7 +181,7 @@ export default function MultiEventDashboard({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-shadow"
+              className="card-depth p-6 hover:shadow-xl transition-shadow"
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-4">

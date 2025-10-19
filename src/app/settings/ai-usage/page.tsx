@@ -109,18 +109,18 @@ export default function AIUsagePage() {
       </div>
 
       {loading ? (
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 text-center">
+        <div className="card-depth p-6 text-center">
           <div className="text-gray-500 dark:text-blue-100">Loading AI usage data...</div>
         </div>
       ) : error ? (
-        <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 text-center">
+        <div className="card-depth p-6 text-center">
           <div className="text-red-500 dark:text-red-400">Error: {error}</div>
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
           {/* Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+            <div className="card-depth p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
                   <ChartBarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -132,7 +132,7 @@ export default function AIUsagePage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+            <div className="card-depth p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-100 dark:bg-[#1a2a57] rounded-lg">
                   <CpuChipIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -144,7 +144,7 @@ export default function AIUsagePage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+            <div className="card-depth p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-yellow-100 dark:bg-[#1a2a57] rounded-lg">
                   <CurrencyDollarIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -156,7 +156,7 @@ export default function AIUsagePage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+            <div className="card-depth p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-100 dark:bg-[#1a2a57] rounded-lg">
                   <ClockIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -170,9 +170,9 @@ export default function AIUsagePage() {
           </div>
 
           {/* Usage Chart */}
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth p-4 sm:p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">Usage Over Time</h3>
-            <div className="w-full h-32 card-depth dark:bg-[#1a2a57] flex items-end p-2">
+            <div className="w-full h-32 bg-gray-50 dark:bg-[#1a2a57] rounded-lg flex items-end p-2">
               <svg width="100%" height="100%" viewBox="0 0 300 80" preserveAspectRatio="none">
                 {Object.entries(usageByDay).map(([date, { calls }], i) => (
                   <rect
@@ -193,7 +193,7 @@ export default function AIUsagePage() {
           </div>
 
           {/* Filters and Table */}
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+          <div className="card-depth p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Recent Usage</h3>
               

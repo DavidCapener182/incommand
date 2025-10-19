@@ -102,7 +102,7 @@ export default function AIAssistantPanel({
       animate={{ opacity: 1, x: 0 }}
       className={`${positionClasses[position]} ${className}`}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="card-depth shadow-2xl overflow-hidden">
         {/* Header */}
         <div
           className="bg-gradient-to-r from-purple-600 to-indigo-700 dark:from-purple-800 dark:to-indigo-900 text-white p-4 cursor-pointer"

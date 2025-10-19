@@ -188,7 +188,7 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                       className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight"
+                className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight"
               >
                 {currentTime}
               </motion.p>
@@ -199,19 +199,25 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                 transition={{ delay: 0.4 }}
               >
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time Since Last Incident</h3>
-                       <p className="text-lg font-extrabold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
+                <p className="text-lg font-extrabold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
               </motion.div>
               
-              {nextEvent && (
+              {(currentSlot || nextEvent) && (
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                  className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/30 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Happening Next</h4>
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{nextEvent.title}</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-300">{countdown}</p>
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+                  </h4>
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    {currentSlot?.title || nextEvent?.title}
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-300">
+                    {currentSlot?.time || countdown}
+                  </p>
                 </motion.div>
               )}
             </div>
@@ -247,22 +253,6 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
             </div>
           </div>
         </CardContent>
-        
-        {/* Desktop: Happening Now positioned in bottom left corner */}
-        {currentSlot && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
-            className="hidden md:block absolute bottom-4 left-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 border border-blue-200/50 dark:border-blue-700/30 shadow-sm hover:shadow-md transition-all duration-200"
-          >
-            <span className="text-xs font-semibold text-blue-700 dark:text-blue-200 block">
-              {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-            </span>
-            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{currentSlot.title}</div>
-            <div className="text-xs text-gray-700 dark:text-gray-100">{currentSlot.time}</div>
-          </motion.div>
-        )}
       </Card>
     </motion.div>
   )

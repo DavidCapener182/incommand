@@ -123,7 +123,7 @@ export default function CareersPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg p-6 text-center"
+                className="card-depth p-6 text-center"
               >
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <benefit.icon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -157,7 +157,7 @@ export default function CareersPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow"
+                className="card-depth p-6 hover:shadow-xl transition-shadow"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="flex-1">

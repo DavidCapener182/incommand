@@ -306,7 +306,7 @@ export default function SocialMediaMonitoringCard({ eventId }: SocialMediaMonito
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                      {posts.map((post) => (
-                     <div key={post.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-white dark:bg-gray-800">
+                     <div key={post.id} className="card-depth-subtle p-6 hover:shadow-lg transition-all duration-200">
                        <div className="flex items-start justify-between mb-4">
                          <div className="flex items-center space-x-3">
                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${

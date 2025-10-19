@@ -429,7 +429,7 @@ export default function BackupRestorePage() {
       )}
 
       {/* Backup History */}
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+      <div className="card-depth p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
             <ServerIcon className="w-5 h-5" />
@@ -558,7 +558,7 @@ export default function BackupRestorePage() {
       )}
 
       {/* Conflict Resolution Settings */}
-      <div className="bg-white dark:bg-[#23408e] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-[#2d437a]">
+      <div className="card-depth p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-blue-200 flex items-center gap-2">
             <ExclamationTriangleIcon className="w-5 h-5" />

@@ -91,7 +91,7 @@ export default function AboutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg p-8 sm:p-12"
+          className="card-depth p-8 sm:p-12"
         >
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
             Our Mission
@@ -122,7 +122,7 @@ export default function AboutPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
-                className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg p-6 text-center"
+                className="card-depth p-6 text-center"
               >
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <value.icon className="w-8 h-8 text-blue-600 dark:text-blue-400" />

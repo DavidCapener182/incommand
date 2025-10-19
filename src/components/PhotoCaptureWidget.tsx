@@ -201,7 +201,7 @@ export default function PhotoCaptureWidget({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="relative aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden group"
+              className="relative aspect-square card-depth-subtle overflow-hidden group"
             >
               {/* Photo */}
               <Image

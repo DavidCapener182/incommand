@@ -88,7 +88,7 @@ export default function FeaturesPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+              className="card-depth hover:shadow-xl transition-shadow p-6 group"
             >
               <div className="flex items-start space-x-4">
                 <div className="flex-shrink-0">

@@ -90,7 +90,7 @@ export default function BlogPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white dark:bg-[#1e2438] rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group"
+              className="card-depth overflow-hidden hover:shadow-xl transition-shadow group"
             >
               {/* Image Placeholder */}
               <div className="h-48 bg-blue-600 flex items-center justify-center text-6xl">

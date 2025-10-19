@@ -56,7 +56,7 @@ export default function StatusPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                className="bg-white dark:bg-[#1e2438] rounded-lg shadow-lg p-6"
+                className="card-depth p-6"
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -84,7 +84,7 @@ export default function StatusPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-white dark:bg-[#1e2438] rounded-lg shadow-lg p-8"
+          className="card-depth p-8"
         >
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
             Overall Uptime

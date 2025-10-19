@@ -189,7 +189,7 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Email Notifications */}
-      <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 mb-6">
+      <div className="card-depth p-4 sm:p-6 mb-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Email Notifications</h2>
         <div className="space-y-3 sm:space-y-4">
           <SettingToggle
@@ -242,7 +242,7 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Push Notifications */}
-      <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 mb-6">
+      <div className="card-depth p-4 sm:p-6 mb-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Push Notifications</h2>
         <div className="space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
@@ -338,7 +338,7 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* SMS Notifications */}
-      <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6 mb-6">
+      <div className="card-depth p-4 sm:p-6 mb-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">SMS Notifications</h2>
         <div className="space-y-3 sm:space-y-4">
           <SettingToggle
@@ -357,7 +357,7 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Quiet Hours */}
-      <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+      <div className="card-depth p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Quiet Hours</h2>
         <div className="space-y-3 sm:space-y-4">
           <div className="p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
@@ -418,7 +418,7 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Settings Navigation */}
-      <div className="bg-white dark:bg-[#23408e] shadow-sm rounded-2xl border border-gray-200 dark:border-[#2d437a] p-4 sm:p-6">
+      <div className="card-depth p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Notification Management</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 card-depth dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">

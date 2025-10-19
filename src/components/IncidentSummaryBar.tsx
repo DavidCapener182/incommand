@@ -167,10 +167,10 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
                   type="button"
                   onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
                   className={`
-                    flex flex-col items-center justify-center px-4 py-4 rounded-xl shadow-1 transition-shadow duration-200 
-                    hover:shadow-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
+                    card-depth-subtle flex flex-col items-center justify-center px-4 py-4 transition-all duration-200 
+                    hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
                     ${color}
-                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-2' : ''}
+                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-lg' : ''}
                     ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
                     ${isTotal ? 'cursor-default' : 'cursor-pointer'}
                   `}
