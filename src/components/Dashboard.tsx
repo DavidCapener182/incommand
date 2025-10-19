@@ -1300,7 +1300,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-3 sm:p-6 md:p-8">
+    <div className="min-h-screen p-3 sm:p-6 md:p-8 bg-[#E3EDFE] md:bg-transparent dark:bg-[#0b1229] md:dark:bg-transparent transition-colors">
       {/* Accessibility: Skip Links */}
       <SkipLinks />
       
@@ -1348,57 +1348,64 @@ export default function Dashboard() {
         </section>
 
         {/* Mobile view */}
-        <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300">
-          {loadingCurrentEvent && <p className="p-3">Loading event...</p>}
-          {!loadingCurrentEvent && currentEvent && (
-            <div>
-              <div className="flex justify-between items-center p-3">
-                <div className="flex items-center">
-                  <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{currentEvent.event_name}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
-                  <div className="text-xs text-orange-600 dark:text-orange-300 font-medium">
-                    Last incident: {timeSinceLastIncident}
+        <div className="md:hidden space-y-4">
+          <div className="relative glass-mobile shadow-lg md:hover:scale-100 md:active:scale-100 overflow-hidden">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+            <div className="relative z-10 space-y-4">
+              {loadingCurrentEvent && (
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-200">Loading event...</p>
+              )}
+              {!loadingCurrentEvent && currentEvent && (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-200">Event</span>
+                      <span className="text-base font-semibold text-slate-900 dark:text-white">{currentEvent.event_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-base font-bold text-slate-900 dark:text-white">{currentTime}</span>
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-200">Last incident: {timeSinceLastIncident}</div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <hr className="border-t border-gray-200" />
-              {(currentSlot || nextSlot) ? (
-                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-b-lg">
-                  {currentSlot ? (
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
-                        {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-                      </span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{currentSlot.title}</span>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-100">{currentSlot.time}</span>
+                  <div className="h-px w-full bg-white/50 dark:bg-white/10" />
+                  {(currentSlot || nextSlot) ? (
+                    <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-white/40 via-white/20 to-transparent p-4 dark:from-white/10 dark:via-white/5 dark:to-transparent">
+                      {currentSlot ? (
+                        <div className="flex flex-col items-start">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">
+                            {currentSlot.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
+                          </span>
+                          <span className="text-sm font-medium text-slate-900 dark:text-white">{currentSlot.title}</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-blue-100">{currentSlot.time}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500">&nbsp;</span>
+                      )}
+                      {nextSlot ? (
+                        <div className="flex flex-col items-end text-right">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-200">Up Next</span>
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-100">{nextSlot.title}</span>
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-100">{nextSlot.time}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500">&nbsp;</span>
+                      )}
                     </div>
-                  ) : <div />}
-                  {nextSlot ? (
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-200">Up Next</span>
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-100">{nextSlot.title}</span>
-                      <span className="text-xs font-bold text-blue-700 dark:text-blue-100">{nextSlot.time}</span>
-                    </div>
-                  ) : <div />}
+                  ) : (
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-center">No timings available</p>
+                  )}
+                </>
+              )}
+              {!loadingCurrentEvent && !currentEvent && (
+                <div className="text-center">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No Current Event</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    No event is currently selected. Create a new event to get started.
+                  </p>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 text-center p-3">No timings available</p>
               )}
             </div>
-          )}
-          {!loadingCurrentEvent && !currentEvent && (
-            <div className="text-center py-4">
-               <h3 className="text-sm font-medium text-gray-900">
-                No Current Event
-              </h3>
-              <p className="text-sm text-gray-500">
-                No event is currently selected. Create a new event to get started.
-              </p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -1610,11 +1617,13 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-
-                    className="card-depth flex h-[130px] w-full cursor-pointer flex-col items-center justify-center"
+                    className="glass-mobile flex h-[130px] w-full cursor-pointer items-center justify-center shadow-sm md:hover:scale-100 md:active:scale-100"
                     onClick={() => setIsOccupancyModalOpen(true)}
                   >
-                    <VenueOccupancy currentEventId={currentEventId} />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+                    <div className="relative z-10 w-full">
+                      <VenueOccupancy currentEventId={currentEventId} />
+                    </div>
                   </motion.div>
                 )}
               </div>

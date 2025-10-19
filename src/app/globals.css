@@ -73,6 +73,10 @@
     border-radius: 1.5rem;
   }
 
+  .glass-mobile {
+    @apply relative overflow-hidden rounded-2xl p-5 border border-white/30 bg-white/40 backdrop-blur-2xl transition-all duration-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_4px_16px_rgba(0,0,0,0.15)] hover:scale-[1.02] active:scale-[0.98];
+  }
+
   @media (max-width: 768px) {
     .glass-card {
       background-color: rgba(255, 255, 255, 0.45) !important;
@@ -83,6 +87,10 @@
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
     }
+
+    .glass-mobile {
+      @apply shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_4px_16px_rgba(0,0,0,0.15)];
+    }
   }
 
   @media (max-width: 768px) and (prefers-color-scheme: dark) {
@@ -90,6 +98,16 @@
       background-color: rgba(30, 30, 30, 0.55) !important;
       border: 1px solid rgba(255, 255, 255, 0.15) !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-mobile {
+      @apply bg-slate-900/50 border-white/20 shadow-[inset_0_1px_1px_rgba(148,163,184,0.35),0_4px_18px_rgba(15,23,42,0.45)];
+    }
+  }
+
+  @media (min-width: 768px) {
+    .glass-mobile {
+      @apply bg-white shadow-sm hover:scale-100 active:scale-100;
     }
   }
 
