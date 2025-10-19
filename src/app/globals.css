@@ -6,6 +6,10 @@
 
 /* Mobile-first form input styling */
 @layer components {
+  :root {
+    --card-padding: 1.25rem;
+  }
+
   .input-mobile {
     @apply w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 sm:py-2 text-base sm:text-sm;
     @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
@@ -61,75 +65,256 @@
     @apply p-4 sm:p-6;
   }
 
-  /* Soft Depth Card System - Centralized Card Design */
+  /* Executive Dashboard Card System */
 
-  /* Base card styling - default for most cards */
   .card-depth {
     background-color: var(--dashboard-card-bg);
-    @apply dark:bg-[#1b203b] rounded-2xl;
+    @apply relative rounded-2xl border border-slate-100/80 dark:border-white/5;
+    @apply dark:bg-[#1b203b];
     box-shadow: var(--shadow-level-1);
-    @apply hover:shadow-level-2 transition-shadow duration-300;
+    padding: var(--card-padding);
+    transition: box-shadow 200ms ease, transform 180ms ease-out, border-color 200ms ease;
+    transform: translateZ(0);
   }
 
-  /* Interactive cards (same as base, kept for semantic clarity) */
+  .card-depth:hover,
+  .card-depth:focus-within {
+    box-shadow: var(--shadow-level-2);
+    border-color: rgba(59, 130, 246, 0.25);
+  }
+
+  .card-depth.card-interactive,
+  .card-depth-interactive {
+    cursor: pointer;
+  }
+
+  .card-depth.card-interactive:hover,
+  .card-depth-interactive:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  .card-depth.card-interactive:active,
+  .card-depth-interactive:active {
+    transform: translateY(0) scale(0.99);
+  }
+
   .card-depth-interactive {
     @apply card-depth;
   }
 
-  /* Subtle cards - for nested cards or less prominent elements */
   .card-depth-subtle {
     background-color: var(--alt-card-bg);
-    @apply dark:bg-[#1b203b] rounded-xl;
+    @apply rounded-xl border border-slate-100/60 dark:border-white/5 dark:bg-[#1b203b];
     box-shadow: var(--shadow-level-1);
-    @apply hover:shadow-level-2 transition-shadow duration-200;
+    padding: var(--card-padding);
+    transition: box-shadow 200ms ease, transform 180ms ease-out;
   }
 
-  /* Table row cards - minimal shadow for dense layouts */
+  .card-depth-subtle:hover,
+  .card-depth-subtle:focus-within {
+    box-shadow: var(--shadow-level-2);
+  }
+
   .card-table-row {
     background-color: var(--metrics-card-bg);
-    @apply dark:bg-[#23408e] rounded-xl;
+    @apply rounded-xl border border-slate-100/70 dark:border-white/5 dark:bg-[#23408e];
     box-shadow: var(--shadow-level-1);
-    @apply hover:shadow-level-2 transition-shadow duration-200;
+    padding: 1rem 1.25rem;
+    transition: box-shadow 200ms ease, transform 180ms ease-out;
   }
 
-  /* Modal/Dialog cards - prominent depth */
+  .card-table-row:hover {
+    box-shadow: var(--shadow-level-2);
+    transform: translateY(-1px);
+  }
+
   .card-modal {
     background-color: var(--modal-card-bg);
-    @apply dark:bg-[#1b203b] rounded-2xl;
+    @apply rounded-2xl border border-slate-200/80 dark:border-white/10 dark:bg-[#1b203b];
     box-shadow: var(--shadow-level-3);
+    padding: calc(var(--card-padding) * 1.2);
   }
 
-  /* Skeleton/Loading cards */
   .card-skeleton {
     @apply card-depth animate-pulse;
   }
 
-  /* Time/Status cards - special colored background variants */
   .card-time {
     background-color: var(--dashboard-card-bg);
-    @apply dark:bg-[#23408e] rounded-2xl;
+    @apply rounded-2xl border border-blue-200/70 dark:border-blue-500/40 dark:bg-[#23408e];
     box-shadow: var(--shadow-level-2);
-    @apply hover:shadow-level-3 transition-shadow duration-300;
+    padding: var(--card-padding);
+    transition: box-shadow 250ms ease;
   }
 
-  /* View toggle/control cards */
-  .card-control {
-    background-color: var(--dashboard-card-bg);
-    @apply dark:bg-[#1b203b] rounded-lg;
-    box-shadow: var(--shadow-level-2);
-  }
-
-  /* Board view container cards */
-  .card-board {
-    background-color: var(--dashboard-card-bg);
-    @apply dark:bg-[#1b203b] rounded-2xl;
+  .card-time:hover {
     box-shadow: var(--shadow-level-3);
   }
 
-  /* Alternative dark background cards (gray-800) - for specialized components */
+  .card-control {
+    background-color: var(--dashboard-card-bg);
+    @apply rounded-lg border border-slate-100/70 dark:border-white/5 dark:bg-[#1b203b];
+    box-shadow: var(--shadow-level-2);
+    padding: 1rem;
+  }
+
+  .card-board {
+    background-color: var(--dashboard-card-bg);
+    @apply rounded-2xl border border-slate-100/70 dark:border-white/5 dark:bg-[#1b203b];
+    box-shadow: var(--shadow-level-3);
+    padding: calc(var(--card-padding) * 1.25);
+  }
+
   .card-alt {
-    @apply bg-white dark:bg-gray-800 rounded-xl;
-    @apply shadow-1 hover:shadow-2 transition-shadow duration-300;
+    @apply bg-white dark:bg-gray-800 rounded-xl border border-slate-100/70 dark:border-white/10;
+    @apply transition-shadow duration-300;
+    box-shadow: var(--shadow-level-1);
+    padding: var(--card-padding);
+  }
+
+  .card-alt:hover {
+    box-shadow: var(--shadow-level-2);
+  }
+
+  /* Accent and Gradient Treatments */
+
+  .card-accent {
+    position: relative;
+    padding-left: calc(var(--card-padding) - 0.25rem);
+    border-left: 4px solid var(--card-accent-color, var(--brand-500));
+  }
+
+  .card-accent-top {
+    border-top: 4px solid var(--card-accent-color, var(--brand-500));
+  }
+
+  .card-accent-danger {
+    --card-accent-color: var(--status-danger);
+  }
+
+  .card-accent-warning {
+    --card-accent-color: var(--status-warning);
+  }
+
+  .card-accent-success {
+    --card-accent-color: var(--status-success);
+  }
+
+  .card-accent-info {
+    --card-accent-color: var(--status-info);
+  }
+
+  .card-accent-neutral {
+    --card-accent-color: var(--status-neutral);
+  }
+
+  .card-hero {
+    @apply rounded-2xl text-slate-900 dark:text-white;
+    background: linear-gradient(135deg, var(--card-hero-from, rgba(59, 130, 246, 0.08)), var(--card-hero-to, #ffffff));
+    box-shadow: var(--shadow-level-2);
+    padding: calc(var(--card-padding) * 1.15);
+  }
+
+  .card-hero[data-tone="brand"] {
+    --card-hero-from: rgba(59, 130, 246, 0.12);
+    --card-hero-to: #ffffff;
+  }
+
+  .card-hero[data-tone="info"] {
+    --card-hero-from: rgba(96, 165, 250, 0.14);
+    --card-hero-to: #ffffff;
+  }
+
+  .card-hero[data-tone="success"] {
+    --card-hero-from: rgba(16, 185, 129, 0.12);
+    --card-hero-to: #ffffff;
+  }
+
+  .card-hero[data-tone="danger"] {
+    --card-hero-from: rgba(239, 68, 68, 0.14);
+    --card-hero-to: #ffffff;
+  }
+
+  .card-hero[data-tone="warning"] {
+    --card-hero-from: rgba(245, 158, 11, 0.14);
+    --card-hero-to: #ffffff;
+  }
+
+  .card-hero.dark {
+    --card-hero-to: rgba(15, 23, 42, 0.9);
+  }
+
+  /* Metric Layout Helpers */
+
+  .card-metric {
+    @apply flex items-start justify-between gap-6;
+  }
+
+  .card-metric__heading {
+    @apply flex flex-col gap-1;
+  }
+
+  .metric-label {
+    @apply text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400;
+  }
+
+  .metric-subtitle {
+    @apply text-xs text-slate-400 dark:text-slate-500;
+  }
+
+  .metric-value {
+    @apply text-3xl font-semibold text-slate-900 dark:text-white;
+    line-height: 1.1;
+  }
+
+  .metric-value .metric-unit {
+    @apply ml-1 text-sm font-medium text-slate-400 dark:text-slate-500;
+  }
+
+  .metric-trend {
+    @apply mt-2 inline-flex items-center gap-1 text-sm font-medium;
+  }
+
+  .metric-trend.positive {
+    color: var(--status-success);
+  }
+
+  .metric-trend.warning {
+    color: var(--status-warning);
+  }
+
+  .metric-trend.negative {
+    color: var(--status-danger);
+  }
+
+  .metric-icon {
+    @apply flex h-12 w-12 items-center justify-center rounded-xl;
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--brand-600);
+  }
+
+  .metric-icon[data-tone="success"] {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--status-success);
+  }
+
+  .metric-icon[data-tone="warning"] {
+    background: rgba(245, 158, 11, 0.16);
+    color: var(--status-warning);
+  }
+
+  .metric-icon[data-tone="danger"] {
+    background: rgba(239, 68, 68, 0.16);
+    color: var(--status-danger);
+  }
+
+  .metric-icon[data-tone="info"] {
+    background: rgba(96, 165, 250, 0.18);
+    color: var(--status-info);
+  }
+
+  .metric-footnote {
+    @apply mt-4 text-xs text-slate-400 dark:text-slate-500;
   }
 }
 
@@ -1099,14 +1284,30 @@ input:-webkit-autofill {
     --bg-dark-dark: 224 45% 8%;
     
     /* Custom color variables for modern dashboard */
-    --page-bg: #DBEAFE;
+    --page-bg: #F8FAFC;
     --dashboard-card-bg: #FFFFFF;
     --metrics-card-bg: #FFFFFF;
     --modal-card-bg: #FDFDFE;
-    --alt-card-bg: #F8FAFC;
-    --shadow-level-1: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
-    --shadow-level-2: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
-    --shadow-level-3: 0px 16px 32px 0px rgba(0, 0, 0, 0.2);
+    --alt-card-bg: #F1F5F9;
+
+    --brand-900: #1E3A8A;
+    --brand-700: #1D4ED8;
+    --brand-600: #2563EB;
+    --brand-500: #3B82F6;
+    --brand-200: #BFDBFE;
+
+    --status-success: #10B981;
+    --status-warning: #F59E0B;
+    --status-danger: #EF4444;
+    --status-info: #3B82F6;
+    --status-neutral: #94A3B8;
+
+    --surface-base: #F8FAFC;
+    --surface-elevated: #FFFFFF;
+
+    --shadow-level-1: 0 10px 24px -12px rgba(15, 23, 42, 0.12), 0 18px 32px -16px rgba(15, 23, 42, 0.08);
+    --shadow-level-2: 0 12px 28px -12px rgba(15, 23, 42, 0.16), 0 22px 40px -18px rgba(15, 23, 42, 0.12);
+    --shadow-level-3: 0 18px 40px -18px rgba(15, 23, 42, 0.25), 0 26px 54px -20px rgba(15, 23, 42, 0.18);
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -1133,6 +1334,9 @@ input:-webkit-autofill {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --surface-base: #0f172a;
+    --surface-elevated: #111a2e;
+    --status-info: #60A5FA;
   }
 }
 
