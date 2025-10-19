@@ -100,9 +100,10 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
       <motion.nav
         role="navigation"
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-50 bg-white/40 dark:bg-slate-900/60 supports-[backdrop-filter]:backdrop-blur-[30px] supports-[backdrop-filter]:backdrop-saturate-150 border-t border-white/30 dark:border-white/10 shadow-[0_-8px_32px_rgba(15,23,42,0.15)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+        className="fixed inset-x-0 bottom-0 z-50 bg-white/35 dark:bg-slate-900/60 supports-[backdrop-filter]:backdrop-blur-[20px] supports-[backdrop-filter]:backdrop-saturate-[1.6] border-t border-white/25 dark:border-white/10 shadow-[0_-12px_32px_rgba(15,23,42,0.18)] dark:shadow-[0_-10px_32px_rgba(0,0,0,0.55)]"
         style={{
-          backdropFilter: 'blur(30px) saturate(150%)',
+          backdropFilter: 'blur(20px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
           paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)',
           paddingRight: 'max(env(safe-area-inset-right), 0.5rem)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
