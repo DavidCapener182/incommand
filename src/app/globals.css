@@ -65,6 +65,34 @@
     @apply p-4 sm:p-6;
   }
 
+  .glass-card {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    border-radius: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .glass-card {
+      background-color: rgba(255, 255, 255, 0.45) !important;
+      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+  }
+
+  @media (max-width: 768px) and (prefers-color-scheme: dark) {
+    .glass-card {
+      background-color: rgba(30, 30, 30, 0.55) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+  }
+
   /* Executive Dashboard Card System */
 
   .card-depth {

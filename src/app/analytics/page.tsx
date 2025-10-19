@@ -90,6 +90,70 @@ export default function AnalyticsPage() {
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
   const [previousEvents, setPreviousEvents] = useState<any[]>([])
+
+  const mobileViewOptions: Array<{ value: typeof selectedMobileView; label: string }> = [
+    { value: 'dashboard', label: 'Dashboard' },
+    { value: 'comparison', label: 'Compare' },
+    { value: 'realtime', label: 'Live' }
+  ]
+
+  const openIncidentsCount = useMemo(
+    () => incidentData.filter((incident) => incident.status !== 'closed').length,
+    [incidentData]
+  )
+
+  const closedIncidentsCount = useMemo(
+    () => incidentData.filter((incident) => incident.status === 'closed').length,
+    [incidentData]
+  )
+
+  const averageResponseMinutes = useMemo(() => {
+    if (incidentData.length === 0) return 0
+    const totalMinutes = incidentData.reduce(
+      (sum, incident) => sum + (incident.response_time_minutes || 0),
+      0
+    )
+    return Math.round(totalMinutes / incidentData.length)
+  }, [incidentData])
+
+  const liveMetricCards = useMemo(
+    () => [
+      {
+        key: 'active',
+        label: 'Active Incidents',
+        color: 'bg-red-500',
+        value: openIncidentsCount,
+        footnote: 'Real-time data',
+        footnoteClass: 'text-green-600 dark:text-green-400'
+      },
+      {
+        key: 'total',
+        label: 'Total Incidents',
+        color: 'bg-blue-500',
+        value: incidentData.length,
+        footnote: 'All incident types',
+        footnoteClass: 'text-blue-600 dark:text-blue-400'
+      },
+      {
+        key: 'closed',
+        label: 'Closed',
+        color: 'bg-green-500',
+        value: closedIncidentsCount,
+        footnote: 'Resolved incidents',
+        footnoteClass: 'text-green-600 dark:text-green-400'
+      },
+      {
+        key: 'response',
+        label: 'Avg Response',
+        color: 'bg-purple-500',
+        value: averageResponseMinutes,
+        suffix: 'm',
+        footnote: 'Response time',
+        footnoteClass: 'text-purple-600 dark:text-purple-400'
+      }
+    ],
+    [averageResponseMinutes, closedIncidentsCount, incidentData.length, openIncidentsCount]
+  )
   
   // Fetch previous events from the same company
   useEffect(() => {
@@ -456,171 +520,175 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   return (
     <div className="min-h-screen">
       {/* Mobile Analytics */}
-      {!isDesktop && (
-        <div className="block md:hidden">
-        <Card className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+        {!isDesktop && (
+        <div className="block md:hidden space-y-6 px-4 pb-10">
+          <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+            <div className="relative z-10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/40 bg-white/30 text-blue-600 dark:text-blue-300">
+                  <BarChart3 className="h-5 w-5 stroke-[1.5]" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">Analytics</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Swipe through insights</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">Analytics</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Swipe through insights</p>
+              <div className="flex items-center gap-1 rounded-xl border border-white/40 bg-white/20 px-1 py-1 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:bg-white/10 dark:border-white/10 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                {mobileViewOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setSelectedMobileView(option.value)}
+                    className={`rounded-lg px-3 py-1 text-xs font-medium capitalize transition-all ${
+                      selectedMobileView === option.value
+                        ? 'bg-white/80 text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.12)] dark:bg-white/10 dark:text-white dark:shadow-[0_2px_12px_rgba(0,0,0,0.45)]'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-            </div>
-            
-            {/* View Toggle */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => setSelectedMobileView('dashboard')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedMobileView === 'dashboard'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Dashboard
-              </button>
-              <button
-                onClick={() => setSelectedMobileView('comparison')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedMobileView === 'comparison'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Compare
-              </button>
-              <button
-                onClick={() => setSelectedMobileView('realtime')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedMobileView === 'realtime'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Live
-              </button>
             </div>
           </div>
-        </Card>
 
-        {/* Mobile Content */}
-        <div className="p-4 space-y-6">
           {selectedMobileView === 'dashboard' && (
             <>
-              {/* All Analytics Cards in One View - Using Real Data */}
               <div className="space-y-4">
-                {createAnalyticsCards(incidentData, eventData).map((card, index) => (
-                  <Card key={card.id} className="p-4">
-                    {card.type === 'chart' && (
+                {createAnalyticsCards(incidentData, eventData).map((card) => {
+                  if (card.type === 'chart') {
+                    return (
                       <MobileOptimizedChart
+                        key={card.id}
                         data={card.data.chartData || []}
                         title={card.title}
                         type={card.data.chartType || 'line'}
                         height={200}
+                        variant="glass"
+                        className="shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]"
                       />
-                    )}
-                    {card.type === 'metric' && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{card.data.subtitle}</p>
-                        </div>
-                        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                          {card.data.value}
-                        </div>
+                    )
+                  }
+
+                  const isPrimaryMetric = card.type === 'metric' || card.type === 'trend' || card.type === 'progress'
+                  const elevationClass = isPrimaryMetric
+                    ? 'shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]'
+                    : 'shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]'
+
+                  return (
+                    <div
+                      key={card.id}
+                      className={`glass-card relative rounded-2xl p-5 ${elevationClass}`}
+                    >
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                      <div className="relative z-10 space-y-3">
+                        {card.type === 'metric' && (
+                          <>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                              {card.title}
+                            </p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                              {card.data.value}
+                            </p>
+                            {card.data.subtitle && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{card.data.subtitle}</p>
+                            )}
+                          </>
+                        )}
+                        {card.type === 'trend' && (() => {
+                          const change = card.data.change as number
+                          const isPositiveChange = change >= 0
+                          const positiveClass = card.data.reverseColors
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-green-600 dark:text-green-400'
+                          const negativeClass = card.data.reverseColors
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+
+                          return (
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                                  {card.title}
+                                </p>
+                                <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{card.data.value}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{card.data.changeLabel}</p>
+                              </div>
+                              <span
+                                className={`text-sm font-semibold ${isPositiveChange ? positiveClass : negativeClass}`}
+                              >
+                                {change > 0 ? '+' : ''}{change}%
+                              </span>
+                            </div>
+                          )
+                        })()}
+                        {card.type === 'progress' && (() => {
+                          const target = card.data.target || 1
+                          const progress = Math.min((card.data.current / target) * 100, 100)
+                          const percentComplete = Math.round(progress)
+
+                          return (
+                            <>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                                {card.title}
+                              </p>
+                              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                                {card.data.current}
+                                <span className="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                                  / {card.data.target}{card.data.unit}
+                                </span>
+                              </p>
+                              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/30 dark:bg-white/10">
+                                <div
+                                  className="h-full rounded-full bg-blue-600 dark:bg-blue-400 transition-all duration-300"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                {percentComplete}% complete
+                              </p>
+                            </>
+                          )
+                        })()}
                       </div>
-                    )}
-                    {card.type === 'trend' && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{card.data.changeLabel}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-gray-900 dark:text-white">{card.data.value}</div>
-                          <div className={`text-sm font-medium ${card.data.change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {card.data.change > 0 ? '+' : ''}{card.data.change}%
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {card.type === 'progress' && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{card.title}</h3>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {card.data.current}{card.data.unit} / {card.data.target}{card.data.unit}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((card.data.current / card.data.target) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {Math.round((card.data.current / card.data.target) * 100)}% complete
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                ))}
+                    </div>
+                  )
+                })}
               </div>
 
-              {/* Real-time Analytics - Using Real Data */}
-              <Card className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Active Incidents</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.status !== 'closed').length}
-                    </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">Real-time data</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Total Incidents</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.length}
-                    </div>
-                    <div className="text-xs text-blue-600 dark:text-blue-400">All incident types</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.status === 'closed').length}
-                    </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">Resolved incidents</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Avg Response</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.length > 0 ? 
-                        Math.round(incidentData.reduce((sum, i) => sum + (i.response_time_minutes || 0), 0) / incidentData.length) 
-                        : 0}m
-                    </div>
-                    <div className="text-xs text-purple-600 dark:text-purple-400">Response time</div>
+              <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {liveMetricCards.map((metric) => (
+                      <div
+                        key={metric.key}
+                        className="glass-card relative rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]"
+                      >
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                        <div className="relative z-10 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
+                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                              {metric.label}
+                            </span>
+                          </div>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                            {metric.value}
+                            {metric.suffix && (
+                              <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                                {metric.suffix}
+                              </span>
+                            )}
+                          </p>
+                          <p className={`text-xs ${metric.footnoteClass}`}>{metric.footnote}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </Card>
+              </div>
             </>
           )}
 
@@ -634,59 +702,41 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
           {selectedMobileView === 'realtime' && (
             <div className="space-y-4">
-              <Card className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Active Incidents</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.status !== 'closed').length}
-                    </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">Real-time data</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Total Incidents</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.length}
-                    </div>
-                    <div className="text-xs text-blue-600 dark:text-blue-400">All incident types</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Closed</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.filter(i => i.status === 'closed').length}
-                    </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">Resolved incidents</div>
-                  </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Avg Response</span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {incidentData.length > 0 ? 
-                        Math.round(incidentData.reduce((sum, i) => sum + (i.response_time_minutes || 0), 0) / incidentData.length) 
-                        : 0}m
-                    </div>
-                    <div className="text-xs text-purple-600 dark:text-purple-400">Response time</div>
+              <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {liveMetricCards.map((metric) => (
+                      <div
+                        key={metric.key}
+                        className="glass-card relative rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]"
+                      >
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
+                        <div className="relative z-10 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${metric.color}`} />
+                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                              {metric.label}
+                            </span>
+                          </div>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                            {metric.value}
+                            {metric.suffix && (
+                              <span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                                {metric.suffix}
+                              </span>
+                            )}
+                          </p>
+                          <p className={`text-xs ${metric.footnoteClass}`}>{metric.footnote}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </Card>
+              </div>
             </div>
           )}
-        </div>
         </div>
       )}
 
