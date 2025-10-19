@@ -41,6 +41,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
+  // Removed floating AI chat state
+  const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
+  const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
+  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+
   if (pathname.startsWith('/style-lab')) {
     return (
       <div className="min-h-screen bg-white text-gray-900">
@@ -48,12 +54,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       </div>
     );
   }
+
   const showNav = !['/login', '/signup'].includes(pathname);
-  const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
-  // Removed floating AI chat state
-  const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
-  const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
-  const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);

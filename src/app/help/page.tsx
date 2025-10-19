@@ -53,7 +53,7 @@ const HelpPage = () => {
           <p><strong>Process:</strong></p>
           <ul className="list-disc list-inside ml-4 space-y-1">
             <li>Document the reason for ejection</li>
-            <li>Record the person's details (if available)</li>
+            <li>Record the person&apos;s details (if available)</li>
             <li>Note any resistance or cooperation</li>
             <li>Log security involvement if required</li>
             <li>Follow up with venue management</li>
@@ -354,10 +354,10 @@ const HelpPage = () => {
           </ul>
           <p><strong>Examples:</strong></p>
           <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>✅ "Person collapsed at 14:30 near north gate"</li>
-            <li>❌ "Person seemed very ill and fell down"</li>
-            <li>✅ "Security team responded within 2 minutes"</li>
-            <li>❌ "Security team was really quick to help"</li>
+            <li>✅ &ldquo;Person collapsed at 14:30 near north gate&rdquo;</li>
+            <li>❌ &ldquo;Person seemed very ill and fell down&rdquo;</li>
+            <li>✅ &ldquo;Security team responded within 2 minutes&rdquo;</li>
+            <li>❌ &ldquo;Security team was really quick to help&rdquo;</li>
           </ul>
           <p><strong>Legal Importance:</strong> Factual language ensures reports are admissible in court and maintain professional credibility.</p>
         </div>
