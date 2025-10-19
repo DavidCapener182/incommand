@@ -16,7 +16,7 @@ const ChartContainer = React.forwardRef<
     {...props}
   >
     <ResponsiveContainer width="100%" height="100%">
-      {children}
+      {children as React.ReactElement}
     </ResponsiveContainer>
   </div>
 ))
