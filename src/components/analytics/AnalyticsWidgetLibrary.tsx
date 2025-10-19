@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
@@ -274,11 +275,12 @@ export function ProgressWidget({
             initial={{ width: 0 }}
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className={`absolute h-full ${
-              isComplete 
-                ? 'bg-green-500 dark:bg-green-400' 
-                : 'bg-blue-500 dark:bg-blue-400'
-            }`}
+            className={cn(
+              'absolute h-full left-0 top-0 rounded-full',
+              isComplete
+                ? 'bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400 dark:from-emerald-400 dark:via-emerald-300 dark:to-emerald-200'
+                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-indigo-600 dark:from-blue-400 dark:via-indigo-400 dark:to-indigo-500'
+            )}
           />
         </div>
 
