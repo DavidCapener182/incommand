@@ -47,6 +47,31 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
 
+  useEffect(() => {
+    // Skip effects for style-lab route
+    if (pathname.startsWith('/style-lab')) return;
+    
+    // Fetch current event on mount
+    const fetchCurrentEvent = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('id')
+        .eq('is_current', true)
+        .single();
+      setHasCurrentEvent(!!data);
+    };
+    fetchCurrentEvent();
+  }, [pathname]);
+
+  useEffect(() => {
+    // Skip effects for style-lab route
+    if (pathname.startsWith('/style-lab')) return;
+    
+    const openHandler = () => setIsHelpCenterOpen(true);
+    window.addEventListener('openHelpCenterMessagesAI', openHandler as any);
+    return () => window.removeEventListener('openHelpCenterMessagesAI', openHandler as any);
+  }, [pathname]);
+
   if (pathname.startsWith('/style-lab')) {
     return (
       <div className="min-h-screen bg-white text-gray-900">
@@ -61,25 +86,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     setIsIncidentModalOpen(false);
     // Optionally: window.location.reload();
   };
-
-  useEffect(() => {
-    // Fetch current event on mount
-    const fetchCurrentEvent = async () => {
-      const { data } = await supabase
-        .from('events')
-        .select('id')
-        .eq('is_current', true)
-        .single();
-      setHasCurrentEvent(!!data);
-    };
-    fetchCurrentEvent();
-  }, []);
-
-  useEffect(() => {
-    const openHandler = () => setIsHelpCenterOpen(true);
-    window.addEventListener('openHelpCenterMessagesAI', openHandler as any);
-    return () => window.removeEventListener('openHelpCenterMessagesAI', openHandler as any);
-  }, []);
 
   // Message bubble SVG for AI Chat
   const MessageBubbleIcon = (
