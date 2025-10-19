@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { supabase } from '../lib/supabase'
 import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
@@ -26,6 +27,7 @@ import IncidentFormDebugger from './debug/IncidentFormDebugger'
 import { useSwipeModal } from '../hooks/useSwipeGestures'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import useWhat3Words from '@/hooks/useWhat3Words'
+import useIncidentSOP from '@/hooks/useIncidentSOP'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
@@ -39,6 +41,9 @@ import { getOccurrenceTemplate } from '@/data/occurrenceTemplates'
 import GuidedActionsModal from './GuidedActionsModal'
 import { useGuidedActions } from '@/hooks/useGuidedActions'
 import { shouldAutoClose, getAutoCloseReason } from '@/utils/autoCloseIncidents'
+import type { Coordinates } from '@/hooks/useGeocodeLocation'
+import type { IncidentSOPStep } from '@/types/sop'
+import SOPModal from './SOPModal'
 
 interface Props {
   isOpen: boolean
@@ -160,6 +165,16 @@ export const incidentTypes = Object.keys(INCIDENT_TYPES);
 
 type IncidentType = keyof typeof INCIDENT_TYPES
 
+const IncidentLocationMap = dynamic(() => import('./maps/IncidentLocationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="incident-map-loading">
+      <span className="status-dot info" />
+      Loading map…
+    </div>
+  )
+})
+
 const getIncidentColor = (type: string) => {
   switch(type) {
     case 'Ejection': return 'bg-red-100 text-red-800'
@@ -173,6 +188,26 @@ const getIncidentColor = (type: string) => {
     case 'Attendance': return 'bg-gray-100 text-gray-800'
     default: return 'bg-gray-100 text-gray-800'
   }
+}
+
+const mergeSopAction = (existing: string | undefined, description: string): string => {
+  const cleaned = description.trim()
+  if (!cleaned) {
+    return existing || ''
+  }
+
+  const bullet = `• ${cleaned}`
+  const current = (existing || '').trim()
+  if (!current) {
+    return bullet
+  }
+
+  const lines = current.split('\n').map((line) => line.trim())
+  if (lines.includes(bullet)) {
+    return current
+  }
+
+  return `${current}\n${bullet}`
 }
 
 const getFollowUpQuestions = (incidentType: string): string[] => {
@@ -2110,6 +2145,10 @@ export default function IncidentCreationModal({
   const [showDebugger, setShowDebugger] = useState(false);
   const [showGuidedActions, setShowGuidedActions] = useState(false);
   const [guidedActionsGenerated, setGuidedActionsGenerated] = useState(false);
+  const [mapCoordinates, setMapCoordinates] = useState<Coordinates | null>(null);
+  const [mapCoordinatesSource, setMapCoordinatesSource] = useState<'w3w' | 'geocoded' | 'manual' | null>(null);
+  const [showSOPModal, setShowSOPModal] = useState(false);
+  const { steps: sopSteps, isLoading: sopLoading, error: sopError } = useIncidentSOP(formData.incident_type || null);
   const { hasGuidedActions } = useGuidedActions();
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
   const [typeSearchQuery, setTypeSearchQuery] = useState('');
@@ -2122,6 +2161,33 @@ export default function IncidentCreationModal({
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [recognitionTimeout, setRecognitionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  const sopHasSteps = sopSteps.length > 0
+  const showSOPButton = useMemo(
+    () => !!formData.incident_type && (sopLoading || sopHasSteps),
+    [formData.incident_type, sopLoading, sopHasSteps]
+  )
+  const mapLocationQuery = useMemo(() => {
+    if (formData.location_name && formData.location_name.trim().length > 0) {
+      return formData.location_name.trim()
+    }
+    if (formData.what3words && formData.what3words.length > 3) {
+      return formData.what3words.replace(/^\/*/, '')
+    }
+    if (w3wInput && w3wInput.trim().length > 0) {
+      return w3wInput.trim()
+    }
+    return ''
+  }, [formData.location_name, formData.what3words, w3wInput])
+  const shouldRenderMap = useMemo(() => {
+    if (!isOpen) {
+      return false
+    }
+    if (mapCoordinates) {
+      return true
+    }
+    return mapLocationQuery.length > 0
+  }, [isOpen, mapCoordinates, mapLocationQuery])
 
   // Offline sync functionality
   const [offlineState, offlineActions] = useOfflineSync();
@@ -3515,6 +3581,7 @@ export default function IncidentCreationModal({
 
       // Get current timestamp
       const now = new Date().toISOString();
+      const resolvedCoordinates = mapCoordinates || w3wCoordinates || null
 
       // Generate structured occurrence text or use legacy occurrence field
       const structuredOccurrence = generateStructuredOccurrence(formData);
@@ -3574,10 +3641,10 @@ export default function IncidentCreationModal({
         logged_by_user_id: user?.id || null,
         logged_by_callsign: userCallsign,
         is_amended: false,
-        // Add GPS coordinates if what3words coordinates are available
-        ...(w3wCoordinates && {
-          latitude: w3wCoordinates.lat,
-          longitude: w3wCoordinates.lng
+        // Add GPS coordinates if map or what3words coordinates are available
+        ...(resolvedCoordinates && {
+          latitude: resolvedCoordinates.lat,
+          longitude: resolvedCoordinates.lng
         })
       };
 
@@ -3904,6 +3971,9 @@ export default function IncidentCreationModal({
     setIsEditing({ occurrence: false, action_taken: false });
     setW3wManuallyEdited(false);
     setShowMoreTypes(false);
+    setMapCoordinates(null);
+    setMapCoordinatesSource(null);
+    setShowSOPModal(false);
   };
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
@@ -3994,6 +4064,57 @@ export default function IncidentCreationModal({
       )
     }
   }, [formData.what3words, isOpen])
+
+  useEffect(() => {
+    if (w3wCoordinates) {
+      setMapCoordinates(w3wCoordinates)
+      setMapCoordinatesSource('w3w')
+    } else if ((!formData.what3words || formData.what3words.length <= 3) && mapCoordinatesSource === 'w3w') {
+      setMapCoordinates(null)
+      setMapCoordinatesSource(null)
+    }
+  }, [w3wCoordinates, formData.what3words, mapCoordinatesSource])
+
+  const handleMapLocationChange = useCallback((coords: Coordinates, source: 'manual' | 'geocoded' | 'drag') => {
+    setMapCoordinates(coords)
+    if (source === 'geocoded') {
+      if (mapCoordinatesSource !== 'manual') {
+        setMapCoordinatesSource('geocoded')
+      }
+    } else {
+      setMapCoordinatesSource('manual')
+    }
+
+    setFormData(prev => {
+      if (prev.location_name && prev.location_name.trim().length > 0) {
+        return prev
+      }
+      return {
+        ...prev,
+        location_name: `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
+      }
+    })
+  }, [mapCoordinatesSource])
+
+  const handleApplySopStep = useCallback((step: IncidentSOPStep) => {
+    setFormData(prev => ({
+      ...prev,
+      actions_taken: mergeSopAction(prev.actions_taken, step.description)
+    }))
+    setGuidedActionsGenerated(true)
+    addToast({
+      type: 'info',
+      title: 'SOP Step Added',
+      message: step.description.length > 80 ? `${step.description.slice(0, 77)}…` : step.description,
+      duration: 2500
+    })
+  }, [addToast])
+
+  useEffect(() => {
+    if (!formData.incident_type && showSOPModal) {
+      setShowSOPModal(false)
+    }
+  }, [formData.incident_type, showSOPModal])
 
   // Extract w3w from Quick Input
   const extractW3WFromQuickInput = (input: string) => {
@@ -4914,17 +5035,31 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                           Actions Taken
                           <span className="ml-2 text-xs text-blue-600 font-normal" title="What was done and by whom">💡 What was done</span>
                         </label>
-                        {formData.incident_type && hasGuidedActions(formData.incident_type) && (
-                          <button
-                            type="button"
-                            onClick={() => setShowGuidedActions(true)}
-                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                            aria-label="Open Guided Actions Assistant"
-                          >
-                            <span>💡</span>
-                            <span>Guided Actions</span>
-                          </button>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {showSOPButton && (
+                            <button
+                              type="button"
+                              onClick={() => setShowSOPModal(true)}
+                              disabled={sopLoading}
+                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors disabled:opacity-60"
+                              aria-label="View Standard Operating Procedure"
+                            >
+                              <span>📘</span>
+                              <span>{sopLoading ? 'Loading…' : 'View SOP'}</span>
+                            </button>
+                          )}
+                          {formData.incident_type && hasGuidedActions(formData.incident_type) && (
+                            <button
+                              type="button"
+                              onClick={() => setShowGuidedActions(true)}
+                              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                              aria-label="Open Guided Actions Assistant"
+                            >
+                              <span>💡</span>
+                              <span>Guided Actions</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <textarea
                         id="actions-taken"
@@ -5144,7 +5279,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                           <span className="font-semibold">{w3wCoordinates.lng.toFixed(5)}</span>
                         </p>
                       )}
-                    </div>
+                  </div>
+                  {shouldRenderMap && (
+                    <IncidentLocationMap
+                      coordinates={mapCoordinates}
+                      locationQuery={mapLocationQuery}
+                      overlays={[]}
+                      onLocationChange={handleMapLocationChange}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -5274,6 +5417,17 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           isVisible={showDebugger}
         />
       )}
+
+      <SOPModal
+        isOpen={showSOPModal}
+        onClose={() => setShowSOPModal(false)}
+        incidentType={formData.incident_type || 'Incident'}
+        steps={sopSteps}
+        isLoading={sopLoading}
+        error={sopError}
+        onCopyStep={handleApplySopStep}
+        onCopyAll={(steps) => steps.forEach(handleApplySopStep)}
+      />
 
       {/* Guided Actions Modal */}
       <GuidedActionsModal

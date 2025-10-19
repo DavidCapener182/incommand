@@ -382,8 +382,8 @@ export default function Navigation() {
 
                     {/* More Dropdown */}
                     <NavigationMenuItem>
-                      <NavigationMenuTrigger 
-                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') ? '!border-red-500' : ''}`}
+                      <NavigationMenuTrigger
+                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500' : ''}`}
                       >
                         More
                       </NavigationMenuTrigger>
@@ -394,6 +394,30 @@ export default function Navigation() {
                               <Link href="/features" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
                                 <div className="font-medium text-white">Features</div>
                                 <div className="text-gray-200">Explore all platform features.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/vendors" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
+                                <div className="font-medium text-white">Vendor Accreditation</div>
+                                <div className="text-gray-200">Manage vendor onboarding and access control.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/maintenance" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
+                                <div className="font-medium text-white">Maintenance & Assets</div>
+                                <div className="text-gray-200">Track assets, work orders, and schedules.</div>
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="/lost-and-found" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
+                                <div className="font-medium text-white">Lost &amp; Found</div>
+                                <div className="text-gray-200">Reconcile guest reports with recovered items.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
@@ -644,6 +668,9 @@ export default function Navigation() {
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
                   <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
+                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Vendor Accreditation</Link>
+                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
+                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
                   <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
                   <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>About</Link>
                   <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
