@@ -518,11 +518,11 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#E3EDFE] md:bg-transparent dark:bg-[#0b1229] md:dark:bg-transparent transition-colors">
       {/* Mobile Analytics */}
         {!isDesktop && (
         <div className="block md:hidden space-y-6 px-4 pb-10">
-          <div className="glass-card relative rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+          <div className="relative glass-mobile overflow-hidden shadow-lg md:hover:scale-100 md:active:scale-100">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
             <div className="relative z-10 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -565,20 +565,18 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         type={card.data.chartType || 'line'}
                         height={200}
                         variant="glass"
-                        className="shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]"
+                        className="shadow-md md:hover:scale-100 md:active:scale-100"
                       />
                     )
                   }
 
                   const isPrimaryMetric = card.type === 'metric' || card.type === 'trend' || card.type === 'progress'
-                  const elevationClass = isPrimaryMetric
-                    ? 'shadow-[0_4px_16px_rgba(0,0,0,0.15)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.45)]'
-                    : 'shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.4)]'
+                  const shadowLevel = isPrimaryMetric ? 'shadow-lg' : 'shadow-md'
 
                   return (
                     <div
                       key={card.id}
-                      className={`glass-card relative rounded-2xl p-5 ${elevationClass}`}
+                      className={`relative glass-mobile overflow-hidden ${shadowLevel} md:hover:scale-100 md:active:scale-100`}
                     >
                       <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
                       <div className="relative z-10 space-y-3">
