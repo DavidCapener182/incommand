@@ -259,7 +259,6 @@ export default function EnhancedSearch({
           aria-label="Search incidents"
           aria-autocomplete="list"
           aria-controls="search-suggestions"
-          aria-expanded={isFocused && suggestions.length > 0}
         />
 
         {/* Action Buttons */}
