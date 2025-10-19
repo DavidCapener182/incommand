@@ -97,12 +97,12 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
 
   return (
     <AnimatePresence>
-      <motion.nav 
-        role="navigation" 
-        aria-label="Primary" 
-        className="fixed inset-x-0 bottom-0 z-50 bg-white/90 dark:bg-gray-900/90 supports-[backdrop-filter]:backdrop-blur-[8px] backdrop-saturate-150 border-t border-white/20 dark:border-gray-700/30 shadow-xl shadow-black/5 dark:shadow-black/20" 
-        style={{ 
-          backdropFilter: 'blur(8px)',
+      <motion.nav
+        role="navigation"
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-50 bg-white/40 dark:bg-slate-900/60 supports-[backdrop-filter]:backdrop-blur-[30px] supports-[backdrop-filter]:backdrop-saturate-150 border-t border-white/30 dark:border-white/10 shadow-[0_-8px_32px_rgba(15,23,42,0.15)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+        style={{
+          backdropFilter: 'blur(30px) saturate(150%)',
           paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)',
           paddingRight: 'max(env(safe-area-inset-right), 0.5rem)',
           paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
@@ -126,7 +126,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-label="Navigate to Home"
               aria-current={isActive('/incidents') ? 'page' : undefined}
               onClick={() => go('/incidents')}
-              className={`touch-target flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : 'text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60'}`}
+              className={`touch-target flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive('/incidents') ? 'text-blue-600 bg-white/80 shadow-[0_4px_16px_rgba(59,130,246,0.25)] dark:bg-white/10 dark:text-blue-300 dark:shadow-[0_4px_18px_rgba(0,0,0,0.45)]' : 'text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -135,7 +135,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                 animate={isActive('/incidents') ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <HomeIcon className="w-6 h-6" />
+                <HomeIcon className="w-6 h-6 stroke-[1.5]" strokeWidth={1.5} />
               </motion.div>
               <span className="text-sm font-semibold">Home</span>
             </motion.button>
@@ -143,16 +143,17 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
             {/* Incident Summary with Enhanced Scrolling Ticker (center) */}
             <AnimatePresence mode="wait">
               {displaySummary && (
-                <motion.div 
+                <motion.div
                   key="summary"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3 }}
-                  className="flex-1 mx-2 sm:mx-4 px-2 sm:px-3 py-1 sm:py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50 overflow-hidden shadow-sm"
+                  className="relative glass-card flex-1 mx-2 sm:mx-4 px-2 sm:px-3 py-1 sm:py-2 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
                 >
-                  <div className="flex items-center">
-                    <motion.span 
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/20 via-white/10 to-transparent pointer-events-none" />
+                  <div className="relative z-10 flex items-center">
+                    <motion.span
                       className="text-red-500 mr-1.5 text-[10px] sm:text-xs font-bold flex items-center flex-shrink-0"
                       animate={{ opacity: [1, 0.5, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
@@ -232,7 +233,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
               aria-disabled={chatDisabled}
               title={chatDisabled ? 'Chat unavailable' : 'Open Help Center'}
               onClick={() => { if (onOpenHelpCenter) onOpenHelpCenter(); }}
-              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent ${isHelpCenterOpen ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-md' : ''}`}
+              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isHelpCenterOpen ? 'text-blue-600 bg-white/80 shadow-[0_4px_16px_rgba(59,130,246,0.25)] dark:bg-white/10 dark:text-blue-300 dark:shadow-[0_4px_18px_rgba(0,0,0,0.45)]' : 'text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent`}
               whileHover={!chatDisabled ? { scale: 1.02 } : {}}
               whileTap={!chatDisabled ? { scale: 0.98 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -241,7 +242,7 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
                 animate={isHelpCenterOpen ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.5]" strokeWidth={1.5} />
               </motion.div>
               <span className="text-xs sm:text-sm font-semibold hidden sm:inline">Chat</span>
             </motion.button>

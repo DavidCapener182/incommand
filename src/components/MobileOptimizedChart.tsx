@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { triggerHaptic } from '../utils/hapticFeedback'
+import { cn } from '@/lib/utils'
 
 interface ChartDataPoint {
   x: number | string
@@ -19,6 +20,7 @@ interface MobileOptimizedChartProps {
   showTooltip?: boolean
   className?: string
   onDataPointClick?: (point: ChartDataPoint) => void
+  variant?: 'card' | 'glass'
 }
 
 export default function MobileOptimizedChart({
@@ -28,7 +30,8 @@ export default function MobileOptimizedChart({
   height = 200,
   showTooltip = true,
   className = '',
-  onDataPointClick
+  onDataPointClick,
+  variant = 'card'
 }: MobileOptimizedChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
@@ -255,72 +258,96 @@ export default function MobileOptimizedChart({
     })
   }
 
+  const isGlass = variant === 'glass'
+  const containerClasses = isGlass
+    ? 'glass-card relative overflow-hidden rounded-2xl p-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_14px_rgba(0,0,0,0.45)]'
+    : 'relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700'
+  const headerClasses = isGlass
+    ? 'px-4 py-3 border-b border-white/40 dark:border-white/10'
+    : 'px-4 py-3 border-b border-gray-200 dark:border-gray-700'
+  const bodyClasses = isGlass ? 'p-4 text-gray-900 dark:text-white' : 'p-4'
+
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
-      {/* Chart Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
-      </div>
+    <div className={cn(containerClasses, className)}>
+      {isGlass && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/15 to-transparent"
+        />
+      )}
 
-      {/* Chart Container */}
-      <div className="p-4">
-        <div 
-          ref={chartRef}
-          className="relative overflow-hidden"
-          style={{ width: chartWidth, height: chartHeight }}
-        >
-          <svg
-            width={chartWidth}
-            height={chartHeight}
-            className="w-full h-full"
+      <div className="relative z-10">
+        {/* Chart Header */}
+        <div className={cn(headerClasses)}>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
+        </div>
+
+        {/* Chart Container */}
+        <div className={cn(bodyClasses)}>
+          <div
+            ref={chartRef}
+            className="relative overflow-hidden"
+            style={{ width: chartWidth, height: chartHeight }}
           >
-            {/* Grid Lines */}
-            <defs>
-              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-gray-200 dark:text-gray-700" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-            
-            {/* Y Axis */}
-            {renderYAxis()}
-            
-            {/* X Axis */}
-            {renderXAxis()}
-            
-            {/* Chart Content */}
-            {type === 'area' && renderAreaChart()}
-            {type === 'line' && renderLineChart()}
-            {type === 'bar' && renderBarChart()}
-            
-            {/* Data Points */}
-            {renderDataPoints()}
-          </svg>
+            <svg
+              width={chartWidth}
+              height={chartHeight}
+              className="w-full h-full"
+            >
+              {/* Grid Lines */}
+              <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path
+                    d="M 20 0 L 0 0 0 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="0.5"
+                    className="text-gray-200 dark:text-gray-700"
+                  />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
 
-          {/* Mobile-Optimized Tooltip */}
-          <AnimatePresence>
-            {isVisible && hoveredPoint && showTooltip && (
-              <motion.div
-                ref={tooltipRef}
-                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                transition={{ duration: 0.15 }}
-                className="absolute pointer-events-none z-10"
-                style={{
-                  left: tooltipPosition.x,
-                  top: tooltipPosition.y,
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                <div className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
-                  <div className="font-medium">{hoveredPoint.label || hoveredPoint.x}</div>
-                  <div className="text-gray-300 dark:text-gray-600">Value: {hoveredPoint.y}</div>
-                </div>
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-100" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              {/* Y Axis */}
+              {renderYAxis()}
+
+              {/* X Axis */}
+              {renderXAxis()}
+
+              {/* Chart Content */}
+              {type === 'area' && renderAreaChart()}
+              {type === 'line' && renderLineChart()}
+              {type === 'bar' && renderBarChart()}
+
+              {/* Data Points */}
+              {renderDataPoints()}
+            </svg>
+
+            {/* Mobile-Optimized Tooltip */}
+            <AnimatePresence>
+              {isVisible && hoveredPoint && showTooltip && (
+                <motion.div
+                  ref={tooltipRef}
+                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute pointer-events-none z-10"
+                  style={{
+                    left: tooltipPosition.x,
+                    top: tooltipPosition.y,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  <div className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                    <div className="font-medium">{hoveredPoint.label || hoveredPoint.x}</div>
+                    <div className="text-gray-300 dark:text-gray-600">Value: {hoveredPoint.y}</div>
+                  </div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-100" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
