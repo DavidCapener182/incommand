@@ -1282,6 +1282,19 @@ input:-webkit-autofill {
     @apply text-xs text-gray-500 dark:text-gray-400;
   }
 
+  /* Section hierarchy classes */
+  .section-container {
+    background-color: var(--section-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+
+  .container-panel {
+    background-color: var(--container-bg);
+    border-radius: 0.75rem;
+    padding: 1rem;
+  }
+
   .incident-map-container {
     @apply mt-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111a36] shadow-lg overflow-hidden;
     min-height: 280px;
@@ -1389,32 +1402,43 @@ input:-webkit-autofill {
     --bg-light-dark: 223 47% 11%;
     --bg-dark-dark: 224 45% 8%;
     
-    /* Custom color variables for modern dashboard */
-    --page-bg: #F8FAFC;
-    --dashboard-card-bg: #FFFFFF;
-    --metrics-card-bg: #FFFFFF;
-    --modal-card-bg: #FDFDFE;
-    --alt-card-bg: #F1F5F9;
+    /* Corrected visual hierarchy */
+    --page-bg: #CBD5E1;            /* Background (deepest) */
+    --section-bg: #E2E8F0;         /* Section layer (5 shades lighter) */
+    --container-bg: #F3F6FD;       /* Container layer */
+    --dashboard-card-bg: #FFFFFF;  /* Top-level cards (brightest) */
 
+    /* Supporting variants */
+    --metrics-card-bg: var(--dashboard-card-bg);
+    --modal-card-bg: #FDFDFE;
+    --alt-card-bg: #F3F6FD;
+
+    /* Brand palette */
     --brand-900: #1E3A8A;
     --brand-700: #1D4ED8;
     --brand-600: #2563EB;
     --brand-500: #3B82F6;
     --brand-200: #BFDBFE;
 
+    /* Status and feedback colours */
     --status-success: #10B981;
     --status-warning: #F59E0B;
     --status-danger: #EF4444;
     --status-info: #3B82F6;
     --status-neutral: #94A3B8;
 
-    --surface-base: #F8FAFC;
-    --surface-elevated: #FFFFFF;
+    /* Surface hierarchy for clarity */
+    --surface-card: var(--dashboard-card-bg);
+    --surface-container: var(--container-bg);
+    --surface-section: var(--section-bg);
+    --surface-page: var(--page-bg);
 
+    /* Shadows and elevation */
     --shadow-level-1: 0 10px 24px -12px rgba(15, 23, 42, 0.12), 0 18px 32px -16px rgba(15, 23, 42, 0.08);
     --shadow-level-2: 0 12px 28px -12px rgba(15, 23, 42, 0.16), 0 22px 40px -18px rgba(15, 23, 42, 0.12);
     --shadow-level-3: 0 18px 40px -18px rgba(15, 23, 42, 0.25), 0 26px 54px -20px rgba(15, 23, 42, 0.18);
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -1440,6 +1464,18 @@ input:-webkit-autofill {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Corrected dark hierarchy (reverse luminance) */
+    --page-bg: #0F172A;            /* Background (deepest) */
+    --section-bg: #111827;         /* Section layer */
+    --container-bg: #162031;       /* Container layer */
+    --dashboard-card-bg: #1E293B;  /* Card surface (brightest) */
+
+    --surface-card: var(--dashboard-card-bg);
+    --surface-container: var(--container-bg);
+    --surface-section: var(--section-bg);
+    --surface-page: var(--page-bg);
+
     --surface-base: #0f172a;
     --surface-elevated: #111a2e;
     --status-info: #60A5FA;
@@ -1496,4 +1532,115 @@ input:-webkit-autofill {
   .dark div.min-h-screen:not([class*="bg-[#23408e]"]) {
     background: linear-gradient(135deg, #0f172a, #1e293b, #334155) !important;
   }
+
+  /* Automatic section hierarchy - cascade backgrounds */
+  main > section {
+    background-color: var(--section-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+
+  main > section > .card-mobile {
+    background-color: var(--dashboard-card-bg);
+  }
+
+  /* Ensure cards within sections maintain proper contrast */
+  .section-container .card-mobile,
+  .section-container .card-depth {
+    background-color: var(--dashboard-card-bg);
+  }
+
+  /* Ensure Operational Metrics matches Support Tools */
+  .incident-dashboard {
+    background-color: var(--section-bg) !important; /* #E2E8F0 */
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+
+  /* If Operational Metrics is nested within Incident Dashboard */
+  .incident-dashboard .operational-metrics {
+    background-color: var(--section-bg) !important;
+  }
+
+  /* Section header bars with rounded upper corners */
+  .section-header {
+    background-color: var(--section-bg);
+    border-radius: 1rem 1rem 0 0; /* Rounded top corners only */
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Ensure section headers align with container top */
+  .section-container .section-header {
+    margin: -1.5rem -1.5rem 0 -1.5rem; /* Negative margins to align with container */
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+  }
+
+  /* Alternative: Direct styling for section titles */
+  main > section > h2,
+  main > section > h3,
+  .section-container > h2,
+  .section-container > h3 {
+    background-color: var(--section-bg);
+    border-radius: 1rem 1rem 0 0;
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    margin: -1.5rem -1.5rem 0 -1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Fix the sticky header bars with rounded corners - DON'T override section background */
+  .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
+    border-radius: 1rem 1rem 0 0 !important;
+    margin: -1rem -1rem 0 -1rem !important;
+    padding: 1rem 1rem 0.5rem 1rem !important;
+  }
+
+  /* Dark mode sticky headers - keep existing background */
+  .dark .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
+    border-radius: 1rem 1rem 0 0 !important;
+  }
+
+  /* Reduce StatCard height - target the actual classes used */
+  .card-depth .p-3,
+  .card-depth .md\\:p-4 {
+    padding: 0.5rem !important; /* Reduced from p-3 (0.75rem) and md:p-4 (1rem) */
+  }
+
+  /* Reduce minimum height of StatCard content */
+  .flex.items-center.justify-between.w-full.gap-3 {
+    min-height: 32px !important; /* Reduced from min-h-[48px] sm:min-h-[54px] */
+  }
+
+  /* Reduce text size and spacing */
+  .text-2xl.font-bold {
+    font-size: 1.25rem !important; /* Reduced from text-2xl (1.5rem) */
+    line-height: 1.2 !important;
+  }
+
+  .text-sm.font-medium {
+    font-size: 0.75rem !important; /* Reduced from text-sm (0.875rem) */
+    line-height: 1.2 !important;
+  }
+
+  /* Reduce icon size */
+  .h-6.w-6,
+  .md\\:h-8.md\\:w-8 {
+    height: 1.25rem !important; /* Reduced from h-6 (1.5rem) */
+    width: 1.25rem !important;
+  }
+
+  /* Reduce gap between elements */
+  .flex.flex-col.flex-1.gap-1 {
+    gap: 0.125rem !important; /* Reduced from gap-1 (0.25rem) */
+  }
+}
+
+/* Equal height utility for dashboard cards */
+.equal-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }

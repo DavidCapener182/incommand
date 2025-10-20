@@ -96,7 +96,7 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
         {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="card-skeleton">
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-2"></div>
               <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-1"></div>
               <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
@@ -112,13 +112,13 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
   return (
     <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
       {/* Log Quality Score */}
-      <Card className="card-depth group">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between gap-3">
+      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 md:p-2 w-full">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-2">
                 <SparklesIcon className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
                   Log Quality
                 </span>
               </div>
@@ -163,13 +163,13 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Compliance Grade */}
-      <Card className="card-depth group">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between gap-3">
+      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 md:p-2 w-full">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-2">
                 <ShieldCheckIcon className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
                   Compliance
                 </span>
               </div>
@@ -204,13 +204,13 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Response Time */}
-      <Card className="card-depth group">
-        <CardContent className="p-3">
+      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 md:p-2 w-full">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-2">
                 <ClockIcon className="h-4 w-4 text-purple-500" />
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
                   Avg Response
                 </span>
               </div>
@@ -231,16 +231,16 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Active Incidents */}
-      <Card className="card-depth group">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between gap-3">
+      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 md:p-2 w-full">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-2">
                 <div className="relative flex h-4 w-4">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                   <ChartBarIcon className="h-4 w-4 text-orange-500 relative" />
                 </div>
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
                   Active Now
                 </span>
               </div>

@@ -143,47 +143,32 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
-      <Card className="card-depth h-full flex flex-col justify-between">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-lg font-semibold tracking-tight">
-            <span>Incident Summary</span>
-          </CardTitle>
-          <CardDescription>{formattedUpdated}</CardDescription>
+      <Card className="h-full flex flex-col justify-between card-time relative p-3 sm:p-4 leading-tight">
+        <CardHeader className="pb-0.5 space-y-0">
+          <CardTitle className="text-sm font-semibold tracking-tight">Incident Summary</CardTitle>
+          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
+            Updated less than a minute ago
+          </CardDescription>
         </CardHeader>
-        
-        <CardContent>
-          <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">
-            Incident Overview
-          </h4>
-          <div className="grid grid-cols-2 gap-4">
-            {statusItems.map(({ label, value, color, icon, key }) => {
-              const isActive = key !== 'total' && activeStatus === key
-              const isChanged = key !== 'total' && changedStatuses.has(key as SummaryStatus)
-              const isTotal = key === 'total'
-              
-              return (
-                <motion.button
-                  key={label}
-                  type="button"
-                  onClick={() => !isTotal && onFilter?.(isActive ? null : key as SummaryStatus)}
-                  className={`
-                    card-depth-subtle flex flex-col items-center justify-center px-4 py-4 transition-all duration-200 
-                    hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50
-                    ${color}
-                    ${isActive ? 'ring-2 ring-blue-400/50 shadow-lg' : ''}
-                    ${isChanged ? 'animate-pulse motion-reduce:animate-none' : ''}
-                    ${isTotal ? 'cursor-default' : 'cursor-pointer'}
-                  `}
-                  aria-pressed={isActive}
-                >
-                  <div className="flex items-center gap-2 font-medium mb-1">
-                    {icon} 
-                    <span className="text-sm">{label}</span>
-                  </div>
-                         <span className="text-2xl font-extrabold">{value}</span>
-                </motion.button>
-              )
-            })}
+
+        <CardContent className="flex-1 p-0 pt-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-2 text-center">
+              <p className="text-[11px] font-medium text-red-700 dark:text-red-300 mb-0.5">Open</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{statusCounts.open}</p>
+            </div>
+            <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-2 text-center">
+              <p className="text-[11px] font-medium text-yellow-700 dark:text-yellow-300 mb-0.5">In Progress</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{statusCounts.in_progress}</p>
+            </div>
+            <div className="rounded-md bg-green-50 dark:bg-green-900/20 p-2 text-center">
+              <p className="text-[11px] font-medium text-green-700 dark:text-green-300 mb-0.5">Closed</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{statusCounts.closed}</p>
+            </div>
+            <div className="rounded-md bg-gray-50 dark:bg-gray-700/20 p-2 text-center">
+              <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-0.5">Total</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{counts.total}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -35,14 +35,17 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
         <motion.button
           onClick={handleCreateIncident}
           aria-label="Create new incident"
-          className="touch-target flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur-2xl border border-white/30 shadow-[inset_0_2px_6px_rgba(255,255,255,0.5),0_8px_20px_rgba(0,0,0,0.25)] transition-transform duration-200 active:scale-95 relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          className="touch-target flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           data-tour="log-incident"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          style={{ 
+            backgroundColor: '#3b82f6',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none'
+          }}
         >
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/40 to-blue-600/30 blur-md" />
-          <div className="absolute inset-0 rounded-full bg-gradient-to-t from-white/30 to-transparent" />
-          <PlusIcon className="h-7 w-7 text-white drop-shadow-lg relative z-10" />
+          <PlusIcon className="h-5 w-5 text-white" />
         </motion.button>
       </motion.div>
 

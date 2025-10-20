@@ -115,7 +115,7 @@ export default function Navigation() {
     if (path === '/incidents' && pathname === '/') {
       return 'border-red-500 text-white'
     }
-    return pathname === path ? 'border-red-500 text-white' : 'border-transparent text-white hover:border-white hover:text-gray-100'
+    return pathname === path ? 'border-red-500 text-white' : 'border-transparent text-white/90 hover:border-white/50 hover:text-white transition-all duration-200'
   }
 
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function Navigation() {
                 <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
                   <NavigationMenuList className="gap-8">
                     <NavigationMenuItem>
-                      <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                      <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
                         Incidents
                       </Link>
                     </NavigationMenuItem>
@@ -327,7 +327,7 @@ export default function Navigation() {
                     {/* Reports Dropdown */}
                     <NavigationMenuItem>
                       <NavigationMenuTrigger 
-                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500' : ''} ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent ? 'opacity-50' : ''}`}
                         onClick={() => {
                           if (!hasCurrentEvent) {
                             setShowNoEventModal(true);
@@ -337,21 +337,21 @@ export default function Navigation() {
                       >
                         Reports
                       </NavigationMenuTrigger>
-                      <NavigationMenuContent className="!bg-[#2A3990] !border-[#1e2a6a] !text-white" style={{ backgroundColor: '#2A3990', borderColor: '#1e2a6a' }}>
+                      <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md">
                         <ul className="grid w-[300px] gap-4 p-4">
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/analytics" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Analytics</div>
-                                <div className="text-gray-200">View event analytics and insights.</div>
+                              <Link href="/analytics" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Analytics</div>
+                                <div className="text-xs text-white/80 leading-relaxed">View event analytics and insights.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/reports" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">End of Event Report</div>
-                                <div className="text-gray-200">Generate comprehensive event reports.</div>
+                              <Link href="/reports" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">End of Event Report</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Generate comprehensive event reports.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
@@ -362,20 +362,20 @@ export default function Navigation() {
                     <NavigationMenuItem>
                       <Link 
                         href="/staffing" 
-                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
                       >
                         Staff
                       </Link>
                     </NavigationMenuItem>
 
                     <NavigationMenuItem>
-                      <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                      <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
                         Help & Glossary
                       </Link>
                     </NavigationMenuItem>
 
                     <NavigationMenuItem>
-                      <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
+                      <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
                         Settings
                       </Link>
                     </NavigationMenuItem>
@@ -383,81 +383,81 @@ export default function Navigation() {
                     {/* More Dropdown */}
                     <NavigationMenuItem>
                       <NavigationMenuTrigger
-                        className={`!bg-transparent !text-white hover:!text-gray-100 !border-transparent hover:!border-white px-3 py-2 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500' : ''}`}
+                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
                       >
                         More
                       </NavigationMenuTrigger>
-                      <NavigationMenuContent className="!bg-[#2A3990] !border-[#1e2a6a] !text-white" style={{ backgroundColor: '#2A3990', borderColor: '#1e2a6a' }}>
+                      <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md">
                         <ul className="grid w-[300px] gap-4 p-4">
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/features" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Features</div>
-                                <div className="text-gray-200">Explore all platform features.</div>
+                              <Link href="/features" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Features</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Explore all platform features.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/vendors" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Vendor Accreditation</div>
-                                <div className="text-gray-200">Manage vendor onboarding and access control.</div>
+                              <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Vendor Accreditation</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Manage vendor onboarding and access control.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/maintenance" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Maintenance & Assets</div>
-                                <div className="text-gray-200">Track assets, work orders, and schedules.</div>
+                              <Link href="/maintenance" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Maintenance & Assets</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Track assets, work orders, and schedules.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/lost-and-found" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Lost &amp; Found</div>
-                                <div className="text-gray-200">Reconcile guest reports with recovered items.</div>
+                              <Link href="/lost-and-found" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Lost &amp; Found</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Reconcile guest reports with recovered items.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/pricing" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Pricing</div>
-                                <div className="text-gray-200">View pricing plans and options.</div>
+                              <Link href="/pricing" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Pricing</div>
+                                <div className="text-xs text-white/80 leading-relaxed">View pricing plans and options.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/about" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">About</div>
-                                <div className="text-gray-200">Learn about our company and mission.</div>
+                              <Link href="/about" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">About</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Learn about our company and mission.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/blog" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Blog</div>
-                                <div className="text-gray-200">Read our latest blog posts.</div>
+                              <Link href="/blog" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Blog</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Read our latest blog posts.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/careers" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Careers</div>
-                                <div className="text-gray-200">Join our team.</div>
+                              <Link href="/careers" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Careers</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Join our team.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/status" className="block p-2 rounded hover:bg-blue-400/30 transition-colors">
-                                <div className="font-medium text-white">Status</div>
-                                <div className="text-gray-200">Check system status and uptime.</div>
+                              <Link href="/status" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Status</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Check system status and uptime.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
@@ -523,7 +523,7 @@ export default function Navigation() {
                   {/* Notification Bell - Mobile optimized touch target (min 44px) */}
                   <button
                     onClick={() => setNotificationDrawerOpen(true)}
-                    className="relative touch-target p-3 md:p-2 text-white hover:text-gray-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-lg transition-colors duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    className="relative touch-target p-3 md:p-2 text-white hover:text-white/80 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2A3990] rounded-lg transition-colors duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     aria-label="Open notifications"
                   >
                     {/* Bell Icon */}
@@ -628,14 +628,14 @@ export default function Navigation() {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/analytics" 
-                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Analytics
                   </Link>
                   <Link 
                     href="/reports" 
-                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     End of Event Report
@@ -667,15 +667,15 @@ export default function Navigation() {
               </button>
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
-                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
-                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Vendor Accreditation</Link>
-                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
-                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
-                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
-                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>About</Link>
-                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
-                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-gray-200 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
+                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
+                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Vendor Accreditation</Link>
+                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
+                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
+                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>About</Link>
+                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
+                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
                 </div>
               )}
             </div>
@@ -869,7 +869,7 @@ export default function Navigation() {
                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2
                       ${selectedEventChatId === group.id
                         ? 'bg-blue-50 dark:bg-blue-900 font-bold text-[#2A3990] dark:text-blue-200 shadow'
-                        : 'hover:bg-blue-50 dark:hover:bg-blue-800 text-gray-800 dark:text-gray-200'}
+                        : 'hover:bg-blue-50 dark:hover:bg-blue-800 text-gray-800 dark:text-white/80'}
                     `}
                     onClick={() => setSelectedEventChatId(group.id)}
                   >

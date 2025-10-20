@@ -157,7 +157,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // Error state with retry
   if (error) {
     return (
-      <Card className="h-[130px] card-depth">
+      <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
         <CardContent className="p-4 h-full flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
             <ExclamationTriangleIcon className="h-8 w-8 text-red-400 mb-2" />
@@ -180,7 +180,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   // No weather data
   if (!weather) {
     return (
-      <Card className="h-[130px] card-depth">
+      <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
         <CardContent className="p-4 h-full flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center text-center">
             <CloudIcon className="h-8 w-8 text-gray-400 mb-2" />
@@ -193,7 +193,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   }
 
   return (
-    <Card className="h-[130px]">
+    <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
       <CardContent className="p-4 h-full flex flex-col items-center justify-center">
         <div className="w-full h-full flex flex-col items-center justify-center">
         {/* Location name */}

@@ -247,80 +247,82 @@ export default function CurrentEvent({
 
   return (
     <motion.div
-      className="h-full"
+      className="flex-1"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-           <Card className="h-full flex flex-col justify-between relative card-depth">
+           <Card className="h-full flex flex-col justify-between relative card-depth p-4 sm:p-5 leading-tight">
         {currentEvent ? (
           <>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-300 mt-1" />
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                      Current Event
-                      {isEventLive() && (
-                        <span className="relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-                          </span>
-                          LIVE
-                        </span>
-                      )}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      <span className="text-base font-semibold text-gray-900 dark:text-white">
-                        {currentEvent.event_name}
-                      </span>
-                      {currentEvent.support_acts && (() => {
-                        let acts = currentEvent.support_acts;
-                        if (typeof acts === 'string') {
-                          try {
-                            acts = JSON.parse(acts);
-                          } catch {
-                            acts = [];
-                          }
-                        }
-                        return Array.isArray(acts) && acts.length > 0 ? (
-                          <span className="text-sm font-normal text-gray-500 dark:text-gray-300 ml-2">
-                            {' + ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
-                          </span>
-                        ) : null;
-                      })()}
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="md:hidden">
-                  {currentTime && (
-                    <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
+            <CardHeader className="pb-2 space-y-1">
+            <div className="flex items-start justify-between">
+  {/* Left column: stacked icons with aligned text */}
+  <div className="flex flex-col gap-2">
+    {/* Venue row */}
+    <div className="flex items-center gap-2">
+      <MapPinIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
+      <CardTitle className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">
+        {currentEvent.venue_name}
+        {isEventLive() && (
+          <span className="ml-2 relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+            </span>
+            LIVE
+          </span>
+        )}
+      </CardTitle>
+    </div>
+
+      {/* Event row */}
+    <div className="flex items-center gap-2">
+      <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
+      <div className="flex flex-col">
+        <span className="text-base font-semibold text-gray-900 dark:text-white">
+          {currentEvent.event_name}
+        </span>
+        {currentEvent.support_acts && (() => {
+          let acts = currentEvent.support_acts
+          if (typeof acts === 'string') {
+            try {
+              acts = JSON.parse(acts)
+            } catch {
+              acts = []
+            }
+          }
+            return Array.isArray(acts) && acts.length > 0 ? (
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-300">
+                {'+ ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+              </span>
+            ) : null
+          })()}
+        </div>
+      </div>
+    </div>
+
+    {/* Optional right column – current time for mobile */}
+    <div className="md:hidden">
+      {currentTime && (
+        <span className="text-base font-bold text-gray-900 dark:text-white">{currentTime}</span>
+      )}
+    </div>
+  </div>
+</CardHeader>
             
-            <CardContent className="flex-1">
-              <div className="hidden md:block space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPinIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-300">Venue</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white ml-2">{currentEvent.venue_name}</span>
-                  </div>
-                </div>
+            <CardContent className="flex-1 pb-3">
+  <div className="hidden md:block space-y-2">
                 
                 {/* AI Insights - modernized with better styling */}
                 {aiInsights.length > 0 && (
-                  <div className="pt-4 border-t border-gray-200/60 dark:border-[#2d437a]/50">
+                  <div className="pt-2 border-t border-gray-200/60 dark:border-[#2d437a]/50">
                     <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">
                       AI Analysis
                     </h4>
-                    <div className="min-h-[100px] max-h-[100px] overflow-hidden">
+                    <div className="min-h-[70px] max-h-[70px] overflow-hidden">
                       {aiLoading ? (
                         <div className="animate-pulse space-y-2">
                           <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
@@ -329,7 +331,7 @@ export default function CurrentEvent({
                           <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
                         </div>
                       ) : aiError ? (
-                        <div className="pb-4">
+                        <div className="2">
                           <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
                           <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
                             {aiError}
