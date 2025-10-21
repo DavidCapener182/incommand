@@ -25,10 +25,12 @@ import {
   EyeIcon,
   PencilSquareIcon
 } from '@heroicons/react/24/outline';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { PageWrapper } from '@/components/layout/PageWrapper';
+import { StackedPanel } from '@/components/ui/StackedPanel';
+import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer';
+import { CardContainer } from '@/components/ui/CardContainer';
 
 const HelpPage = () => {
   const getExpandedContent = (title: string) => {
@@ -368,8 +370,9 @@ const HelpPage = () => {
   };
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300 pb-24" style={{ backgroundColor: '#f3f4f6' }}>
-      <div className="max-w-6xl mx-auto text-gray-900 dark:text-gray-100 p-6 md:p-10" style={{ backgroundColor: '#f3f4f6' }}>
+    <PageWrapper>
+      <StackedPanel className="space-y-12">
+        <SectionContainer>
         <div className="card-depth mb-10 p-6">
           <div className="pb-6">
             <div className="flex items-center gap-3">
@@ -696,8 +699,9 @@ const HelpPage = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </SectionContainer>
+    </StackedPanel>
+  </PageWrapper>
   );
 };
 

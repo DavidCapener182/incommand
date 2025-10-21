@@ -28,23 +28,24 @@ import {
   AreaChart
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import LogQualityDashboard from '@/components/Analytics/LogQualityDashboard'
-import ComplianceDashboard from '@/components/Analytics/ComplianceDashboard'
-import UserActivityDashboard from '@/components/Analytics/UserActivityDashboard'
-import AIInsightsDashboard from '@/components/Analytics/AIInsightsDashboard'
-import ExportReportModal from '@/components/Analytics/ExportReportModal'
-import RealtimeAlertBanner from '@/components/Analytics/RealtimeAlertBanner'
-import RealtimeStatusIndicator from '@/components/Analytics/RealtimeStatusIndicator'
-import CustomMetricBuilder from '@/components/Analytics/CustomMetricBuilder'
-import CustomDashboardBuilder from '@/components/Analytics/CustomDashboardBuilder'
-import BenchmarkingDashboard from '@/components/Analytics/BenchmarkingDashboard'
-import EndOfEventReport from '@/components/Analytics/EndOfEventReport'
-import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/Analytics/MobileAnalyticsCarousel'
-import ComparativeAnalytics from '@/components/Analytics/ComparativeAnalytics'
+import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
+import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
+import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
+import AIInsightsDashboard from '@/components/analytics/AIInsightsDashboard'
+import ExportReportModal from '@/components/analytics/ExportReportModal'
+import RealtimeAlertBanner from '@/components/analytics/RealtimeAlertBanner'
+import RealtimeStatusIndicator from '@/components/analytics/RealtimeStatusIndicator'
+import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
+import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
+import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
+import EndOfEventReport from '@/components/analytics/EndOfEventReport'
+import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
+import ComparativeAnalytics from '@/components/analytics/ComparativeAnalytics'
 import MobileOptimizedChart from '@/components/MobileOptimizedChart'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Card } from '@/components/ui/card'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 
 interface IncidentRecord {
   id: string
@@ -536,7 +537,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   }
 
   return (
-    <div className="min-h-screen bg-[#E3EDFE] dark:bg-[#0b1229] p-3 sm:p-6 md:p-8 transition-colors">
+    <PageWrapper className="px-4 py-4 sm:px-6 sm:py-6">
       {/* Mobile Analytics */}
         {!isDesktop && (
         <div className="block md:hidden space-y-6 px-4 pb-10">
@@ -1537,6 +1538,6 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         eventId={eventData?.id}
         eventName={eventData?.name}
       />
-    </div>
+    </PageWrapper>
   )
 }

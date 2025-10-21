@@ -177,16 +177,12 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-          <SparklesIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">AI Insights</h2>
-          <p className="text-gray-600 dark:text-gray-400">Intelligent pattern analysis and predictions</p>
-        </div>
+    <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 md:p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <div className="h-3 w-1 rounded-full bg-gradient-to-b from-purple-500 to-indigo-500" />
+        <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+          AI Insights
+        </h2>
       </div>
 
       {/* Confidence Metrics */}
@@ -461,7 +457,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           </ResponsiveContainer>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 

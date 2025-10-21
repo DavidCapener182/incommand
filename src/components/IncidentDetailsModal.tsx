@@ -499,7 +499,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className={cn(
-              'card-modal relative mx-auto flex h-full w-full flex-col overflow-hidden bg-background',
+              'relative mx-auto flex h-full w-full flex-col overflow-hidden bg-white dark:bg-[#1b203b] rounded-2xl shadow-3xl',
               'max-h-screen rounded-none sm:h-auto sm:max-h-[calc(100vh-48px)] sm:w-[95%] sm:max-w-[1280px] sm:rounded-3xl'
             )}
             onClick={(e) => e.stopPropagation()}
@@ -508,7 +508,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         <div className="bg-blue-600 text-white flex items-center justify-between px-6 py-4 border-b border-border/40">
           <div>
             <h2 className="text-xl font-bold">
-              Incident #{incident?.log_number}
+              Log number - {incident?.log_number}
             </h2>
             <p className="text-sm text-blue-100">
               {incident?.incident_type} · {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type ? (
@@ -853,7 +853,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                     <div className="space-y-2">
                       {incident.dependencies.map((depId, index) => (
                         <div key={depId} className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                          <span className="text-sm text-orange-800">Incident #{depId}</span>
+                          <span className="text-sm text-orange-800">{depId}</span>
                         </div>
                       ))}
                     </div>

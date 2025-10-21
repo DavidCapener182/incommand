@@ -48,6 +48,7 @@ import { createPortal } from 'react-dom';
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
 import IncidentSummaryBar, { type SummaryStatus } from './IncidentSummaryBar'
+import { PageWrapper } from './layout/PageWrapper'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
@@ -1308,7 +1309,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-3 sm:p-6 md:p-8 bg-[#E3EDFE] md:bg-transparent dark:bg-[#0b1229] md:dark:bg-transparent transition-colors">
+    <PageWrapper>
       {/* Accessibility: Skip Links */}
       <SkipLinks />
       
@@ -1829,6 +1830,6 @@ export default function Dashboard() {
             </svg>
           </button>
         </div>
-      </div>
+    </PageWrapper>
   )
 }

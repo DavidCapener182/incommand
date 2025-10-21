@@ -5,6 +5,10 @@ import PWAStatus from '@/components/PWAStatus';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useNightMode } from '@/contexts/NightModeContext';
 import { supabase } from '@/lib/supabase';
+import { PageWrapper } from '@/components/layout/PageWrapper';
+import { StackedPanel } from '@/components/ui/StackedPanel';
+import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer';
+import { CardContainer } from '@/components/ui/CardContainer';
 import { 
   UserIcon, 
   CogIcon, 
@@ -189,12 +193,16 @@ export default function GeneralSettingsPage() {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">General Settings</h1>
-        <p className="text-gray-600 dark:text-blue-100">Manage your account preferences and profile information.</p>
-      </div>
-      
+    <PageWrapper>
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <StackedPanel className="space-y-6">
+          <SectionContainer className="space-y-6">
+            <SectionHeader
+              title="General Settings"
+              accent="indigo"
+              description="Manage your account preferences and profile information."
+            />
+
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
           <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
@@ -209,7 +217,7 @@ export default function GeneralSettingsPage() {
 
       <div className="space-y-4 sm:space-y-6">
         {/* Profile Information */}
-        <div className="card-time p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
               <UserIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -289,11 +297,11 @@ export default function GeneralSettingsPage() {
               placeholder="Tell us about yourself..."
             />
           </div>
-        </div>
+        </CardContainer>
 
         {/* Company Information */}
         {company && (
-          <div className="card-time p-4 sm:p-6">
+          <CardContainer className="p-4 sm:p-6 space-y-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-green-100 dark:bg-[#1a2a57] rounded-lg">
                 <BuildingOfficeIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -323,11 +331,11 @@ export default function GeneralSettingsPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 dark:text-blue-300 mt-2">Company details are managed by administrators</p>
-          </div>
+          </CardContainer>
         )}
 
         {/* Password Change */}
-        <div className="card-time p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-red-100 dark:bg-[#1a2a57] rounded-lg">
               <KeyIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -379,10 +387,10 @@ export default function GeneralSettingsPage() {
               {saving ? 'Updating...' : 'Update Password'}
             </button>
           </div>
-        </div>
+        </CardContainer>
 
         {/* Preferences */}
-        <div className="card-time p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-purple-100 dark:bg-[#1a2a57] rounded-lg">
               <CogIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -558,13 +566,13 @@ export default function GeneralSettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </CardContainer>
 
         {/* PWA Status */}
         <PWAStatus />
         
         {/* Settings Navigation */}
-        <div className="card-time p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
               <CogIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -623,11 +631,11 @@ export default function GeneralSettingsPage() {
               </div>
             </a>
           </div>
-        </div>
+        </CardContainer>
 
         {/* Sync Status */}
         {preferences && (
-          <div className="card-time p-4 sm:p-6">
+          <CardContainer className="p-4 sm:p-6 space-y-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <CheckIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -637,11 +645,11 @@ export default function GeneralSettingsPage() {
             <div className="text-sm text-gray-600 dark:text-blue-300">
               Your preferences are synced across all devices
             </div>
-          </div>
+          </CardContainer>
         )}
 
         {/* Account Actions */}
-        <div className="card-time p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6 space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-yellow-100 dark:bg-[#1a2a57] rounded-lg">
               <ShieldCheckIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -670,8 +678,11 @@ export default function GeneralSettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </CardContainer>
       </div>
-    </div>
+    </SectionContainer>
+  </StackedPanel>
+      </div>
+    </PageWrapper>
   );
 } 

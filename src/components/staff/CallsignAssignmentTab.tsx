@@ -436,85 +436,89 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Callsign Assignment</h2>
-          <p className="text-gray-600 dark:text-gray-400">Assign your team to positions for the current event</p>
+      {/* Top Section Container - Stats & Filters */}
+      <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+              Callsign Assignment
+            </h2>
+          </div>
+          <button
+            onClick={() => setShowAddPositionModal(true)}
+            className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+          >
+            <PlusIcon className="h-4 w-4 inline mr-2" />
+            Add Position
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddPositionModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Position
-        </button>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by callsign, role, or staff name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase">Total Positions</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{positions.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <CheckIcon className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase">Assigned</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{assignedCount}</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <XMarkIcon className="h-8 w-8 text-red-600" />
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase">Vacant</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{vacantCount}</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <UserGroupIcon className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase">Available Staff</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{staff.length}</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <select
-          value={selectedDepartment}
-          onChange={(e) => setSelectedDepartment(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        >
-          {departments.map(dept => (
-            <option key={dept} value={dept}>
-              {dept === 'all' ? 'All Departments' : dept}
-            </option>
-          ))}
-        </select>
-      </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Positions</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{positions.length}</p>
-            </div>
+        {/* Search and Filters */}
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by callsign, role, or staff name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
+            />
           </div>
+          <select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
+          >
+            {departments.map(dept => (
+              <option key={dept} value={dept}>
+                {dept === 'all' ? 'All Departments' : dept}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <CheckIcon className="h-8 w-8 text-green-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Assigned</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{assignedCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <XMarkIcon className="h-8 w-8 text-red-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Vacant</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{vacantCount}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <UserGroupIcon className="h-8 w-8 text-purple-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Available Staff</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{staff.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
 
       {/* Available Staff */}
       {(() => {
@@ -523,8 +527,13 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
         const availableStaff = staff.filter(staffMember => !assignedStaffIds.includes(staffMember.id))
         
         return availableStaff.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Staff</h3>
+          <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-green-500 to-emerald-500" />
+              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Available Staff
+              </h3>
+            </div>
             <div className="flex flex-wrap gap-2">
               {availableStaff.map((staffMember, index) => {
                 console.log(`Rendering available staff ${index}:`, staffMember.id, staffMember.name)
@@ -543,7 +552,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                 )
               })}
             </div>
-          </div>
+          </section>
         )
       })()}
 
@@ -555,42 +564,45 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
           return acc
         }, {} as Record<string, Position[]>)
       ).map(([department, deptPositions]) => (
-        <div key={department} className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {department}
-              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                ({deptPositions.length} positions, {deptPositions.filter(p => p.assigned_staff_id).length} assigned)
-              </span>
-            </h3>
+        <section key={department} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                {department}
+                <span className="ml-2 text-xs normal-case text-gray-500 dark:text-gray-400">
+                  ({deptPositions.length} positions, {deptPositions.filter(p => p.assigned_staff_id).length} assigned)
+                </span>
+              </h3>
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {deptPositions.map(position => (
               <div
                 key={position.id}
-                className={`p-4 rounded-lg border-2 ${
+                className={`rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 p-4 sm:p-5 ${
                   position.assigned_staff_id 
                     ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900'
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{position.callsign}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{position.position}</p>
+                    <p className="text-xs font-semibold text-gray-600 uppercase">{position.callsign}</p>
+                    <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">{position.position}</h4>
                   </div>
                   <div className="flex gap-1">
                     <button
                       onClick={() => openEditModal(position)}
-                      className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
+                      className="text-blue-600 hover:bg-blue-50 p-1 rounded"
                       title="Edit position"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => deletePosition(position.id)}
-                      className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                      className="text-red-600 hover:bg-red-50 p-1 rounded"
                       title="Delete position"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -608,7 +620,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                     </div>
                     <button
                       onClick={() => unassignStaffFromPosition(position.id)}
-                      className="text-xs text-red-600 hover:text-red-800 dark:hover:text-red-400"
+                      className="text-xs text-red-600 hover:text-red-800 dark:hover:text-red-400 font-medium"
                     >
                       Unassign
                     </button>
@@ -618,7 +630,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                     <p className="text-xs text-gray-500 dark:text-gray-400">Available for assignment</p>
                     <button
                       onClick={() => openAssignStaffModal(position)}
-                      className="w-full text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                      className="w-full text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                     >
                       Assign Staff
                     </button>
@@ -641,7 +653,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
               </div>
             ))}
           </div>
-        </div>
+        </section>
       ))}
 
       {/* Add Position Modal */}

@@ -24,6 +24,9 @@ import StaffPerformanceDashboard from '@/components/staff/StaffPerformanceDashbo
 import RadioSignOutSystem from '@/components/radio/RadioSignOutSystem'
 import AddStaffModal from '@/components/staff/AddStaffModal'
 import CallsignAssignmentTab from '@/components/staff/CallsignAssignmentTab'
+import { PageBackground } from '@/components/ui/PageBackground'
+import { StackedPanel } from '@/components/ui/StackedPanel'
+import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer'
 
 interface StaffMember {
   id: string
@@ -503,37 +506,47 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   )
 
   return (
-    <div className="min-h-screen bg-[#E3EDFE] dark:bg-[#0b1229] p-4 sm:p-6 md:p-8 transition-colors">
-      <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Staffing Centre</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Manage team assignments, review skill coverage, and track performance
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddStaffModal(true)}
-              className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-            >
-              Add Staff
-            </button>
-            <button
-              type="button"
-              onClick={() => distributeStaff([...availableStaff, ...Object.values(columns).flatMap((column) => column.staff)])}
-              className="text-gray-700 border-gray-300 px-4 py-2 rounded-xl text-sm font-medium border hover:bg-gray-50 transition-all dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800"
-            >
-              Rebalance
-            </button>
-          </div>
-        </div>
+    <PageBackground>
+      <div>
+        <StackedPanel className="space-y-8">
+          <SectionContainer className="space-y-6">
+            <SectionHeader
+              title="Staffing Centre"
+              accent="indigo"
+              description="Manage team assignments, review skill coverage, and track performance"
+              actions={
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStaffModal(true)}
+                    className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                  >
+                    Add Staff
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => distributeStaff([...availableStaff, ...Object.values(columns).flatMap((column) => column.staff)])}
+                    className="text-gray-700 border border-gray-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800"
+                  >
+                    Rebalance
+                  </button>
+                </div>
+              }
+            />
+            {currentEvent ? (
+              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                Current Event: {currentEvent.name}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No active event selected. Assignments will be saved for future events.
+              </p>
+            )}
+          </SectionContainer>
 
-        {/* Tabs - Match Analytics Design */}
-        <Card className="p-1.5 sm:p-2 mb-4 sm:mb-6 overflow-x-auto">
-          <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
+          <SectionContainer>
+            <Card className="p-1.5 sm:p-2 overflow-x-auto">
+              <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('callsign')}
               className={`${
@@ -588,10 +601,12 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               </div>
             </button>
           </nav>
-        </Card>
+            </Card>
+          </SectionContainer>
 
-        {/* Tab Content */}
-        {activeTab === 'callsign' && (
+          {/* Tab Content */}
+          <div className="space-y-6">
+            {activeTab === 'callsign' && (
           <CallsignAssignmentTab 
             staff={availableStaff}
             eventId={currentEvent?.id}
@@ -617,9 +632,9 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               }
             }}
           />
-        )}
+            )}
 
-        {activeTab === 'radio' && (
+            {activeTab === 'radio' && (
           currentEvent ? (
             <RadioSignOutSystem 
               eventId={currentEvent.id}
@@ -635,15 +650,15 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               </p>
             </section>
           )
-        )}
+            )}
 
-        {activeTab === 'skills' && (
+            {activeTab === 'skills' && (
           <StaffSkillsMatrix 
             eventId={currentEvent?.id}
           />
-        )}
+            )}
 
-        {activeTab === 'performance' && (
+            {activeTab === 'performance' && (
           currentEvent ? (
             <StaffPerformanceDashboard
               eventId={currentEvent.id}
@@ -659,10 +674,12 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               </p>
             </section>
           )
-        )}
-
-        {/* Add Staff Modal */}
-        <AddStaffModal
+            )}
+          </div>
+        </StackedPanel>
+      </div>
+      {/* Add Staff Modal */}
+      <AddStaffModal
           isOpen={showAddStaffModal}
           onClose={() => setShowAddStaffModal(false)}
           onStaffAdded={() => {
@@ -688,8 +705,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
           }}
           companyId={companyId || ''}
         />
-      </div>
-    </div>
+    </PageBackground>
   )
 }
 

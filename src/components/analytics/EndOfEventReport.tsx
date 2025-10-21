@@ -132,6 +132,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [lessonsLearned, setLessonsLearned] = useState<LessonsLearned | null>(null)
   const [aiInsights, setAiInsights] = useState<string>('')
   const [showPreview, setShowPreview] = useState(false)
+  const [detailedIncidents, setDetailedIncidents] = useState<any[]>([])
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({
     recipients: '',
@@ -149,6 +150,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       setStaffPerformance(null)
       setLessonsLearned(null)
       setAiInsights('')
+      setDetailedIncidents([])
       setLoading(false)
       return
     }
@@ -174,14 +176,16 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
 
       const { data: incidents, error: incidentError } = await supabase
         .from('incident_logs')
-        .select('incident_type, priority, status, created_at, updated_at')
+        .select('*')
         .eq('event_id', eventId)
+        .order('created_at', { ascending: false })
 
       if (incidentError) {
         console.warn('Incident summary error:', incidentError)
       }
 
       const incidentRecords = incidents || []
+      setDetailedIncidents(incidentRecords)
       const summary = buildIncidentSummary(incidentRecords)
       setIncidentSummary(summary)
 
@@ -337,7 +341,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     } finally {
       setLoading(false)
     }
-  }, [eventId, addToast, loading])
+  }, [eventId, addToast])
 
   useEffect(() => {
     // Debounce the fetch to prevent excessive calls
@@ -982,6 +986,178 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
           </div>
         </Card>
       )}
+
+      {/* Detailed Incident Logs Table */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <DocumentTextIcon className="h-6 w-6 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Complete Incident Log</h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              ({detailedIncidents?.length || 0} incidents recorded)
+            </span>
+          </div>
+          <div className="flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {detailedIncidents?.filter(i => i.status === 'closed' || i.status === 'logged').length || 0} Closed
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {detailedIncidents?.filter(i => i.status === 'in_progress').length || 0} In Progress
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {detailedIncidents?.filter(i => i.status === 'open').length || 0} Open
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Incident ID
+                </th>
+                <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Type & Priority
+                </th>
+                <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Occurrence
+                </th>
+                <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Response Time
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions & Amendments
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {detailedIncidents && detailedIncidents.length > 0 ? (
+                detailedIncidents.slice(0, 10).map((incident, index) => {
+                  const responseTime = incident.updated_at && incident.timestamp 
+                    ? Math.round((new Date(incident.updated_at).getTime() - new Date(incident.timestamp).getTime()) / (1000 * 60))
+                    : incident.updated_at && incident.created_at 
+                    ? Math.round((new Date(incident.updated_at).getTime() - new Date(incident.created_at).getTime()) / (1000 * 60))
+                    : null
+                  
+                  return (
+                    <tr key={incident.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="w-20 px-4 py-4 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-white">
+                        {incident.log_number ? incident.log_number.split('-').pop() : incident.id || String(index + 1).padStart(3, '0')}
+                      </td>
+                      <td className="w-32 px-4 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                            {incident.incident_type?.replace(/_/g, ' ') || incident.type?.replace(/_/g, ' ') || incident.occurrence || 'Unknown'}
+                          </span>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            incident.priority === 'urgent' || incident.priority === 'high'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : incident.priority === 'medium'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }`}>
+                            {incident.priority ? incident.priority.charAt(0).toUpperCase() + incident.priority.slice(1) : 'Unspecified'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="w-48 px-4 py-4 text-sm text-gray-900 dark:text-white">
+                        <div className="break-words">
+                          <span className="text-sm">
+                            {incident.occurrence || incident.description || incident.notes || 'No description'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="w-24 px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          incident.status === 'closed' || incident.status === 'logged'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : incident.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                          {incident.status ? incident.status.charAt(0).toUpperCase() + incident.status.slice(1) : 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="w-24 px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {incident.timestamp ? new Date(incident.timestamp).toLocaleTimeString() : incident.created_at ? new Date(incident.created_at).toLocaleTimeString() : 'N/A'}
+                      </td>
+                      <td className="w-28 px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {responseTime ? `${responseTime}m` : 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <span className="text-xs">Incident logged by {incident.callsign_from || 'Staff'}</span>
+                          </div>
+                          {incident.updated_at && incident.updated_at !== incident.timestamp && incident.updated_at !== incident.created_at && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                              <span className="text-xs">Status updated to {incident.status}</span>
+                            </div>
+                          )}
+                          {incident.status === 'closed' && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                              <span className="text-xs">Incident resolved</span>
+                            </div>
+                          )}
+                          {incident.callsign_to && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                              <span className="text-xs">Assigned to {incident.callsign_to}</span>
+                            </div>
+                          )}
+                          {incident.action_taken && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                              <span className="text-xs">Action: {incident.action_taken}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <DocumentTextIcon className="h-8 w-8 text-gray-300" />
+                      <span className="text-lg font-medium">No incidents recorded for this event</span>
+                      <span className="text-sm">This indicates excellent event management!</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {detailedIncidents && detailedIncidents.length > 10 && (
+          <div className="mt-4 text-center">
+            <button className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200">
+              View all {detailedIncidents.length} incidents →
+            </button>
+          </div>
+        )}
+      </Card>
 
       {/* Lessons Learned */}
       {lessonsLearned && (

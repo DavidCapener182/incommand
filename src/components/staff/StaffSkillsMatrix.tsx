@@ -169,7 +169,7 @@ export default function StaffSkillsMatrix({
 
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
@@ -178,13 +178,13 @@ export default function StaffSkillsMatrix({
             ))}
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (error) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -193,39 +193,42 @@ export default function StaffSkillsMatrix({
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={fetchStaffSkills}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all"
           >
             Retry
           </button>
         </div>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Staff Skills Matrix
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Skills and certifications overview
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Staff Skills Matrix
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Skills and certifications overview
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={exportSkillsMatrix}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center gap-2 text-sm font-medium"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               Export CSV
             </button>
             <button
               onClick={() => setShowAddSkillModal(true)}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-medium"
             >
               <PlusIcon className="h-4 w-4" />
               Add Skill
@@ -484,6 +487,6 @@ export default function StaffSkillsMatrix({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   )
 }

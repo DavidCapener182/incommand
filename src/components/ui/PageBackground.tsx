@@ -9,7 +9,7 @@ const PageBackground = React.forwardRef<HTMLDivElement, PageBackgroundProps>(
     <div
       ref={ref}
       className={cn(
-        'min-h-screen bg-[#E3EDFE] dark:bg-[#0b1229] p-4 sm:p-6 md:p-8 transition-colors',
+        'min-h-screen bg-white dark:bg-[#151d34] px-6 py-6 sm:px-8 sm:py-8 space-y-8 transition-colors',
         className
       )}
       {...props}

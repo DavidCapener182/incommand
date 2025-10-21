@@ -106,7 +106,7 @@ export default function StaffPerformanceDashboard({
 
   if (loading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
@@ -115,13 +115,13 @@ export default function StaffPerformanceDashboard({
             ))}
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (error) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -130,12 +130,12 @@ export default function StaffPerformanceDashboard({
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={fetchPerformanceData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all"
           >
             Retry
           </button>
         </div>
-      </div>
+      </section>
     )
   }
 
@@ -148,24 +148,27 @@ export default function StaffPerformanceDashboard({
     .slice(0, 3)
 
   return (
-    <div className={`card-depth ${className}`}>
+    <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Staff Performance Dashboard
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Performance metrics and scoring for current event
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Staff Performance Dashboard
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Performance metrics and scoring for current event
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
+            <div className="text-right bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {averageScore.toFixed(1)}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-xs text-gray-600 dark:text-gray-400">
                 Average Score
               </div>
             </div>
@@ -174,11 +177,11 @@ export default function StaffPerformanceDashboard({
       </div>
 
       {/* Performance Overview */}
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         {/* Top Performers */}
         {topPerformers.length > 0 && (
-          <div className="mb-6">
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div>
+            <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">
               Top Performers
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -188,7 +191,7 @@ export default function StaffPerformanceDashboard({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800"
+                  className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 sm:p-5 border border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -201,10 +204,10 @@ export default function StaffPerformanceDashboard({
                       {performer.overall_score}%
                     </div>
                   </div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">
                     {performer.full_name}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
                     {performer.callsign || performer.email}
                   </div>
                 </motion.div>
@@ -304,7 +307,7 @@ export default function StaffPerformanceDashboard({
         {performances.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <ChartBarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No performance data available for this event</p>
+            <p className="text-sm">No performance data available for this event</p>
           </div>
         )}
       </div>
@@ -414,6 +417,6 @@ export default function StaffPerformanceDashboard({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   )
 }

@@ -239,29 +239,32 @@ export default function RadioSignOutSystem({
   const overdueRadios = signOuts.filter(s => s.status === 'overdue')
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Radio Sign-Out System
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Track radio equipment with digital signatures
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Radio Sign-Out System
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Track radio equipment with digital signatures
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={exportCSV}
-              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center gap-2 text-sm font-medium"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               Export CSV
             </button>
             <button
               onClick={() => setShowSignOutModal(true)}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-medium"
             >
               <RadioIcon className="h-4 w-4" />
               Sign Out Radio
@@ -272,8 +275,8 @@ export default function RadioSignOutSystem({
 
       {/* Assigned Staff */}
       {assignedStaff.length > 0 && (
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 space-y-4">
+          <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
             Assigned Staff Available for Radio Assignment
           </h4>
           <div className="flex flex-wrap gap-2">
@@ -298,16 +301,16 @@ export default function RadioSignOutSystem({
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">{outRadios.length}</div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Currently Out</div>
         </div>
-        <div className="text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
           <div className="text-2xl font-bold text-green-600">{returnedRadios.length}</div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Returned</div>
         </div>
-        <div className="text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 text-center">
           <div className="text-2xl font-bold text-red-600">{overdueRadios.length}</div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Overdue</div>
         </div>
@@ -321,7 +324,7 @@ export default function RadioSignOutSystem({
               key={signOut.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+              className={`flex items-center justify-between p-4 sm:p-5 rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 ${
                 signOut.status === 'overdue'
                   ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
                   : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
@@ -332,10 +335,8 @@ export default function RadioSignOutSystem({
                   <RadioIcon className="h-8 w-8 text-blue-600" />
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    Radio #{signOut.radio_number}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Radio #{signOut.radio_number}</p>
+                  <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {signOut.profile.full_name}
                     {signOut.profile.callsign && ` (${signOut.profile.callsign})`}
                   </div>
@@ -350,7 +351,7 @@ export default function RadioSignOutSystem({
                   setSelectedSignOut(signOut)
                   setShowSignInModal(true)
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium"
               >
                 Sign In
               </button>
@@ -361,7 +362,7 @@ export default function RadioSignOutSystem({
         {outRadios.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <RadioIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No radios currently signed out</p>
+            <p className="text-sm">No radios currently signed out</p>
           </div>
         )}
       </div>
@@ -584,6 +585,6 @@ export default function RadioSignOutSystem({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   )
 }

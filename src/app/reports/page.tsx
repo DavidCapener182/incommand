@@ -6,6 +6,10 @@ import SignaturePad from "react-signature-canvas";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import OpenAI from "openai";
+import { PageWrapper } from '@/components/layout/PageWrapper';
+import { StackedPanel } from '@/components/ui/StackedPanel';
+import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer';
+import { CardContainer } from '@/components/ui/CardContainer';
 
 export default function ReportsPage() {
   const [event, setEvent] = useState<any>(null);
@@ -373,9 +377,17 @@ export default function ReportsPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 card-time shadow rounded-lg mt-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">End of Event Report</h1>
-      <form onSubmit={handleSubmit} className="space-y-6" id="event-report-pdf">
+    <PageWrapper>
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <StackedPanel className="space-y-8">
+          <SectionContainer className="space-y-6">
+            <SectionHeader
+              title="End of Event Report"
+              accent="indigo"
+              description="Compile post-event details, timings, and incident summaries."
+            />
+            <CardContainer className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" id="event-report-pdf">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-white">Head of Security</label>
@@ -579,7 +591,11 @@ export default function ReportsPage() {
             {submitting ? "Submitting..." : "Submit Report"}
           </button>
         </div>
-      </form>
-    </main>
+              </form>
+            </CardContainer>
+          </SectionContainer>
+        </StackedPanel>
+      </div>
+    </PageWrapper>
   );
-} 
+}
