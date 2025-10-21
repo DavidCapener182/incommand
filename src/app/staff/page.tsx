@@ -3,18 +3,21 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { 
+import {
   UserGroupIcon,
   AcademicCapIcon,
   ChartBarIcon,
   ClockIcon,
-  PlusIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { supabase } from '@/lib/supabase'
 import StaffSkillsMatrix from '@/components/staff/StaffSkillsMatrix'
 import StaffAvailabilityToggle from '@/components/staff/StaffAvailabilityToggle'
 import StaffPerformanceDashboard from '@/components/staff/StaffPerformanceDashboard'
+import { PageBackground } from '@/components/ui/PageBackground'
+import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer'
+import { MetricCard } from '@/components/ui/MetricCard'
+import { CardContainer } from '@/components/ui/CardContainer'
 
 export default function StaffPage() {
   const router = useRouter()
@@ -80,199 +83,191 @@ export default function StaffPage() {
   ]
 
   return (
-    <div className="min-h-screen">
-      {/* Mobile Notice - Simplified Staff View */}
-      <div className="block md:hidden bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <UserGroupIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-green-900 dark:text-green-100">
-                Staff Management
-              </h1>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Simplified view on mobile. Full management available on desktop.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop Staff Management - Hidden on Mobile */}
-      <div className="hidden md:block">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        {/* Header - Mobile Optimized */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Staff Management
-              </h1>
-              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                Manage staff skills, availability, and performance
-              </p>
-              {currentEvent && (
-                <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">
-                  Current Event: {currentEvent.name}
+    <PageBackground>
+      <div className="space-y-8">
+        {/* Mobile Notice - Simplified Staff View */}
+        <div className="block md:hidden">
+          <CardContainer className="bg-green-50/90 dark:bg-green-900/25 border-green-200 dark:border-green-800 text-green-900 dark:text-green-100 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100/80 dark:bg-green-900/50">
+                <UserGroupIcon className="h-6 w-6 text-green-600 dark:text-green-300" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold">Staff Management</h1>
+                <p className="text-sm text-green-700 dark:text-green-200">
+                  Simplified view on mobile. Full management available on desktop.
                 </p>
-              )}
+              </div>
             </div>
-            <div className="w-full sm:w-auto">
-              {!currentEvent && (
-                <div className="flex items-center gap-2 text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 px-3 py-2 rounded-lg">
-                  <ExclamationTriangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-xs sm:text-sm font-medium">No active event</span>
-                </div>
-              )}
-            </div>
-          </div>
+          </CardContainer>
         </div>
 
-        {/* Tab Navigation - Mobile Optimized */}
-        <div className="mb-6 sm:mb-8">
-          <nav className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-8" aria-label="Tabs">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`touch-target group inline-flex items-center py-3 sm:py-2 px-4 sm:px-1 sm:border-b-2 rounded-lg sm:rounded-none font-medium text-sm transition-colors ${
-                    isActive
-                      ? 'sm:border-blue-500 bg-blue-50 sm:bg-transparent dark:bg-blue-900/20 sm:dark:bg-transparent text-blue-600 dark:text-blue-400'
-                      : 'sm:border-transparent bg-gray-50 sm:bg-transparent dark:bg-gray-800 sm:dark:bg-transparent text-gray-500 hover:text-gray-700 sm:hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <Icon
-                    className={`mr-2 h-5 w-5 ${
-                      isActive
-                        ? 'text-blue-500'
-                        : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
-                  />
-                  {tab.name}
-                </button>
-              )
-            })}
-          </nav>
-          
-          {/* Tab Description */}
-          <div className="mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {tabs.find(tab => tab.id === activeTab)?.description}
-            </p>
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {activeTab === 'skills' && (
-            <StaffSkillsMatrix 
-              eventId={currentEvent?.id}
-              className="mb-8"
+        {/* Desktop Staff Management */}
+        <div className="hidden md:block space-y-8">
+          <SectionContainer className="space-y-6">
+            <SectionHeader
+              title="Staff Management"
+              accent="blue"
+              description="Manage staff skills, availability, and performance."
             />
-          )}
-
-          {activeTab === 'availability' && (
-            currentEvent ? (
-              <StaffAvailabilityToggle 
-                eventId={currentEvent.id}
-                className="mb-8"
-              />
-            ) : (
-              <div className="card-alt p-8 text-center">
-                <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  No Active Event
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Please create or activate an event to manage staff availability.
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
+                  Staff Management
+                </h1>
+                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                  Coordinate team readiness and coverage across events.
                 </p>
+                {currentEvent && (
+                  <p className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    Current Event: {currentEvent.name}
+                  </p>
+                )}
               </div>
-            )
-          )}
-
-          {activeTab === 'performance' && (
-            currentEvent ? (
-              <StaffPerformanceDashboard 
-                eventId={currentEvent.id}
-                className="mb-8"
-              />
-            ) : (
-              <div className="card-alt p-8 text-center">
-                <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  No Active Event
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Please create or activate an event to view performance metrics.
-                </p>
-              </div>
-            )
-          )}
-        </motion.div>
-
-        {/* Quick Stats - Mobile Optimized */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8">
-          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <UserGroupIcon className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Staff
-                </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  -
-                </p>
-              </div>
+              {!currentEvent && (
+                <CardContainer className="flex items-center gap-2 border border-yellow-300 bg-yellow-50/90 p-3 text-yellow-700 dark:border-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-200">
+                  <ExclamationTriangleIcon className="h-5 w-5" />
+                  <span className="text-sm font-medium">No active event</span>
+                </CardContainer>
+              )}
             </div>
-          </div>
+          </SectionContainer>
 
-          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <AcademicCapIcon className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Certified Skills
-                </p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-                  -
-                </p>
-              </div>
-            </div>
-          </div>
+          <SectionContainer className="space-y-4">
+            <SectionHeader
+              title="Management Areas"
+              accent="purple"
+              description="Choose a focus area to update team information."
+            />
+            <CardContainer className="space-y-4 p-3 sm:p-4">
+              <nav
+                className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3"
+                aria-label="Staff management navigation"
+              >
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = activeTab === tab.id
 
-          <div className="card-alt p-4 sm:p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ChartBarIcon className="h-8 w-8 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Avg Performance
-                </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  -
-                </p>
-              </div>
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                      className={`touch-target inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                        isActive
+                          ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
+                          : 'border-transparent bg-transparent text-gray-600 hover:border-blue-200 hover:bg-blue-50/70 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-5 w-5 ${
+                          isActive ? 'text-white' : 'text-blue-500 dark:text-blue-300'
+                        }`}
+                      />
+                      {tab.name}
+                    </button>
+                  )
+                })}
+              </nav>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {tabs.find((tab) => tab.id === activeTab)?.description}
+              </p>
+            </CardContainer>
+          </SectionContainer>
+
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {activeTab === 'skills' && (
+              <StaffSkillsMatrix eventId={currentEvent?.id} />
+            )}
+
+            {activeTab === 'availability' &&
+              (currentEvent ? (
+                <StaffAvailabilityToggle eventId={currentEvent.id} />
+              ) : (
+                <CardContainer className="text-center">
+                  <ClockIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No Active Event
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Please create or activate an event to manage staff availability.
+                  </p>
+                </CardContainer>
+              ))}
+
+            {activeTab === 'performance' &&
+              (currentEvent ? (
+                <StaffPerformanceDashboard eventId={currentEvent.id} />
+              ) : (
+                <CardContainer className="text-center">
+                  <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No Active Event
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Please create or activate an event to view performance metrics.
+                  </p>
+                </CardContainer>
+              ))}
+          </motion.div>
+
+          <SectionContainer>
+            <SectionHeader
+              title="Team Snapshot"
+              accent="emerald"
+              description="High-level staffing indicators for the current event."
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <MetricCard>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                    <UserGroupIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Total Staff
+                    </p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">-</p>
+                  </div>
+                </div>
+              </MetricCard>
+
+              <MetricCard>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                    <AcademicCapIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Certified Skills
+                    </p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">-</p>
+                  </div>
+                </div>
+              </MetricCard>
+
+              <MetricCard>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
+                    <ChartBarIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Avg Performance
+                    </p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">-</p>
+                  </div>
+                </div>
+              </MetricCard>
             </div>
-          </div>
-        </div>
+          </SectionContainer>
         </div>
       </div>
-    </div>
+    </PageBackground>
   )
 }

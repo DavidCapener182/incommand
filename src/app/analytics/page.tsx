@@ -488,6 +488,24 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
     }
   }, [incidentData, attendanceData, eventData, metrics.typeBreakdown])
 
+  const aiSummaryColumns = useMemo(() => {
+    if (!aiSummary) return []
+
+    const normalized = aiSummary
+      .split('\n')
+      .map((line) =>
+        line
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/^[-*]\s+/, '• ')
+          .trim()
+      )
+      .filter((line) => line.length > 0)
+
+    const midpoint = Math.ceil(normalized.length / 2) || 1
+    return [normalized.slice(0, midpoint), normalized.slice(midpoint)]
+  }, [aiSummary])
+
   // Chart colors
   const COLORS = ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16']
 
@@ -518,7 +536,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
   }
 
   return (
-    <div className="min-h-screen bg-[#E3EDFE] md:bg-transparent dark:bg-[#0b1229] md:dark:bg-transparent transition-colors">
+    <div className="min-h-screen bg-[#E3EDFE] dark:bg-[#0b1229] p-3 sm:p-6 md:p-8 transition-colors">
       {/* Mobile Analytics */}
         {!isDesktop && (
         <div className="block md:hidden space-y-6 px-4 pb-10">
@@ -738,10 +756,10 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         </div>
       )}
 
-      {/* Desktop Analytics - Hidden on Mobile */}
+      {/* Desktop Analytics */}
       {isDesktop && (
         <div className="hidden md:block">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <div className="bg-white/80 dark:bg-slate-900/80 rounded-3xl shadow-lg shadow-black/5 border border-gray-200/70 dark:border-gray-700/50 p-6 md:p-8 space-y-8 backdrop-blur-md">
                 {/* Header - Mobile Optimized */}
                 <div className="mb-4 sm:mb-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
@@ -989,9 +1007,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         {/* Operational Tab Content (existing charts) */}
         {activeTab === 'operational' && (
           <>
-        {/* Top Level Metrics - 6 Cards - Mobile Optimized */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Card className="p-4 sm:p-5">
+        {/* Key Metrics Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-purple-500 to-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Key Metrics</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Incidents</p>
@@ -1002,7 +1025,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-5">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Open Incidents</p>
@@ -1013,7 +1036,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-5">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Closed Incidents</p>
@@ -1024,7 +1047,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-5">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Avg Response Time</p>
@@ -1035,7 +1058,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-5">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Most Likely Type</p>
@@ -1048,7 +1071,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-5">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Peak Attendance</p>
@@ -1060,12 +1083,18 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               <Users className="h-7 w-7 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
             </div>
           </Card>
-        </div>
+          </div>
+        </section>
 
-        {/* Operational Focus, Response Performance, Attendance Pulse - 3 Cards - Mobile Stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Operational Insights Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Operational Insights</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Live Watch */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Watch</h3>
@@ -1089,7 +1118,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </Card>
 
           {/* Response Quality */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Response Quality</h3>
@@ -1112,7 +1141,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </Card>
 
           {/* Ingress Snapshot */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Ingress Snapshot</h3>
@@ -1135,12 +1164,18 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
             </div>
           </Card>
-        </div>
+          </div>
+        </section>
 
-        {/* Attendance Timeline, Attendance Log, Live Incident Status - 3 Cards - Mobile Stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Attendance & Status Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-green-500 to-emerald-500" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Attendance & Status</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Attendance Timeline */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Timeline</h3>
             {attendanceData.length > 0 ? (
               <div className="h-40 sm:h-48">
@@ -1167,7 +1202,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </Card>
 
           {/* Attendance Log */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Attendance Log</h3>
             {attendanceData.length > 0 ? (
               <div className="space-y-4">
@@ -1203,7 +1238,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
           </Card>
 
           {/* Live Incident Status */}
-          <Card className="p-4 sm:p-6">
+          <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Live Incident Status</h3>
               <div className="flex items-center gap-2">
@@ -1217,20 +1252,26 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               <p className="text-sm text-gray-600 dark:text-gray-400">No active incidents at this time</p>
             </div>
           </Card>
-        </div>
+          </div>
+        </section>
 
         {/* Charts Section - Mobile Optimized */}
         {showAdvancedFeatures && (
-          <div className="space-y-4 sm:space-y-6 md:space-y-8">
+          <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-orange-500 to-red-500" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Analytics & Trends</h2>
+            </div>
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
             {/* Row 1: Incident Volume & Type Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Incident Volume Over Time */}
-              <Card className="p-4 sm:p-6">
+              <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Volume Over Time</h3>
                 </div>
-                <div className="h-48 sm:h-56 md:h-64">
+                <div className="h-[280px]">
                   <ChartContainer config={{}}>
                     <BarChart data={chartData.incidentVolumeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
@@ -1251,12 +1292,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </Card>
 
               {/* Incident Type Breakdown */}
-              <Card className="p-4 sm:p-6">
+              <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-4 sm:p-6">
                 <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Incident Types Breakdown</h3>
                 </div>
-                <div className="h-48 sm:h-56 md:h-64">
+                <div className="h-[280px]">
                   <ChartContainer config={{}}>
                     <RechartsPieChart>
                       <Pie
@@ -1283,12 +1324,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             {/* Row 2: Response Time Distribution & Ejection Patterns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Response Time Distribution */}
-              <Card className="p-6">
+              <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Clock className="w-6 h-6 text-orange-600" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Response Time Distribution</h3>
                 </div>
-                <div className="h-64 w-full overflow-hidden">
+                <div className="h-[280px] w-full overflow-hidden">
                   <ChartContainer config={{}}>
                     <BarChart data={chartData.responseTimeData} layout="horizontal" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
@@ -1302,12 +1343,12 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </Card>
 
               {/* Ejection/Refusal Patterns */}
-              <Card className="p-6">
+              <Card className="rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-150 p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <UserX className="w-6 h-6 text-red-600" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ejection/Refusal Patterns</h3>
                 </div>
-                <div className="h-64">
+                <div className="h-[280px]">
                   <ChartContainer config={{}}>
                     <LineChart data={chartData.ejectionPatternData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
@@ -1332,12 +1373,38 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 </div>
               </Card>
             </div>
-          </div>
+            </div>
+          </section>
         )}
 
         {/* AI Summary Section */}
         {aiSummary && (
-          <Card className="p-6 mt-6">
+          <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">AI Insights</h2>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Operational Summary</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Key insights generated from the latest incident activity.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={generateAISummary}
+                disabled={isGeneratingSummary}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {isGeneratingSummary ? 'Generating…' : 'Refresh Insights'}
+              </button>
+            </div>
+            <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-blue-600" />
@@ -1396,16 +1463,22 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </div>
             )}
           </Card>
+          </section>
         )}
 
-        {/* Recent Incidents Table */}
-        <Card className="mt-8">
+        {/* Recent Incidents Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-gray-500 to-slate-500" />
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Recent Incidents</h2>
+          </div>
+          <Card>
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Type
@@ -1450,6 +1523,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
             </table>
           </div>
         </Card>
+          </section>
           </>
         )}
         </div>

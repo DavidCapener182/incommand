@@ -17,6 +17,7 @@ import {
 
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { Card } from '@/components/ui/card'
 import StaffSkillsMatrix from '@/components/staff/StaffSkillsMatrix'
 import StaffAvailabilityToggle from '@/components/staff/StaffAvailabilityToggle'
 import StaffPerformanceDashboard from '@/components/staff/StaffPerformanceDashboard'
@@ -502,190 +503,192 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   )
 
   return (
-    <div className="space-y-6">
-      <header className="card-depth flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Staffing Centre</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Drag and drop to balance teams, review skill coverage, and request AI-backed role recommendations.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
-            <input
-              type="search"
-              placeholder="Search staff"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="w-56 rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => distributeStaff([...availableStaff, ...Object.values(columns).flatMap((column) => column.staff)])}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
-            <RefreshCcw className="h-4 w-4" aria-hidden />
-            Rebalance
-          </button>
-          <button
-            type="button"
-            onClick={handleUndo}
-            disabled={assignmentHistory.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden />
-            Undo
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAddStaffModal(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-          >
-            <Users className="h-4 w-4" aria-hidden />
-            Add Staff
-          </button>
-        </div>
-      </header>
-
-      {/* Navigation Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          {[
-            { id: 'callsign', name: 'Callsign Assignment', icon: UserCheck },
-            { id: 'radio', name: 'Radio Sign Out', icon: Radio },
-            { id: 'skills', name: 'Skills Matrix', icon: GraduationCap },
-            { id: 'performance', name: 'Performance', icon: BarChart3 },
-          ].map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                <Icon
-                  className={`mr-2 h-5 w-5 ${
-                    isActive
-                      ? 'text-blue-500'
-                      : 'text-gray-400 group-hover:text-gray-500'
-                  }`}
-                />
-                {tab.name}
-              </button>
-            )
-          })}
-        </nav>
-          </div>
-
-      {/* Tab Content */}
-             {activeTab === 'callsign' && (
-               <CallsignAssignmentTab 
-                 staff={availableStaff}
-                 eventId={currentEvent?.id}
-                 onStaffUpdate={() => {
-                   // Refresh staff data when assignments change
-                   if (companyId) {
-                     const fetchStaff = async () => {
-                       const { data, error } = await supabase
-                         .from('staff')
-                         .select('id, full_name, contact_number, email, skill_tags, notes, active')
-                         .eq('company_id', companyId)
-                         .order('full_name', { ascending: true })
-
-                       if (error) {
-                         console.error('Failed to load staff roster', error)
-                         return
-                       }
-
-                       const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-                       distributeStaff(normalized)
-                     }
-                     fetchStaff()
-                   }
-                 }}
-               />
-             )}
-
-      {activeTab === 'radio' && (
-        currentEvent ? (
-          <RadioSignOutSystem 
-            eventId={currentEvent.id}
-            className="mb-8"
-          />
-        ) : (
-          <div className="card-alt p-8 text-center">
-            <Radio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No Active Event
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create an event to enable radio sign-out functionality
+    <div className="min-h-screen bg-[#E3EDFE] dark:bg-[#0b1229] p-4 sm:p-6 md:p-8 transition-colors">
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Staffing Centre</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Manage team assignments, review skill coverage, and track performance
             </p>
-                  </div>
-        )
-      )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAddStaffModal(true)}
+              className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            >
+              Add Staff
+            </button>
+            <button
+              type="button"
+              onClick={() => distributeStaff([...availableStaff, ...Object.values(columns).flatMap((column) => column.staff)])}
+              className="text-gray-700 border-gray-300 px-4 py-2 rounded-xl text-sm font-medium border hover:bg-gray-50 transition-all dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800"
+            >
+              Rebalance
+            </button>
+          </div>
+        </div>
 
-      {activeTab === 'skills' && (
-        <StaffSkillsMatrix 
-          eventId={currentEvent?.id}
-          className="mb-8"
-        />
-      )}
+        {/* Tabs - Match Analytics Design */}
+        <Card className="p-1.5 sm:p-2 mb-4 sm:mb-6 overflow-x-auto">
+          <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
+            <button
+              onClick={() => setActiveTab('callsign')}
+              className={`${
+                activeTab === 'callsign'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Callsign Assignment</span>
+                <span className="sm:hidden">Callsign</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('radio')}
+              className={`${
+                activeTab === 'radio'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <Radio className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Radio Sign-Out</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={`${
+                activeTab === 'skills'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Skills Matrix</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('performance')}
+              className={`${
+                activeTab === 'performance'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Performance</span>
+              </div>
+            </button>
+          </nav>
+        </Card>
 
-      {activeTab === 'performance' && (
-        currentEvent ? (
-          <StaffPerformanceDashboard
-            eventId={currentEvent.id}
-            className="mb-8"
-          />
-        ) : (
-          <div className="card-alt p-8 text-center">
-            <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No Active Event
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create an event to view performance metrics
-            </p>
-                    </div>
-        )
-      )}
+        {/* Tab Content */}
+        {activeTab === 'callsign' && (
+          <CallsignAssignmentTab 
+            staff={availableStaff}
+            eventId={currentEvent?.id}
+            onStaffUpdate={() => {
+              // Refresh staff data when assignments change
+              if (companyId) {
+                const fetchStaff = async () => {
+                  const { data, error } = await supabase
+                    .from('staff')
+                    .select('id, full_name, contact_number, email, skill_tags, notes, active')
+                    .eq('company_id', companyId)
+                    .order('full_name', { ascending: true })
 
-      {/* Add Staff Modal */}
-      <AddStaffModal
-        isOpen={showAddStaffModal}
-        onClose={() => setShowAddStaffModal(false)}
-        onStaffAdded={() => {
-          // Refresh staff data
-          if (companyId) {
-            const fetchStaff = async () => {
-              const { data, error } = await supabase
-                .from('staff')
-                .select('id, full_name, contact_number, email, skill_tags, notes, active')
-                .eq('company_id', companyId)
-                .order('full_name', { ascending: true })
+                  if (error) {
+                    console.error('Failed to load staff roster', error)
+                    return
+                  }
 
-              if (error) {
-                console.error('Failed to load staff roster', error)
-                return
+                  const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+                  distributeStaff(normalized)
+                }
+                fetchStaff()
               }
+            }}
+          />
+        )}
 
-              const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-              distributeStaff(normalized)
+        {activeTab === 'radio' && (
+          currentEvent ? (
+            <RadioSignOutSystem 
+              eventId={currentEvent.id}
+            />
+          ) : (
+            <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <Radio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Active Event
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create an event to enable radio sign-out functionality
+              </p>
+            </section>
+          )
+        )}
+
+        {activeTab === 'skills' && (
+          <StaffSkillsMatrix 
+            eventId={currentEvent?.id}
+          />
+        )}
+
+        {activeTab === 'performance' && (
+          currentEvent ? (
+            <StaffPerformanceDashboard
+              eventId={currentEvent.id}
+            />
+          ) : (
+            <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Active Event
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create an event to view performance metrics
+              </p>
+            </section>
+          )
+        )}
+
+        {/* Add Staff Modal */}
+        <AddStaffModal
+          isOpen={showAddStaffModal}
+          onClose={() => setShowAddStaffModal(false)}
+          onStaffAdded={() => {
+            // Refresh staff data
+            if (companyId) {
+              const fetchStaff = async () => {
+                const { data, error } = await supabase
+                  .from('staff')
+                  .select('id, full_name, contact_number, email, skill_tags, notes, active')
+                  .eq('company_id', companyId)
+                  .order('full_name', { ascending: true })
+
+                if (error) {
+                  console.error('Failed to load staff roster', error)
+                  return
+                }
+
+                const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+                distributeStaff(normalized)
+              }
+              fetchStaff()
             }
-            fetchStaff()
-          }
-        }}
-        companyId={companyId || ''}
-      />
+          }}
+          companyId={companyId || ''}
+        />
+      </div>
     </div>
   )
 }
