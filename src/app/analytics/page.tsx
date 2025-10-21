@@ -1306,7 +1306,10 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }: { name: string; percent?: number }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                        label={(props: any) => {
+                          const { name, percent } = props;
+                          return `${name || ''} ${percent ? (percent * 100).toFixed(0) : 0}%`;
+                        }}
                         outerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 80}
                         fill="#8884d8"
                         dataKey="value"
