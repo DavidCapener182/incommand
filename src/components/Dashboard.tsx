@@ -1811,7 +1811,7 @@ export default function Dashboard() {
         {/* Mobile FAB - New Incident */}
         <div className="md:hidden fixed bottom-6 right-6 z-50">
           <button
-            onClick={() => setShowIncidentModal(true)}
+            onClick={() => setIsIncidentModalOpen(true)}
             className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target"
             style={{ 
               backgroundColor: '#3b82f6 !important',
