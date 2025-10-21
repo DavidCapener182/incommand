@@ -4136,23 +4136,23 @@ export default function IncidentCreationModal({
 
   // Responsive incident type grid: 8x3 (desktop), 4x3 (mobile)
   const desktopVisibleCount = 24;
-const mobileVisibleCount = 11;
+  const mobileVisibleCount = 11;
 
-// Sort types by usage count (desc), then name
-const sortedIncidentTypes = React.useMemo(() => {
-  return Object.keys(INCIDENT_TYPES)
-    .sort((a, b) => {
-      const diff = (usageCounts[b] || 0) - (usageCounts[a] || 0);
-      if (diff !== 0) return diff;
-      return a.localeCompare(b);
-    });
-}, [usageCounts]);
+  // Sort types by usage count (desc), then name
+  const sortedIncidentTypes = React.useMemo(() => {
+    return Object.keys(INCIDENT_TYPES)
+      .sort((a, b) => {
+        const diff = (usageCounts[b] || 0) - (usageCounts[a] || 0);
+        if (diff !== 0) return diff;
+        return a.localeCompare(b);
+      });
+  }, [usageCounts]);
 
-// Use sortedIncidentTypes for grid
-const desktopVisibleTypes = sortedIncidentTypes.slice(0, desktopVisibleCount);
-const mobileVisibleTypes = sortedIncidentTypes.slice(0, mobileVisibleCount);
-const desktopPlaceholdersNeeded = desktopVisibleCount - desktopVisibleTypes.length;
-const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
+  // Use sortedIncidentTypes for grid
+  const desktopVisibleTypes = sortedIncidentTypes.slice(0, desktopVisibleCount);
+  const mobileVisibleTypes = sortedIncidentTypes.slice(0, mobileVisibleCount);
+  const desktopPlaceholdersNeeded = desktopVisibleCount - desktopVisibleTypes.length;
+  const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
 
   const handleIncidentTypeSelect = (type: string) => {
     setFormData(prev => ({
@@ -4387,7 +4387,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         </div>
         
         {/* Desktop: Original Modal Content */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex md:flex-col md:h-screen md:overflow-hidden">
         {/* Real-time collaboration indicators */}
         {isConnected && (
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
@@ -4403,7 +4403,7 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                 </div>
               ))}
             </div>
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               {presenceUsers.filter(u => u.id !== user?.id).length} collaborating
             </span>
           </div>
@@ -4412,70 +4412,59 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
         {/* Cursor tracker */}
         <CursorTracker users={presenceUsers} containerRef={modalRef} />
 
-        {/* Header - Mobile Optimized */}
-        <header className="bg-blue-600 px-4 sm:px-6 py-4 sticky top-0 z-30" style={{
-          paddingTop: 'max(env(safe-area-inset-top), 1rem)',
-        }}>
-          <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3 sm:gap-4">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-white/20 flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-base sm:text-lg">🚨</span>
-            </div>
-            <div>
-                <h3 className="text-xl font-bold text-white">New Incident</h3>
-                <div className="flex items-center gap-4 mt-1">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-blue-100">Event:</span>
-                    <span className="text-xs font-semibold text-white">
-                  {(() => {
-                    const chosen = events.find(e => e.id === selectedEventId)
-                      || events.find(e => e.is_current)
-                      || currentEventFallback
-                      || events[0];
-                    if (chosen?.event_name) return chosen.event_name;
-                    return eventsLoading ? 'Loading...' : 'No events available';
-                  })()}
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* 🔹 Sticky Header */}
+        <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 sm:px-8 flex items-center justify-between shadow-sm">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">New Incident</h1>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Event: <strong className="text-gray-900 dark:text-white">
+                {(() => {
+                  const chosen = events.find(e => e.id === selectedEventId)
+                    || events.find(e => e.is_current)
+                    || currentEventFallback
+                    || events[0];
+                  if (chosen?.event_name) return chosen.event_name;
+                  return eventsLoading ? 'Loading...' : 'No events available';
+                })()}
+              </strong>
+            </span>
           </div>
-          <button
-            onClick={() => {
-              resetForm()
-              onClose()
-            }}
-              className="rounded-full p-2 hover:bg-white/10 transition-colors"
+          <div className="flex items-center space-x-3">
+            {/* Quick log buttons - keeping existing functionality */}
+            <QuickTabs
+              eventId={selectedEventId || ''}
+              onIncidentLogged={async () => {
+                await onIncidentCreated();
+              }}
+              currentUser={user}
+            />
+            <button
+              onClick={() => {
+                resetForm()
+                onClose()
+              }}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Close"
-          >
-              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+            >
+              <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </header>
 
                 {/* Quick Add Bar - Full Width */}
-        <div className="px-4 py-3 border-b bg-gray-50 dark:bg-[#1a2a57] space-y-3">
-          {/* Quick Tabs for Common Logs */}
-          <QuickTabs
-            eventId={selectedEventId || ''}
-            onIncidentLogged={async () => {
-              await onIncidentCreated();
-            }}
-            currentUser={user}
-          />
-          
+        <div className="px-6 py-4 sm:px-8 border-b bg-gray-50 dark:bg-slate-800 space-y-3">
           {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">OR use natural language</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Natural Language Input</span>
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
           </div>
           
           {/* AI Parsing Instructions */}
           <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            💡 Type incident details and press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> or click <span className="text-blue-600">✨</span> to auto-fill structured fields
+            💡 Type incident details and press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> or click <span className="text-blue-600 dark:text-blue-400">✨</span> to auto-fill structured fields
           </div>
           
           <div className="relative">
@@ -4694,43 +4683,39 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
           </AnimatePresence>
         </div>
 
-        {/* Content scroll area */}
-        <div className="px-4 pb-20 overflow-auto h-[calc(100vh-100px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
-            {/* Left Column - Incident Type (scrollable) */}
-            <section className="lg:col-span-3 h-full">
-              <div className="card-depth p-3 h-full flex flex-col">
-                <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-sm font-semibold text-gray-900">Incident Type</h3>
+        {/* 🔹 Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto">
+            {/* Left Column - Incident Type Categories (Sidebar) */}
+            <aside className="col-span-3 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
+              <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
                 </div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Incident Type</h3>
+              </div>
                 
 
-                <div className="flex-1 overflow-y-auto pr-1 min-h-0">
-                  <IncidentTypeCategories
-                    selectedType={formData.incident_type}
-                    onTypeSelect={handleIncidentTypeSelect}
-                    usageStats={incidentTypeUsageStats}
-                  />
-              </div>
-            </div>
-            </section>
+              <IncidentTypeCategories
+                selectedType={formData.incident_type}
+                onTypeSelect={handleIncidentTypeSelect}
+                usageStats={incidentTypeUsageStats}
+              />
+            </aside>
 
-            {/* Middle Column - Callsign, Configuration, Detailed Info */}
-            <section className="lg:col-span-5 space-y-3 h-full">
+            {/* Middle Column - Main Form Section */}
+            <section className="col-span-6 space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
               {/* Callsign Information Card */}
-              <div className="card-depth p-3" role="region" aria-labelledby="callsign-title">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div role="region" aria-labelledby="callsign-title">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <h3 id="callsign-title" className="text-sm font-semibold text-gray-900">Callsign Information</h3>
+                  <h3 id="callsign-title" className="text-sm font-semibold text-gray-900 dark:text-white">Callsign Information</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -4764,17 +4749,17 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
             </div>
 
               {/* Incident Configuration Card */}
-              <div className={`card-depth p-4 ${
-                formData.priority === 'high' ? 'border-l-4 border-l-red-500' : ''
+              <div className={`${
+                formData.priority === 'high' ? 'border-l-4 border-l-red-500 pl-4' : ''
               }`} role="region" aria-labelledby="configuration-title">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
-                  <h3 id="configuration-title" className="text-sm font-semibold text-gray-900">Incident Configuration</h3>
+                  <h3 id="configuration-title" className="text-sm font-semibold text-gray-900 dark:text-white">Incident Configuration</h3>
                 </div>
                 <div>
                   <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
@@ -4937,15 +4922,15 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
               </div>
 
               {/* Detailed Information Card */}
-              <div className="card-depth p-3" role="region" aria-labelledby="detailed-info-title">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div role="region" aria-labelledby="detailed-info-title">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-              </div>
-                  <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900">Detailed Information</h3>
-            </div>
+                  </div>
+                  <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900 dark:text-white">Detailed Information</h3>
+                </div>
               <div className="space-y-3">
                 {/* Always use structured template */}
                   <div className="space-y-3">
@@ -5117,22 +5102,24 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                     )}
                   </div>
                 </div>
-            </div>
+              </div>
+              </div>
             </section>
 
-            {/* Right Column - Location & Actions, Additional Options */}
-            <section className="lg:col-span-4 space-y-3 h-full">
+            {/* Right Column - Right-hand Panel */}
+            <aside className="col-span-3 space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
               {/* Green Guide Best Practices */}
               {(
-                <div className="card-depth p-3" role="region" aria-labelledby="best-practices-title">
-                  <div className="flex items-center justify-between mb-2">
+                <div role="region" aria-labelledby="best-practices-title">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                        <svg className="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-emerald-700 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <h3 id="best-practices-title" className="text-sm font-semibold text-gray-900">Best Practices (Green Guide)</h3>
+                      <h3 id="best-practices-title" className="text-sm font-semibold text-gray-900 dark:text-white">Best Practices (Green Guide)</h3>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600">
                       <input
@@ -5375,43 +5362,37 @@ const mobilePlaceholdersNeeded = mobileVisibleCount - mobileVisibleTypes.length;
                   </div>
                 </div>
               </div>
-            </section>
+              </div>
+            </aside>
           </div>
-        </div>
 
-        {/* Sticky Footer - Mobile Optimized */}
-        <footer className="sticky md:absolute bottom-0 left-0 right-0 border-t bg-white/95 dark:bg-[#23408e]/95 backdrop-blur px-3 sm:px-6 py-3 sm:py-4" style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
-        }}>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400">Auto-saved</div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        {/* 🔹 Sticky Footer */}
+        <footer className="sticky bottom-0 z-20 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4 sm:px-8 flex items-center justify-end space-x-4 shadow-sm">
+          {/* Use existing handlers – do not change onClick or data flow */}
           <button
             onClick={() => {
               resetForm()
               onClose()
             }}
-                className="touch-target w-full sm:w-auto px-4 py-3 sm:py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#2d437a] focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
+            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-                className="touch-target hidden sm:flex w-full sm:w-auto px-4 py-3 sm:py-2 text-sm border border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:ring-2 focus:ring-blue-500 rounded-lg transition-colors font-medium"
-              >
-                Save as Draft
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="touch-target w-full sm:w-auto px-6 py-3 sm:py-2 text-sm bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-lg"
-              >
-                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Log Incident
-              </button>
-            </div>
-          </div>
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
+          >
+            Save as Draft
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="px-6 py-2 text-sm bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Log Incident
+          </button>
         </footer>
       </div>
     </div>

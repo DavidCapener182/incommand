@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let eventId = params.eventId ?? null
+    let eventId = url.searchParams.get('eventId') ?? null
 
     if (!eventId) {
       const { data: currentEvent, error: currentEventError } = await supabase

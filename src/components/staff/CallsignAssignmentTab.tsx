@@ -437,7 +437,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   return (
     <div className="space-y-6">
       {/* Top Section Container - Stats & Filters */}
-      <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+      <section className="card-depth p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
@@ -456,7 +456,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+          <div className="card-depth p-4">
             <div className="flex items-center gap-3">
               <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
               <div>
@@ -465,7 +465,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+          <div className="card-depth p-4">
             <div className="flex items-center gap-3">
               <CheckIcon className="h-8 w-8 text-green-600" />
               <div>
@@ -474,7 +474,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+          <div className="card-depth p-4">
             <div className="flex items-center gap-3">
               <XMarkIcon className="h-8 w-8 text-red-600" />
               <div>
@@ -483,7 +483,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
               </div>
             </div>
           </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 shadow-sm p-4">
+          <div className="card-depth p-4">
             <div className="flex items-center gap-3">
               <UserGroupIcon className="h-8 w-8 text-purple-600" />
               <div>
@@ -527,7 +527,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
         const availableStaff = staff.filter(staffMember => !assignedStaffIds.includes(staffMember.id))
         
         return availableStaff.length > 0 && (
-          <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+          <section className="card-depth p-6 space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-3 w-1 rounded-full bg-gradient-to-b from-green-500 to-emerald-500" />
               <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
@@ -540,11 +540,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                 return (
                   <span
                     key={staffMember.id}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700"
                   >
                     {staffMember.name}
                     {staffMember.callsign && (
-                      <span className="ml-2 text-xs bg-green-200 dark:bg-green-800 px-2 py-0.5 rounded">
+                      <span className="ml-2 text-xs bg-green-200/80 dark:bg-green-800/60 px-2 py-0.5 rounded border border-green-300/50 dark:border-green-700/50">
                         {staffMember.callsign}
                       </span>
                     )}
@@ -564,7 +564,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
           return acc
         }, {} as Record<string, Position[]>)
       ).map(([department, deptPositions]) => (
-        <section key={department} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+        <section key={department} className="card-depth p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
@@ -581,10 +581,10 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
             {deptPositions.map(position => (
               <div
                 key={position.id}
-                className={`rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 p-4 sm:p-5 ${
+                className={`card-depth hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 p-4 sm:p-5 ${
                   position.assigned_staff_id 
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900'
+                    ? 'border-green-500/50 bg-green-50/80 dark:bg-green-900/20' 
+                    : ''
                 }`}
               >
                 <div className="flex items-start justify-between mb-2">

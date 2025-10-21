@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useGeocodeLocation, { Coordinates } from '@/hooks/useGeocodeLocation'
 import { getMapStyle, type MapStyleOption } from '@/utils/mapProvider'
 
-const SCRIPT_URL = 'https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.js'
+const SCRIPT_URL = 'https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js'
+const CSS_URL = 'https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css'
 
 export type MapOverlay =
   | {
@@ -37,15 +38,20 @@ interface IncidentLocationMapProps {
   onLocationChange?: (coordinates: Coordinates, source: 'manual' | 'geocoded' | 'drag') => void
 }
 
-interface MaplibreGl {
-  Map: any
-  NavigationControl: any
-  Marker: any
-}
+type MaplibreGl = any
 
 function ensureScriptLoaded(): Promise<MaplibreGl> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Map cannot be used on the server'))
+  }
+
+  // Load CSS first if not already loaded
+  if (!document.querySelector<HTMLLinkElement>('link[data-maplibre-css]')) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = CSS_URL
+    link.dataset.maplibreCss = 'true'
+    document.head.appendChild(link)
   }
 
   if ((window as any).maplibregl) {
@@ -55,7 +61,16 @@ function ensureScriptLoaded(): Promise<MaplibreGl> {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-maplibre-gl]')
     if (existing) {
-      existing.addEventListener('load', () => resolve((window as any).maplibregl as MaplibreGl), { once: true })
+      existing.addEventListener('load', () => {
+        // Small delay to ensure library is fully initialized
+        setTimeout(() => {
+          if ((window as any).maplibregl) {
+            resolve((window as any).maplibregl as MaplibreGl)
+          } else {
+            reject(new Error('Map library failed to initialise'))
+          }
+        }, 100)
+      }, { once: true })
       existing.addEventListener('error', () => reject(new Error('Failed to load map library')), { once: true })
       return
     }
@@ -63,17 +78,20 @@ function ensureScriptLoaded(): Promise<MaplibreGl> {
     const script = document.createElement('script')
     script.src = SCRIPT_URL
     script.async = true
-    script.defer = true
+    script.defer = false // Change to false for immediate execution
     script.dataset.maplibreGl = 'true'
     script.onload = () => {
-      if ((window as any).maplibregl) {
-        resolve((window as any).maplibregl as MaplibreGl)
-      } else {
-        reject(new Error('Map library failed to initialise'))
-      }
+      // Small delay to ensure library is fully initialized
+      setTimeout(() => {
+        if ((window as any).maplibregl) {
+          resolve((window as any).maplibregl as MaplibreGl)
+        } else {
+          reject(new Error('Map library failed to initialise'))
+        }
+      }, 100)
     }
     script.onerror = () => reject(new Error('Failed to load map library'))
-    document.body.appendChild(script)
+    document.head.appendChild(script)
   })
 }
 
@@ -95,6 +113,24 @@ function generateCirclePolygon(center: Coordinates, radiusMeters: number, steps 
   return coordinates
 }
 
+function isValidLocationInput(input: string | null | undefined): boolean {
+  if (!input || !input.trim()) return false
+  
+  const trimmed = input.trim()
+  
+  // Check for What3Words format (///word.word.word)
+  const w3wPattern = /^\/\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/
+  if (w3wPattern.test(trimmed)) return true
+  
+  // Check for address-like patterns (contains numbers, letters, spaces, common address words)
+  const addressPattern = /^[a-zA-Z0-9\s,.-]+$/
+  const hasNumbers = /\d/.test(trimmed)
+  const hasLetters = /[a-zA-Z]/.test(trimmed)
+  const isLongEnough = trimmed.length >= 5
+  
+  return addressPattern.test(trimmed) && hasNumbers && hasLetters && isLongEnough
+}
+
 export default function IncidentLocationMap({
   coordinates,
   locationQuery,
@@ -108,6 +144,7 @@ export default function IncidentLocationMap({
   const [maplibre, setMaplibre] = useState<MaplibreGl | null>(null)
   const [style, setStyle] = useState<MapStyleOption>('street')
   const [manualOverride, setManualOverride] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const { coordinates: geocodedCoordinates, isLoading: isGeocoding, error: geocodeError } = useGeocodeLocation(
     locationQuery,
@@ -117,9 +154,28 @@ export default function IncidentLocationMap({
   const [activeCoords, setActiveCoords] = useState<Coordinates | null>(coordinates || geocodedCoordinates || null)
 
   useEffect(() => {
+    // Only load on client side
+    if (typeof window === 'undefined') return
+    
+    let isMounted = true
+    
     ensureScriptLoaded()
-      .then(setMaplibre)
-      .catch((error) => console.error(error))
+      .then((lib) => {
+        if (isMounted) {
+          setMaplibre(lib)
+          setLoadError(null)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load map library:', error)
+        if (isMounted) {
+          setLoadError('Failed to load map')
+        }
+      })
+      
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -354,12 +410,52 @@ export default function IncidentLocationMap({
     applyOverlays()
   }, [applyOverlays])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.remove()
+          markerRef.current = null
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove()
+          mapRef.current = null
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    }
+  }, [])
+
   const legendEntries = useMemo(
     () => overlays.map((overlay) => ({ id: overlay.id, name: overlay.name, color: overlay.color })),
     [overlays]
   )
 
   const renderStatusMessage = () => {
+    if (loadError) {
+      return (
+        <div className="incident-map-loading text-red-600 dark:text-red-300">
+          <span className="status-dot warning" />
+          {loadError}
+        </div>
+      )
+    }
+
+    if (!maplibre) {
+      return (
+        <div className="incident-map-loading">
+          <span className="status-dot info" />
+          Loading map…
+        </div>
+      )
+    }
+
     if (isGeocoding) {
       return (
         <div className="incident-map-loading">
@@ -387,6 +483,14 @@ export default function IncidentLocationMap({
       )
     }
 
+    return null
+  }
+
+  // Don't render the map if the location input is not valid
+  const shouldShowMap = isValidLocationInput(locationQuery) || !!coordinates
+
+  // Don't render anything if location input is not valid
+  if (!shouldShowMap) {
     return null
   }
 

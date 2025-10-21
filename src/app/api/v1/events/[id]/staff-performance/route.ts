@@ -2,6 +2,43 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+// Fuzzy matching function to find staff in incident logs
+function findStaffInLogs(staffName: string, incidentLogs: any[]): { matched: boolean; incidents: any[] } {
+  const normalizedStaffName = staffName.toLowerCase().trim()
+  
+  // Try exact match first (full name)
+  let matchedIncidents = incidentLogs.filter(log => 
+    log.callsign_from?.toLowerCase().includes(normalizedStaffName) ||
+    log.assigned_to?.toLowerCase().includes(normalizedStaffName)
+  )
+  
+  if (matchedIncidents.length > 0) {
+    return { matched: true, incidents: matchedIncidents }
+  }
+  
+  
+  // Try fuzzy matching with name parts (first name, last name, etc.)
+  const nameParts = normalizedStaffName.split(' ').filter(part => part.length > 1)
+  for (const log of incidentLogs) {
+    const logCallsign = log.callsign_from?.toLowerCase() || ''
+    const logAssigned = log.assigned_to?.toLowerCase() || ''
+    
+    // Check if any name part matches (handles "Jimmy" matching "Jimmy Norrie")
+    const hasMatch = nameParts.some(part => 
+      part.length > 2 && (
+        logCallsign.includes(part) ||
+        logAssigned.includes(part)
+      )
+    )
+    
+    if (hasMatch) {
+      matchedIncidents.push(log)
+    }
+  }
+  
+  return { matched: matchedIncidents.length > 0, incidents: matchedIncidents }
+}
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -11,19 +48,24 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('Staff performance API called with eventId:', params.id)
     const supabase = createRouteHandlerClient({ cookies })
     const eventId = params.id
 
     if (!eventId) {
+      console.log('No eventId provided')
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
 
     // Get user's company
+    console.log('Getting user...')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
+      console.log('No user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('Getting user profile for user:', user.id)
     const { data: userProfile } = await supabase
       .from('profiles')
       .select('company_id')
@@ -31,10 +73,14 @@ export async function GET(
       .single()
 
     if (!userProfile) {
+      console.log('No user profile found')
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    console.log('User company_id:', userProfile.company_id)
+
     // Get all staff in the company
+    console.log('Fetching staff for company:', userProfile.company_id)
     const { data: staff, error: staffError } = await supabase
       .from('staff')
       .select('id, full_name, email, contact_number, skill_tags, active')
@@ -48,30 +94,68 @@ export async function GET(
       )
     }
 
-    // Calculate simple performance metrics for each staff member
+    console.log('Found staff:', staff?.length || 0, 'members')
+
+    // Get all incident logs for the event to use for fuzzy matching
+    console.log('Fetching incident logs for event:', eventId)
+    const { data: allIncidentLogs, error: logsError } = await supabase
+      .from('incident_logs')
+      .select('id, timestamp, responded_at, callsign_from, assigned_to, occurrence, action_taken, location, incident_type, priority')
+      .eq('event_id', eventId)
+
+    if (logsError) {
+      console.error('Error fetching incident logs:', logsError)
+      return NextResponse.json({ error: 'Failed to fetch incident logs' }, { status: 500 })
+    }
+
+    console.log('Found incident logs:', allIncidentLogs?.length || 0, 'logs')
+
+    // Calculate performance metrics for each staff member using fuzzy matching
     const performances = []
     
     for (const member of staff) {
-      // Get incidents logged by this staff member
-      const { count: incidentsLogged, error: incidentsError } = await supabase
-        .from('incident_logs')
-        .select('id', { count: 'exact' })
-        .eq('created_by', member.id)
-
-      if (incidentsError) {
-        console.warn(`Could not fetch incidents for profile ${member.id}:`, incidentsError.message)
+      // Use fuzzy matching to find incidents for this staff member
+      const { matched, incidents } = findStaffInLogs(member.full_name, allIncidentLogs || [])
+      
+      if (!matched) {
+        continue // Skip staff members with no matching incidents
       }
 
-      // Simple performance calculation
-      const incidentsCount = incidentsLogged || 0
-      const avgResponseTime = Math.floor(Math.random() * 15) + 1 // 1-15 minutes (dummy data)
-      const logQualityScore = Math.floor(Math.random() * 40) + 60 // 60-100%
+      const incidentsCount = incidents.length
       
-      // Calculate overall score based on incidents logged, response time, and active status
+      // Calculate real average response time from matched incidents
+      let avgResponseTime = 0
+      const responseTimeIncidents = incidents.filter(incident => incident.responded_at)
+      if (responseTimeIncidents.length > 0) {
+        const responseTimes = responseTimeIncidents.map(incident => {
+          const created = new Date(incident.timestamp)
+          const responded = new Date(incident.responded_at)
+          return (responded.getTime() - created.getTime()) / (1000 * 60) // Convert to minutes
+        })
+        avgResponseTime = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+      }
+      
+      // Calculate real log quality score based on incident completeness
+      let logQualityScore = 0
+      if (incidents.length > 0) {
+        const qualityScores = incidents.map(incident => {
+          let score = 0
+          if (incident.occurrence && incident.occurrence.trim() !== '') score += 20
+          if (incident.action_taken && incident.action_taken.trim() !== '') score += 20
+          if (incident.location && incident.location.trim() !== '') score += 20
+          if (incident.incident_type && incident.incident_type.trim() !== '') score += 20
+          if (incident.priority && incident.priority.trim() !== '') score += 20
+          return score
+        })
+        logQualityScore = qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length
+      }
+      
+      // Calculate overall score based on real data
       const activeMultiplier = member.active ? 1.1 : 0.9
+      const responseTimeScore = avgResponseTime > 0 ? Math.max(0, 15 - avgResponseTime) * 2 : 0
       const overallScore = Math.floor(
         (incidentsCount * 10 * activeMultiplier) + 
-        (Math.max(0, 15 - avgResponseTime) * 2) + 
+        responseTimeScore + 
         (logQualityScore * 0.5)
       )
 
@@ -79,22 +163,24 @@ export async function GET(
         profile_id: member.id,
         full_name: member.full_name,
         email: member.email,
-        callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
+        callsign: member.full_name,
         incidents_logged: incidentsCount,
         avg_response_time: avgResponseTime,
         log_quality_score: logQualityScore,
         overall_score: Math.min(100, Math.max(0, overallScore)),
-        experience_level: 'intermediate', // Default since staff table doesn't have experience_level
+        experience_level: 'intermediate',
         active_assignments: member.active ? 1 : 0
       })
     }
 
+    console.log('Returning performances:', performances.length)
     return NextResponse.json({
       success: true,
       performances: performances.sort((a, b) => b.overall_score - a.overall_score)
     })
   } catch (error) {
     console.error('Event staff performance API error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     return NextResponse.json(
       { 
         error: 'Failed to fetch staff performance',

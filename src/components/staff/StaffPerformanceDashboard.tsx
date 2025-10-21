@@ -106,7 +106,7 @@ export default function StaffPerformanceDashboard({
 
   if (loading) {
     return (
-      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`card-depth p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
@@ -121,7 +121,7 @@ export default function StaffPerformanceDashboard({
 
   if (error) {
     return (
-      <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+      <section className={`card-depth p-6 ${className}`}>
         <div className="text-center">
           <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -147,8 +147,36 @@ export default function StaffPerformanceDashboard({
     .sort((a, b) => b.overall_score - a.overall_score)
     .slice(0, 3)
 
+  // Show message when no performance data is available
+  if (performances.length === 0) {
+    return (
+      <section className={`card-depth ${className}`}>
+        <div className="p-6 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide ml-2">
+              Staff Performance Dashboard
+            </h3>
+          </div>
+          <div className="py-8">
+            <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              No Performance Data Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Performance metrics will appear here once staff members start logging incidents and activities.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Data is calculated from incident logs, response times, and supervisor ratings.
+            </p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <section className={`bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <section className={`card-depth ${className}`}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">

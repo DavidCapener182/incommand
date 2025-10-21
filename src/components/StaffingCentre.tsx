@@ -197,16 +197,28 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   useEffect(() => {
     const fetchCurrentEvent = async () => {
       try {
-        const { data: events } = await supabase
+        // First try to get the event marked as current
+        let { data: events } = await supabase
           .from('events')
           .select('*')
           .eq('is_current', true)
           .order('created_at', { ascending: false })
           .limit(1)
 
-        if (events && events.length > 0) {
-          setCurrentEvent(events[0])
+        // If no current event, get the most recent event
+        if (!events || events.length === 0) {
+          const { data: recentEvents } = await supabase
+            .from('events')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+          
+        if (recentEvents && recentEvents.length > 0) {
+          setCurrentEvent(recentEvents[0])
         }
+      } else {
+        setCurrentEvent(events[0])
+      }
       } catch (error) {
         console.error('Error fetching current event:', error)
       }
@@ -535,7 +547,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
             />
             {currentEvent ? (
               <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                Current Event: {currentEvent.name}
+                Current Event: {currentEvent.event_name || currentEvent.name || currentEvent.title || 'Unnamed Event'}
               </p>
             ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400">
