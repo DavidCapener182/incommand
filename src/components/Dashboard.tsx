@@ -1814,14 +1814,14 @@ export default function Dashboard() {
             onClick={() => setIsIncidentModalOpen(true)}
             className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target"
             style={{ 
-              backgroundColor: '#3b82f6 !important',
-              backdropFilter: 'none !important',
-              WebkitBackdropFilter: 'none !important',
-              background: '#3b82f6 !important',
-              opacity: '1 !important',
-              backgroundImage: 'none !important',
-              backgroundBlendMode: 'normal !important',
-              mixBlendMode: 'normal !important'
+              backgroundColor: '#3b82f6',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none',
+              background: '#3b82f6',
+              opacity: '1',
+              backgroundImage: 'none',
+              backgroundBlendMode: 'normal',
+              mixBlendMode: 'normal'
             }}
             aria-label="Create new incident"
           >
