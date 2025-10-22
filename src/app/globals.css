@@ -1,3 +1,5 @@
+@import url('https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,8 +13,6 @@
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
 }
-
-@import url('https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.css');
 
 /* Mobile-first form input styling */
 @layer components {

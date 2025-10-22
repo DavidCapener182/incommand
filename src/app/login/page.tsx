@@ -81,12 +81,12 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-6">
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#2A3990] mb-2">
+            <label htmlFor="login-email" className="block text-sm font-medium text-[#2A3990] mb-2">
               Email address
             </label>
             <input
               ref={emailRef}
-              id="email"
+              id="login-email"
               name="email"
               type="email"
               required
@@ -99,13 +99,13 @@ export default function LoginPage() {
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[#2A3990] mb-2">
+            <label htmlFor="login-password" className="block text-sm font-medium text-[#2A3990] mb-2">
               Password
             </label>
             <div className="relative">
               <input
                 ref={passwordRef}
-                id="password"
+                id="login-password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 required

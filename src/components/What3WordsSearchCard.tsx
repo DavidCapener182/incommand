@@ -487,6 +487,7 @@ export default function What3WordsSearchCard({
             width={largeLogo ? 192 : 160}
             height={largeLogo ? 96 : 80}
             className="object-contain"
+            style={{ width: 'auto', height: 'auto' }}
             priority
           />
         </div>

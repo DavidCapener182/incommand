@@ -98,11 +98,11 @@ export default function SignUpPage() {
         {/* Form */}
         <form onSubmit={handleSignUp} className="space-y-6">
           <div>
-            <label htmlFor="company" className="block text-sm font-medium text-[#2A3990] mb-2">
+            <label htmlFor="signup-company" className="block text-sm font-medium text-[#2A3990] mb-2">
               Company Name
             </label>
             <input
-              id="company"
+              id="signup-company"
               name="company"
               type="text"
               required
@@ -113,11 +113,11 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#2A3990] mb-2">
+            <label htmlFor="signup-email" className="block text-sm font-medium text-[#2A3990] mb-2">
               Email address
             </label>
             <input
-              id="email"
+              id="signup-email"
               name="email"
               type="email"
               autoComplete="email"
@@ -129,11 +129,11 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[#2A3990] mb-2">
+            <label htmlFor="signup-password" className="block text-sm font-medium text-[#2A3990] mb-2">
               Password
             </label>
             <input
-              id="password"
+              id="signup-password"
               name="password"
               type="password"
               autoComplete="new-password"

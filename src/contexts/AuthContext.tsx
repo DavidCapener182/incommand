@@ -390,11 +390,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearCachedRole(user.id)
       }
       await supabase.auth.signOut()
-      router.push('/login')
+      // Use window.location.href for immediate redirect to avoid route protection conflicts
+      window.location.href = '/login'
     } catch (error) {
       logger.error('Error during sign out', error, { component: 'AuthContext', action: 'signOut' });
       // Fallback: redirect to login even if signOut fails
-      router.push('/login')
+      window.location.href = '/login'
     }
   }
 

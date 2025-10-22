@@ -12,7 +12,7 @@ export default function ProfileMenu() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push('/');
+    // signOut() will handle the redirect to /login
   };
 
   return (

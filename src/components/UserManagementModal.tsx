@@ -143,12 +143,12 @@ export default function UserManagementModal({
                   )}
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="user-email" className="block text-sm font-medium text-gray-700">
                       Email
                     </label>
                     <input
                       type="email"
-                      id="email"
+                      id="user-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"

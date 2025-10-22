@@ -84,13 +84,13 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
       fetchHourly();
     }
     
-    // Refresh weather data every 10 minutes
+    // Refresh weather data every 30 minutes to prevent rate limiting
     const refreshInterval = setInterval(() => {
       if (lat && lon) {
         fetchWeather();
         fetchHourly();
       }
-    }, 10 * 60 * 1000);
+    }, 30 * 60 * 1000);
     
     return () => clearInterval(refreshInterval);
   }, [lat, lon, eventDate, startTime, curfewTime]);

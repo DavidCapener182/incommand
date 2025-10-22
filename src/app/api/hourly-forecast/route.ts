@@ -1,6 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10; // 10 requests per minute
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+// Rate limiting middleware
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitStore.get(identifier);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitStore.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (userLimit.count >= MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
+}
+
 export async function GET(request: NextRequest) {
+  // Get client IP for rate limiting
+  const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+  
+  // Check rate limit
+  if (!checkRateLimit(clientIP)) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429 }
+    );
+  }
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get('lat');
   const lon = searchParams.get('lon');

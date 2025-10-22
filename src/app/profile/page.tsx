@@ -198,7 +198,7 @@ export default function ProfilePage() {
               className="w-full mt-4 py-2 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-[#2d437a] dark:hover:bg-[#23408e] text-gray-700 dark:text-gray-100 rounded-lg shadow transition-colors duration-200"
               onClick={async () => {
                 await supabase.auth.signOut();
-                router.push('/login');
+                window.location.href = '/login';
               }}
             >
               Log out

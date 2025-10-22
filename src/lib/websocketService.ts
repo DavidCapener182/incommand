@@ -46,8 +46,9 @@ class WebSocketService {
   private channels: Map<string, any> = new Map();
   private messageHandlers: Map<string, ((message: WebSocketMessage) => void)[]> = new Map();
   private reconnectAttempts: Map<string, number> = new Map();
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
+  private maxReconnectAttempts = 10;
+  private reconnectDelay = 2000;
+  private reconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   // Subscribe to a channel
   subscribe(channelName: string, handlers: ((message: WebSocketMessage) => void)[]) {
@@ -178,15 +179,27 @@ class WebSocketService {
       return;
     }
 
+    // Clear any existing timeout for this channel
+    const existingTimeout = this.reconnectTimeouts.get(channelName);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
     this.reconnectAttempts.set(channelName, attempts + 1);
     
-    setTimeout(() => {
+    const delay = Math.min(this.reconnectDelay * Math.pow(1.5, attempts), 30000); // Cap at 30 seconds
+    const timeout = setTimeout(() => {
       logger.info(`Attempting to reconnect to channel ${channelName} (attempt ${attempts + 1})`);
       
       const handlers = this.messageHandlers.get(channelName) || [];
-      this.unsubscribe(channelName);
-      this.subscribe(channelName, handlers);
-    }, this.reconnectDelay * Math.pow(2, attempts)); // Exponential backoff
+      if (handlers.length > 0) {
+        this.unsubscribe(channelName);
+        this.subscribe(channelName, handlers);
+      }
+      this.reconnectTimeouts.delete(channelName);
+    }, delay);
+    
+    this.reconnectTimeouts.set(channelName, timeout);
   }
 
   // Get connection status for a channel
@@ -202,6 +215,12 @@ class WebSocketService {
 
   // Cleanup all connections
   cleanup() {
+    // Clear all timeouts
+    this.reconnectTimeouts.forEach((timeout) => {
+      clearTimeout(timeout);
+    });
+    this.reconnectTimeouts.clear();
+    
     this.channels.forEach((channel, channelName) => {
       this.unsubscribe(channelName);
     });

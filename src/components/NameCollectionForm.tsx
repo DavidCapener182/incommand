@@ -45,12 +45,12 @@ export default function NameCollectionForm() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="name-collection" className="block text-sm font-medium text-gray-700">
                 Full Name
               </label>
               <div className="mt-1">
                 <input
-                  id="name"
+                  id="name-collection"
                   name="name"
                   type="text"
                   required
