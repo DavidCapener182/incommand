@@ -5,20 +5,21 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Image from 'next/image'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { PlusIcon } from '@heroicons/react/24/solid'
+import LegalModal from '../../components/modals/LegalModal'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  const [showPassword, setShowPassword] = useState(false)
+  const [showLegalModal, setShowLegalModal] = useState(false)
+  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('privacy')
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
-  const [showPassword, setShowPassword] = useState(false)
+  const router = useRouter()
 
-  // Autofocus email on mount
   useEffect(() => {
     emailRef.current?.focus()
   }, [])
@@ -28,7 +29,6 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    // Get values directly from the input elements to handle autofill
     const emailValue = emailRef.current?.value || email
     const passwordValue = passwordRef.current?.value || password
 
@@ -37,9 +37,7 @@ export default function LoginPage() {
         email: emailValue,
         password: passwordValue,
       })
-
       if (error) throw error
-
       router.push('/incidents')
       router.refresh()
     } catch (err) {
@@ -50,98 +48,149 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-[#23408e] relative">
-      {/* Logo with fixed top margin */}
-      <div className="w-full flex flex-col items-center mt-20">
+    <div className="min-h-screen flex flex-col justify-center bg-[#23408e] px-4 sm:px-6 lg:px-8">
+      {/* Logo & Tagline */}
+      <div className="flex flex-col items-center mb-10 sm:mb-14">
         <Image
           src="/inCommand.png"
           alt="inCommand Logo"
-          width={180}
-          height={180}
-          className="mx-auto mb-6 md:mb-8 drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain"
+          width={400}
+          height={300}
+          className="drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain mb-6 sm:mb-8"
+          priority
         />
-        <div className="text-base text-blue-100 font-medium mb-8 text-center max-w-xl mx-auto">
+        <p className="text-sm sm:text-base text-blue-100 font-medium text-center max-w-md leading-relaxed">
           Modern incident tracking and event command for every scale of operation.
-        </div>
+        </p>
       </div>
-      {/* Card with consistent margin below logo */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 py-8 px-6 shadow-xl rounded-2xl sm:px-10 border border-blue-100">
-          <h2 className="mb-6 text-center text-2xl font-extrabold text-blue-900 drop-shadow-sm tracking-tight">Sign in to your account</h2>
-          <form className="space-y-6 w-full mt-6" onSubmit={handleLogin}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#2A3990]">Email address</label>
+
+      {/* Login Card */}
+      <div className="w-full max-w-md mx-auto bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 sm:p-8 backdrop-blur-md">
+        <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-blue-900 mb-6 sm:mb-8 tracking-tight">
+          Sign in to your account
+        </h2>
+
+        {error && (
+          <div className="mb-4 text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          {/* Email */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-[#2A3990] mb-2">
+              Email address
+            </label>
+            <input
+              ref={emailRef}
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-[#2A3990] mb-2">
+              Password
+            </label>
+            <div className="relative">
               <input
-                ref={emailRef}
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                ref={passwordRef}
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
                 required
-                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-base"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                autoComplete="current-password"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#2A3990]">Password</label>
-              <div className="relative">
-                <input
-                  ref={passwordRef}
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-base"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  tabIndex={0}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-blue-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-              <div className="flex justify-end mt-2">
-                <Link href="/forgot-password" className="text-xs text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400">Forgot password?</Link>
-              </div>
-            </div>
-            <div>
               <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-[#2661F5] hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 text-white font-semibold text-lg py-3 rounded-xl shadow transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-700 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                Sign in
+                {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
-          </form>
-          <div className="mt-8 w-full">
-            <div className="flex flex-col items-center">
-              <Link href="/signup" className="text-xs text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2">New to inCommand?</Link>
+            <div className="flex justify-end mt-2">
               <Link
-                href="/signup"
-                className="w-full flex items-center justify-center py-3 px-4 rounded-xl shadow text-base font-semibold text-white bg-[#2661F5] hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
+                href="/forgot-password"
+                className="text-xs text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Create an account
+                Forgot password?
               </Link>
             </div>
           </div>
+
+          {/* Submit */}
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#2661F5] hover:bg-blue-700 text-white font-semibold text-lg py-3 rounded-xl shadow-md focus:ring-4 focus:ring-blue-300 transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+        </form>
+
+        {/* Divider */}
+        <div className="mt-8 border-t border-blue-100"></div>
+
+        {/* Create Account */}
+        <div className="mt-6 flex flex-col items-center space-y-3">
+          <p className="text-sm text-blue-700">New to inCommand?</p>
+          <Link
+            href="/signup"
+            className="w-full flex items-center justify-center py-3 px-4 rounded-xl text-base font-semibold text-white bg-[#2661F5] hover:bg-blue-700 shadow-md focus:ring-4 focus:ring-blue-300 transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Create an account
+          </Link>
         </div>
       </div>
-      <div className="flex flex-col items-center mt-8 mb-4 w-full">
-        <div className="flex gap-4 text-xs text-blue-100">
-          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+
+      {/* Footer */}
+      <footer className="mt-12 text-center text-xs text-blue-100 space-y-2">
+        <div className="flex justify-center gap-4">
+          <button 
+            onClick={() => {
+              setLegalModalTab('privacy')
+              setShowLegalModal(true)
+            }}
+            className="hover:underline cursor-pointer"
+          >
+            Privacy Policy
+          </button>
           <span>|</span>
-          <Link href="/terms" className="hover:underline">Terms of Use</Link>
+          <button 
+            onClick={() => {
+              setLegalModalTab('terms')
+              setShowLegalModal(true)
+            }}
+            className="hover:underline cursor-pointer"
+          >
+            Terms of Use
+          </button>
         </div>
-        <div className="text-xs text-blue-100 mt-2">© {new Date().getFullYear()} inCommand. All rights reserved.</div>
-      </div>
+        <p>© {new Date().getFullYear()} inCommand. All rights reserved.</p>
+      </footer>
+
+      {/* Legal Modal */}
+      <LegalModal 
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        defaultTab={legalModalTab}
+      />
     </div>
   )
-} 
+}
