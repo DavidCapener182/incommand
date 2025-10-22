@@ -26,6 +26,8 @@ import {
   ClockIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline';
+import InviteManagement from '@/components/InviteManagement';
+import { useEventMembership } from '@/hooks/useEventMembership';
 
 interface UserProfile {
   id: string;
@@ -51,6 +53,7 @@ export default function GeneralSettingsPage() {
   const { user } = useAuth();
   const { preferences } = useUserPreferences();
   const { isNightModeAlwaysOn, toggleNightModeAlwaysOn, isNightModeActive } = useNightMode();
+  const { canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [compactNavigation, setCompactNavigation] = useState(false);
   const [company, setCompany] = useState<CompanyData | null>(null);
@@ -68,6 +71,7 @@ export default function GeneralSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -99,6 +103,17 @@ export default function GeneralSettingsPage() {
         // Get theme preference exclusively from centralized preferences
         if (preferences?.theme) {
           setDarkMode(preferences.theme === 'dark');
+        }
+
+        // Get current event ID
+        const { data: currentEvent, error: eventError } = await supabase
+          .from('events')
+          .select('id')
+          .eq('is_current', true)
+          .single();
+
+        if (!eventError && currentEvent) {
+          setCurrentEventId(currentEvent.id);
         }
 
       } catch (error: any) {
@@ -568,6 +583,19 @@ export default function GeneralSettingsPage() {
           </div>
         </CardContainer>
 
+        {/* Event Invites Management - Only show for admin users with active membership */}
+        {canAccessAdminFeatures && hasActiveMembership && currentEventId && (
+          <CardContainer className="p-4 sm:p-6 space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
+                <UserIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Event Invites</h2>
+            </div>
+            <InviteManagement eventId={currentEventId} />
+          </CardContainer>
+        )}
+
         {/* PWA Status */}
         <PWAStatus />
         
@@ -630,6 +658,7 @@ export default function GeneralSettingsPage() {
                 <div className="text-sm text-gray-500 dark:text-blue-300">Manage data backups</div>
               </div>
             </a>
+
           </div>
         </CardContainer>
 

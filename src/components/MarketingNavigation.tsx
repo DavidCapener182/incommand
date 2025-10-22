@@ -18,7 +18,7 @@ export default function MarketingNavigation() {
             alt="InCommand Logo"
             width={360}
             height={360}
-             className="object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.25)]"
+            className="object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.25)]"
             priority
           />
         </div>

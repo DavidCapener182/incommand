@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
 import { useAuth } from '../contexts/AuthContext'
+import { useEventMembership } from '../hooks/useEventMembership'
 import { usePresence } from '@/hooks/usePresence'
 import { ensureBrowserLLM, isBrowserLLMAvailable, parseIncidentWithBrowserLLM, rewriteIncidentFieldsWithBrowserLLM } from '@/services/browserLLMService'
 import type { EnhancedIncidentParsingResponse } from '../types/ai'
@@ -1950,6 +1951,32 @@ export default function IncidentCreationModal({
   initialIncidentType,
 }: Props) {
   const { addToast } = useToast();
+  const { membership } = useEventMembership();
+
+  // Function to determine the "To" field based on user's role
+  const getCallsignTo = () => {
+    if (!membership?.role) return 'Event Control';
+    
+    const role = membership.role.toLowerCase();
+    
+    switch (role) {
+      case 'security':
+        return 'Security Control';
+      case 'medic':
+      case 'medical':
+        return 'Medical Control';
+      case 'production':
+        return 'Production';
+      case 'admin':
+      case 'organizer':
+      case 'superadmin':
+        return 'Event Control';
+      case 'read_only':
+        return 'Event Control'; // Read-only users can't create incidents, but if they could, it would go to Event Control
+      default:
+        return 'Event Control';
+    }
+  };
 
   // Swipe gestures for modal interaction
   const swipeGestures = useSwipeModal(
@@ -2054,7 +2081,7 @@ export default function IncidentCreationModal({
 
   const [formData, setFormData] = useState<IncidentFormData>({
     callsign_from: '',
-    callsign_to: 'Event Control',
+    callsign_to: getCallsignTo(),
     occurrence: '',
     incident_type: initialIncidentType || '',
     action_taken: '',
@@ -2109,6 +2136,20 @@ export default function IncidentCreationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [entryTypeWarnings, setEntryTypeWarnings] = useState<string[]>([])
+  
+  // Update callsign_to when membership changes
+  useEffect(() => {
+    const newCallsignTo = getCallsignTo();
+    console.log('IncidentCreationModal - Updating callsign_to:', {
+      membershipRole: membership?.role,
+      currentCallsignTo: formData.callsign_to,
+      newCallsignTo,
+      shouldUpdate: formData.callsign_to !== newCallsignTo
+    });
+    if (formData.callsign_to !== newCallsignTo) {
+      setFormData(prev => ({ ...prev, callsign_to: newCallsignTo }));
+    }
+  }, [membership?.role, formData.callsign_to]);
   
   // New state for tabbed interface and AI parsing
   const [currentTab, setCurrentTab] = useState<'quick' | 'details' | 'people' | 'priority' | 'additional'>('quick')
@@ -3585,6 +3626,8 @@ export default function IncidentCreationModal({
 
       // Generate structured occurrence text or use legacy occurrence field
       const structuredOccurrence = generateStructuredOccurrence(formData);
+      const actionsTakenText = (formData.actions_taken || '').trim();
+      const outcomeText = (formData.outcome || '').trim();
       
       // Ensure required fields (incident_type, occurrence) are populated
       const sourceText = (structuredOccurrence || formData.occurrence || formData.ai_input || '').trim();
@@ -3600,6 +3643,12 @@ export default function IncidentCreationModal({
           resolvedOccurrence = (logic.occurrence || sourceText || 'New incident reported.').trim();
         }
       }
+
+      if (actionsTakenText) {
+        resolvedOccurrence = actionsTakenText;
+      }
+
+      const resolvedActionTaken = outcomeText || (formData.action_taken || '').trim();
 
       // Get user info for logged_by fields
       const { data: { user } } = await supabase.auth.getUser()
@@ -3618,13 +3667,19 @@ export default function IncidentCreationModal({
       const shouldBeLogged = lowPriorityTypes.includes(resolvedType) || formData.priority === 'low';
       
       // Prepare the incident data
+      console.log('IncidentCreationModal - Submitting incident with callsign_to:', {
+        formDataCallsignTo: formData.callsign_to,
+        membershipRole: membership?.role,
+        finalCallsignTo: (formData.callsign_to || 'Event Control').trim()
+      });
+      
       const incidentData = {
         log_number: logNumber,
         callsign_from: formData.callsign_from.trim(),
         callsign_to: (formData.callsign_to || 'Event Control').trim(),
         occurrence: resolvedOccurrence,
         incident_type: resolvedType,
-        action_taken: (formData.action_taken || '').trim(),
+        action_taken: resolvedActionTaken,
         is_closed: shouldBeLogged,
         event_id: effectiveEvent.id,
         status: shouldBeLogged ? 'logged' : (formData.status || 'open'),
@@ -4740,7 +4795,7 @@ export default function IncidentCreationModal({
                   <input
                       id="callsign-to"
                     type="text"
-                    value={formData.callsign_to || 'Event Control'}
+                    value={formData.callsign_to || getCallsignTo()}
                     onChange={(e) => setFormData({ ...formData, callsign_to: e.target.value })}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />

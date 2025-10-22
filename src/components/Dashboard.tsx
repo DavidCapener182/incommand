@@ -29,7 +29,7 @@ import {
 import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import { geocodeAddress } from '../utils/geocoding'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 // @ts-ignore-next-line
 import Modal from 'react-modal'
@@ -632,6 +632,7 @@ export default function Dashboard() {
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
@@ -639,6 +640,61 @@ export default function Dashboard() {
   
   // Accessibility: Screen reader announcements
   const { announce } = useScreenReader({ politeness: 'polite' });
+
+  // Handle event parameter from URL (for invite links)
+  useEffect(() => {
+    const eventId = searchParams.get('event');
+    if (eventId && eventId !== currentEventId) {
+      console.log('Dashboard - Event ID from URL:', eventId);
+      // Set the event ID and fetch the event details
+      setCurrentEventId(eventId);
+      fetchEventById(eventId);
+    }
+  }, [searchParams, currentEventId]);
+
+  // Fetch event by ID (for invite links)
+  const fetchEventById = async (eventId: string) => {
+    try {
+      console.log('Dashboard - Fetching event by ID:', eventId);
+      setLoadingCurrentEvent(true);
+      
+      const { data: event, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+
+      if (error) {
+        console.error('Dashboard - Error fetching event by ID:', error);
+        setLoadingCurrentEvent(false);
+        return;
+      }
+
+      if (event) {
+        console.log('Dashboard - Event found:', event);
+        setCurrentEvent(event);
+        setHasCurrentEvent(true);
+        
+        // Fetch coordinates if venue address exists
+        if (event.venue_address) {
+          try {
+            const coords = await geocodeAddress(event.venue_address);
+            setCoordinates(coords);
+          } catch (err) {
+            console.error('Dashboard - Error geocoding venue address:', err);
+          }
+        }
+        
+        setLoadingCurrentEvent(false);
+      } else {
+        console.log('Dashboard - No event found with ID:', eventId);
+        setLoadingCurrentEvent(false);
+      }
+    } catch (err) {
+      console.error('Dashboard - Error in fetchEventById:', err);
+      setLoadingCurrentEvent(false);
+    }
+  };
 
   // Accessibility: Global keyboard shortcuts
   useKeyboardShortcuts({

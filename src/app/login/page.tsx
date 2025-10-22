@@ -25,6 +25,79 @@ export default function LoginPage() {
     emailRef.current?.focus()
   }, [])
 
+  // Handle magic link authentication
+  useEffect(() => {
+    const handleMagicLink = async () => {
+      try {
+        // Check if we have access token in the URL hash
+        const hash = window.location.hash;
+        if (hash.includes('access_token=')) {
+          console.log('Login page - Magic link detected, processing authentication');
+          
+          // Import Supabase client
+          const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
+          const supabase = createClientComponentClient();
+          
+          // Extract tokens from URL hash
+          const urlParams = new URLSearchParams(hash.substring(1));
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+          const tokenType = urlParams.get('token_type');
+          
+          console.log('Login page - Extracted tokens:', {
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken,
+            tokenType
+          });
+          
+          if (accessToken && refreshToken) {
+            // Set the session manually using the tokens
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            console.log('Login page - Manual session set:', {
+              hasSession: !!sessionData.session,
+              sessionError: sessionError?.message,
+              userId: sessionData.session?.user?.id,
+              email: sessionData.session?.user?.email
+            });
+            
+            if (sessionData.session) {
+              console.log('Login page - User authenticated via magic link, redirecting to incidents');
+              router.push('/incidents');
+              return;
+            }
+          }
+          
+          // Wait for Supabase to process the magic link automatically
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check session after processing
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          
+          console.log('Login page - Session check after magic link:', {
+            hasSession: !!sessionData.session,
+            sessionError: sessionError?.message,
+            userId: sessionData.session?.user?.id,
+            email: sessionData.session?.user?.email
+          });
+          
+          if (sessionData.session) {
+            console.log('Login page - User authenticated via magic link, redirecting to incidents');
+            router.push('/incidents');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Login page - Magic link processing error:', err);
+      }
+    };
+
+    handleMagicLink();
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)

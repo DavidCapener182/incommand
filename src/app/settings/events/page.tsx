@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import InviteManagement from '@/components/InviteManagement';
+import { useEventMembership } from '@/hooks/useEventMembership';
 
 // Utility to format date/time for logs table
 function formatDateTime(ts: string | Date | undefined) {
@@ -11,6 +13,7 @@ function formatDateTime(ts: string | Date | undefined) {
 }
 
 export default function EventsSettingsPage() {
+  const { canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [pastEvents, setPastEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -335,6 +338,21 @@ export default function EventsSettingsPage() {
             <div className="text-gray-400 dark:text-blue-300">No current event.</div>
           )}
         </div>
+
+        {/* Event Invites Management - Only show for admin users with active membership */}
+        {canAccessAdminFeatures && hasActiveMembership && currentEvent && (
+          <div className="card-depth text-gray-900 dark:text-gray-100 p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
+                <svg className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Event Invites</h2>
+            </div>
+            <InviteManagement eventId={currentEvent.id} />
+          </div>
+        )}
         
         <div className="card-depth text-gray-900 dark:text-gray-100 p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-blue-200">Past Events</h2>

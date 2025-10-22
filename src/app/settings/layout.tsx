@@ -12,6 +12,7 @@ if (typeof window !== 'undefined') {
 const nav = [
   { name: 'General', href: '/settings', icon: Cog6ToothIcon },
   { name: 'Events', href: '/settings/events', icon: CalendarDaysIcon },
+  { name: 'Event Invites', href: '/settings/event-invites', icon: UserCircleIcon },
   { name: 'AI Usage', href: '/settings/ai-usage', icon: ChartBarIcon },
   { name: 'Notification Settings', href: '/settings/notifications', icon: BellIcon },
   { name: 'Support', href: '/settings/support', icon: QuestionMarkCircleIcon },

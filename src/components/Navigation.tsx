@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES } from '../types/auth'
+import { useEventMembership } from '../hooks/useEventMembership'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
 import ProfileMenu from './ProfileMenu'
@@ -90,6 +91,7 @@ function useTheme() {
 export default function Navigation() {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
+  const { isTemporaryMember, canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -374,11 +376,13 @@ export default function Navigation() {
                       </Link>
                     </NavigationMenuItem>
 
-                    <NavigationMenuItem>
-                      <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
-                        Settings
-                      </Link>
-                    </NavigationMenuItem>
+                    {canAccessAdminFeatures && (
+                      <NavigationMenuItem>
+                        <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
+                          Settings
+                        </Link>
+                      </NavigationMenuItem>
+                    )}
 
                     {/* More Dropdown */}
                     <NavigationMenuItem>
@@ -492,12 +496,19 @@ export default function Navigation() {
               {user && (
                 <div className="relative flex items-center space-x-3">
                   {/* Welcome message with first name, left of avatar */}
-                  <span className="hidden md:inline-block text-white font-semibold text-base mr-2">
-                    {getRandomGreeting()}, {(() => {
-                      if (profile?.full_name) return profile.full_name.split(' ')[0];
-                      return '';
-                    })()}
-                  </span>
+                  <div className="hidden md:flex md:items-center md:gap-2">
+                    <span className="text-white font-semibold text-base">
+                      {getRandomGreeting()}, {(() => {
+                        if (profile?.full_name) return profile.full_name.split(' ')[0];
+                        return '';
+                      })()}
+                    </span>
+                    {isTemporaryMember && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                        Guest
+                      </span>
+                    )}
+                  </div>
                   {/* Profile Photo - Mobile optimized touch target (min 44px) */}
                   <button
                     className="flex items-center focus:outline-none touch-target p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] justify-center"
@@ -652,7 +663,9 @@ export default function Navigation() {
               Staff
             </Link>
             <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help & Glossary</Link>
-            <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+            {canAccessAdminFeatures && (
+              <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+            )}
             
             {/* More Dropdown for Mobile */}
             <div>

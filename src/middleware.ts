@@ -27,13 +27,44 @@ export async function middleware(req: NextRequest) {
     "/privacy",
     "/terms",
     "/login",
-    "/signup"
+    "/signup",
+    "/invite"
+  ]
+
+  // Define auth callback routes that need special handling
+  const authCallbackRoutes = [
+    "/auth/magic-link"
+  ]
+
+  // Define callback routes that should be allowed even without full authentication
+  const callbackRoutes = [
+    "/api/auth/invite-callback"
   ]
 
   // Check if the route is public
   const isPublicRoute = publicRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  
+  // Check if the route is a callback route
+  const isCallbackRoute = callbackRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  
+  // Check if the route is an auth callback route
+  const isAuthCallbackRoute = authCallbackRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 
-  if (isPublicRoute) {
+  // Check if this is a magic link authentication (has access_token in URL)
+  const hasAccessToken = req.nextUrl.hash.includes('access_token=') || req.nextUrl.searchParams.has('access_token')
+
+  if (isPublicRoute || isCallbackRoute || isAuthCallbackRoute) {
+    // Special handling for callback routes - allow them to proceed without authentication checks
+    if (isCallbackRoute || isAuthCallbackRoute) {
+      return res
+    }
+    
+    // Special handling for magic link authentication
+    if (hasAccessToken) {
+      // Allow magic link authentication to proceed without middleware interference
+      return res
+    }
+    
     // Get session for redirect logic
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -52,6 +83,12 @@ export async function middleware(req: NextRequest) {
   let { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
+    // Check if this is a magic link authentication attempt
+    if (hasAccessToken) {
+      // Allow magic link authentication to proceed
+      return res
+    }
+    
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = "/login"
     redirectUrl.searchParams.set("redirectedFrom", pathname)
@@ -158,8 +195,6 @@ export const config = {
     "/admin/:path*",
     "/dashboard/:path*",
     "/analytics/:path*",
-    "/profile/:path*",
-    // Allow catch-all to handle redirects gracefully
-    "/((?!_next|api|static|.*\\..*).*)"
+    "/profile/:path*"
   ],
 }
