@@ -173,52 +173,50 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col justify-between card-time relative p-3 sm:p-4 leading-tight">
-        <CardHeader className="pb-0.5 space-y-0">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+      <Card className="card-time h-full flex flex-col relative">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             Current Time
           </CardTitle>
-          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
-            Time Since Last Incident
-          </CardDescription>
+          <CardDescription>Time Since Last Incident</CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 h-full">
+        <CardContent className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
             {/* Left Column - Time Info */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <motion.p
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight"
+                transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight"
               >
                 {currentTime}
               </motion.p>
 
-              <div className="leading-snug">
-                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-300 mb-0.5">
-                  Time Since Last Incident
-                </h3>
-                <p className="text-sm font-semibold text-orange-600 dark:text-orange-300 leading-none">
-                  {timeSinceLastIncident}
-                </p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-300">Time Since Last Incident</h3>
+                <p className="text-lg font-extrabold text-orange-600 dark:text-orange-300">{timeSinceLastIncident}</p>
+              </motion.div>
 
               {(currentSlot || nextEvent) && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-1.5 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-md border border-blue-200/50 dark:border-blue-700/30 shadow-sm"
+                  className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/30 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  <h4 className="text-[10px] font-semibold text-blue-900 dark:text-blue-100 mb-0.5">
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
                     {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
                   </h4>
-                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 leading-tight">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
                     {currentSlot?.title || nextEvent?.title}
                   </p>
-                  <p className="text-[10px] text-blue-600 dark:text-blue-300">
+                  <p className="text-xs text-blue-600 dark:text-blue-300">
                     {currentSlot?.time || countdown}
                   </p>
                 </motion.div>
@@ -226,47 +224,33 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
             </div>
 
             {/* Right Column - Event Schedule */}
-            <div className="space-y-0.5">
-              <h4 className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1 font-medium">
-                Event Schedule
-              </h4>
-              <div className="space-y-0.5">
+            <div className="space-y-2">
+              <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">Event Schedule</h4>
+              <div className="space-y-1">
                 {eventTimings.map((timing, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 + index * 0.1 }}
-                    className={`flex justify-between items-center px-2 py-1 rounded-md ${
+                    className={`flex justify-between items-center p-2 rounded-lg transition-all duration-200 hover:shadow-sm ${
                       timing.isNext
                         ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
                     }`}
                   >
-                    <span
-                      className={`text-[11px] font-medium ${
-                        timing.isNext
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : 'text-gray-600 dark:text-gray-300'
-                      }`}
-                    >
+                    <span className={`text-xs font-medium ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-300'}`}>
                       {timing.title}
                     </span>
-                    <span
-                      className={`text-[11px] font-bold ${
-                        timing.isNext
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}
-                    >
+                    <span className={`text-xs font-bold ${timing.isNext ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'}`}>
                       {timing.time}
                     </span>
                   </motion.div>
                 ))}
-                {eventTimings.length === 0 && !nextEvent && (
-                  <p className="text-[11px] text-gray-400 dark:text-gray-400">No upcoming event timings</p>
-                )}
               </div>
+              {eventTimings.length === 0 && !nextEvent && (
+                <p className="text-xs text-gray-400 dark:text-gray-400">No upcoming event timings</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -339,41 +323,49 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const content = (
     <Card className={cn(
-      'card-depth relative h-[75px] md:h-[80px] flex items-center justify-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]',
+      'card-depth relative',
       isFilterable && 'cursor-pointer touch-target',
       isSelected && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg',
       pulse && 'animate-pulse',
       className
     )}>
-      <CardContent className="p-1.5 md:p-2 flex flex-col items-center justify-center space-y-1">
-        <div className="flex items-center gap-1">
+      <CardContent className="p-3 md:p-4">
+        <div className="flex items-center justify-between w-full gap-3 min-h-[48px] sm:min-h-[54px]">
+          <div className="flex flex-col flex-1 gap-1">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <motion.div
+                key={value}
+                initial={{ scale: 1.1, opacity: 0.8 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="text-2xl font-bold text-gray-900 dark:text-white"
+              >
+                {value}
+              </motion.div>
+              <span className="text-sm font-medium text-muted-foreground leading-tight whitespace-nowrap">
+                {title}
+              </span>
+            </div>
+            {trendData && trendData.length > 0 && (
+              <div className="mt-1 hidden sm:block">
+                <MiniTrendChart data={trendData} height={20} width={60} />
+              </div>
+            )}
+          </div>
           <motion.div
-            key={value}
-            initial={{ scale: 1.1, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-lg font-bold text-gray-900 dark:text-white"
+            whileHover={{ rotate: 5, scale: 1.1 }}
+            transition={{ duration: 0.2 }}
+            className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'}`}
           >
-            {value}
-          </motion.div>
-          <div className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'} h-4 w-4`}>
             {icon}
-          </div>
+          </motion.div>
+          {showPulse && (
+            <div className="absolute top-2 right-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+              <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
+            </div>
+          )}
         </div>
-        <span className="text-[11px] font-semibold text-muted-foreground tracking-tight leading-none text-center">
-          {title}
-        </span>
-        {trendData && trendData.length > 0 && (
-          <div className="mt-1 hidden sm:block">
-            <MiniTrendChart data={trendData} height={20} width={60} />
-          </div>
-        )}
-        {showPulse && (
-          <div className="absolute top-2 right-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-            <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
