@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -65,45 +65,50 @@ export default function FeaturesPage() {
       <PageWrapper>
 
         {/* HERO SECTION */}
-        <section className="flex flex-col lg:flex-row items-center justify-between gap-10 py-20 px-6 sm:px-10">
-          {/* Text Content */}
+        <section className="relative flex flex-col lg:flex-row items-center justify-between gap-10 py-24 px-6 sm:px-10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-800/40 to-blue-700/30" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-800/20 to-blue-600/10 animate-pulse-slow" />
+          
+          {/* TEXT */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="max-w-xl text-center lg:text-left"
+            className="relative z-10 max-w-xl text-center lg:text-left"
           >
-            <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
-              Transform How You Manage Events
+            <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight mb-6">
+              <span className="bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent drop-shadow-lg">
+                Transform How You Manage Events
+              </span>
             </h1>
-            <p className="text-blue-100 text-lg mb-8">
+            <p className="text-blue-100 text-lg mb-10 leading-relaxed">
               InCommand brings together incident tracking, staff management, and analytics in one
-              intelligent command platform.
+              intelligent command platform for modern safety teams.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
                 href="/signup"
-                className="bg-white text-blue-800 font-semibold px-6 py-3 rounded-xl shadow-md hover:bg-blue-100 transition-transform active:scale-95"
+                className="bg-white text-blue-800 font-semibold px-8 py-4 rounded-xl shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
               >
                 Start Free Trial
               </Link>
               <Link
                 href="/pricing"
-                className="bg-transparent border border-white font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition-colors"
+                className="border border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
               >
                 View Pricing
               </Link>
             </div>
           </motion.div>
 
-          {/* Product Image Placeholder */}
+          {/* IMAGE */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.7 }}
-            className="relative w-full max-w-lg"
+            className="relative w-full max-w-lg mt-10 lg:mt-0 z-10"
           >
-            <div className="aspect-video rounded-2xl overflow-hidden shadow-2xl border border-blue-200/30">
+            <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-blue-200/30 ring-4 ring-white/10">
               <Image
                 src="/placeholder-dashboard.png"
                 alt="Screenshot of InCommand dashboard showing live incidents and analytics"
@@ -114,9 +119,9 @@ export default function FeaturesPage() {
           </motion.div>
         </section>
 
-        {/* FEATURE GRID */}
-        <StackedPanel className="py-16 px-6 sm:px-10 bg-white text-blue-900 rounded-t-3xl">
-          <h2 className="text-center text-3xl font-bold mb-12 text-[#23408e]">
+        {/* FEATURES GRID */}
+        <StackedPanel className="py-20 px-6 sm:px-10 bg-white text-blue-900 rounded-t-3xl">
+          <h2 className="text-center text-3xl font-bold mb-14 text-[#23408e]">
             Why Event Professionals Choose InCommand
           </h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
@@ -126,15 +131,19 @@ export default function FeaturesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-2xl p-6 shadow-md border border-blue-100 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+                className="bg-white rounded-2xl p-8 shadow-md border border-blue-100 hover:shadow-xl hover:-translate-y-2 transition-all cursor-pointer min-h-[230px]"
                 onClick={() => setSelectedFeature(feature)}
               >
-                <feature.icon className="w-8 h-8 text-blue-600 mb-4" />
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                  <feature.icon className="w-7 h-7 text-blue-700" />
+                </div>
                 <h3 className="text-lg font-semibold mb-2 text-blue-900">
                   {feature.title}
                 </h3>
-                <p className="text-blue-700 text-sm">{feature.description}</p>
-                <span className="text-blue-600 text-sm font-medium mt-3 inline-flex items-center">
+                <p className="text-blue-700 text-sm leading-relaxed mb-4">
+                  {feature.description}
+                </p>
+                <span className="text-blue-600 text-sm font-semibold inline-flex items-center hover:underline">
                   Learn more →
                 </span>
               </motion.div>
@@ -142,9 +151,9 @@ export default function FeaturesPage() {
           </div>
         </StackedPanel>
 
-        {/* VISUAL BREAK SECTION */}
-        <section className="relative py-20 bg-gradient-to-r from-blue-800 to-blue-700 overflow-hidden">
-          <div className="absolute inset-0 opacity-30">
+        {/* VISUAL BREAK */}
+        <section className="relative py-24 bg-gradient-to-r from-blue-800 to-blue-700 overflow-hidden">
+          <div className="absolute inset-0 opacity-40">
             <Image
               src="/placeholder-event-control-room.jpg"
               alt="Event control room with staff operating screens"
@@ -153,20 +162,23 @@ export default function FeaturesPage() {
             />
           </div>
           <div className="relative text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl font-extrabold mb-4">Designed for Every Scale of Operation</h2>
-            <p className="text-blue-100 text-lg">
-              From small festivals to major city events — InCommand scales effortlessly with your
-              needs.
+            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 text-white drop-shadow-md">
+              Designed for Every Scale of Operation
+            </h2>
+            <p className="text-blue-100 text-lg leading-relaxed">
+              From small festivals to major city events — InCommand adapts effortlessly to your
+              organisation&apos;s scale, workflows, and command structure.
             </p>
           </div>
         </section>
 
-        {/* TESTIMONIALS SECTION */}
-        <section className="py-20 px-6 sm:px-10 bg-white text-blue-900">
-          <h2 className="text-center text-3xl font-bold mb-12 text-[#23408e]">
-            What Our Clients Say
-          </h2>
-          <div className="max-w-5xl mx-auto grid gap-8 md:grid-cols-3">
+        {/* TESTIMONIALS */}
+        <section className="py-20 px-6 sm:px-10 bg-gradient-to-b from-white to-blue-50 text-blue-900">
+          <div className="max-w-7xl mx-auto">
+            <h2 className="text-center text-3xl font-bold mb-12 text-[#23408e]">
+              What Our Clients Say
+            </h2>
+            <div className="grid gap-8 md:grid-cols-3">
             {[
               {
                 quote:
@@ -186,28 +198,33 @@ export default function FeaturesPage() {
                 name: 'Operations Lead',
                 org: 'City Festival',
               },
-            ].map((t) => (
-              <div
+            ].map((t, i) => (
+              <motion.div
                 key={t.name}
-                className="p-6 bg-blue-50 rounded-2xl shadow border border-blue-100"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                className="p-6 bg-white rounded-2xl shadow border border-blue-100 hover:shadow-lg hover:-translate-y-1 transition"
               >
-                <p className="italic text-blue-800 mb-4">"{t.quote}"</p>
+                <p className="italic text-blue-800 mb-4">&ldquo;{t.quote}&rdquo;</p>
                 <p className="font-semibold text-blue-900">{t.name}</p>
                 <p className="text-sm text-blue-600">{t.org}</p>
-              </div>
+              </motion.div>
             ))}
+            </div>
           </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="bg-gradient-to-r from-blue-700 to-blue-600 py-20 text-center text-white">
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">
-            Ready to Transform Your Operations?
-          </h2>
-          <p className="text-blue-100 text-lg mb-8">
-            Join hundreds of event and security teams who trust InCommand.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* CTA */}
+        <section className="bg-gradient-to-r from-[#23408e] to-[#2661F5] py-24 text-center text-white">
+          <div className="max-w-7xl mx-auto px-6 sm:px-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 drop-shadow-md">
+              Ready to Transform Your Operations?
+            </h2>
+            <p className="text-blue-100 text-lg mb-8">
+              Join hundreds of event and safety teams already using InCommand.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
               className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
@@ -220,6 +237,7 @@ export default function FeaturesPage() {
             >
               Request a Demo
             </a>
+            </div>
           </div>
         </section>
 
