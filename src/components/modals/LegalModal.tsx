@@ -2,10 +2,8 @@
 
 import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 interface LegalModalProps {
   isOpen: boolean
@@ -16,25 +14,13 @@ interface LegalModalProps {
 export default function LegalModal({ isOpen, onClose, defaultTab = 'privacy' }: LegalModalProps) {
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>(defaultTab)
 
-  const handleClose = () => {
-    onClose()
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
             Legal Information
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </Button>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'privacy' | 'terms')} className="w-full">
