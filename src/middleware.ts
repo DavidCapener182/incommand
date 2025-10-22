@@ -15,36 +15,57 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
-  // TEMP: bypass auth checks for green guide tools while we stabilize the route
-  if (req.nextUrl.pathname.startsWith('/admin/green-guide')) {
+  const { pathname } = req.nextUrl
+
+  // Define public routes (anyone can access)
+  const publicRoutes = [
+    "/", 
+    "/features", 
+    "/pricing", 
+    "/about", 
+    "/help",
+    "/privacy",
+    "/terms",
+    "/login",
+    "/signup"
+  ]
+
+  // Check if the route is public
+  const isPublicRoute = publicRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+
+  if (isPublicRoute) {
+    // Get session for redirect logic
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // If user is logged in and visiting login or signup, redirect to incidents
+    // But allow them to stay on the landing page and other marketing pages
+    if (session && ["/login", "/signup"].includes(pathname)) {
+      const redirectUrl = req.nextUrl.clone()
+      redirectUrl.pathname = "/incidents"
+      return NextResponse.redirect(redirectUrl)
+    }
+    
     return res
   }
 
+  // For protected pages, require authentication
+  let { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    const redirectUrl = req.nextUrl.clone()
+    redirectUrl.pathname = "/login"
+    redirectUrl.searchParams.set("redirectedFrom", pathname)
+    redirectUrl.searchParams.set("message", "Please sign in to continue")
+    return NextResponse.redirect(redirectUrl)
+  }
+
   // Check if the route is an admin route
-  if (req.nextUrl.pathname.startsWith('/admin')) {
-    
+  if (pathname.startsWith('/admin')) {
     const maxRetries = 3
     let retryCount = 0
     
     while (retryCount < maxRetries) {
       try {
-        // Get the current session
-        let { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-        if (sessionError) {
-          console.error('Middleware - Session error:', sessionError)
-          const loginUrl = new URL('/login', req.url)
-          loginUrl.searchParams.set('error', ERROR_MESSAGES.SYSTEM_ERROR)
-          return NextResponse.redirect(loginUrl)
-        }
-        
-        if (!session?.user) {
-          // No session, redirect to login
-          const loginUrl = new URL('/login', req.url)
-          loginUrl.searchParams.set('error', ERROR_MESSAGES.AUTHENTICATION_REQUIRED)
-          return NextResponse.redirect(loginUrl)
-        }
-
         // Check if session is expired and attempt refresh
         if (session.expires_at && session.expires_at * 1000 < Date.now()) {
           console.log('Middleware - Session expired, attempting refresh')
@@ -129,13 +150,16 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    // Protected application routes
+    "/incidents/:path*",
+    "/reports/:path*",
+    "/staff/:path*",
+    "/settings/:path*",
+    "/admin/:path*",
+    "/dashboard/:path*",
+    "/analytics/:path*",
+    "/profile/:path*",
+    // Allow catch-all to handle redirects gracefully
+    "/((?!_next|api|static|.*\\..*).*)"
   ],
-} 
+}

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { PlusIcon } from '@heroicons/react/24/solid'
 import LegalModal from '../../components/modals/LegalModal'
+import { RedirectBanner } from '../../components/RedirectBanner'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -49,6 +50,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-[#23408e] px-4 sm:px-6 lg:px-8">
+      <RedirectBanner />
       {/* Logo & Tagline */}
       <div className="flex flex-col items-center mb-10 sm:mb-14">
         <Image

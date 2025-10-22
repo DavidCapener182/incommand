@@ -199,8 +199,8 @@ export default function LegalModal({ isOpen, onClose, defaultTab = 'privacy' }: 
                     <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 ml-4 mt-2">
                       <li>Violate any laws or regulations</li>
                       <li>Transmit harmful or malicious code</li>
-                      <li>Interfere with the service's operation</li>
-                      <li>Access other users' data without permission</li>
+                      <li>Interfere with the service&apos;s operation</li>
+                      <li>Access other users&apos; data without permission</li>
                       <li>Use the service for unauthorized purposes</li>
                     </ul>
                   </section>
