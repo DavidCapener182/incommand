@@ -71,24 +71,6 @@
     background-color: rgba(255, 255, 255, 0.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.28) !important;
     border-radius: 1.5rem;
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    isolation: isolate;
-  }
-
-  .glass-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), transparent, rgba(255, 255, 255, 0.05));
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .glass-card > * {
-    position: relative;
-    z-index: 1;
   }
 
   .glass-mobile {
@@ -100,7 +82,7 @@
       background-color: rgba(255, 255, 255, 0.45) !important;
       border: 1px solid rgba(255, 255, 255, 0.25) !important;
       box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.4),
         0 4px 16px rgba(0, 0, 0, 0.15);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -1402,38 +1384,28 @@ input:-webkit-autofill {
     --bg-light-dark: 223 47% 11%;
     --bg-dark-dark: 224 45% 8%;
     
-    /* Corrected visual hierarchy */
-    --page-bg: #CBD5E1;            /* Background (deepest) */
-    --section-bg: #E2E8F0;         /* Section layer (5 shades lighter) */
-    --container-bg: #F3F6FD;       /* Container layer */
-    --dashboard-card-bg: #FFFFFF;  /* Top-level cards (brightest) */
-
-    /* Supporting variants */
-    --metrics-card-bg: var(--dashboard-card-bg);
+    /* Custom color variables for modern dashboard */
+    --page-bg: #F8FAFC;
+    --dashboard-card-bg: #FFFFFF;
+    --metrics-card-bg: #FFFFFF;
     --modal-card-bg: #FDFDFE;
-    --alt-card-bg: #F3F6FD;
+    --alt-card-bg: #F1F5F9;
 
-    /* Brand palette */
     --brand-900: #1E3A8A;
     --brand-700: #1D4ED8;
     --brand-600: #2563EB;
     --brand-500: #3B82F6;
     --brand-200: #BFDBFE;
 
-    /* Status and feedback colours */
     --status-success: #10B981;
     --status-warning: #F59E0B;
     --status-danger: #EF4444;
     --status-info: #3B82F6;
     --status-neutral: #94A3B8;
 
-    /* Surface hierarchy for clarity */
-    --surface-card: var(--dashboard-card-bg);
-    --surface-container: var(--container-bg);
-    --surface-section: var(--section-bg);
-    --surface-page: var(--page-bg);
+    --surface-base: #F8FAFC;
+    --surface-elevated: #FFFFFF;
 
-    /* Shadows and elevation */
     --shadow-level-1: 0 10px 24px -12px rgba(15, 23, 42, 0.12), 0 18px 32px -16px rgba(15, 23, 42, 0.08);
     --shadow-level-2: 0 12px 28px -12px rgba(15, 23, 42, 0.16), 0 22px 40px -18px rgba(15, 23, 42, 0.12);
     --shadow-level-3: 0 18px 40px -18px rgba(15, 23, 42, 0.25), 0 26px 54px -20px rgba(15, 23, 42, 0.18);
@@ -1465,17 +1437,6 @@ input:-webkit-autofill {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    /* Corrected dark hierarchy (reverse luminance) */
-    --page-bg: #0F172A;            /* Background (deepest) */
-    --section-bg: #111827;         /* Section layer */
-    --container-bg: #162031;       /* Container layer */
-    --dashboard-card-bg: #1E293B;  /* Card surface (brightest) */
-
-    --surface-card: var(--dashboard-card-bg);
-    --surface-container: var(--container-bg);
-    --surface-section: var(--section-bg);
-    --surface-page: var(--page-bg);
-
     --surface-base: #0f172a;
     --surface-elevated: #111a2e;
     --status-info: #60A5FA;
@@ -1491,19 +1452,6 @@ input:-webkit-autofill {
     @apply dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] text-foreground !important;
   }
 
-  @media (max-width: 768px) {
-    body {
-      background: radial-gradient(
-        circle at 20% 30%,
-        rgba(203, 213, 255, 0.8) 0%,
-        rgba(147, 197, 253, 0.7) 35%,
-        rgba(59, 130, 246, 0.3) 100%
-      ) !important;
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-    }
-  }
-  
   html {
     background-color: var(--page-bg) !important;
     @apply dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] !important;
@@ -1533,131 +1481,4 @@ input:-webkit-autofill {
     background: linear-gradient(135deg, #0f172a, #1e293b, #334155) !important;
   }
 
-  /* Automatic section hierarchy - cascade backgrounds */
-  main > section {
-    background-color: var(--section-bg);
-    border-radius: 1rem;
-    padding: 1.5rem;
-  }
-
-  main > section > .card-mobile {
-    background-color: var(--dashboard-card-bg);
-  }
-
-  /* Ensure cards within sections maintain proper contrast */
-  .section-container .card-mobile,
-  .section-container .card-depth {
-    background-color: var(--dashboard-card-bg);
-  }
-
-  /* Ensure Operational Metrics matches Support Tools */
-  .incident-dashboard {
-    background-color: var(--section-bg) !important; /* #E2E8F0 */
-    border-radius: 1rem;
-    padding: 1.5rem;
-  }
-
-  /* If Operational Metrics is nested within Incident Dashboard */
-  .incident-dashboard .operational-metrics {
-    background-color: var(--section-bg) !important;
-  }
-
-  /* Section header bars with rounded upper corners */
-  .section-header {
-    background-color: var(--section-bg);
-    border-radius: 1rem 1rem 0 0; /* Rounded top corners only */
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-    margin: 0;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Ensure section headers align with container top */
-  .section-container .section-header {
-    margin: -1.5rem -1.5rem 0 -1.5rem; /* Negative margins to align with container */
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-  }
-
-  /* Alternative: Direct styling for section titles */
-  main > section > h2,
-  main > section > h3,
-  .section-container > h2,
-  .section-container > h3 {
-    background-color: var(--section-bg);
-    border-radius: 1rem 1rem 0 0;
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-    margin: -1.5rem -1.5rem 0 -1.5rem;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Fix the sticky header bars with rounded corners - DON'T override section background */
-  .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
-    border-radius: 1rem 1rem 0 0 !important;
-    margin: -1rem -1rem 0 -1rem !important;
-    padding: 1rem 1rem 0.5rem 1rem !important;
-  }
-
-  /* Dark mode sticky headers - keep existing background */
-  .dark .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
-    border-radius: 1rem 1rem 0 0 !important;
-  }
-
-  /* Reduce StatCard height - target the actual classes used */
-  .card-depth .p-3,
-  .card-depth .md\\:p-4 {
-    padding: 0.5rem !important; /* Reduced from p-3 (0.75rem) and md:p-4 (1rem) */
-  }
-
-  /* Reduce minimum height of StatCard content */
-  .flex.items-center.justify-between.w-full.gap-3 {
-    min-height: 32px !important; /* Reduced from min-h-[48px] sm:min-h-[54px] */
-  }
-
-  /* Reduce text size and spacing */
-  .text-2xl.font-bold {
-    font-size: 1.25rem !important; /* Reduced from text-2xl (1.5rem) */
-    line-height: 1.2 !important;
-  }
-
-  .text-sm.font-medium {
-    font-size: 0.75rem !important; /* Reduced from text-sm (0.875rem) */
-    line-height: 1.2 !important;
-  }
-
-  /* Reduce icon size */
-  .h-6.w-6,
-  .md\\:h-8.md\\:w-8 {
-    height: 1.25rem !important; /* Reduced from h-6 (1.5rem) */
-    width: 1.25rem !important;
-  }
-
-  /* Reduce gap between elements */
-  .flex.flex-col.flex-1.gap-1 {
-    gap: 0.125rem !important; /* Reduced from gap-1 (0.25rem) */
-  }
-}
-
-/* Equal height utility for dashboard cards */
-.equal-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* Reusable Tab Navigation Component */
-.tab-navigation {
-  @apply flex flex-wrap items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-2;
-}
-
-.tab-navigation-item {
-  @apply px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2;
-}
-
-.tab-navigation-item-active {
-  @apply bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300;
-}
-
-.tab-navigation-item-inactive {
-  @apply text-gray-600 hover:text-blue-700 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/40;
 }
