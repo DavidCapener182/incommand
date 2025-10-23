@@ -1964,7 +1964,7 @@ export default function IncidentCreationModal({
         return 'Security Control';
       case 'medic':
       case 'medical':
-        return 'Medical Control';
+        return 'Medic Control';
       case 'production':
         return 'Production';
       case 'admin':
@@ -2140,12 +2140,6 @@ export default function IncidentCreationModal({
   // Update callsign_to when membership changes
   useEffect(() => {
     const newCallsignTo = getCallsignTo();
-    console.log('IncidentCreationModal - Updating callsign_to:', {
-      membershipRole: membership?.role,
-      currentCallsignTo: formData.callsign_to,
-      newCallsignTo,
-      shouldUpdate: formData.callsign_to !== newCallsignTo
-    });
     if (formData.callsign_to !== newCallsignTo) {
       setFormData(prev => ({ ...prev, callsign_to: newCallsignTo }));
     }
@@ -2726,6 +2720,7 @@ export default function IncidentCreationModal({
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   const { user } = useAuth();
+  const { membership } = useEventMembership();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -2742,27 +2737,72 @@ export default function IncidentCreationModal({
     // Quick path: resolve current event immediately so UI never blocks on "Loading..."
     (async () => {
       try {
-        const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
-        const companyId = profile?.company_id;
-        if (!companyId) return;
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        
         let chosen: any = null;
-        const { data: current } = await supabase
-          .from('events')
-          .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
-          .eq('company_id', companyId)
-          .eq('is_current', true)
-          .maybeSingle();
-        if (current?.id) {
-          chosen = current;
+        
+        if (profileError && profileError.code === 'PGRST116') {
+          // No profile exists - this is a temporary user, fetch current event by membership
+          const { data: membership } = await supabase
+            .from('event_members')
+            .select(`
+              events!inner(
+                id, event_name, artist_name, expected_attendance, is_current, company_id
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .eq('events.is_current', true)
+            .maybeSingle();
+          
+          if (membership?.events) {
+            chosen = membership.events;
+          } else {
+            // If no current event, get the latest event for this user
+            const { data: latestMembership } = await supabase
+              .from('event_members')
+              .select(`
+                events!inner(
+                  id, event_name, artist_name, expected_attendance, is_current, company_id
+                )
+              `)
+              .eq('user_id', user.id)
+              .eq('status', 'active')
+              .order('events.start_datetime', { ascending: false })
+              .limit(1);
+            
+            if (latestMembership && latestMembership[0]?.events) {
+              chosen = latestMembership[0].events;
+            }
+          }
+        } else if (profileError) {
+          console.warn('Profile fetch error:', profileError);
+          return;
         } else {
-          const { data: latest } = await supabase
+          // Regular user with company_id
+          const companyId = profile?.company_id;
+          if (!companyId) return;
+          
+          const { data: current } = await supabase
             .from('events')
             .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
             .eq('company_id', companyId)
-            .order('start_datetime', { ascending: false })
-            .limit(1);
-          if (latest && latest[0]?.id) chosen = latest[0];
+            .eq('is_current', true)
+            .maybeSingle();
+          
+          if (current?.id) {
+            chosen = current;
+          } else {
+            const { data: latest } = await supabase
+              .from('events')
+              .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
+              .eq('company_id', companyId)
+              .order('start_datetime', { ascending: false })
+              .limit(1);
+            if (latest && latest[0]?.id) chosen = latest[0];
+          }
         }
+        
         if (chosen) {
           setCurrentEventFallback(chosen);
           setSelectedEventId(prev => prev || chosen.id);
@@ -2772,16 +2812,64 @@ export default function IncidentCreationModal({
     const fetchEvents = async () => {
       setEventsLoading(true);
       try {
-        // Get company_id from profile
-        const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
-        if (!profile?.company_id) return;
-         // Fetch all events for this company
-         const { data: allEvents } = await supabase
-           .from('events')
-           .select('id, event_name, artist_name, is_current, expected_attendance')
-           .eq('company_id', profile.company_id)
-           .order('start_datetime', { ascending: false });
-        setEvents(allEvents || []);
+        // For temporary users, fetch events based on event membership
+        // For regular users, fetch events based on company_id
+        console.log('IncidentCreationModal - Fetching profile for user:', user.id);
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        console.log('IncidentCreationModal - Profile query result:', { profile, profileError });
+        
+        let allEvents = [];
+        
+        if (profileError && profileError.code === 'PGRST116') {
+          // No profile exists - this is a temporary user, fetch events by membership
+          console.log('IncidentCreationModal - Fetching events for temporary user:', user.id);
+          const { data: memberships, error: membershipError } = await supabase
+            .from('event_members')
+            .select(`
+              events!inner(
+                id, event_name, artist_name, is_current, expected_attendance
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('status', 'active');
+          
+          console.log('IncidentCreationModal - Membership query result:', { memberships, membershipError });
+          allEvents = memberships?.map((m: any) => m.events) || [];
+        } else if (profileError) {
+          console.warn('Profile fetch error:', profileError);
+          return;
+        } else {
+          // Regular user with company_id
+          const companyId = profile?.company_id;
+          if (!companyId) return;
+          
+          const { data: companyEvents } = await supabase
+            .from('events')
+            .select('id, event_name, artist_name, is_current, expected_attendance')
+            .eq('company_id', companyId)
+            .order('start_datetime', { ascending: false });
+          
+          allEvents = companyEvents || [];
+        }
+        
+        console.log('IncidentCreationModal - Final events result:', allEvents);
+        
+        // If no events found but we have membership, try to fetch the specific event
+        if (allEvents.length === 0 && membership?.event_id) {
+          console.log('IncidentCreationModal - No events found, trying to fetch specific event from membership:', membership.event_id);
+          const { data: specificEvent } = await supabase
+            .from('events')
+            .select('id, event_name, artist_name, is_current, expected_attendance')
+            .eq('id', membership.event_id)
+            .single();
+          
+          if (specificEvent) {
+            allEvents = [specificEvent];
+            console.log('IncidentCreationModal - Found specific event:', specificEvent);
+          }
+        }
+        
+        setEvents(allEvents);
         // Default to current event
         const current = allEvents?.find((e: any) => e.is_current);
         setSelectedEventId(prev => prev || current?.id || (allEvents?.[0]?.id ?? null));
@@ -3418,7 +3506,7 @@ export default function IncidentCreationModal({
               });
         if (response.ok) {
               const data = await response.json();
-          console.debug('AI response from /api/generate-incident-description:', data);
+          // AI response processed
           if (data.incidentType) aiIncidentType = data.incidentType;
           if (data.description) fixedOccurrence = data.description;
           if (data.priority) {
@@ -3435,17 +3523,15 @@ export default function IncidentCreationModal({
               description: data.ejectionInfo.description || '',
               reason: data.ejectionInfo.reason || ''
             }));
-            if (data.ejectionRaw) {
-              console.debug('Raw ejection extraction response:', data.ejectionRaw);
-            }
+            // Ejection data processed
           }
         } else {
-          console.debug('AI endpoint returned non-OK response:', response.status);
+          // AI endpoint returned non-OK response
           const localPriority = detectPriority(input);
           setFormData(prev => ({ ...prev, priority: localPriority || prev.priority }));
         }
       } catch (err) {
-        console.debug('Error calling AI endpoint:', err);
+        // Error calling AI endpoint
         const localPriority = detectPriority(input);
         setFormData(prev => ({ ...prev, priority: localPriority || prev.priority }));
       }
@@ -3453,7 +3539,7 @@ export default function IncidentCreationModal({
       // For attendance incidents, always use local detection and bypass AI
       const localDetection = detectIncidentType(input);
       const detectedType = localDetection === 'Attendance' ? 'Attendance' : (aiIncidentType || localDetection);
-      console.debug('Incident type chosen (AI or fallback):', detectedType);
+      // Incident type chosen
       setFormData(prev => ({ ...prev, incident_type: detectedType }));
 
       // Extract callsign
@@ -3474,7 +3560,7 @@ export default function IncidentCreationModal({
           }));
         }
       } else {
-        console.debug('Occurrence after grammar/spell check:', fixedOccurrence);
+        // Occurrence processed
         setFormData(prev => ({
           ...prev,
           occurrence: fixedOccurrence,
@@ -3652,11 +3738,31 @@ export default function IncidentCreationModal({
 
       // Get user info for logged_by fields
       const { data: { user } } = await supabase.auth.getUser()
-      const { data: userProfile } = await supabase
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+      
+      // For temporary users, we don't create profiles - use user metadata directly
+      let userProfile = null;
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user?.id || '')
+        .select('first_name, last_name, id')
+        .eq('id', user.id)
         .single()
+      
+      if (profileData) {
+        userProfile = profileData;
+      } else if (profileError) {
+        // For temporary users, profile fetch errors are expected
+        // Use user metadata from auth system instead
+        console.warn('Profile fetch error (expected for temporary users):', profileError);
+        userProfile = {
+          first_name: user.user_metadata?.full_name?.split(' ')[0] || (user.email || '').split('@')[0],
+          last_name: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+          id: user.id
+        };
+      }
       
       const userCallsign = formData.callsign_from || 
         `${userProfile?.first_name?.[0]}${userProfile?.last_name?.[0]}`.toUpperCase() ||
@@ -3667,11 +3773,6 @@ export default function IncidentCreationModal({
       const shouldBeLogged = lowPriorityTypes.includes(resolvedType) || formData.priority === 'low';
       
       // Prepare the incident data
-      console.log('IncidentCreationModal - Submitting incident with callsign_to:', {
-        formDataCallsignTo: formData.callsign_to,
-        membershipRole: membership?.role,
-        finalCallsignTo: (formData.callsign_to || 'Event Control').trim()
-      });
       
       const incidentData = {
         log_number: logNumber,
@@ -3693,7 +3794,7 @@ export default function IncidentCreationModal({
         time_logged: formData.time_logged || now,
         entry_type: formData.entry_type || 'contemporaneous',
         retrospective_justification: formData.retrospective_justification || null,
-        logged_by_user_id: user?.id || null,
+        logged_by_user_id: user.id, // We've already verified user.id exists above
         logged_by_callsign: userCallsign,
         is_amended: false,
         // Add GPS coordinates if map or what3words coordinates are available
@@ -3714,7 +3815,42 @@ export default function IncidentCreationModal({
         throw new Error('Log number already exists. Please try again.');
       }
 
+      // Ensure user has a profile for foreign key constraint
+      // This is required for the incident_logs.logged_by_user_id foreign key
+      if (!profileData) {
+        console.log('Creating minimal profile for user:', user.id);
+        
+        // Verify user is authenticated
+        if (!user.id) {
+          throw new Error('User not authenticated. Please log in again.');
+        }
+        
+        // Call server-side API to create profile with service role
+        const response = await fetch('/api/ensure-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            email: user.email || ''
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Failed to create profile via API:', errorData);
+          
+          if (response.status === 404) {
+            throw new Error('User not found in authentication system. Please log in again.');
+          } else {
+            throw new Error(`Failed to create user profile: ${errorData.error || 'Unknown error'}`);
+          }
+        }
+        
+        console.log('Profile created successfully for user:', user.id);
+      }
+
       // Insert the incident
+      console.log('About to insert incident with logged_by_user_id:', user.id);
       let insertedIncident: { id: number } | null = null;
       const { data: insertReturn, error: insertError } = await supabase
         .from('incident_logs')
@@ -3722,7 +3858,7 @@ export default function IncidentCreationModal({
         .select('id')
         .maybeSingle();
       if (insertError) {
-        console.error('❌ Insert error:', insertError);
+        console.error('Insert error:', insertError);
         throw new Error((insertError as any)?.message || 'Insert failed');
       }
       insertedIncident = insertReturn as any;
@@ -3755,7 +3891,7 @@ export default function IncidentCreationModal({
             .select();
 
           if (attendanceError) {
-            console.error('❌ Error updating attendance record:', attendanceError);
+            console.error('Error updating attendance record:', attendanceError);
             // Don't throw here, as the incident was already created
           } else {
           }
