@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabaseClient } from '@/lib/supabaseServer';
 import crypto from 'crypto';
 import { logger } from '@/lib/logger';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,38 @@ interface RedeemInviteRequest {
 // Hash code for comparison (same as in invites route)
 function hashCode(code: string): string {
   return crypto.scryptSync(code, 'incommand-invite-salt', 64).toString('hex');
+}
+
+async function findUserByEmail(
+  supabase: ReturnType<typeof getServiceSupabaseClient>,
+  email: string,
+) {
+  const normalizedEmail = email.toLowerCase();
+  const perPage = 100;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+
+    if (error) {
+      return { user: null as SupabaseUser | null, error };
+    }
+
+    const users = data?.users ?? [];
+    const match = users.find(user => (user.email ?? '').toLowerCase() === normalizedEmail);
+
+    if (match) {
+      return { user: match as SupabaseUser, error: null };
+    }
+
+    if (!data?.nextPage || data.nextPage <= page || users.length === 0) {
+      break;
+    }
+
+    page = data.nextPage;
+  }
+
+  return { user: null as SupabaseUser | null, error: null };
 }
 
 export async function POST(request: NextRequest) {
@@ -69,7 +102,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if invite has reached max uses
-    if (invite.used_count >= invite.max_uses) {
+    const maxUses = invite.max_uses ?? 1;
+
+    if (invite.used_count >= maxUses) {
       return NextResponse.json({ error: 'Invite has reached maximum uses' }, { status: 410 });
     }
 
@@ -78,16 +113,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email does not match intended recipient' }, { status: 403 });
     }
 
-    // Check if user already exists
-    const { data: existingUser, error: userError } = await supabase.auth.admin.listUsers();
-
     let userId: string;
     let isNewUser = false;
 
-    // Find user by email
-    const user = existingUser.users?.find(u => u.email === body.email);
-    
-    if (userError || !user) {
+    const { user, error: userLookupError } = await findUserByEmail(supabase, body.email);
+
+    if (userLookupError) {
+      logger.error('Failed to list users for invite redemption', userLookupError, {
+        component: 'InviteRedeemAPI',
+        action: 'listUsers',
+        email: body.email,
+      });
+      return NextResponse.json({ error: 'Failed to verify existing users' }, { status: 500 });
+    }
+
+    if (!user) {
       // Create new user
       const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
         email: body.email,
@@ -191,11 +231,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Update invite usage count
+    const newUsedCount = invite.used_count + 1;
+    const inviteStatus = newUsedCount >= maxUses ? 'locked' : 'active';
+
     const { error: updateInviteError } = await supabase
       .from('event_invites')
       .update({
-        used_count: invite.used_count + 1,
-        last_used_at: new Date().toISOString()
+        used_count: newUsedCount,
+        last_used_at: new Date().toISOString(),
+        status: inviteStatus,
       })
       .eq('id', invite.id);
 
@@ -208,13 +252,21 @@ export async function POST(request: NextRequest) {
     }
 
         // Generate a session token for the user
-        const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: body.email,
-          options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/incidents?event=${invite.event_id}`
-          }
-        });
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const redirectParams = new URLSearchParams({
+      inviteId: invite.id,
+      role: invite.role,
+      eventId: invite.event_id,
+      isTemporary: 'true',
+    });
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: body.email,
+      options: {
+        redirectTo: `${baseUrl}/auth/magic-link?${redirectParams.toString()}`
+      }
+    });
 
     if (sessionError || !sessionData) {
       logger.error('Failed to generate session token', sessionError, {
@@ -250,10 +302,12 @@ export async function POST(request: NextRequest) {
       isNewUser
     });
 
+    const incidentsRedirect = invite.event_id ? `/incidents?event=${invite.event_id}` : '/incidents';
+
     return NextResponse.json({
       success: true,
       session_token: sessionData.properties.action_link,
-      redirect_url: '/incidents',
+      redirect_url: incidentsRedirect,
       message: 'Invite redeemed successfully. You are now logged in.',
       is_new_user: isNewUser
     });

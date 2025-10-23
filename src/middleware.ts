@@ -36,26 +36,18 @@ export async function middleware(req: NextRequest) {
     "/auth/magic-link"
   ]
 
-  // Define callback routes that should be allowed even without full authentication
-  const callbackRoutes = [
-    "/api/auth/invite-callback"
-  ]
-
   // Check if the route is public
   const isPublicRoute = publicRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  
-  // Check if the route is a callback route
-  const isCallbackRoute = callbackRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-  
+
   // Check if the route is an auth callback route
   const isAuthCallbackRoute = authCallbackRoutes.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 
   // Check if this is a magic link authentication (has access_token in URL)
   const hasAccessToken = req.nextUrl.hash.includes('access_token=') || req.nextUrl.searchParams.has('access_token')
 
-  if (isPublicRoute || isCallbackRoute || isAuthCallbackRoute) {
+  if (isPublicRoute || isAuthCallbackRoute) {
     // Special handling for callback routes - allow them to proceed without authentication checks
-    if (isCallbackRoute || isAuthCallbackRoute) {
+    if (isAuthCallbackRoute) {
       return res
     }
     

@@ -125,7 +125,7 @@ The Scoped Access System allows event organizers to invite temporary users (medi
 ### For Users
 
 - `POST /api/invite/redeem` - Redeem invite token
-- `POST /api/auth/invite-callback` - Handle authentication callback
+- `POST /api/auth/magic-link` - Verify invite details when automatic authentication fails
 
 ### For System
 
