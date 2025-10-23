@@ -89,6 +89,7 @@ interface Incident {
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
   const isAdmin = useIsAdmin()
+  const { user } = useAuth()
   const [incident, setIncident] = useState<Incident | null>(null)
   const [updates, setUpdates] = useState<IncidentUpdate[]>([])
   const [newUpdate, setNewUpdate] = useState('')
@@ -106,6 +107,57 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [isAmendmentModalOpen, setIsAmendmentModalOpen] = useState(false)
   const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false)
   const [revisionCount, setRevisionCount] = useState(0)
+  const [currentUserName, setCurrentUserName] = useState('Event Control')
+
+  useEffect(() => {
+    let cancelled = false
+
+    const resolveDisplayName = async () => {
+      if (!user?.id) {
+        setCurrentUserName('Event Control')
+        return
+      }
+
+      const metadataName = (user.user_metadata?.full_name as string | undefined)
+        || (user.user_metadata?.name as string | undefined)
+        || (user.user_metadata?.display_name as string | undefined)
+
+      if (metadataName) {
+        setCurrentUserName(metadataName)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('display_name, full_name, callsign')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (cancelled) {
+          return
+        }
+
+        if (error) {
+          throw error
+        }
+
+        const profileName = data?.display_name || data?.full_name || data?.callsign || user.email || 'Event Control'
+        setCurrentUserName(profileName)
+      } catch (profileError) {
+        console.warn('Unable to resolve profile name for incident updates', profileError)
+        if (!cancelled) {
+          setCurrentUserName(user.email || 'Event Control')
+        }
+      }
+    }
+
+    resolveDisplayName()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.email, user?.user_metadata])
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return 'Timestamp unavailable'
@@ -335,7 +387,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         .insert({
           incident_id: incident.id,
           update_text: newUpdate,
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: currentUserName
         });
 
       if (error) throw error;
@@ -395,7 +447,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         .insert({
           incident_id: incident.id,
           update_text: 'Incident details updated',
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: currentUserName
         });
 
       if (auditError) throw auditError;
@@ -431,7 +483,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         .insert({
           incident_id: incident.id,
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
-          updated_by: 'Event Control' // TODO: Use actual user
+          updated_by: currentUserName
         });
 
       if (auditError) throw auditError;

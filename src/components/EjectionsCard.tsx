@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'react';
-import { UserMinusIcon } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useState } from 'react'
+import { UserMinusIcon } from '@heroicons/react/24/outline'
+
+interface ApiResponse {
+  total: number
+  recent: number
+  trend: 'up' | 'down' | 'stable'
+}
 
 interface EjectionStats {
   total: number;
@@ -12,33 +18,39 @@ export default function EjectionsCard() {
     total: 0,
     recent: 0,
     trend: 'stable'
-  });
-  const [loading, setLoading] = useState(true);
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadStats = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/analytics/ejections')
+      if (!response.ok) {
+        throw new Error('Unable to load ejection statistics')
+      }
+
+      const data = (await response.json()) as ApiResponse
+      setStats({
+        total: data.total,
+        recent: data.recent,
+        trend: data.trend
+      })
+    } catch (err) {
+      console.error('Error fetching ejection stats:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    // TODO: Replace with actual API call
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        // Simulated data - replace with actual API call
-        const data = {
-          total: 12,
-          recent: 3,
-          trend: 'stable' as const
-        };
-        setStats(data);
-      } catch (error) {
-        console.error('Error fetching ejection stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-    // Refresh stats every 5 minutes
-    const interval = setInterval(fetchStats, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    loadStats()
+    const interval = setInterval(loadStats, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loadStats])
 
   if (loading) {
     return (
@@ -106,7 +118,13 @@ export default function EjectionsCard() {
             <p className="text-lg font-semibold">{stats.recent}</p>
           </div>
         </div>
+
+        {error && (
+          <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">
+            {error}
+          </p>
+        )}
       </div>
     </div>
-  );
-} 
+  )
+}

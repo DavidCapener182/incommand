@@ -28,7 +28,8 @@ export async function middleware(req: NextRequest) {
     "/terms",
     "/login",
     "/signup",
-    "/invite"
+    "/invite",
+    "/induction"
   ]
 
   // Define auth callback routes that need special handling

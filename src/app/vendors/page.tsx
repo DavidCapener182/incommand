@@ -1,17 +1,24 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, QrCode, Send, ShieldCheck, Users } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { DomainSetupDebugCard } from '@/components/ui/DebugCard'
-import type { VendorAccreditation, VendorAccessLevel, VendorProfile } from '@/types/vendor'
+import type {
+  VendorAccreditation,
+  VendorAccessLevel,
+  VendorProfile,
+  VendorInductionEvent
+} from '@/types/vendor'
 import {
   fetchVendorAccreditations,
   fetchVendorAccessLevels,
   fetchVendorProfiles,
   submitVendorApplication,
+  fetchVendorInductionEvents,
   updateVendorAccreditationIdentity,
-  updateVendorAccreditationStatus
+  updateVendorAccreditationStatus,
+  issueVendorPass
 } from '@/services/vendorService'
 import {
   Dialog,
@@ -55,6 +62,7 @@ export default function VendorPortalPage() {
   const [vendors, setVendors] = useState<VendorProfile[]>([])
   const [accreditations, setAccreditations] = useState<VendorAccreditation[]>([])
   const [accessLevels, setAccessLevels] = useState<VendorAccessLevel[]>([])
+  const [inductionEvents, setInductionEvents] = useState<VendorInductionEvent[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null)
   const [formState, setFormState] = useState(defaultFormState)
   const [applicationModalOpen, setApplicationModalOpen] = useState(false)
@@ -70,15 +78,17 @@ export default function VendorPortalPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [profileData, accreditationData, accessLevelData] = await Promise.all([
+      const [profileData, accreditationData, accessLevelData, inductionEventData] = await Promise.all([
         fetchVendorProfiles(),
         fetchVendorAccreditations(),
-        fetchVendorAccessLevels()
+        fetchVendorAccessLevels(),
+        fetchVendorInductionEvents()
       ])
 
       setVendors(profileData)
       setAccreditations(accreditationData)
       setAccessLevels(accessLevelData)
+      setInductionEvents(inductionEventData)
 
       if (!selectedVendorId && profileData.length > 0) {
         setSelectedVendorId(profileData[0].id)
@@ -109,10 +119,15 @@ export default function VendorPortalPage() {
     [accreditations]
   )
 
-  const pendingAccreditations = useMemo(
-    () => accreditations.filter((accreditation) => accreditation.status === 'pending_review'),
-    [accreditations]
-  )
+  const pendingAccreditations = useMemo(() => (
+    accreditations
+      .filter((accreditation) => accreditation.status === 'pending_review')
+      .sort((a, b) => {
+        const aTime = a.induction_completed_at ? new Date(a.induction_completed_at).getTime() : 0
+        const bTime = b.induction_completed_at ? new Date(b.induction_completed_at).getTime() : 0
+        return bTime - aTime
+      })
+  ), [accreditations])
 
   const approvedAccreditations = useMemo(
     () => accreditations.filter((accreditation) => accreditation.status === 'approved'),
@@ -130,6 +145,57 @@ export default function VendorPortalPage() {
     }
     return vendors.find((vendor) => vendor.id === reviewingAccreditation.vendor_id) || null
   }, [reviewingAccreditation, vendors])
+
+  const activityFeed = useMemo(() => {
+    if (inductionEvents.length === 0) {
+      return []
+    }
+
+    return inductionEvents.slice(0, 10).map((event) => {
+      const vendorName = event.accreditation?.vendor?.business_name || 'Unknown vendor'
+      const timestamp = formatDateTime(event.created_at)
+      let title = 'Induction update'
+      let description = `${vendorName} event recorded.`
+      let icon: 'email' | 'link' | 'complete' | 'pass' = 'link'
+
+      switch (event.event_type) {
+        case 'email_sent':
+          title = 'Induction email sent'
+          description = `${vendorName} received induction instructions.`
+          icon = 'email'
+          break
+        case 'email_failed':
+          title = 'Email delivery issue'
+          description = `Failed to reach ${vendorName}. Check email configuration.`
+          icon = 'email'
+          break
+        case 'completed':
+          title = 'Induction complete'
+          description = `${vendorName} acknowledged induction.`
+          icon = 'complete'
+          break
+        case 'pass_issued':
+          title = 'Digital pass issued'
+          description = `${vendorName} assigned accreditation credentials.`
+          icon = 'pass'
+          break
+        case 'link_opened':
+        default:
+          title = 'Induction link opened'
+          description = `${vendorName} accessed their induction link.`
+          icon = 'link'
+          break
+      }
+
+      return {
+        id: event.id,
+        title,
+        description,
+        timestamp,
+        icon
+      }
+    })
+  }, [inductionEvents])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -192,6 +258,15 @@ export default function VendorPortalPage() {
         id_document_type: reviewForm.id_document_type.trim() || null,
         id_document_reference: reviewForm.id_document_reference.trim() || null
       })
+
+      if (status === 'approved') {
+        const randomToken = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10)
+        const environmentUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+        const baseUrl = environmentUrl ? environmentUrl.replace(/\/$/, '') : 'https://incommand.app'
+        const passUrl = `${baseUrl}/passes/${reviewingAccreditation.id}`
+
+        await issueVendorPass(reviewingAccreditation.id, passUrl, randomToken)
+      }
 
       await updateVendorAccreditationStatus(
         reviewingAccreditation.id,
@@ -439,6 +514,38 @@ export default function VendorPortalPage() {
             )}
           </div>
         </section>
+
+        <section className="module-card">
+          <div className="module-card-header">
+            <div>
+              <h2 className="module-card-title">Accreditation Activity</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Monitor induction events and pass issuance in real time.</p>
+            </div>
+          </div>
+          <div className="module-card-body">
+            {activityFeed.length > 0 ? (
+              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+                {activityFeed.map((item) => (
+                  <li key={item.id} className="py-3 flex items-start gap-3">
+                    <div className="mt-1 rounded-full bg-blue-600/10 p-2 text-blue-600 dark:text-blue-300">
+                      {item.icon === 'email' && <Send className="h-4 w-4" />}
+                      {item.icon === 'link' && <Users className="h-4 w-4" />}
+                      {item.icon === 'complete' && <ShieldCheck className="h-4 w-4" />}
+                      {item.icon === 'pass' && <QrCode className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{item.timestamp}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="module-empty">No recent induction activity yet.</div>
+            )}
+          </div>
+        </section>
       </main>
 
       <button
@@ -502,25 +609,30 @@ export default function VendorPortalPage() {
               </div>
             </div>
             <div>
-              <label>Requested access level</label>
-              <select
-                value={formState.access_level_ids[0] ?? ''}
-                onChange={(event) => {
-                  const value = event.target.value
-                  setFormState((prev) => ({ ...prev, access_level_ids: value ? [value] : [] }))
-                }}
-                className="module-select mt-2"
-                required={accessLevels.length > 0}
-              >
-                <option value="">{accessLevels.length > 0 ? 'Select access level' : 'Configure access levels first'}</option>
-                {accessLevels.map((level) => (
-                  <option key={level.id} value={level.id}>
-                    {level.name}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Requested access levels</label>
+              {accessLevels.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-sm text-gray-500 dark:text-gray-400">
+                  No access levels configured. Populate <code>vendor_access_levels</code> in Supabase to enable selections.
+                </div>
+              ) : (
+                <select
+                  multiple
+                  value={formState.access_level_ids}
+                  onChange={(event) => {
+                    const selected = Array.from(event.target.selectedOptions).map((option) => option.value)
+                    setFormState((prev) => ({ ...prev, access_level_ids: selected }))
+                  }}
+                  className="module-select mt-2 h-32"
+                >
+                  {accessLevels.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Configure access levels in Supabase table <code>vendor_access_levels</code> to manage available options.
+                Hold Ctrl (Windows) or ⌘ (macOS) to select multiple access types.
               </p>
             </div>
             <div>

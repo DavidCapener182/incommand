@@ -5,7 +5,7 @@ interface RouteContext {
   params: { token: string }
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const token = context.params.token
 
   if (!token) {
@@ -24,6 +24,19 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Accreditation not found' }, { status: 404 })
     }
 
+    const forwardedFor = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    const ipAddress = forwardedFor?.split(',')[0]?.trim()
+    const userAgent = request.headers.get('user-agent') || undefined
+
+    await supabase
+      .from('vendor_induction_events')
+      .insert({
+        accreditation_id: data.id,
+        event_type: 'link_opened',
+        ip_address: ipAddress || null,
+        user_agent: userAgent || null
+      })
+
     return NextResponse.json({ accreditation: data })
   } catch (error) {
     console.error('Error retrieving induction details', error)
@@ -31,7 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-export async function PATCH(_request: Request, context: RouteContext) {
+export async function PATCH(request: Request, context: RouteContext) {
   const token = context.params.token
 
   if (!token) {
@@ -69,6 +82,19 @@ export async function PATCH(_request: Request, context: RouteContext) {
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
+
+    const forwardedFor = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+    const ipAddress = forwardedFor?.split(',')[0]?.trim()
+    const userAgent = request.headers.get('user-agent') || undefined
+
+    await supabase
+      .from('vendor_induction_events')
+      .insert({
+        accreditation_id: accreditation.id,
+        event_type: 'completed',
+        ip_address: ipAddress || null,
+        user_agent: userAgent || null
+      })
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -63,6 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('timestamp', { ascending: false })
       .limit(limit * 2); // Get more to account for filtering
 
+    const profileIds = new Set<string>();
+
     if (incidentsError) {
       console.error('Error fetching incidents:', incidentsError);
     } else if (incidents) {
@@ -73,6 +75,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           'Evacuation', 'Medical', 'Suspicious Behaviour'
         ].includes(incident.incident_type);
 
+        const contributingUserId = incident.logged_by_user_id || incident.created_by_profile_id || incident.reported_by_profile_id;
+        if (contributingUserId) {
+          profileIds.add(contributingUserId);
+        }
+
         actions.push({
           id: `incident-${incident.id}`,
           type: 'incident',
@@ -80,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           title: `${incident.incident_type} ${incident.is_closed ? '(Closed)' : ''}`,
           description: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
           timestamp: incident.timestamp,
-          userName: 'Event Control',
+          userId: contributingUserId,
           priority: isHighPriority ? 'high' : 'medium',
           link: `/incidents#${incident.id}`
         });
@@ -108,6 +115,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.warn('Audit logs not available:', auditError.message);
       } else if (auditLogs) {
         auditLogs.forEach(log => {
+          if (log.performed_by) {
+            profileIds.add(log.performed_by);
+          }
           actions.push({
             id: `audit-${log.id}`,
             type: 'audit',
@@ -115,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             title: `${log.action} ${log.table_name}`,
             description: `Record ID: ${log.record_id}`,
             timestamp: log.created_at,
-            userName: 'System', // TODO: Look up user name from performed_by if needed
+            userId: log.performed_by || undefined,
             priority: 'low',
           });
         });
@@ -124,6 +134,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Silently skip audit logs if table doesn't exist
       console.warn('Audit logs table not available');
     }
+
+    if (profileIds.size > 0) {
+      try {
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, display_name, full_name, callsign')
+          .in('id', Array.from(profileIds))
+
+        if (profileError) {
+          console.warn('Profile lookup failed for recent actions:', profileError.message)
+        } else if (profiles) {
+          const profileMap = new Map<string, string>()
+          profiles.forEach((profile) => {
+            profileMap.set(
+              profile.id,
+              profile.display_name || profile.full_name || profile.callsign || 'Team Member'
+            )
+          })
+
+          actions.forEach((action) => {
+            if (action.userId) {
+              const resolved = profileMap.get(action.userId)
+              if (resolved) {
+                action.userName = resolved
+              }
+            }
+          })
+        }
+      } catch (profileLookupError) {
+        console.warn('Unable to resolve user names for recent actions', profileLookupError)
+      }
+    }
+
+    actions.forEach((action) => {
+      if (!action.userName) {
+        action.userName = action.type === 'audit' ? 'System' : 'Event Control'
+      }
+    })
 
     // Sort all actions by timestamp (newest first)
     actions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

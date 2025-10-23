@@ -77,3 +77,20 @@ export interface VendorApplicationPayload {
   access_level_ids?: string[]
   notes?: string
 }
+
+export type VendorInductionEventType = 'link_opened' | 'completed' | 'email_sent' | 'email_failed' | 'pass_issued'
+
+export interface VendorInductionEvent {
+  id: string
+  accreditation_id: string
+  event_type: VendorInductionEventType
+  ip_address?: string | null
+  user_agent?: string | null
+  created_at: string
+  accreditation?: {
+    id: string
+    status: VendorAccreditationStatus
+    vendor_id: string
+    vendor?: Pick<VendorProfile, 'business_name' | 'service_type'>
+  } | null
+}

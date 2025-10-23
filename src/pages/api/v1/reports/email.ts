@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { emailService } from '@/lib/notifications/emailService'
 
 /**
  * Send event report via email
@@ -32,38 +33,23 @@ export default async function handler(
       return res.status(400).json({ error: 'Report data is required' })
     }
 
-    // Generate email body
     const emailBody = generateEmailBody(reportData, message)
+    const fallbackEventName = eventName || reportData?.event?.name || 'Event'
+    const csvAttachment = includeAttachment ? generateCSVAttachment(reportData) : null
 
-    // Generate CSV attachment if requested
-    let attachment = null
-    if (includeAttachment) {
-      attachment = generateCSVAttachment(reportData)
-    }
-
-    // In a production environment, you would use a service like SendGrid, AWS SES, or Nodemailer
-    // For now, we'll log the email and return success
-    console.log('Email Report Request:', {
-      to: recipients,
-      subject: subject || `Event Report: ${eventName}`,
-      body: emailBody,
-      hasAttachment: !!attachment,
-      eventId
-    })
-
-    // TODO: Implement actual email sending
-    // Example with a hypothetical email service:
-    /*
     await emailService.send({
       to: recipients,
-      subject: subject || `Event Report: ${eventName}`,
+      subject: subject || `Event Report: ${fallbackEventName}`,
       html: emailBody,
-      attachments: attachment ? [{
-        filename: `event-report-${eventId}.csv`,
-        content: attachment
-      }] : []
+      text: generatePlainText(reportData, message),
+      attachments: csvAttachment
+        ? [{
+            filename: `event-report-${eventId || 'summary'}.csv`,
+            content: Buffer.from(csvAttachment, 'utf8'),
+            contentType: 'text/csv'
+          }]
+        : undefined
     })
-    */
 
     return res.status(200).json({
       success: true,
@@ -80,8 +66,21 @@ export default async function handler(
   }
 }
 
-function generateEmailBody(reportData: any, customMessage: string): string {
-  const { event, incidents, staff, lessonsLearned, aiInsights } = reportData
+function generateEmailBody(reportData: any, customMessage = ''): string {
+  const {
+    event = {},
+    incidents = {},
+    staff = {},
+    lessonsLearned = { strengths: [], improvements: [], recommendations: [] },
+    aiInsights
+  } = reportData || {}
+
+  const avgResponseTime = Number.isFinite(Number(incidents?.avgResponseTime))
+    ? Number(incidents.avgResponseTime)
+    : 0
+  const efficiencyScore = Number.isFinite(Number(staff?.efficiencyScore))
+    ? Number(staff.efficiencyScore)
+    : 0
 
   return `
 <!DOCTYPE html>
@@ -102,8 +101,8 @@ function generateEmailBody(reportData: any, customMessage: string): string {
 </head>
 <body>
   <div class="header">
-    <h1>Event Report: ${event.name}</h1>
-    <p>${new Date(event.event_date).toLocaleDateString()} | ${event.venue_name}</p>
+    <h1>Event Report: ${event.name || 'Event'}</h1>
+    <p>${event.event_date ? new Date(event.event_date).toLocaleDateString() : 'Date TBC'} | ${event.venue_name || 'Venue TBC'}</p>
   </div>
   
   <div class="content">
@@ -117,23 +116,23 @@ function generateEmailBody(reportData: any, customMessage: string): string {
     <div class="section">
       <h2 class="section-title">Key Metrics</h2>
       <div class="metric">
-        <div class="metric-value">${incidents.total}</div>
+        <div class="metric-value">${Number(incidents.total ?? 0)}</div>
         <div class="metric-label">Total Incidents</div>
       </div>
       <div class="metric">
-        <div class="metric-value">${incidents.resolved}</div>
+        <div class="metric-value">${Number(incidents.resolved ?? 0)}</div>
         <div class="metric-label">Resolved</div>
       </div>
       <div class="metric">
-        <div class="metric-value">${incidents.avgResponseTime.toFixed(1)}m</div>
+        <div class="metric-value">${avgResponseTime.toFixed(1)}m</div>
         <div class="metric-label">Avg Response Time</div>
       </div>
       <div class="metric">
-        <div class="metric-value">${staff.assignedPositions}</div>
+        <div class="metric-value">${Number(staff.assignedPositions ?? 0)}</div>
         <div class="metric-label">Staff Positions</div>
       </div>
       <div class="metric">
-        <div class="metric-value">${staff.efficiencyScore.toFixed(0)}%</div>
+        <div class="metric-value">${efficiencyScore.toFixed(0)}%</div>
         <div class="metric-label">Efficiency Score</div>
       </div>
     </div>
@@ -142,13 +141,13 @@ function generateEmailBody(reportData: any, customMessage: string): string {
       <h2 class="section-title">Lessons Learned</h2>
       
       <h3 style="color: #10B981;">✓ Strengths</h3>
-      ${lessonsLearned.strengths.map((s: string) => `<div class="list-item">• ${s}</div>`).join('')}
+      ${(lessonsLearned.strengths || []).map((s: string) => `<div class="list-item">• ${s}</div>`).join('')}
       
       <h3 style="color: #F59E0B; margin-top: 15px;">⚠ Areas for Improvement</h3>
-      ${lessonsLearned.improvements.map((i: string) => `<div class="list-item">• ${i}</div>`).join('')}
+      ${(lessonsLearned.improvements || []).map((i: string) => `<div class="list-item">• ${i}</div>`).join('')}
       
       <h3 style="color: #3B82F6; margin-top: 15px;">💡 Recommendations</h3>
-      ${lessonsLearned.recommendations.map((r: string) => `<div class="list-item">• ${r}</div>`).join('')}
+      ${(lessonsLearned.recommendations || []).map((r: string) => `<div class="list-item">• ${r}</div>`).join('')}
     </div>
   </div>
   
@@ -161,8 +160,61 @@ function generateEmailBody(reportData: any, customMessage: string): string {
   `.trim()
 }
 
+function generatePlainText(reportData: any, customMessage = ''): string {
+  const {
+    event = {},
+    incidents = {},
+    staff = {},
+    lessonsLearned = { strengths: [], improvements: [], recommendations: [] },
+    aiInsights
+  } = reportData || {}
+
+  const avgResponseTime = Number.isFinite(Number(incidents?.avgResponseTime))
+    ? Number(incidents.avgResponseTime)
+    : 0
+  const efficiencyScore = Number.isFinite(Number(staff?.efficiencyScore))
+    ? Number(staff.efficiencyScore)
+    : 0
+
+  const eventDate = event.event_date ? new Date(event.event_date).toLocaleDateString() : 'Date TBC'
+  const lines = [
+    `Event Report: ${event.name || 'Event'}`,
+    `${eventDate} | ${event.venue_name || 'Venue TBC'}`,
+    '',
+    customMessage || '',
+    'Executive Summary:',
+    aiInsights || 'AI-generated insights not available',
+    '',
+    'Key Metrics:',
+    `- Total Incidents: ${Number(incidents.total ?? 0)}`,
+    `- Resolved: ${Number(incidents.resolved ?? 0)}`,
+    `- Avg Response Time: ${avgResponseTime.toFixed(1)} minutes`,
+    `- Staff Positions: ${Number(staff.assignedPositions ?? 0)}`,
+    `- Efficiency Score: ${efficiencyScore.toFixed(0)}%`,
+    '',
+    'Strengths:',
+    ...lessonsLearned.strengths.map((item: string) => `• ${item}`),
+    '',
+    'Areas for Improvement:',
+    ...lessonsLearned.improvements.map((item: string) => `• ${item}`),
+    '',
+    'Recommendations:',
+    ...lessonsLearned.recommendations.map((item: string) => `• ${item}`),
+    '',
+    'Generated by inCommand Event Management System'
+  ]
+
+  return lines.filter(Boolean).join('\n')
+}
+
 function generateCSVAttachment(reportData: any): string {
-  const { event, incidents, staff, lessonsLearned, aiInsights } = reportData
+  const {
+    event = {},
+    incidents = {},
+    staff = {},
+    lessonsLearned = { strengths: [], improvements: [], recommendations: [] },
+    aiInsights
+  } = reportData || {}
 
   const rows = [
     ['Event Report', event.name],
@@ -170,24 +222,24 @@ function generateCSVAttachment(reportData: any): string {
     ['Venue', event.venue_name],
     [''],
     ['INCIDENT SUMMARY'],
-    ['Total Incidents', incidents.total],
-    ['Resolved', incidents.resolved],
-    ['Open', incidents.open],
-    ['Average Response Time (min)', incidents.avgResponseTime.toFixed(1)],
+    ['Total Incidents', Number(incidents.total ?? 0)],
+    ['Resolved', Number(incidents.resolved ?? 0)],
+    ['Open', Number(incidents.open ?? 0)],
+    ['Average Response Time (min)', Number.isFinite(Number(incidents.avgResponseTime)) ? Number(incidents.avgResponseTime).toFixed(1) : '0.0'],
     [''],
     ['STAFF PERFORMANCE'],
-    ['Assigned Positions', staff.assignedPositions],
-    ['Radio Sign-outs', staff.radioSignouts],
-    ['Efficiency Score (%)', staff.efficiencyScore.toFixed(0)],
+    ['Assigned Positions', Number(staff.assignedPositions ?? 0)],
+    ['Radio Sign-outs', Number(staff.radioSignouts ?? 0)],
+    ['Efficiency Score (%)', Number.isFinite(Number(staff.efficiencyScore)) ? Number(staff.efficiencyScore).toFixed(0) : '0'],
     [''],
     ['LESSONS LEARNED - STRENGTHS'],
-    ...(lessonsLearned.strengths.map((s: string) => ['', s])),
+    ...((lessonsLearned.strengths || []).map((s: string) => ['', s])),
     [''],
     ['LESSONS LEARNED - IMPROVEMENTS'],
-    ...(lessonsLearned.improvements.map((i: string) => ['', i])),
+    ...((lessonsLearned.improvements || []).map((i: string) => ['', i])),
     [''],
     ['LESSONS LEARNED - RECOMMENDATIONS'],
-    ...(lessonsLearned.recommendations.map((r: string) => ['', r])),
+    ...((lessonsLearned.recommendations || []).map((r: string) => ['', r])),
     [''],
     ['AI INSIGHTS'],
     ['', aiInsights]
@@ -195,4 +247,3 @@ function generateCSVAttachment(reportData: any): string {
 
   return rows.map(row => row.map((cell: any) => `"${cell}"`).join(',')).join('\n')
 }
-

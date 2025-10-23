@@ -5,7 +5,8 @@ import type {
   VendorInduction,
   VendorProfile,
   VendorAccessLevel,
-  VendorAccreditationStatus
+  VendorAccreditationStatus,
+  VendorInductionEvent
 } from '@/types/vendor'
 
 import { supabase } from '@/lib/supabase'
@@ -111,6 +112,50 @@ export async function fetchVendorAuditLog(accreditationId: string): Promise<Vend
   return (data || []) as VendorAccreditationAuditLog[]
 }
 
+export async function fetchVendorInductionEvents(): Promise<VendorInductionEvent[]> {
+  const { data, error } = await supabase
+    .from('vendor_induction_events')
+    .select(`
+      id,
+      accreditation_id,
+      event_type,
+      ip_address,
+      user_agent,
+      created_at,
+      vendor_accreditations!inner (
+        id,
+        status,
+        vendor_id,
+        vendors (
+          business_name,
+          service_type
+        )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (data || []).map((row: any) => {
+    const { vendor_accreditations: accreditationRecord, ...rest } = row
+
+    return {
+      ...rest,
+      accreditation: accreditationRecord
+        ? {
+            id: accreditationRecord.id,
+            status: accreditationRecord.status,
+            vendor_id: accreditationRecord.vendor_id,
+            vendor: accreditationRecord.vendors || null
+          }
+        : null
+    }
+  }) as VendorInductionEvent[]
+}
+
 export async function submitVendorApplication(payload: VendorApplicationPayload) {
   const response = await fetch('/api/accreditations', {
     method: 'POST',
@@ -204,6 +249,13 @@ export async function issueVendorPass(accreditationId: string, passUrl: string, 
   if (error) {
     throw new Error(error.message)
   }
+
+  await supabase
+    .from('vendor_induction_events')
+    .insert({
+      accreditation_id: accreditationId,
+      event_type: 'pass_issued'
+    })
 }
 
 export async function refreshVendorAccreditationAccessLevels(accreditationId: string, accessLevelIds: string[]) {

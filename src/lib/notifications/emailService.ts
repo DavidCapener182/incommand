@@ -39,6 +39,12 @@ class ResendProvider implements EmailProvider {
 
   async send(options: EmailOptions): Promise<boolean> {
     try {
+      const attachments = options.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        content: (typeof attachment.content === 'string' ? Buffer.from(attachment.content) : attachment.content).toString('base64'),
+        type: attachment.contentType
+      }))
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -53,7 +59,8 @@ class ResendProvider implements EmailProvider {
           text: options.text,
           cc: options.cc,
           bcc: options.bcc,
-          reply_to: options.replyTo
+          reply_to: options.replyTo,
+          attachments
         })
       })
 
@@ -84,6 +91,13 @@ class SendGridProvider implements EmailProvider {
 
   async send(options: EmailOptions): Promise<boolean> {
     try {
+      const attachments = options.attachments?.map((attachment) => ({
+        content: (typeof attachment.content === 'string' ? Buffer.from(attachment.content) : attachment.content).toString('base64'),
+        type: attachment.contentType,
+        filename: attachment.filename,
+        disposition: 'attachment'
+      }))
+
       const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
         headers: {
@@ -104,7 +118,8 @@ class SendGridProvider implements EmailProvider {
           content: [
             { type: 'text/html', value: options.html },
             { type: 'text/plain', value: options.text || '' }
-          ]
+          ],
+          attachments
         })
       })
 

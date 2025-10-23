@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: accreditationError?.message ?? 'Unable to create accreditation record' }, { status: 500 })
     }
 
-    if (access_level_ids?.length) {
+    if (access_level_ids && access_level_ids.length > 0) {
       const rows = access_level_ids.map((access_level_id) => ({
         accreditation_id: accreditation.id,
         access_level_id
@@ -70,8 +70,16 @@ export async function POST(request: Request) {
       }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || ''
-    const inductionLink = `${appUrl.replace(/\/$/, '')}/induction/${encodeURIComponent(inductionToken)}`
+    const originFromRequest = request.headers.get('origin') || new URL(request.url).origin
+    const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || originFromRequest
+    const baseUrl = rawBaseUrl?.replace(/\/$/, '')
+
+    if (!baseUrl) {
+      console.error('Missing base URL configuration for induction emails')
+      return NextResponse.json({ error: 'Accreditation created but induction URL could not be generated' }, { status: 500 })
+    }
+
+    const inductionLink = `${baseUrl}/induction/${encodeURIComponent(inductionToken)}`
 
     try {
       await emailService.send({
@@ -88,8 +96,21 @@ export async function POST(request: Request) {
         `,
         text: `Hi ${rest.contact_name || business_name},\n\nThank you for submitting your accreditation request for ${business_name}.\n\nPlease complete the induction using the link below to continue:\n${inductionLink}\n\nWe look forward to working with you.\n\ninCommand Accreditation Team`
       })
+
+      await supabase
+        .from('vendor_induction_events')
+        .insert({
+          accreditation_id: accreditation.id,
+          event_type: 'email_sent'
+        })
     } catch (error) {
       console.error('Failed to send induction email', error)
+      await supabase
+        .from('vendor_induction_events')
+        .insert({
+          accreditation_id: accreditation.id,
+          event_type: 'email_failed'
+        })
       return NextResponse.json({ error: 'Accreditation created but email failed to send' }, { status: 502 })
     }
 
