@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 export default function DebugMagicLinkPage() {
   const searchParams = useSearchParams();
+  const entries = Array.from(searchParams?.entries?.() ?? []);
   const [hash, setHash] = useState('');
 
   useEffect(() => {
@@ -35,12 +36,12 @@ export default function DebugMagicLinkPage() {
             <h2 className="text-lg font-semibold mb-2">Query Parameters:</h2>
             <div className="bg-gray-100 p-2 rounded">
               <ul className="space-y-1">
-                {Array.from(searchParams.entries()).map(([key, value]) => (
+                {entries.map(([key, value]) => (
                   <li key={key} className="font-mono text-sm">
                     <strong>{key}:</strong> {value}
                   </li>
                 ))}
-                {Array.from(searchParams.entries()).length === 0 && (
+                {entries.length === 0 && (
                   <li className="text-gray-500">No query parameters</li>
                 )}
               </ul>
@@ -51,7 +52,7 @@ export default function DebugMagicLinkPage() {
             <h2 className="text-lg font-semibold mb-2">All Search Params:</h2>
             <div className="bg-gray-100 p-2 rounded">
               <pre className="text-sm">
-                {JSON.stringify(Object.fromEntries(searchParams.entries()), null, 2)}
+                {JSON.stringify(Object.fromEntries(entries), null, 2)}
               </pre>
             </div>
           </div>

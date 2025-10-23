@@ -2720,7 +2720,6 @@ export default function IncidentCreationModal({
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   const { user } = useAuth();
-  const { membership } = useEventMembership();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);

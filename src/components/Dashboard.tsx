@@ -52,10 +52,10 @@ import { PageWrapper } from './layout/PageWrapper'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
-import AnalyticsKPICards from './Analytics/AnalyticsKPICards'
+import AnalyticsKPICards from './analytics/AnalyticsKPICards'
 import MiniTrendChart from './MiniTrendChart'
-import RealtimeAlertBanner from './Analytics/RealtimeAlertBanner'
-import RealtimeStatusIndicator from './Analytics/RealtimeStatusIndicator'
+import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
+import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 // Accessibility imports
 import SkipLinks from './SkipLinks'
@@ -643,7 +643,7 @@ export default function Dashboard() {
 
   // Handle event parameter from URL (for invite links)
   useEffect(() => {
-    const eventId = searchParams.get('event');
+    const eventId = searchParams?.get('event');
     if (eventId && eventId !== currentEventId) {
       console.log('Dashboard - Event ID from URL:', eventId);
       // Set the event ID and fetch the event details

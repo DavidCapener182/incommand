@@ -41,8 +41,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite code' }, { status: 404 });
     }
 
+    const events = (invite as any).events;
+    const eventName = Array.isArray(events)
+      ? events[0]?.event_name
+      : events?.event_name;
+
     return NextResponse.json({
-      eventName: invite.events?.event_name || 'Event',
+      eventName: eventName || 'Event',
       eventId: invite.event_id,
       inviteId: invite.id
     });

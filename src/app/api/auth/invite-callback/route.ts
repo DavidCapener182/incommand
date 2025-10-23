@@ -13,6 +13,19 @@ export async function GET(request: NextRequest) {
     const eventId = searchParams.get('eventId');
     const isTemporary = searchParams.get('isTemporary') === 'true';
 
+    if (!inviteId || !role || !eventId) {
+      logger.error('Missing invite callback parameters', null, {
+        component: 'InviteCallbackAPI',
+        action: 'validateParams',
+        inviteId: inviteId ?? undefined,
+        role: role ?? undefined,
+        eventId: eventId ?? undefined,
+        isTemporary,
+        url: request.url
+      });
+      return NextResponse.redirect(new URL('/login?error=invalid_invite', request.url));
+    }
+
     logger.info('Invite callback received', {
       component: 'InviteCallbackAPI',
       action: 'inviteCallback',
