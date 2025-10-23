@@ -38,6 +38,7 @@ import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import AttendanceModal from './AttendanceModal'
 import { getIncidentTypeStyle } from '../utils/incidentStyles'
+import { useEventMembership } from '../hooks/useEventMembership'
 import MultiSelectFilter from './ui/MultiSelectFilter'
 import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
@@ -563,6 +564,14 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 export default function Dashboard() {
   const { user } = useAuth();
   const { updateCounts } = useIncidentSummary()
+  const { membership } = useEventMembership()
+  const metadataRole = typeof user?.user_metadata?.role === 'string'
+    ? user.user_metadata.role.toLowerCase()
+    : null
+  const membershipRole = membership?.role ? membership.role.toLowerCase() : null
+  const isSuperAdmin = metadataRole === 'superadmin'
+  const isReadOnlyRole = !isSuperAdmin && (metadataRole === 'read_only' || membershipRole === 'read_only')
+  const canCreateIncidents = !isReadOnlyRole
   
   // Performance monitoring
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
@@ -596,6 +605,7 @@ export default function Dashboard() {
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [currentEvent, setCurrentEvent] = useState<any | null>(null)
+  const { messages, addToast, removeToast } = useToast();
   
   // Real-time analytics for live updates
   const realtimeAnalytics = useRealtimeAnalytics({
@@ -640,6 +650,22 @@ export default function Dashboard() {
   
   // Accessibility: Screen reader announcements
   const { announce } = useScreenReader({ politeness: 'polite' });
+
+  const openIncidentModal = useCallback(() => {
+    if (!canCreateIncidents) {
+      addToast({
+        type: 'error',
+        title: 'Read-only access',
+        message: 'You have read-only access and cannot create incidents.',
+      });
+      return;
+    }
+
+    if (!isIncidentModalOpen) {
+      setIsIncidentModalOpen(true);
+      announce('Opening new incident form');
+    }
+  }, [addToast, announce, canCreateIncidents, isIncidentModalOpen]);
 
   // Handle event parameter from URL (for invite links)
   useEffect(() => {
@@ -702,12 +728,7 @@ export default function Dashboard() {
       {
         key: 'n',
         description: 'Create new incident',
-        action: () => {
-          if (!isIncidentModalOpen) {
-            setIsIncidentModalOpen(true)
-            announce('Opening new incident form')
-          }
-        },
+        action: openIncidentModal,
         disabled: !hasCurrentEvent
       },
       {
@@ -782,9 +803,6 @@ export default function Dashboard() {
     (!incident.assigned_staff_ids || incident.assigned_staff_ids.length === 0)
   ).length;
   
-  // Toast notifications
-  const { messages, addToast, removeToast } = useToast();
-
   // Add a state for showing the event creation modal if not already present
   const [showCreateEvent, setShowCreateEvent] = useState(false);
 
@@ -1859,9 +1877,10 @@ export default function Dashboard() {
         {/* Mobile FAB - New Incident */}
         <div className="md:hidden fixed bottom-6 right-6 z-50">
           <button
-            onClick={() => setIsIncidentModalOpen(true)}
-            className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target"
-            style={{ 
+            onClick={openIncidentModal}
+            disabled={!canCreateIncidents}
+            className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
               backgroundColor: '#3b82f6',
               backdropFilter: 'none',
               WebkitBackdropFilter: 'none',

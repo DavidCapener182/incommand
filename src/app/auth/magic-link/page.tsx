@@ -9,6 +9,11 @@ import Image from 'next/image';
 export default function MagicLinkPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const inviteIdParam = searchParams?.get('inviteId');
+  const roleParam = searchParams?.get('role');
+  const eventIdParam = searchParams?.get('eventId');
+  const isTemporaryParam = searchParams?.get('isTemporary') === 'true';
+  const incidentsPath = eventIdParam ? `/incidents?event=${eventIdParam}` : '/incidents';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -23,9 +28,20 @@ export default function MagicLinkPage() {
   useEffect(() => {
     const handleMagicLink = async () => {
       try {
+        if (!inviteIdParam || !roleParam || !eventIdParam) {
+          console.error('Magic link missing required parameters', {
+            inviteId: inviteIdParam,
+            role: roleParam,
+            eventId: eventIdParam
+          });
+          setError('This invite link is missing required information. Please request a new link.');
+          setLoading(false);
+          return;
+        }
+
         console.log('Magic link page - full URL:', window.location.href);
         console.log('Magic link page - hash:', window.location.hash);
-        
+
         // Import Supabase client
         const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
         const supabase = createClientComponentClient();
@@ -64,13 +80,13 @@ export default function MagicLinkPage() {
             });
             
             if (sessionData.session) {
-              console.log('User session established, redirecting to incidents');
-              setSuccess(true);
-              setTimeout(() => {
-                router.push('/incidents');
-              }, 1000);
-              return;
-            }
+            console.log('User session established, redirecting to incidents');
+            setSuccess(true);
+            setTimeout(() => {
+                router.push(incidentsPath);
+            }, 1000);
+            return;
+          }
           }
           
           // Wait for Supabase to process the magic link automatically
@@ -90,37 +106,39 @@ export default function MagicLinkPage() {
             console.log('User has a session, redirecting to incidents');
             setSuccess(true);
             setTimeout(() => {
-              router.push('/incidents');
+              router.push(incidentsPath);
             }, 1000);
             return;
           }
         }
-        
+
         // If no access token or session, check for existing session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionData.session) {
           console.log('User already has a session, redirecting to incidents');
           setSuccess(true);
           setTimeout(() => {
-            router.push('/incidents');
+            router.push(incidentsPath);
           }, 1000);
           return;
         }
-        
-        console.log('No authentication found');
-        setError('Authentication failed. Please try again.');
+
+        console.log('No authentication found, showing manual verification form');
+        setError('We could not verify the invite automatically. Please confirm your details below.');
+        setShowForm(true);
         setLoading(false);
 
       } catch (err) {
         console.error('Magic link authentication error:', err);
-        setError(err instanceof Error ? err.message : 'Authentication failed');
+        setError(err instanceof Error ? err.message : 'Authentication failed. Please complete the form below.');
+        setShowForm(true);
         setLoading(false);
       }
     };
 
     handleMagicLink();
-  }, [searchParams, router]);
+  }, [searchParams, router, inviteIdParam, roleParam, eventIdParam, incidentsPath]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,21 +146,16 @@ export default function MagicLinkPage() {
     setFormError('');
 
     try {
-      const inviteId = searchParams?.get('inviteId');
-      const role = searchParams?.get('role');
-      const eventId = searchParams?.get('eventId');
-      const isTemporary = searchParams?.get('isTemporary') === 'true';
-
       console.log('Form submission - parameters:', {
-        inviteId,
-        role,
-        eventId,
-        isTemporary,
+        inviteId: inviteIdParam,
+        role: roleParam,
+        eventId: eventIdParam,
+        isTemporary: isTemporaryParam,
         name: formData.name,
         email: formData.email
       });
 
-      if (!inviteId || !role || !eventId) {
+      if (!inviteIdParam || !roleParam || !eventIdParam) {
         throw new Error('Missing invite parameters');
       }
 
@@ -154,10 +167,10 @@ export default function MagicLinkPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inviteId,
-          role,
-          eventId,
-          isTemporary,
+          inviteId: inviteIdParam,
+          role: roleParam,
+          eventId: eventIdParam,
+          isTemporary: isTemporaryParam,
           name: formData.name,
           email: formData.email
         }),
@@ -173,9 +186,12 @@ export default function MagicLinkPage() {
 
       // Success - redirect to incidents
       console.log('Form submission successful, redirecting to incidents');
+      setFormError('');
+      setError('');
+      setShowForm(false);
       setSuccess(true);
       setTimeout(() => {
-        router.push('/incidents');
+        router.push(incidentsPath);
       }, 2000);
 
     } catch (err) {
@@ -230,6 +246,17 @@ export default function MagicLinkPage() {
               Please enter your details to complete the invite verification
             </p>
           </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl relative mb-6"
+            >
+              <strong className="font-bold">Notice:</strong>
+              <span className="block sm:inline ml-2">{error}</span>
+            </motion.div>
+          )}
 
           {formError && (
             <motion.div

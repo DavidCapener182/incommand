@@ -1956,26 +1956,17 @@ export default function IncidentCreationModal({
   // Function to determine the "To" field based on user's role
   const getCallsignTo = () => {
     if (!membership?.role) return 'Event Control';
-    
+
     const role = membership.role.toLowerCase();
-    
-    switch (role) {
-      case 'security':
-        return 'Security Control';
-      case 'medic':
-      case 'medical':
-        return 'Medic Control';
-      case 'production':
-        return 'Production';
-      case 'admin':
-      case 'organizer':
-      case 'superadmin':
-        return 'Event Control';
-      case 'read_only':
-        return 'Event Control'; // Read-only users can't create incidents, but if they could, it would go to Event Control
-      default:
-        return 'Event Control';
-    }
+    const callSignMap: Record<string, string> = {
+      security: 'Security Control',
+      medic: 'Medic Control',
+      medical: 'Medic Control',
+      production: 'Production',
+      production_control: 'Production',
+    };
+
+    return callSignMap[role] ?? 'Event Control';
   };
 
   // Swipe gestures for modal interaction

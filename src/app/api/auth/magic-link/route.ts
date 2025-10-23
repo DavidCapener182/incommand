@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Verify the email matches the invite
     const { data: invite, error: inviteError } = await serviceSupabase
       .from('event_invites')
-      .select('intended_email, status')
+      .select('intended_email, status, event_id, role')
       .eq('id', inviteId)
       .single();
 
@@ -47,8 +47,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if invite is still active
-    if (invite.status !== 'active') {
+    if (!['active', 'locked'].includes(invite.status)) {
       return NextResponse.json({ error: 'Invite is no longer active' }, { status: 400 });
+    }
+
+    if (invite.event_id !== eventId) {
+      logger.warn('Invite event mismatch during magic link verification', {
+        component: 'MagicLinkAuthAPI',
+        action: 'eventMismatch',
+        inviteId,
+        expectedEvent: invite.event_id,
+        providedEvent: eventId
+      });
+      return NextResponse.json({ error: 'Invite does not belong to this event' }, { status: 403 });
     }
 
     // Check if email matches the intended email (if specified)
@@ -91,6 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update event membership
+    const membershipRole = invite.role || role;
     const { error: memberError } = await serviceSupabase
       .from('event_members')
       .upsert({
@@ -99,8 +111,8 @@ export async function POST(request: NextRequest) {
         invite_id: inviteId,
         full_name: name,
         email: email,
-        role: role,
-        is_temporary: isTemporary,
+        role: membershipRole,
+        is_temporary: Boolean(isTemporary),
       }, { onConflict: 'event_id,user_id' });
 
     if (memberError) {
@@ -120,8 +132,8 @@ export async function POST(request: NextRequest) {
       action: 'magic_link_auth_success',
       details: {
         invite_id: inviteId,
-        role: role,
-        is_temporary: isTemporary
+        role: membershipRole,
+        is_temporary: Boolean(isTemporary)
       }
     });
 
@@ -133,11 +145,12 @@ export async function POST(request: NextRequest) {
       inviteId
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Authentication successful',
       userId: user.id,
-      eventId
+      eventId,
+      redirectUrl: eventId ? `/incidents?event=${eventId}` : '/incidents'
     });
 
   } catch (error: any) {
