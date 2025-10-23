@@ -99,7 +99,7 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
       logger.error('Failed to fetch invites', err, {
         component: 'InviteManagement',
         action: 'fetchInvites',
-        eventId: currentEventId
+        eventId: currentEventId || undefined
       });
     } finally {
       setLoading(false);
@@ -159,7 +159,7 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
       logger.error('Failed to create invite', err, {
         component: 'InviteManagement',
         action: 'createInvite',
-        eventId: currentEventId
+        eventId: currentEventId || undefined
       });
     } finally {
       setCreating(false);
@@ -191,7 +191,7 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
       logger.error('Failed to revoke invite', err, {
         component: 'InviteManagement',
         action: 'revokeInvite',
-        eventId: currentEventId,
+        eventId: currentEventId || undefined,
         inviteId
       });
     }
@@ -221,7 +221,7 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
       logger.error('Failed to delete invite', err, {
         component: 'InviteManagement',
         action: 'deleteInvite',
-        eventId: currentEventId,
+        eventId: currentEventId || undefined,
         inviteId
       });
     }

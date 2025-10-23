@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Check if email matches the intended email (if specified)
     if (invite.intended_email && invite.intended_email.toLowerCase() !== email.toLowerCase()) {
-      logger.warn('Email does not match intended recipient', null, {
+      logger.warn('Email does not match intended recipient', {
         component: 'MagicLinkAuthAPI',
         action: 'emailMismatch',
         inviteId,

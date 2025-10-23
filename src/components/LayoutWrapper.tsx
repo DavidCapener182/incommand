@@ -49,6 +49,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Skip effects for style-lab route
@@ -86,7 +87,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Define routes that should never show the main application navigation
   // Marketing pages have their own navigation, so hide the main nav on all of them
   const noNavRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup'];
-  const { user } = useAuth();
   
   // Only show the main application navigation for authenticated users on operational pages
   const showNav = user && !noNavRoutes.includes(pathname);

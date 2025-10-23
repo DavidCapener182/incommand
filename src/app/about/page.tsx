@@ -234,7 +234,7 @@ export default function AboutPage() {
               Partner with Us to Elevate Event Safety
             </h2>
             <p className="text-lg text-blue-700 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Whether you're managing a local festival or an international venue, InCommand is built
+              Whether you&apos;re managing a local festival or an international venue, InCommand is built
               to make your operations safer, smarter, and more efficient.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

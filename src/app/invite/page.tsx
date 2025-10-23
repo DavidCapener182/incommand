@@ -148,12 +148,12 @@ export default function InvitePage() {
           <p className="text-gray-600 mb-6">
             {isNewUser ? (
               <>
-                Welcome to InCommand! Your account has been created and you've been added to this event.
+                Welcome to InCommand! Your account has been created and you&apos;ve been added to this event.
                 You are now logged in and ready to access the control room.
               </>
             ) : (
               <>
-                You've been added to this event and are now logged in.
+                You&apos;ve been added to this event and are now logged in.
                 You can now access the control room.
               </>
             )}
@@ -170,7 +170,7 @@ export default function InvitePage() {
           </div>
 
           <p className="text-sm text-gray-500">
-            You'll be redirected to the incidents page shortly...
+            You&apos;ll be redirected to the incidents page shortly...
           </p>
         </motion.div>
       </div>
