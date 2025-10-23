@@ -1,12 +1,14 @@
-import { supabase } from '@/lib/supabase'
 import type {
   VendorAccreditation,
   VendorAccreditationAuditLog,
   VendorApplicationPayload,
   VendorInduction,
   VendorProfile,
-  VendorAccessLevel
+  VendorAccessLevel,
+  VendorAccreditationStatus
 } from '@/types/vendor'
+
+import { supabase } from '@/lib/supabase'
 
 export async function fetchVendorProfiles(): Promise<VendorProfile[]> {
   const { data, error } = await supabase
@@ -110,51 +112,25 @@ export async function fetchVendorAuditLog(accreditationId: string): Promise<Vend
 }
 
 export async function submitVendorApplication(payload: VendorApplicationPayload) {
-  const { access_level_ids, notes, ...vendorFields } = payload
-  const { data: vendorInsert, error: vendorError } = await supabase
-    .from('vendors')
-    .insert([{ ...vendorFields, notes: notes || null }])
-    .select('*')
-    .single()
+  const response = await fetch('/api/accreditations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
 
-  if (vendorError) {
-    throw new Error(vendorError.message)
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    const message = data?.error || 'Unable to submit accreditation'
+    throw new Error(message)
   }
 
-  const vendor = vendorInsert as VendorProfile
-
-  const { data: accreditationInsert, error: accreditationError } = await supabase
-    .from('vendor_accreditations')
-    .insert([{ vendor_id: vendor.id, status: 'pending', feedback: payload.notes || null }])
-    .select('*')
-    .single()
-
-  if (accreditationError) {
-    throw new Error(accreditationError.message)
-  }
-
-  const accreditation = accreditationInsert as VendorAccreditation
-
-  if (access_level_ids?.length) {
-    const rows = access_level_ids.map((access_level_id) => ({
-      accreditation_id: accreditation.id,
-      access_level_id
-    }))
-    const { error: joinError } = await supabase
-      .from('vendor_accreditation_access_levels')
-      .insert(rows)
-
-    if (joinError) {
-      throw new Error(joinError.message)
-    }
-  }
-
-  return { vendor, accreditation }
+  const data = await response.json()
+  return data as { vendor: VendorProfile; accreditation: VendorAccreditation }
 }
 
 export async function updateVendorAccreditationStatus(
   accreditationId: string,
-  status: string,
+  status: VendorAccreditationStatus,
   feedback?: string,
   actorProfileId?: string
 ) {
@@ -174,6 +150,36 @@ export async function updateVendorAccreditationStatus(
       action: `status:${status}`,
       notes: feedback || null,
       actor_profile_id: actorProfileId || null
+    })
+}
+
+export async function updateVendorAccreditationIdentity(
+  accreditationId: string,
+  details: {
+    accreditation_number?: string | null
+    id_document_type?: string | null
+    id_document_reference?: string | null
+  }
+) {
+  const { error } = await supabase
+    .from('vendor_accreditations')
+    .update({
+      accreditation_number: details.accreditation_number ?? null,
+      id_document_type: details.id_document_type ?? null,
+      id_document_reference: details.id_document_reference ?? null
+    })
+    .eq('id', accreditationId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  await supabase
+    .from('vendor_accreditation_audit_logs')
+    .insert({
+      accreditation_id: accreditationId,
+      action: 'identity:update',
+      notes: `Updated accreditation number ${details.accreditation_number || 'unset'}`
     })
 }
 

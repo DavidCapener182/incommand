@@ -1,15 +1,26 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import { DomainSetupDebugCard } from '@/components/ui/DebugCard'
 import type { VendorAccreditation, VendorAccessLevel, VendorProfile } from '@/types/vendor'
 import {
   fetchVendorAccreditations,
   fetchVendorAccessLevels,
   fetchVendorProfiles,
   submitVendorApplication,
+  updateVendorAccreditationIdentity,
   updateVendorAccreditationStatus
 } from '@/services/vendorService'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 
 const defaultFormState = {
   business_name: '',
@@ -21,8 +32,24 @@ const defaultFormState = {
   notes: ''
 }
 
+const idDocumentPresets = ['Passport', "Driver's licence", 'Other ID']
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return 'Not recorded'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return 'Not recorded'
+  }
+  return date.toLocaleString()
+}
+
 export default function VendorPortalPage() {
   const { addToast } = useToast()
+  const addToastRef = useRef(addToast)
+  addToastRef.current = addToast
+  
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [vendors, setVendors] = useState<VendorProfile[]>([])
@@ -30,6 +57,15 @@ export default function VendorPortalPage() {
   const [accessLevels, setAccessLevels] = useState<VendorAccessLevel[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null)
   const [formState, setFormState] = useState(defaultFormState)
+  const [applicationModalOpen, setApplicationModalOpen] = useState(false)
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [reviewingAccreditationId, setReviewingAccreditationId] = useState<string | null>(null)
+  const [reviewForm, setReviewForm] = useState({
+    accreditation_number: '',
+    id_document_type: '',
+    id_document_reference: ''
+  })
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -43,12 +79,13 @@ export default function VendorPortalPage() {
       setVendors(profileData)
       setAccreditations(accreditationData)
       setAccessLevels(accessLevelData)
+
       if (!selectedVendorId && profileData.length > 0) {
         setSelectedVendorId(profileData[0].id)
       }
     } catch (error) {
       console.error(error)
-      addToast({
+      addToastRef.current({
         type: 'error',
         title: 'Unable to load vendors',
         message: error instanceof Error ? error.message : 'An unexpected error occurred.'
@@ -56,16 +93,24 @@ export default function VendorPortalPage() {
     } finally {
       setLoading(false)
     }
-  }, [addToast, selectedVendorId])
+  }, [selectedVendorId])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  const selectedVendor = useMemo(() => vendors.find((vendor) => vendor.id === selectedVendorId) || null, [vendors, selectedVendorId])
+  const selectedVendor = useMemo(
+    () => vendors.find((vendor) => vendor.id === selectedVendorId) || null,
+    [vendors, selectedVendorId]
+  )
+
+  const awaitingInduction = useMemo(
+    () => accreditations.filter((accreditation) => accreditation.status === 'new'),
+    [accreditations]
+  )
 
   const pendingAccreditations = useMemo(
-    () => accreditations.filter((accreditation) => accreditation.status === 'pending'),
+    () => accreditations.filter((accreditation) => accreditation.status === 'pending_review'),
     [accreditations]
   )
 
@@ -74,24 +119,17 @@ export default function VendorPortalPage() {
     [accreditations]
   )
 
-  const handleStatusChange = async (accreditationId: string, status: 'approved' | 'rejected') => {
-    try {
-      await updateVendorAccreditationStatus(accreditationId, status, status === 'approved' ? undefined : 'Rejected via portal')
-      addToast({
-        type: 'success',
-        title: `Accreditation ${status}`,
-        message: `Accreditation ${accreditationId.slice(0, 8)} marked as ${status}.`
-      })
-      await loadData()
-    } catch (error) {
-      console.error(error)
-      addToast({
-        type: 'error',
-        title: 'Unable to update accreditation',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred.'
-      })
+  const reviewingAccreditation = useMemo(
+    () => accreditations.find((item) => item.id === reviewingAccreditationId) || null,
+    [accreditations, reviewingAccreditationId]
+  )
+
+  const reviewingVendor = useMemo(() => {
+    if (!reviewingAccreditation) {
+      return null
     }
-  }
+    return vendors.find((vendor) => vendor.id === reviewingAccreditation.vendor_id) || null
+  }, [reviewingAccreditation, vendors])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -101,9 +139,10 @@ export default function VendorPortalPage() {
       addToast({
         type: 'success',
         title: 'Application submitted',
-        message: 'Vendor application recorded and pending review.'
+        message: 'Vendor accreditation recorded. Induction email sent.'
       })
       setFormState(defaultFormState)
+      setApplicationModalOpen(false)
       await loadData()
     } catch (error) {
       console.error(error)
@@ -117,258 +156,511 @@ export default function VendorPortalPage() {
     }
   }
 
-  return (
-    <main className="module-container">
-      <header className="module-header">
-        <div>
-          <h1 className="module-title">Vendor Management &amp; Accreditation</h1>
-          <p className="module-subtitle">
-            Coordinate vendor access, track accreditation progress, and distribute induction materials without impacting incident workflows.
-          </p>
-        </div>
-      </header>
+  const openReviewModal = (accreditation: VendorAccreditation) => {
+    setReviewingAccreditationId(accreditation.id)
+    setReviewForm({
+      accreditation_number: accreditation.accreditation_number ?? '',
+      id_document_type: accreditation.id_document_type ?? '',
+      id_document_reference: accreditation.id_document_reference ?? ''
+    })
+    setReviewModalOpen(true)
+  }
 
-      <section className="module-grid">
-        <article className="module-card">
-          <div className="module-card-header">
+  const handleGenerateAccreditationNumber = () => {
+    const generated = `ACC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    setReviewForm((prev) => ({ ...prev, accreditation_number: generated }))
+  }
+
+  const handleReviewAction = async (status: 'approved' | 'rejected') => {
+    if (!reviewingAccreditation) {
+      return
+    }
+
+    if (status === 'approved' && !reviewForm.accreditation_number.trim()) {
+      addToast({
+        type: 'error',
+        title: 'Accreditation number required',
+        message: 'Generate or enter an accreditation number before approving.'
+      })
+      return
+    }
+
+    setReviewSubmitting(true)
+    try {
+      await updateVendorAccreditationIdentity(reviewingAccreditation.id, {
+        accreditation_number: reviewForm.accreditation_number.trim() || null,
+        id_document_type: reviewForm.id_document_type.trim() || null,
+        id_document_reference: reviewForm.id_document_reference.trim() || null
+      })
+
+      await updateVendorAccreditationStatus(
+        reviewingAccreditation.id,
+        status,
+        status === 'approved' ? undefined : 'Rejected during review'
+      )
+
+      addToast({
+        type: status === 'approved' ? 'success' : 'warning',
+        title: `Accreditation ${status === 'approved' ? 'approved' : 'rejected'}`,
+        message: reviewingVendor?.business_name
+          ? `${reviewingVendor.business_name} marked as ${status.replace('_', ' ')}.`
+          : `Accreditation ${status}.`
+      })
+
+      setReviewModalOpen(false)
+      await loadData()
+    } catch (error) {
+      console.error(error)
+      addToast({
+        type: 'error',
+        title: 'Unable to update accreditation',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred.'
+      })
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <main className="module-container">
+        <DomainSetupDebugCard />
+
+        <header className="module-header">
+          <div>
+            <h1 className="module-title">Vendor Management &amp; Accreditation</h1>
+            <p className="module-subtitle">
+              Coordinate accreditation requests end-to-end – from onboarding to induction completion and final approval.
+            </p>
+          </div>
+        </header>
+
+        <section className="module-grid">
+          <article className="module-card">
+            <div className="module-card-header">
+              <div>
+                <h2 className="module-card-title">Vendor Directory</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{vendors.length} registered vendors</p>
+              </div>
+            </div>
+            <div className="module-card-body">
+              {loading ? (
+                <div className="module-empty">Loading vendor directory…</div>
+              ) : vendors.length === 0 ? (
+                <div className="module-empty">No vendors have been registered yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="module-action-bar">
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Select vendor</label>
+                    <select
+                      value={selectedVendorId ?? ''}
+                      onChange={(event) => setSelectedVendorId(event.target.value)}
+                      className="module-select"
+                      style={{ maxWidth: '16rem' }}
+                    >
+                      {vendors.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendor.business_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedVendor ? (
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Service type</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.service_type || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Contract expiry</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contract_expires_on || 'Not set'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Primary contact</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_name || 'Unknown'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Insurance</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.insurance_expires_on || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Email</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_email || 'Not provided'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500 dark:text-gray-400">Status</dt>
+                        <dd>
+                          <span className="module-pill-info capitalize">{selectedVendor.status}</span>
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <div className="module-empty">Select a vendor to view profile details.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="module-card">
+            <div className="module-card-header items-start">
+              <div>
+                <h2 className="module-card-title">Accreditation Intake</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Capture vendor or staff applications who require controlled access without full platform accounts.
+                </p>
+              </div>
+              <button type="button" className="button-secondary text-sm" onClick={() => setApplicationModalOpen(true)}>
+                New application
+              </button>
+            </div>
+            <div className="module-card-body space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Launch the form to send an automated induction link. Applicants complete induction before entering the review queue.
+              </p>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Awaiting induction</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 font-semibold">{awaitingInduction.length}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Pending review</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 font-semibold">{pendingAccreditations.length}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500 dark:text-gray-400">Approved</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 font-semibold">{approvedAccreditations.length}</dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+        </section>
+
+        <section className="module-card">
+          <div className="module-card-header flex-wrap gap-3">
             <div>
-              <h2 className="module-card-title">Vendor Directory</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{vendors.length} registered vendors</p>
+              <h2 className="module-card-title">Accreditation Queue</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Monitor induction progress and finalise approvals with ID verification and accreditation numbers.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="module-pill-warning">{pendingAccreditations.length} awaiting review</span>
+              <span className="module-pill-info">{awaitingInduction.length} awaiting induction</span>
             </div>
           </div>
-          <div className="module-card-body">
-            {loading ? (
-              <div className="module-empty">Loading vendor directory…</div>
-            ) : vendors.length === 0 ? (
-              <div className="module-empty">No vendors have been registered yet.</div>
-            ) : (
-              <div className="space-y-3">
-                <div className="module-action-bar">
-                  <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Select vendor</label>
-                  <select
-                    value={selectedVendorId ?? ''}
-                    onChange={(event) => setSelectedVendorId(event.target.value)}
-                    className="module-select"
-                    style={{ maxWidth: '16rem' }}
-                  >
-                    {vendors.map((vendor) => (
-                      <option key={vendor.id} value={vendor.id}>
-                        {vendor.business_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <div className="module-card-body space-y-6">
+            {awaitingInduction.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Awaiting induction</h3>
+                <ul className="module-list">
+                  {awaitingInduction.map((accreditation) => {
+                    const vendor = vendors.find((item) => item.id === accreditation.vendor_id)
+                    return (
+                      <li key={accreditation.id} className="module-list-item">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {vendor?.business_name || 'Unknown vendor'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Induction link sent {formatDateTime(accreditation.created_at)}
+                            </p>
+                          </div>
+                          <span className="module-pill-info">Waiting on applicant</span>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
 
-                {selectedVendor ? (
-                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Service Type</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.service_type || 'Not provided'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Contract Expiry</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contract_expires_on || 'Not set'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Primary Contact</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_name || 'Unknown'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Insurance</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.insurance_expires_on || 'Not provided'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Email</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_email || 'Not provided'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Status</dt>
-                      <dd>
-                        <span className="module-pill-info capitalize">{selectedVendor.status}</span>
-                      </dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <div className="module-empty">Select a vendor to view profile details.</div>
-                )}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Pending review</h3>
+              {pendingAccreditations.length === 0 ? (
+                <div className="module-empty">No pending accreditations. Vendors are up to date.</div>
+              ) : (
+                <ul className="module-list">
+                  {pendingAccreditations.map((accreditation) => {
+                    const vendor = vendors.find((item) => item.id === accreditation.vendor_id)
+                    return (
+                      <li key={accreditation.id} className="module-list-item">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {vendor?.business_name || 'Unknown vendor'}
+                              </h3>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Induction completed {formatDateTime(accreditation.induction_completed_at)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="button-primary text-xs"
+                                onClick={() => openReviewModal(accreditation)}
+                              >
+                                Review &amp; verify
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">
+                            Access requested:{' '}
+                            {accreditation.access_levels && accreditation.access_levels.length > 0
+                              ? accreditation.access_levels.map((level) => level.name).join(', ')
+                              : 'No levels selected'}
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {approvedAccreditations.length > 0 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Recently approved</h3>
+                <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                  {approvedAccreditations.slice(0, 5).map((accreditation) => {
+                    const vendor = vendors.find((item) => item.id === accreditation.vendor_id)
+                    return (
+                      <li key={accreditation.id} className="flex items-center justify-between">
+                        <span>{vendor?.business_name || 'Unknown vendor'}</span>
+                        <span className="module-pill-success">Accreditation #{accreditation.accreditation_number || 'N/A'}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             )}
           </div>
-        </article>
+        </section>
+      </main>
 
-        <article className="module-card">
-          <div className="module-card-header">
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        onClick={() => setApplicationModalOpen(true)}
+        aria-label="Create new accreditation"
+      >
+        <span className="text-3xl leading-none">+</span>
+      </button>
+
+      <Dialog open={applicationModalOpen} onOpenChange={setApplicationModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>New accreditation application</DialogTitle>
+            <DialogDescription>
+              Capture vendor or contractor details. An induction link is sent automatically after submission.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <h2 className="module-card-title">New Accreditation Application</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Capture vendor onboarding requests and access needs.</p>
+              <label>Business name</label>
+              <input
+                value={formState.business_name}
+                onChange={(event) => setFormState((prev) => ({ ...prev, business_name: event.target.value }))}
+                required
+              />
             </div>
-          </div>
-          <div className="module-card-body">
-            <form className="module-form" onSubmit={handleSubmit}>
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label>Business name</label>
+                <label>Service type</label>
                 <input
-                  value={formState.business_name}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, business_name: event.target.value }))}
+                  value={formState.service_type}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, service_type: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label>Contact name</label>
+                <input
+                  value={formState.contact_name}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, contact_name: event.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label>Contact email</label>
+                <input
+                  type="email"
+                  value={formState.contact_email}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, contact_email: event.target.value }))}
                   required
                 />
               </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label>Service type</label>
-                  <input
-                    value={formState.service_type}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, service_type: event.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label>Contact name</label>
-                  <input
-                    value={formState.contact_name}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, contact_name: event.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label>Contact email</label>
-                  <input
-                    type="email"
-                    value={formState.contact_email}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, contact_email: event.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <label>Contact phone</label>
-                  <input
-                    value={formState.contact_phone}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, contact_phone: event.target.value }))}
-                  />
-                </div>
-              </div>
-
               <div>
-                <label>Requested access levels</label>
-                <div className="space-y-2">
-                  {accessLevels.length === 0 ? (
-                    <small>No access levels configured yet.</small>
-                  ) : (
-                    accessLevels.map((level) => (
-                      <label key={level.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                        <input
-                          type="checkbox"
-                          checked={formState.access_level_ids.includes(level.id)}
-                          onChange={(event) => {
-                            setFormState((prev) => {
-                              const next = new Set(prev.access_level_ids)
-                              if (event.target.checked) {
-                                next.add(level.id)
-                              } else {
-                                next.delete(level.id)
-                              }
-                              return { ...prev, access_level_ids: Array.from(next) }
-                            })
-                          }}
-                        />
-                        <span className="font-medium text-gray-800 dark:text-gray-100">{level.name}</span>
-                        {level.description && <span className="text-xs text-gray-500 dark:text-gray-400">{level.description}</span>}
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label>Notes</label>
-                <textarea
-                  value={formState.notes}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
-                  placeholder="Optional context for reviewers"
+                <label>Contact phone</label>
+                <input
+                  value={formState.contact_phone}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, contact_phone: event.target.value }))}
                 />
               </div>
-
+            </div>
+            <div>
+              <label>Requested access level</label>
+              <select
+                value={formState.access_level_ids[0] ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setFormState((prev) => ({ ...prev, access_level_ids: value ? [value] : [] }))
+                }}
+                className="module-select mt-2"
+                required={accessLevels.length > 0}
+              >
+                <option value="">{accessLevels.length > 0 ? 'Select access level' : 'Configure access levels first'}</option>
+                {accessLevels.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Configure access levels in Supabase table <code>vendor_access_levels</code> to manage available options.
+              </p>
+            </div>
+            <div>
+              <label>Notes</label>
+              <textarea
+                value={formState.notes}
+                onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
+                placeholder="Optional context for reviewers"
+              />
+            </div>
+            <DialogFooter>
               <button type="submit" className="button-primary" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit application'}
+                {submitting ? (
+                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Submitting…</span>
+                ) : (
+                  'Submit application'
+                )}
               </button>
-            </form>
-          </div>
-        </article>
-      </section>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      <section className="module-card">
-        <div className="module-card-header">
-          <div>
-            <h2 className="module-card-title">Accreditation Queue</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Review outstanding applications and maintain a unified audit trail.
-            </p>
-          </div>
-          <span className="module-pill-warning">{pendingAccreditations.length} awaiting review</span>
-        </div>
-        <div className="module-card-body space-y-4">
-          {pendingAccreditations.length === 0 ? (
-            <div className="module-empty">No pending accreditations. Vendors are up to date.</div>
-          ) : (
-            <ul className="module-list">
-              {pendingAccreditations.map((accreditation) => {
-                const vendor = vendors.find((item) => item.id === accreditation.vendor_id)
-                return (
-                  <li key={accreditation.id} className="module-list-item">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {vendor?.business_name || 'Unknown vendor'}
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Submitted {new Date(accreditation.submitted_at ?? '').toLocaleString()}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="button-secondary text-xs"
-                          onClick={() => handleStatusChange(accreditation.id, 'approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="button-danger text-xs"
-                          onClick={() => handleStatusChange(accreditation.id, 'rejected')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">
-                      Access requested:{' '}
-                      {accreditation.access_levels && accreditation.access_levels.length > 0
-                        ? accreditation.access_levels.map((level) => level.name).join(', ')
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Review accreditation</DialogTitle>
+            <DialogDescription>
+              Confirm ID details and accreditation number before approving access.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reviewingAccreditation && (
+            <div className="space-y-5">
+              <section className="rounded-lg bg-gray-50 dark:bg-gray-900/60 p-4 text-sm text-gray-700 dark:text-gray-300">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Applicant summary</h3>
+                <dl className="space-y-1">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500 dark:text-gray-400">Business</dt>
+                    <dd className="font-medium text-gray-900 dark:text-gray-100">{reviewingVendor?.business_name || 'Unknown vendor'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500 dark:text-gray-400">Service type</dt>
+                    <dd className="font-medium text-gray-900 dark:text-gray-100">{reviewingVendor?.service_type || 'Not provided'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500 dark:text-gray-400">Access request</dt>
+                    <dd className="font-medium text-gray-900 dark:text-gray-100">
+                      {reviewingAccreditation.access_levels && reviewingAccreditation.access_levels.length > 0
+                        ? reviewingAccreditation.access_levels.map((level) => level.name).join(', ')
                         : 'No levels selected'}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500 dark:text-gray-400">Induction completed</dt>
+                    <dd className="font-medium text-gray-900 dark:text-gray-100">
+                      {formatDateTime(reviewingAccreditation.induction_completed_at)}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-          {approvedAccreditations.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Recently approved</h3>
-              <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
-                {approvedAccreditations.slice(0, 5).map((accreditation) => {
-                  const vendor = vendors.find((item) => item.id === accreditation.vendor_id)
-                  return (
-                    <li key={accreditation.id} className="flex items-center justify-between">
-                      <span>{vendor?.business_name || 'Unknown vendor'}</span>
-                      <span className="module-pill-success">Approved</span>
-                    </li>
-                  )
-                })}
-              </ul>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">ID document type</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {idDocumentPresets.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setReviewForm((prev) => ({ ...prev, id_document_type: option }))}
+                        className={`rounded-full border px-3 py-1 text-xs transition ${
+                          reviewForm.id_document_type === option
+                            ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-600/20'
+                            : 'border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="mt-2"
+                    placeholder="Custom type (optional)"
+                    value={reviewForm.id_document_type}
+                    onChange={(event) => setReviewForm((prev) => ({ ...prev, id_document_type: event.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">ID reference number</label>
+                  <input
+                    value={reviewForm.id_document_reference}
+                    onChange={(event) => setReviewForm((prev) => ({ ...prev, id_document_reference: event.target.value }))}
+                    placeholder="e.g. Passport 123456789"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Accreditation number</label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      value={reviewForm.accreditation_number}
+                      onChange={(event) => setReviewForm((prev) => ({ ...prev, accreditation_number: event.target.value }))}
+                      placeholder="Generate or enter accreditation number"
+                    />
+                    <button type="button" className="button-secondary whitespace-nowrap" onClick={handleGenerateAccreditationNumber}>
+                      Generate
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Approved entries move to the cleared list immediately.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    className="button-danger"
+                    onClick={() => handleReviewAction('rejected')}
+                    disabled={reviewSubmitting}
+                  >
+                    {reviewSubmitting ? 'Processing…' : 'Reject'}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-primary"
+                    onClick={() => handleReviewAction('approved')}
+                    disabled={reviewSubmitting}
+                  >
+                    {reviewSubmitting ? 'Processing…' : 'Approve'}
+                  </button>
+                </div>
+              </DialogFooter>
             </div>
           )}
-        </div>
-      </section>
-    </main>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

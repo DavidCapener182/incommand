@@ -46,7 +46,7 @@ class ResendProvider implements EmailProvider {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: options.from || 'inCommand <noreply@incommand.app>',
+          from: options.from || 'inCommand <onboarding@resend.dev>',
           to: Array.isArray(options.to) ? options.to : [options.to],
           subject: options.subject,
           html: options.html,

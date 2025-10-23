@@ -22,10 +22,12 @@ export interface VendorAccessLevel {
   created_at?: string
 }
 
+export type VendorAccreditationStatus = 'new' | 'pending_review' | 'approved' | 'rejected'
+
 export interface VendorAccreditation {
   id: string
   vendor_id: string
-  status: string
+  status: VendorAccreditationStatus
   submitted_at?: string
   reviewed_at?: string | null
   reviewed_by?: string | null
@@ -33,9 +35,13 @@ export interface VendorAccreditation {
   digital_pass_url?: string | null
   qr_code_token?: string | null
   expires_at?: string | null
+  accreditation_number?: string | null
+  id_document_type?: string | null
+  id_document_reference?: string | null
   induction_completed: boolean
   induction_completed_at?: string | null
   induction_completed_by?: string | null
+  induction_token?: string | null
   created_at?: string
   updated_at?: string
   access_levels?: VendorAccessLevel[]
@@ -68,6 +74,6 @@ export interface VendorApplicationPayload {
   contact_name?: string
   contact_email?: string
   contact_phone?: string
-  access_level_ids: string[]
+  access_level_ids?: string[]
   notes?: string
 }
