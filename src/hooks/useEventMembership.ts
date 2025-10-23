@@ -32,20 +32,48 @@ export function useEventMembership() {
         setLoading(true);
         setError(null);
 
-        // Get current event
-        const { data: currentEvent, error: eventError } = await supabase
-          .from('events')
-          .select('id')
-          .eq('is_current', true)
-          .single();
+        let eventId: string | null = null;
 
-        if (eventError || !currentEvent) {
+        if (typeof window !== 'undefined') {
+          eventId = sessionStorage.getItem('currentEventId');
+        }
+
+        if (!eventId) {
+          const { data: currentEvent, error: eventError } = await supabase
+            .from('events')
+            .select('id')
+            .eq('is_current', true)
+            .single();
+
+          if (eventError || !currentEvent) {
+            setMembership(null);
+            if (typeof window !== 'undefined') {
+              try {
+                sessionStorage.removeItem('currentEventId');
+              } catch (storageError) {
+                console.warn('Unable to remove current event id from sessionStorage', storageError);
+              }
+            }
+            return;
+          }
+
+          eventId = currentEvent.id;
+
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem('currentEventId', eventId);
+            } catch (storageError) {
+              console.warn('Unable to persist current event id in sessionStorage', storageError);
+            }
+          }
+        }
+
+        if (!eventId) {
           setMembership(null);
-          setLoading(false);
           return;
         }
 
-        // Get user's membership for current event
+        // Get user's membership for resolved event
         const { data: membershipData, error: membershipError } = await supabase
           .from('event_members')
           .select(`
@@ -59,7 +87,7 @@ export function useEventMembership() {
             full_name,
             email
           `)
-          .eq('event_id', currentEvent.id)
+          .eq('event_id', eventId)
           .eq('user_id', user.id)
           .eq('status', 'active')
           .single();
@@ -68,6 +96,13 @@ export function useEventMembership() {
           if (membershipError.code === 'PGRST116') {
             // No membership found - user is not a temporary member
             setMembership(null);
+            if (typeof window !== 'undefined') {
+              try {
+                sessionStorage.removeItem('currentEventId');
+              } catch (storageError) {
+                console.warn('Unable to remove current event id from sessionStorage', storageError);
+              }
+            }
           } else {
             setError(membershipError.message);
           }

@@ -389,6 +389,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user?.id) {
         clearCachedRole(user.id)
       }
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('currentEventId')
+        } catch (error) {
+          logger.error('Error clearing current event id from sessionStorage', error, { component: 'AuthContext', action: 'signOut' })
+        }
+      }
       await supabase.auth.signOut()
       // Use window.location.href for immediate redirect to avoid route protection conflicts
       window.location.href = '/login'

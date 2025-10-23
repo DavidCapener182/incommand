@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CheckCircleIcon, ExclamationTriangleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
@@ -20,6 +20,33 @@ export default function MagicLinkPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
+  const eventParam = useMemo(() => {
+    return searchParams?.get('eventId') || searchParams?.get('event') || null;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!eventParam || typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem('currentEventId', eventParam);
+    } catch (error) {
+      console.warn('Unable to persist current event id in sessionStorage', error);
+    }
+  }, [eventParam]);
+
+  const redirectToIncidents = useCallback(() => {
+    const targetPath = eventParam
+      ? `/incidents?event=${encodeURIComponent(eventParam)}`
+      : '/incidents';
+    if (eventParam && typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('currentEventId', eventParam);
+      } catch (error) {
+        console.warn('Unable to persist current event id in sessionStorage', error);
+      }
+    }
+    router.push(targetPath);
+  }, [eventParam, router]);
+
   useEffect(() => {
     const handleMagicLink = async () => {
       try {
@@ -36,7 +63,7 @@ export default function MagicLinkPage() {
         
         if (hash.includes('access_token=')) {
           console.log('Access token found in URL hash, processing...');
-          
+
           // Extract the access token from the hash
           const urlParams = new URLSearchParams(hash.substring(1));
           const accessToken = urlParams.get('access_token');
@@ -67,12 +94,12 @@ export default function MagicLinkPage() {
               console.log('User session established, redirecting to incidents');
               setSuccess(true);
               setTimeout(() => {
-                router.push('/incidents');
+                redirectToIncidents();
               }, 1000);
               return;
             }
           }
-          
+
           // Wait for Supabase to process the magic link automatically
           await new Promise(resolve => setTimeout(resolve, 2000));
           
@@ -90,12 +117,12 @@ export default function MagicLinkPage() {
             console.log('User has a session, redirecting to incidents');
             setSuccess(true);
             setTimeout(() => {
-              router.push('/incidents');
+              redirectToIncidents();
             }, 1000);
             return;
           }
         }
-        
+
         // If no access token or session, check for existing session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
@@ -103,11 +130,11 @@ export default function MagicLinkPage() {
           console.log('User already has a session, redirecting to incidents');
           setSuccess(true);
           setTimeout(() => {
-            router.push('/incidents');
+            redirectToIncidents();
           }, 1000);
           return;
         }
-        
+
         console.log('No authentication found');
         setError('Authentication failed. Please try again.');
         setLoading(false);
@@ -120,7 +147,7 @@ export default function MagicLinkPage() {
     };
 
     handleMagicLink();
-  }, [searchParams, router]);
+  }, [redirectToIncidents, searchParams]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +202,7 @@ export default function MagicLinkPage() {
       console.log('Form submission successful, redirecting to incidents');
       setSuccess(true);
       setTimeout(() => {
-        router.push('/incidents');
+        redirectToIncidents();
       }, 2000);
 
     } catch (err) {
