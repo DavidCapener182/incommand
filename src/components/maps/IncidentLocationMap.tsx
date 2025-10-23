@@ -118,17 +118,8 @@ function isValidLocationInput(input: string | null | undefined): boolean {
   
   const trimmed = input.trim()
   
-  // Check for What3Words format (///word.word.word)
-  const w3wPattern = /^\/\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/
-  if (w3wPattern.test(trimmed)) return true
-  
-  // Check for address-like patterns (contains numbers, letters, spaces, common address words)
-  const addressPattern = /^[a-zA-Z0-9\s,.-]+$/
-  const hasNumbers = /\d/.test(trimmed)
-  const hasLetters = /[a-zA-Z]/.test(trimmed)
-  const isLongEnough = trimmed.length >= 5
-  
-  return addressPattern.test(trimmed) && hasNumbers && hasLetters && isLongEnough
+  // Allow any non-empty location name (Stage, Main Gate, North Entrance, etc.)
+  return trimmed.length > 0
 }
 
 export default function IncidentLocationMap({

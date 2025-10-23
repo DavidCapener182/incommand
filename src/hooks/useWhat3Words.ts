@@ -42,6 +42,13 @@ export function useWhat3Words(): UseWhat3WordsResult {
   const validate = useCallback(async (rawInput: string) => {
     const normalized = normalizeInput(rawInput)
 
+    // Skip validation for callsigns (single letters/numbers like A1, R2, etc.)
+    if (normalized && /^[a-z0-9]{1,3}$/i.test(normalized)) {
+      setCoordinates(null)
+      setError(null)
+      return false
+    }
+
     if (!normalized || normalized.split('.').length !== 3) {
       setCoordinates(null)
       setError("Invalid address. Try 'filled.count.soap'")

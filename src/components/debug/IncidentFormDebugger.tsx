@@ -11,7 +11,7 @@ interface IncidentFormData {
   incident_type: string;
   action_taken: string;
   priority: string;
-  what3words: string;
+  location: string;
   time_of_occurrence?: string;
   entry_type?: 'contemporaneous' | 'retrospective';
   retrospective_justification?: string;
@@ -63,12 +63,12 @@ export default function IncidentFormDebugger({ formData, eventId, isVisible = fa
       value: formData.priority || 'Empty',
       required: true
     },
-    {
-      name: 'What3Words',
-      isValid: !formData.what3words || formData.what3words.length > 6,
-      value: formData.what3words || 'Empty',
-      required: false
-    },
+        {
+          name: 'Location',
+          isValid: !!formData.location?.trim(),
+          value: formData.location || 'Empty',
+          required: false
+        },
     {
       name: 'Entry Type',
       isValid: !!formData.entry_type,

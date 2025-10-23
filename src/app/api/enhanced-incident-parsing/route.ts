@@ -350,6 +350,12 @@ export async function POST(request: Request) {
     const description = aiResult?.description || input;
     const callsign = aiResult?.callsign || fallbackDetectCallsign(input);
     let location = (aiResult?.location || fallbackExtractLocation(input) || '').toString();
+    
+    // Filter out coordinates - if location looks like coordinates, clear it
+    if (location && /^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(location.trim())) {
+      location = '';
+    }
+    
     // Special handling for Emergency Show Stop, Artist On Stage, and Artist Off Stage - location should be "Stage"
     if (incidentType === 'Emergency Show Stop' || incidentType === 'Artist On Stage' || incidentType === 'Artist Off Stage') {
       location = 'Stage';

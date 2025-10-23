@@ -139,11 +139,11 @@ export async function POST(request: NextRequest) {
       retrospective_justification: body.retrospective_justification,
       logged_by_callsign: userCallsign,
       priority: body.priority || 'medium',
-      what3words: body.what3words,
       photo_url: body.photo_url,
       event_id: body.event_id,
       status: body.status || 'open',
-      is_closed: false
+      is_closed: false,
+      location: body.location_name || '' // Map location_name to database location field
     }
 
     // Create immutable log

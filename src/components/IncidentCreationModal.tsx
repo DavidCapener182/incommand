@@ -27,7 +27,6 @@ import EscalationTimer from './EscalationTimer'
 import IncidentFormDebugger from './debug/IncidentFormDebugger'
 import { useSwipeModal } from '../hooks/useSwipeGestures'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
-import useWhat3Words from '@/hooks/useWhat3Words'
 import useIncidentSOP from '@/hooks/useIncidentSOP'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -63,9 +62,8 @@ interface IncidentFormData {
   is_closed: boolean
   status: string
   log_number: string
-  what3words: string
+  location: string
   priority: string
-  location_name?: string
   // Auditable logging fields
   time_of_occurrence?: string
   time_logged?: string
@@ -2088,9 +2086,8 @@ export default function IncidentCreationModal({
     is_closed: false,
     status: 'open',
     log_number: '',
-    what3words: '///',
     priority: 'medium',
-    location_name: '',
+    location: '',
     // Auditable logging defaults
     time_of_occurrence: new Date().toISOString(),
     time_logged: new Date().toISOString(),
@@ -2104,7 +2101,6 @@ export default function IncidentCreationModal({
     outcome: '',
     use_structured_template: true
   });
-  const [w3wInput, setW3wInput] = useState('')
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
     description: '',
@@ -2168,20 +2164,12 @@ export default function IncidentCreationModal({
     occurrence: false,
     action_taken: false
   })
-  const {
-    coordinates: w3wCoordinates,
-    isLoading: isValidatingWhat3Words,
-    error: what3WordsError,
-    validate: validateWhat3Words,
-    reset: resetWhat3Words,
-  } = useWhat3Words()
-  const [w3wManuallyEdited, setW3wManuallyEdited] = useState(false);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
   const [showGuidedActions, setShowGuidedActions] = useState(false);
   const [guidedActionsGenerated, setGuidedActionsGenerated] = useState(false);
   const [mapCoordinates, setMapCoordinates] = useState<Coordinates | null>(null);
-  const [mapCoordinatesSource, setMapCoordinatesSource] = useState<'w3w' | 'geocoded' | 'manual' | null>(null);
+  const [mapCoordinatesSource, setMapCoordinatesSource] = useState<'geocoded' | 'manual' | null>(null);
   const [showSOPModal, setShowSOPModal] = useState(false);
   const { steps: sopSteps, isLoading: sopLoading, error: sopError } = useIncidentSOP(formData.incident_type || null);
   const { hasGuidedActions } = useGuidedActions();
@@ -2203,17 +2191,11 @@ export default function IncidentCreationModal({
     [formData.incident_type, sopLoading, sopHasSteps]
   )
   const mapLocationQuery = useMemo(() => {
-    if (formData.location_name && formData.location_name.trim().length > 0) {
-      return formData.location_name.trim()
-    }
-    if (formData.what3words && formData.what3words.length > 3) {
-      return formData.what3words.replace(/^\/*/, '')
-    }
-    if (w3wInput && w3wInput.trim().length > 0) {
-      return w3wInput.trim()
+    if (formData.location && formData.location.trim().length > 0) {
+      return formData.location.trim()
     }
     return ''
-  }, [formData.location_name, formData.what3words, w3wInput])
+  }, [formData.location])
   const shouldRenderMap = useMemo(() => {
     if (!isOpen) {
       return false
@@ -2986,7 +2968,6 @@ export default function IncidentCreationModal({
     }
 
     const isW3W = !!cleanedLocation && /^(?:\s*\/{0,3})?[a-zA-Z]+\.[a-zA-Z]+\.[a-zA-Z]+$/.test(cleanedLocation);
-    const normalizedW3W = isW3W ? (`///${cleanedLocation.replace(/^\/*/, '')}`) : prev.what3words;
 
     // Priority override for low priority incident types
     const lowPriorityTypes = ['Artist On Stage', 'Artist Off Stage', 'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Showdown'];
@@ -3003,8 +2984,7 @@ export default function IncidentCreationModal({
       callsign_from: aiData.callsign || prev.callsign_from,
       callsign_to: '', // Leave callsign_to empty as specified
       priority: finalPriority,
-      what3words: normalizedW3W,
-      location_name: cleanedLocation,
+      location: cleanedLocation,
       action_taken: recommendedActions,
       outcome: occurrenceTemplate
     };
@@ -3127,9 +3107,9 @@ export default function IncidentCreationModal({
       const newData = {
         ...prev,
         incident_type: incidentType,
-        what3words: data.location || prev.what3words,
         callsign_from: data.callsign || prev.callsign_from,
         priority: data.priority || prev.priority,
+        location: data.location || prev.location, // Add location field
         // Populate structured template fields
         headline: structuredFields.headline,
         source: structuredFields.source,
@@ -3171,6 +3151,7 @@ export default function IncidentCreationModal({
   };
 
   const handleQuickAdd = async (value: string) => {
+    console.log('🚀 handleQuickAdd called with:', value);
     setIsQuickAddProcessing(true);
     setQuickAddAISource(null);
     setQuickAddValue(value);
@@ -3222,7 +3203,14 @@ export default function IncidentCreationModal({
       // cloud: API succeeded with OpenAI; browser: client-side WebLLM; null: heuristics/no AI
       setQuickAddAISource(source);
       if (data) {
-        setFormData(prev => applyAIIncidentResult(data, value, incidentTypes, prev));
+        console.log('🔍 AI parsing result:', data);
+        console.log('📍 Current form data before update:', formData.location);
+        const updatedFormData = applyAIIncidentResult(data, value, incidentTypes, formData);
+        console.log('📍 Updated form data location:', updatedFormData.location);
+        console.log('📍 Full updated form data:', updatedFormData);
+        console.log('🔄 Setting form data with location:', updatedFormData.location);
+        setFormData(updatedFormData);
+        console.log('✅ Form data set successfully');
         applied = true;
       }
     } finally {
@@ -3459,21 +3447,6 @@ export default function IncidentCreationModal({
       priority: localPriority || prev.priority
     }));
 
-    // Auto-extract w3w if not manually edited
-    if (!w3wManuallyEdited) {
-      // Ensure extractW3WFromQuickInput is declared before use
-      const w3wMatch = extractW3WFromQuickInput(input) || '';
-      if (w3wMatch) {
-        setFormData(prev => {
-          // Remove any existing w3w location at the end
-          let newOccurrence = prev.occurrence.replace(/Location \(\/{0,3}[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+\)$/i, '').trim();
-          // Append the new w3w location
-          newOccurrence = newOccurrence ? `${newOccurrence} Location (${w3wMatch})` : `Location (${w3wMatch})`;
-          return { ...prev, what3words: w3wMatch, occurrence: newOccurrence };
-        });
-        setW3wInput(w3wMatch.replace(/^\/*/, ''))
-      }
-    }
 
     // Clear any previous timer
     if (processTimer.current) {
@@ -3684,9 +3657,8 @@ export default function IncidentCreationModal({
           status: 'open',
           ai_input: '',
           log_number: '',
-          what3words: '///',
           priority: 'medium',
-          location_name: '',
+          location: '',
           time_of_occurrence: new Date().toISOString(),
           time_logged: new Date().toISOString(),
           entry_type: 'contemporaneous',
@@ -3707,7 +3679,7 @@ export default function IncidentCreationModal({
 
       // Get current timestamp
       const now = new Date().toISOString();
-      const resolvedCoordinates = mapCoordinates || w3wCoordinates || null
+      const resolvedCoordinates = mapCoordinates || null
 
       // Generate structured occurrence text or use legacy occurrence field
       const structuredOccurrence = generateStructuredOccurrence(formData);
@@ -3784,10 +3756,10 @@ export default function IncidentCreationModal({
         event_id: effectiveEvent.id,
         status: shouldBeLogged ? 'logged' : (formData.status || 'open'),
         ai_input: formData.ai_input || null,
+        location: formData.location || '',
         created_at: now,
         updated_at: now, // Keep this for backward compatibility
         timestamp: now, // Keep this for backward compatibility
-        what3words: formData.what3words && formData.what3words.length > 6 ? formData.what3words : null,
         // Auditable logging fields
         time_of_occurrence: formData.time_of_occurrence || now,
         time_logged: formData.time_logged || now,
@@ -3796,7 +3768,7 @@ export default function IncidentCreationModal({
         logged_by_user_id: user.id, // We've already verified user.id exists above
         logged_by_callsign: userCallsign,
         is_amended: false,
-        // Add GPS coordinates if map or what3words coordinates are available
+        // Add GPS coordinates if map coordinates are available
         ...(resolvedCoordinates && {
           latitude: resolvedCoordinates.lat,
           longitude: resolvedCoordinates.lng
@@ -3939,9 +3911,8 @@ export default function IncidentCreationModal({
         status: 'open',
         ai_input: '',
         log_number: '',
-        what3words: '///',
         priority: 'medium',
-        location_name: '',
+        location: '',
         time_of_occurrence: new Date().toISOString(),
         time_logged: new Date().toISOString(),
         entry_type: 'contemporaneous',
@@ -4110,9 +4081,8 @@ export default function IncidentCreationModal({
       is_closed: false,
       status: 'open',
       log_number: '',
-      what3words: '///',
       priority: 'medium',
-      location_name: '',
+      location: '',
       // Auditable logging defaults
       time_of_occurrence: new Date().toISOString(),
       time_logged: new Date().toISOString(),
@@ -4126,8 +4096,6 @@ export default function IncidentCreationModal({
       outcome: '',
       use_structured_template: true
     });
-    setW3wInput('')
-    resetWhat3Words()
     setFactualValidationWarnings([])
     setRefusalDetails({
       policeRequired: false,
@@ -4159,7 +4127,6 @@ export default function IncidentCreationModal({
     setProcessingAI(false);
     setMissingCallsign(false);
     setIsEditing({ occurrence: false, action_taken: false });
-    setW3wManuallyEdited(false);
     setShowMoreTypes(false);
     setMapCoordinates(null);
     setMapCoordinatesSource(null);
@@ -4168,102 +4135,14 @@ export default function IncidentCreationModal({
 
   const followUpQuestions = getFollowUpQuestions(formData.incident_type)
 
-  // What3Words input logic
-
-  // Update handleW3WChange to set the manual edit flag
-  const handleW3WChange = (value: string) => {
-    setW3wManuallyEdited(true)
-    const sanitized = value
-      .toLowerCase()
-      .replace(/[^a-z0-9.\s]/g, '')
-      .replace(/\s+/g, '.')
-      .replace(/\.+/g, '.')
-      .replace(/^\.+/, '')
-
-    setW3wInput(sanitized)
+  // Simple location input logic
+  const handleLocationChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      what3words: sanitized ? `///${sanitized}` : '',
+      location: value,
     }))
   }
 
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    if (!w3wInput) {
-      resetWhat3Words()
-      return
-    }
-
-    const normalized = w3wInput.replace(/^\/*/, '')
-    let isActive = true
-
-    const timeout = setTimeout(async () => {
-      const success = await validateWhat3Words(normalized)
-      if (!isActive) {
-        return
-      }
-
-      if (success) {
-        try {
-          window.localStorage?.setItem('last_w3w_location', normalized)
-        } catch (error) {
-          console.warn('Unable to persist last what3words location', error)
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          what3words: `///${normalized}`,
-        }))
-      }
-    }, 500)
-
-    return () => {
-      isActive = false
-      clearTimeout(timeout)
-    }
-  }, [isOpen, resetWhat3Words, validateWhat3Words, w3wInput])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    const existing = formData.what3words?.replace(/^\/*/, '').replace(/^\.+/, '') || ''
-    let initialValue = existing
-
-    if (!initialValue && typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem('last_w3w_location')
-        if (stored) {
-          initialValue = stored
-        }
-      } catch (error) {
-        console.warn('Unable to read last what3words location', error)
-      }
-    }
-
-    setW3wInput(initialValue)
-    if (initialValue) {
-      setFormData((prev) =>
-        prev.what3words === `///${initialValue}`
-          ? prev
-          : { ...prev, what3words: `///${initialValue}` }
-      )
-    }
-  }, [formData.what3words, isOpen])
-
-  useEffect(() => {
-    if (w3wCoordinates) {
-      setMapCoordinates(w3wCoordinates)
-      setMapCoordinatesSource('w3w')
-    } else if ((!formData.what3words || formData.what3words.length <= 3) && mapCoordinatesSource === 'w3w') {
-      setMapCoordinates(null)
-      setMapCoordinatesSource(null)
-    }
-  }, [w3wCoordinates, formData.what3words, mapCoordinatesSource])
 
   const handleMapLocationChange = useCallback((coords: Coordinates, source: 'manual' | 'geocoded' | 'drag') => {
     setMapCoordinates(coords)
@@ -4276,13 +4155,12 @@ export default function IncidentCreationModal({
     }
 
     setFormData(prev => {
-      if (prev.location_name && prev.location_name.trim().length > 0) {
+      // Only auto-populate location if it's empty and we have a meaningful location
+      if (prev.location && prev.location.trim().length > 0) {
         return prev
       }
-      return {
-        ...prev,
-        location_name: `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-      }
+      // Don't auto-populate with raw coordinates - let user enter meaningful location names
+      return prev
     })
   }, [mapCoordinatesSource])
 
@@ -4313,16 +4191,6 @@ export default function IncidentCreationModal({
     }
   }, [formData.incident_type, showSOPModal])
 
-  // Extract w3w from Quick Input
-  const extractW3WFromQuickInput = (input: string) => {
-    // Only match if input contains ///word.word.word
-    const regex = /\/\/\/([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)/;
-    const match = input.match(regex);
-    if (match) {
-      return `///${match[1]}.${match[2]}.${match[3]}`;
-    }
-    return null;
-  };
 
   // Responsive incident type grid: 8x3 (desktop), 4x3 (mobile)
   const desktopVisibleCount = 24;
@@ -4660,7 +4528,10 @@ export default function IncidentCreationModal({
           <div className="relative">
             <QuickAddInput 
               aiSource={quickAddAISource} 
-              onQuickAdd={async (val: string) => { await handleQuickAdd(val); }} 
+              onQuickAdd={async (val: string) => { 
+                console.log('🎯 QuickAddInput onQuickAdd called with:', val);
+                await handleQuickAdd(val); 
+              }} 
               onParsedData={handleParsedData}
               isProcessing={isQuickAddProcessing} 
               showParseButton={true}
@@ -4674,7 +4545,7 @@ export default function IncidentCreationModal({
                     callsign_from: '',
                     callsign_to: 'Event Control',
                     priority: 'medium',
-                    location_name: '',
+                    // Don't clear location - let AI parsing populate it
                     action_taken: '',
                     outcome: '',
                     // Clear structured fields that were auto-populated
@@ -5411,59 +5282,17 @@ export default function IncidentCreationModal({
                 </div>
               <div className="space-y-3">
                 <div>
-                    <label htmlFor="w3w" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                       Location
-                      <span className="ml-1 text-gray-400" title="Three-word address for precise location">ⓘ</span>
                     </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">{'///'}</span>
-                      </div>
-                  <input
-                        id="w3w"
-                    type="text"
-                        value={w3wInput}
-                        onChange={(e) => handleW3WChange(e.target.value)}
-                        placeholder="word.word.word"
-                        className="w-full rounded-lg border border-gray-200 pl-8 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    <input
+                        id="location"
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => handleLocationChange(e.target.value)}
+                        placeholder="e.g., Stage, Main Gate, North Entrance"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
-                      {isValidatingWhat3Words && (
-                        <span className="absolute inset-y-0 right-2 flex items-center">
-                          <svg
-                            className="h-4 w-4 animate-spin text-blue-500"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            aria-hidden
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                            />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1" aria-live="polite">
-                      {what3WordsError && (
-                        <p className="font-semibold text-red-600 dark:text-red-400">{what3WordsError}</p>
-                      )}
-                      {w3wCoordinates && !what3WordsError && !isValidatingWhat3Words && (
-                        <p className="text-gray-600 dark:text-gray-300">
-                          Coordinates: <span className="font-semibold">{w3wCoordinates.lat.toFixed(5)}</span>,{' '}
-                          <span className="font-semibold">{w3wCoordinates.lng.toFixed(5)}</span>
-                        </p>
-                      )}
-                  </div>
                   {shouldRenderMap && (
                     <IncidentLocationMap
                       coordinates={mapCoordinates}
@@ -5615,7 +5444,7 @@ export default function IncidentCreationModal({
         incidentData={{
           occurrence: formData.occurrence,
           callsign: formData.callsign_from,
-          location: formData.location_name || '',
+          location: formData.location || '',
           priority: formData.priority,
           time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
           persons: '', // Can be extracted from occurrence if needed

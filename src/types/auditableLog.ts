@@ -40,7 +40,7 @@ export interface AuditableIncidentLog {
   assigned_staff_ids?: string[]
   auto_assigned?: boolean
   dependencies?: string[]
-  what3words?: string
+  location?: string
   
   // New auditable logging fields
   time_of_occurrence: string           // When the incident actually happened
@@ -97,7 +97,7 @@ export interface CreateAuditableLogRequest {
   entry_type: EntryType
   retrospective_justification?: string // Required if retrospective
   priority?: string
-  what3words?: string
+  location_name?: string              // Location name (replaces what3words)
   photo_url?: string
   event_id: string
   status?: string
@@ -233,7 +233,7 @@ export const AMENDABLE_FIELDS = [
   'callsign_to',
   'incident_type',
   'priority',
-  'what3words',
+  'location',
   'time_of_occurrence',
   'status'
 ] as const
