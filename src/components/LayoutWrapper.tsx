@@ -28,8 +28,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     // Define public routes that don't require authentication
     const publicRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup', '/staffing', '/admin/green-guide', '/invite', '/auth/magic-link'];
-    
-    if (!loading && !user && !publicRoutes.includes(pathname)) {
+    const hasAuthToken = typeof window !== 'undefined' && (
+      window.location.hash.includes('access_token=') ||
+      window.location.search.includes('access_token=')
+    );
+
+    if (!loading && !user && !publicRoutes.includes(pathname) && !hasAuthToken) {
       router.push('/login');
     }
     if (!loading && user && ['/login', '/signup'].includes(pathname)) {
@@ -49,6 +53,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Skip effects for style-lab route
@@ -86,8 +91,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Define routes that should never show the main application navigation
   // Marketing pages have their own navigation, so hide the main nav on all of them
   const noNavRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup'];
-  const { user } = useAuth();
-  
+
   // Only show the main application navigation for authenticated users on operational pages
   const showNav = user && !noNavRoutes.includes(pathname);
 

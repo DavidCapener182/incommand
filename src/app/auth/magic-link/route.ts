@@ -108,8 +108,12 @@ export async function GET(request: NextRequest) {
       eventId
     });
 
-    // Redirect to the incidents page
-    return NextResponse.redirect(new URL('/incidents', request.url));
+    // Redirect to the incidents page, preserving event context when available
+    const redirectUrl = new URL('/incidents', request.url);
+    if (eventId) {
+      redirectUrl.searchParams.set('event', eventId);
+    }
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error: any) {
     logger.error('Unhandled error in magic link callback', error, {

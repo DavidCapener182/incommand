@@ -596,6 +596,19 @@ export default function Dashboard() {
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
   const [currentEvent, setCurrentEvent] = useState<any | null>(null)
+
+  const persistCurrentEventId = useCallback((eventId: string | null) => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (eventId) {
+        sessionStorage.setItem('currentEventId', eventId);
+      } else {
+        sessionStorage.removeItem('currentEventId');
+      }
+    } catch (error) {
+      console.warn('Unable to persist current event id in sessionStorage', error);
+    }
+  }, []);
   
   // Real-time analytics for live updates
   const realtimeAnalytics = useRealtimeAnalytics({
@@ -641,23 +654,12 @@ export default function Dashboard() {
   // Accessibility: Screen reader announcements
   const { announce } = useScreenReader({ politeness: 'polite' });
 
-  // Handle event parameter from URL (for invite links)
-  useEffect(() => {
-    const eventId = searchParams.get('event');
-    if (eventId && eventId !== currentEventId) {
-      console.log('Dashboard - Event ID from URL:', eventId);
-      // Set the event ID and fetch the event details
-      setCurrentEventId(eventId);
-      fetchEventById(eventId);
-    }
-  }, [searchParams, currentEventId]);
-
   // Fetch event by ID (for invite links)
-  const fetchEventById = async (eventId: string) => {
+  const fetchEventById = useCallback(async (eventId: string) => {
     try {
       console.log('Dashboard - Fetching event by ID:', eventId);
       setLoadingCurrentEvent(true);
-      
+
       const { data: event, error } = await supabase
         .from('events')
         .select('*')
@@ -674,7 +676,8 @@ export default function Dashboard() {
         console.log('Dashboard - Event found:', event);
         setCurrentEvent(event);
         setHasCurrentEvent(true);
-        
+        persistCurrentEventId(event.id);
+
         // Fetch coordinates if venue address exists
         if (event.venue_address) {
           try {
@@ -689,12 +692,24 @@ export default function Dashboard() {
       } else {
         console.log('Dashboard - No event found with ID:', eventId);
         setLoadingCurrentEvent(false);
-      }
-    } catch (err) {
-      console.error('Dashboard - Error in fetchEventById:', err);
-      setLoadingCurrentEvent(false);
+        persistCurrentEventId(null);
     }
-  };
+  } catch (err) {
+    console.error('Dashboard - Error in fetchEventById:', err);
+    setLoadingCurrentEvent(false);
+  }
+  }, [persistCurrentEventId]);
+
+  // Handle event parameter from URL (for invite links)
+  useEffect(() => {
+    const eventId = searchParams.get('event');
+    if (eventId && eventId !== currentEventId) {
+      console.log('Dashboard - Event ID from URL:', eventId);
+      // Set the event ID and fetch the event details
+      setCurrentEventId(eventId);
+      fetchEventById(eventId);
+    }
+  }, [currentEventId, fetchEventById, searchParams]);
 
   // Accessibility: Global keyboard shortcuts
   useKeyboardShortcuts({
@@ -902,6 +917,7 @@ export default function Dashboard() {
         setCurrentEvent(data);
         setHasCurrentEvent(true);
         setCurrentEventId(data.id);
+        persistCurrentEventId(data.id);
         if (data.venue_address) {
           try {
             const coords = await geocodeAddress(data.venue_address);
@@ -920,7 +936,7 @@ export default function Dashboard() {
         }
       } else {
         console.log('No event found with company_id filter, trying without company_id for superadmin...');
-        
+
         // For superadmin users, try fetching without company_id filter
         if (userRole === 'superadmin') {
           try {
@@ -940,6 +956,7 @@ export default function Dashboard() {
               setCurrentEvent(superadminData);
               setHasCurrentEvent(true);
               setCurrentEventId(superadminData.id);
+              persistCurrentEventId(superadminData.id);
               if (superadminData.venue_address) {
                 try {
                   const coords = await geocodeAddress(superadminData.venue_address);
@@ -955,15 +972,18 @@ export default function Dashboard() {
             } else {
               setHasCurrentEvent(false);
               setCurrentEventId(null);
+              persistCurrentEventId(null);
             }
           } catch (superadminErr) {
             console.error('Superadmin event fetch failed:', superadminErr);
             setHasCurrentEvent(false);
             setCurrentEventId(null);
+            persistCurrentEventId(null);
           }
         } else {
           setHasCurrentEvent(false);
           setCurrentEventId(null);
+          persistCurrentEventId(null);
         }
       }
     } catch (err) {
@@ -977,7 +997,7 @@ export default function Dashboard() {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
     }
-  }, [companyId, userRole]);
+  }, [companyId, persistCurrentEventId, userRole]);
 
   useEffect(() => {
     const timer = setInterval(() => {

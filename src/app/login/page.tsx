@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Image from 'next/image'
@@ -21,6 +21,40 @@ export default function LoginPage() {
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  const resolveEventContext = useCallback(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const eventParam = params.get('event') || params.get('eventId')
+      if (eventParam) {
+        try {
+          sessionStorage.setItem('currentEventId', eventParam)
+        } catch (error) {
+          console.warn('Unable to persist current event id in sessionStorage', error)
+        }
+        return eventParam
+      }
+      return sessionStorage.getItem('currentEventId')
+    } catch (error) {
+      console.warn('Unable to resolve event context from location', error)
+      try {
+        return sessionStorage.getItem('currentEventId')
+      } catch (storageError) {
+        console.warn('Unable to read current event id from sessionStorage', storageError)
+        return null
+      }
+    }
+  }, [])
+
+  const redirectToIncidents = useCallback(() => {
+    const eventParam = resolveEventContext()
+    if (eventParam) {
+      router.push(`/incidents?event=${encodeURIComponent(eventParam)}`)
+    } else {
+      router.push('/incidents')
+    }
+  }, [resolveEventContext, router])
+
   useEffect(() => {
     emailRef.current?.focus()
   }, [])
@@ -33,11 +67,13 @@ export default function LoginPage() {
         const hash = window.location.hash;
         if (hash.includes('access_token=')) {
           console.log('Login page - Magic link detected, processing authentication');
-          
+
           // Import Supabase client
           const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
           const supabase = createClientComponentClient();
-          
+
+          resolveEventContext();
+
           // Extract tokens from URL hash
           const urlParams = new URLSearchParams(hash.substring(1));
           const accessToken = urlParams.get('access_token');
@@ -66,7 +102,7 @@ export default function LoginPage() {
             
             if (sessionData.session) {
               console.log('Login page - User authenticated via magic link, redirecting to incidents');
-              router.push('/incidents');
+              redirectToIncidents();
               return;
             }
           }
@@ -86,7 +122,7 @@ export default function LoginPage() {
           
           if (sessionData.session) {
             console.log('Login page - User authenticated via magic link, redirecting to incidents');
-            router.push('/incidents');
+            redirectToIncidents();
             return;
           }
         }
@@ -96,7 +132,7 @@ export default function LoginPage() {
     };
 
     handleMagicLink();
-  }, [router]);
+  }, [redirectToIncidents, resolveEventContext]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,7 +148,7 @@ export default function LoginPage() {
         password: passwordValue,
       })
       if (error) throw error
-      router.push('/incidents')
+      redirectToIncidents()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
