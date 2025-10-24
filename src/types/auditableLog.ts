@@ -250,7 +250,7 @@ export const FIELD_LABELS: Record<AmendableField, string> = {
   callsign_to: 'Callsign To',
   incident_type: 'Incident Type',
   priority: 'Priority',
-  what3words: 'What3Words Location',
+  location: 'Location',
   time_of_occurrence: 'Time of Occurrence',
   status: 'Status'
 } as const
