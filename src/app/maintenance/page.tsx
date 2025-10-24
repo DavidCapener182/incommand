@@ -7,7 +7,8 @@ import {
   ClipboardList,
   Factory,
   Loader2,
-  Wrench
+  Wrench,
+  X
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import type {
@@ -43,6 +44,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 
 const assetStatusOptions = [
   { value: 'operational', label: 'Operational' },
@@ -528,7 +530,7 @@ export default function MaintenancePage() {
   }
 
   return (
-    <main className="module-container">
+    <PageWrapper>
       <header className="module-header">
         <div>
           <h1 className="module-title">Maintenance &amp; Asset Management</h1>
@@ -982,95 +984,158 @@ export default function MaintenancePage() {
         </div>
       </section>
 
-      <Dialog open={assetModalOpen} onOpenChange={setAssetModalOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{assetModalMode === 'create' ? 'Add asset to register' : 'Update asset details'}</DialogTitle>
-            <DialogDescription>
-              {assetModalMode === 'create'
-                ? 'Capture the core metadata for the asset so maintenance and lifecycle planning can start immediately.'
-                : 'Keep asset information accurate for upcoming work orders and reporting.'}
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleAssetSubmit}>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label>Asset tag</label>
-                <input
-                  value={assetForm.asset_tag}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, asset_tag: event.target.value }))}
-                  required
-                  disabled={assetModalMode === 'edit'}
-                />
-              </div>
-              <div>
-                <label>Name</label>
-                <input
-                  value={assetForm.name}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, name: event.target.value }))}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label>Description</label>
-              <textarea
-                value={assetForm.description}
-                onChange={(event) => setAssetForm((prev) => ({ ...prev, description: event.target.value }))}
-                placeholder="Optional context, model numbers, or warranty details"
-              />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label>Location</label>
-                <input
-                  value={assetForm.location}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, location: event.target.value }))}
-                  placeholder="e.g. North Concourse"
-                />
-              </div>
-              <div>
-                <label>Status</label>
-                <select
-                  className="module-select"
-                  value={assetForm.status}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, status: event.target.value }))}
-                >
-                  {assetStatusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label>Service life (months)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={assetForm.service_life_months}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, service_life_months: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label>Commissioned</label>
-                <input
-                  type="date"
-                  value={assetForm.commissioned_at}
-                  onChange={(event) => setAssetForm((prev) => ({ ...prev, commissioned_at: event.target.value }))}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <button type="submit" className="button-primary">
-                {assetModalMode === 'create' ? 'Add asset' : 'Save changes'}
+      {/* Asset Modal */}
+      {assetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setAssetModalOpen(false)}
+          />
+          
+          {/* Modal */}
+          <div className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-[#1e2438] rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 p-6">
+              <button
+                onClick={() => setAssetModalOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-white" />
               </button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Factory className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white pr-12">
+                    {assetModalMode === 'create' ? 'Add asset to register' : 'Update asset details'}
+                  </h2>
+                  <p className="text-blue-100 mt-1">
+                    {assetModalMode === 'create'
+                      ? 'Capture the core metadata for the asset so maintenance and lifecycle planning can start immediately.'
+                      : 'Keep asset information accurate for upcoming work orders and reporting.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-6">
+              <form className="space-y-6" onSubmit={handleAssetSubmit}>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Asset tag
+                    </label>
+                    <input
+                      type="text"
+                      value={assetForm.asset_tag}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, asset_tag: event.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                      required
+                      disabled={assetModalMode === 'edit'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={assetForm.name}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, name: event.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={assetForm.description}
+                    onChange={(event) => setAssetForm((prev) => ({ ...prev, description: event.target.value }))}
+                    placeholder="Optional context, model numbers, or warranty details"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={assetForm.location}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, location: event.target.value }))}
+                      placeholder="e.g. North Concourse"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={assetForm.status}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, status: event.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {assetStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Service life (months)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={assetForm.service_life_months}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, service_life_months: event.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                      Commissioned
+                    </label>
+                    <input
+                      type="date"
+                      value={assetForm.commissioned_at}
+                      onChange={(event) => setAssetForm((prev) => ({ ...prev, commissioned_at: event.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                  >
+                    {assetModalMode === 'create' ? 'Add asset' : 'Save changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
         <DialogContent className="max-w-xl">
@@ -1233,6 +1298,6 @@ export default function MaintenancePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </main>
+    </PageWrapper>
   )
 }

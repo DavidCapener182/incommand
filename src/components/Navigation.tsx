@@ -404,8 +404,8 @@ export default function Navigation() {
                           <li>
                             <NavigationMenuLink asChild>
                               <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Vendor Accreditation</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Manage vendor onboarding and access control.</div>
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Accreditation Management</div>
+                                <div className="text-xs text-white/80 leading-relaxed">Manage Accreditation onboarding and access control.</div>
                               </Link>
                             </NavigationMenuLink>
                           </li>
@@ -681,7 +681,7 @@ export default function Navigation() {
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
                   <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
-                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Vendor Accreditation</Link>
+                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Accreditation Management</Link>
                   <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
                   <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
                   <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>

@@ -62,7 +62,7 @@ export default function HomePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="relative z-10 flex flex-wrap justify-center gap-4"
+          className="relative z-10 flex flex-wrap justify-center gap-4 mt-8"
         >
           {isPreLaunch ? (
             <button
@@ -179,7 +179,7 @@ export default function HomePage() {
         <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 drop-shadow-md">
           Ready to Transform Your Operations?
         </h2>
-        <p className="text-blue-100 text-lg mb-10 leading-relaxed">
+        <p className="text-blue-100 text-lg mb-12 leading-relaxed">
           Join hundreds of event and security teams using InCommand to run safer, more efficient operations.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">

@@ -4,12 +4,13 @@ import React from 'react';
 import { useEventMembership } from '@/hooks/useEventMembership';
 import InviteManagement from '@/components/InviteManagement';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { PageWrapper } from '@/components/layout/PageWrapper';
 
 export default function EventInvitesPage() {
   const { canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <PageWrapper>
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
           <UserCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -41,6 +42,6 @@ export default function EventInvitesPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageWrapper>
   );
 }

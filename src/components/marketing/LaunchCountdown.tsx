@@ -107,14 +107,6 @@ export const LaunchCountdown = ({
           {timeLeft.days} days, {timeLeft.hours} hours, {timeLeft.minutes} minutes
         </span>
       </p>
-      {progress !== null && (
-        <div className={cn('mt-3 h-2 w-full max-w-md overflow-hidden rounded-full bg-white/20', progressBarClassName)}>
-          <div
-            className="h-full bg-blue-300/80"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
-      )}
     </div>
   )
 }

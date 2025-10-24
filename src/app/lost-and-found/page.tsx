@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/components/Toast'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 import type { FoundItem, LostFoundMatch, LostItem } from '@/types/lostAndFound'
 import {
   confirmMatch,
@@ -187,7 +188,7 @@ export default function LostAndFoundPage() {
   }
 
   return (
-    <main className="module-container">
+    <PageWrapper>
       <header className="module-header">
         <div>
           <h1 className="module-title">Lost &amp; Found</h1>
@@ -440,6 +441,6 @@ export default function LostAndFoundPage() {
           </div>
         </div>
       </section>
-    </main>
+    </PageWrapper>
   )
 }
