@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -8,6 +8,10 @@ import { CheckIcon } from '@heroicons/react/24/outline'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { StackedPanel } from '@/components/ui/StackedPanel'
 import MarketingNavigation from '@/components/MarketingNavigation'
+import { useLaunchMode } from '@/hooks/useLaunchMode'
+import { RegisterInterestModal } from '@/components/marketing/RegisterInterestModal'
+import { MarketingFooter } from '@/components/marketing/MarketingFooter'
+import { SocialLinks } from '@/components/marketing/SocialLinks'
 
 const plans = [
   {
@@ -89,6 +93,9 @@ const faqs = [
 ]
 
 export default function PricingPage() {
+  const { isPreLaunch } = useLaunchMode()
+  const [interestOpen, setInterestOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
       <MarketingNavigation />
@@ -117,12 +124,22 @@ export default function PricingPage() {
             <p className="text-sm text-blue-200 mb-10">
               14-day free trial • No credit card required • Cancel anytime
             </p>
-            <Link
-              href="/signup"
-              className="inline-block bg-white text-blue-700 px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
-            >
-              Start Free Trial
-            </Link>
+            {isPreLaunch ? (
+              <button
+                type="button"
+                onClick={() => setInterestOpen(true)}
+                className="inline-block bg-white text-blue-700 px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
+              >
+                Register Interest
+              </button>
+            ) : (
+              <Link
+                href="/signup"
+                className="inline-block bg-white text-blue-700 px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
+              >
+                Start Free Trial
+              </Link>
+            )}
           </motion.div>
 
           {/* Image */}
@@ -142,6 +159,10 @@ export default function PricingPage() {
             </div>
           </motion.div>
         </section>
+
+        <div className="flex justify-center mt-10">
+          <SocialLinks />
+        </div>
 
         {/* PRICING GRID */}
         <StackedPanel className="py-20 px-6 sm:px-10 bg-white text-blue-900 rounded-t-3xl">
@@ -199,16 +220,30 @@ export default function PricingPage() {
                     ))}
                   </ul>
                 </div>
-                <Link
-                  href={plan.ctaLink}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold text-center transition-all ${
-                    plan.highlighted
-                      ? 'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
+                {isPreLaunch && plan.ctaLink.startsWith('/signup') ? (
+                  <button
+                    type="button"
+                    onClick={() => setInterestOpen(true)}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold text-center transition-all ${
+                      plan.highlighted
+                        ? 'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                    }`}
+                  >
+                    Register Interest
+                  </button>
+                ) : (
+                  <Link
+                    href={plan.ctaLink}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold text-center transition-all ${
+                      plan.highlighted
+                        ? 'bg-white text-blue-700 hover:bg-blue-50 shadow-lg'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                    }`}
+                  >
+                    {plan.cta}
+                  </Link>
+                )}
               </motion.div>
             ))}
           </div>
@@ -250,12 +285,22 @@ export default function PricingPage() {
               Join hundreds of event and safety professionals using InCommand.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href="/signup"
-              className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
-            >
-              Start Free Trial
-            </Link>
+              {isPreLaunch ? (
+                <button
+                  type="button"
+                  onClick={() => setInterestOpen(true)}
+                  className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+                >
+                  Register Interest
+                </button>
+              ) : (
+                <Link
+                  href="/signup"
+                  className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+                >
+                  Start Free Trial
+                </Link>
+              )}
             <a
               href="mailto:sales@incommand.uk?subject=Pricing Inquiry"
               className="border border-white text-white px-8 py-4 rounded-xl hover:bg-white/10 font-semibold transition-colors"
@@ -266,6 +311,8 @@ export default function PricingPage() {
           </div>
         </section>
       </PageWrapper>
+      <MarketingFooter />
+      <RegisterInterestModal open={interestOpen} onOpenChange={setInterestOpen} />
     </div>
   )
 }
