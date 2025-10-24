@@ -73,15 +73,18 @@ export default function SignUpPage() {
           priority
         />
         <p className="text-sm sm:text-base text-blue-100 font-medium text-center max-w-md leading-relaxed">
-          Modern incident tracking and event command for every scale of operation.
+          Smart, scalable incident management — built for every operation.
         </p>
       </div>
 
       {/* Sign-Up Card */}
       <div className="w-full max-w-md mx-auto bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 sm:p-8 backdrop-blur-md">
-        <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-blue-900 mb-6 sm:mb-8 tracking-tight">
+        <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-blue-900 mb-2 tracking-tight">
           Create your account
         </h2>
+        <p className="text-center text-sm text-blue-600 mb-6 sm:mb-8">
+          Join hundreds of event professionals using InCommand.
+        </p>
 
         {/* Status messages */}
         {error && (
@@ -99,7 +102,7 @@ export default function SignUpPage() {
         <form onSubmit={handleSignUp} className="space-y-6">
           <div>
             <label htmlFor="signup-company" className="block text-sm font-medium text-[#2A3990] mb-2">
-              Company Name
+              Organisation or Company Name
             </label>
             <input
               id="signup-company"
@@ -108,8 +111,11 @@ export default function SignUpPage() {
               required
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              This will appear on your dashboard and reports.
+            </p>
           </div>
 
           <div>
@@ -124,7 +130,7 @@ export default function SignUpPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
             />
           </div>
 
@@ -140,8 +146,11 @@ export default function SignUpPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              At least 8 characters, including one number or symbol.
+            </p>
           </div>
 
           {/* Submit */}
@@ -179,7 +188,7 @@ export default function SignUpPage() {
               setLegalModalTab('privacy')
               setShowLegalModal(true)
             }}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
           >
             Privacy Policy
           </button>
@@ -189,10 +198,18 @@ export default function SignUpPage() {
               setLegalModalTab('terms')
               setShowLegalModal(true)
             }}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
           >
             Terms of Use
           </button>
+        </div>
+        <div className="flex justify-center">
+          <a 
+            href="mailto:support@incommand.uk?subject=Signup Support"
+            className="hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-1"
+          >
+            Need help? Contact support
+          </a>
         </div>
         <p>© {new Date().getFullYear()} inCommand. All rights reserved.</p>
       </footer>
