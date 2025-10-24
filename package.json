@@ -7,6 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "analyze": "ANALYZE=true next build",
+    "lint:fix": "next lint --fix",
+    "typecheck": "tsc --noEmit",
+    "lighthouse": "npx @lhci/cli autorun",
+    "predeploy": "npm run typecheck && npm run analyze",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:detection": "jest src/utils/__tests__/detection.test.ts",
@@ -54,6 +59,7 @@
     "chartjs-plugin-annotation": "^3.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "critters": "^0.0.23",
     "cross-fetch": "^4.1.0",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.0",
@@ -104,6 +110,7 @@
   },
   "devDependencies": {
     "@heroicons/react": "^2.2.0",
+    "@next/bundle-analyzer": "^14.2.0",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
@@ -124,6 +131,7 @@
     "@what3words/api": "^5.4.0",
     "autoprefixer": "^10.0.1",
     "dotenv": "^16.4.5",
+    "dotenv-safe": "^9.0.0",
     "eslint": "^8",
     "eslint-config-next": "14.0.3",
     "jest": "^30.1.1",
@@ -133,6 +141,7 @@
     "shadcn": "^3.4.2",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^3.25.76"
   }
 }

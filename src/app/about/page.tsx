@@ -79,7 +79,7 @@ export default function AboutPage() {
               Making Events Safer — One Incident at a Time
             </h1>
             <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
-              We're redefining event management and incident response with real-time, field-proven technology built by professionals who've been there.
+              We&apos;re redefining event management and incident response with real-time, field-proven technology built by professionals who&apos;ve been there.
             </p>
             <div className="mt-10 flex justify-center">
               <SocialLinks />
@@ -101,7 +101,7 @@ export default function AboutPage() {
               To empower event teams to respond faster, communicate smarter, and maintain the highest standards of safety and compliance — no matter the size or scale of operation.
             </p>
             <p className="text-lg text-blue-700 max-w-3xl mx-auto leading-relaxed">
-              InCommand isn't just software — it's a professional platform that transforms how teams coordinate, document, and analyse safety operations in real time.
+              InCommand isn&apos;t just software — it&apos;s a professional platform that transforms how teams coordinate, document, and analyse safety operations in real time.
             </p>
           </motion.div>
 
@@ -114,10 +114,10 @@ export default function AboutPage() {
               Designed by Practitioners, for Practitioners
             </h3>
             <p className="text-blue-800 leading-relaxed mb-3">
-              After years managing major UK events, our founder recognised a problem — most incident management systems were built for offices, not the field. They were complicated, outdated, or couldn't adapt to the pace of live event control.
+              After years managing major UK events, our founder recognised a problem — most incident management systems were built for offices, not the field. They were complicated, outdated, or couldn&apos;t adapt to the pace of live event control.
             </p>
             <p className="text-blue-700 leading-relaxed">
-              InCommand bridges that gap. Built mobile-first and JESIP-aligned, it's a legally defensible system that keeps teams connected, accountable, and in control — wherever they operate.
+              InCommand bridges that gap. Built mobile-first and JESIP-aligned, it&apos;s a legally defensible system that keeps teams connected, accountable, and in control — wherever they operate.
             </p>
           </motion.div>
         </div>
@@ -155,7 +155,7 @@ export default function AboutPage() {
               Having led control rooms at major festivals and sports events, he understands the realities of coordinating large-scale operations with fragmented tools. InCommand was designed from that experience — a platform built for real-world demands.
             </p>
             <p className="italic text-blue-700 font-medium leading-relaxed">
-              "If it isn't written down, it didn't happen." That simple truth underpins every aspect of our system — clarity, accountability, and safety above all.
+              &ldquo;If it isn&apos;t written down, it didn&apos;t happen.&rdquo; That simple truth underpins every aspect of our system — clarity, accountability, and safety above all.
             </p>
           </motion.div>
         </div>
@@ -219,7 +219,7 @@ export default function AboutPage() {
             Partner with Us to Elevate Event Safety
           </h2>
           <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-            Whether you're managing a local festival or an international venue, InCommand empowers your team to operate safely, efficiently, and with complete confidence.
+            Whether you&apos;re managing a local festival or an international venue, InCommand empowers your team to operate safely, efficiently, and with complete confidence.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isPreLaunch ? (

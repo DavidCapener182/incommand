@@ -145,7 +145,7 @@ export default function FeaturesPage() {
             Powerful Features for Safer, Smarter Operations
           </h2>
           <p className="text-center text-lg text-blue-700 mb-16 max-w-3xl mx-auto">
-            InCommand equips your team with the tools they need to plan, monitor, and manage any live event — whether it's a local festival or a national stadium. Each feature is built to enhance coordination, accountability, and response speed.
+            InCommand equips your team with the tools they need to plan, monitor, and manage any live event — whether it&apos;s a local festival or a national stadium. Each feature is built to enhance coordination, accountability, and response speed.
           </p>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">

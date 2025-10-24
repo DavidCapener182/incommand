@@ -1067,7 +1067,7 @@ export default function VendorPortalPage() {
                   </div>
                 ) : (
                   <div className="module-empty">
-                    No wristband types configured yet. Click "Manage Wristbands" to create your first wristband type.
+                    No wristband types configured yet. Click &ldquo;Manage Wristbands&rdquo; to create your first wristband type.
                   </div>
                 )}
 

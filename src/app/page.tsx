@@ -45,7 +45,7 @@ export default function HomePage() {
           transition={{ delay: 0.3, duration: 0.8 }}
           className="relative z-10 text-blue-100 text-base sm:text-lg max-w-2xl mb-10 leading-relaxed"
         >
-          InCommand is the UK's all-in-one event control and incident management platform — built by safety professionals to help your team respond faster, communicate smarter, and maintain complete operational oversight.
+          InCommand is the UK&apos;s all-in-one event control and incident management platform — built by safety professionals to help your team respond faster, communicate smarter, and maintain complete operational oversight.
         </motion.p>
 
         {preLaunchConfigured && (
