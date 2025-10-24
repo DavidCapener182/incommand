@@ -135,12 +135,12 @@ export default function LoginPage() {
           priority
         />
         <p className="text-sm sm:text-base text-blue-100 font-medium text-center max-w-md leading-relaxed">
-          Modern incident tracking and event command for every scale of operation.
+          Smart, scalable incident management — built for every operation.
         </p>
       </div>
 
       {/* Login Card */}
-      <div className="w-full max-w-md mx-auto bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 sm:p-8 backdrop-blur-md">
+      <div className="w-full max-w-md mx-auto bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-4 sm:p-6 md:p-8 backdrop-blur-md">
         <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-blue-900 mb-6 sm:mb-8 tracking-tight">
           Sign in to your account
         </h2>
@@ -164,7 +164,7 @@ export default function LoginPage() {
               type="email"
               required
               autoComplete="email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -183,15 +183,16 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder-gray-400"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-700 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-700 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
               >
                 {showPassword ? 'Hide' : 'Show'}
               </button>
@@ -242,7 +243,7 @@ export default function LoginPage() {
               setLegalModalTab('privacy')
               setShowLegalModal(true)
             }}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
           >
             Privacy Policy
           </button>
@@ -252,10 +253,18 @@ export default function LoginPage() {
               setLegalModalTab('terms')
               setShowLegalModal(true)
             }}
-            className="hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
           >
             Terms of Use
           </button>
+        </div>
+        <div className="flex justify-center">
+          <a 
+            href="mailto:support@incommand.uk?subject=Login Support"
+            className="hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-1"
+          >
+            Need help? Contact support
+          </a>
         </div>
         <p>© {new Date().getFullYear()} inCommand. All rights reserved.</p>
       </footer>
