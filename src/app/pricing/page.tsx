@@ -25,7 +25,7 @@ const plans = [
       'Mobile app access',
       'Event dashboard',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     ctaLink: '/signup',
     highlighted: false,
   },
@@ -43,7 +43,7 @@ const plans = [
       'Custom branding',
       'API access',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     ctaLink: '/signup',
     highlighted: true,
   },
@@ -74,9 +74,9 @@ const faqs = [
       'Absolutely. You can upgrade, downgrade, or cancel whenever needed — with no hidden fees.',
   },
   {
-    question: 'Is there a free trial?',
+    question: 'How do I get started?',
     answer:
-      'Yes — every new account includes a 14-day free trial with full platform access.',
+      'Contact our sales team to discuss your requirements and get started with InCommand.',
   },
   {
     question: 'Do you offer annual billing discounts?',
@@ -116,7 +116,7 @@ export default function PricingPage() {
                 Whether you manage a local festival or a national venue, InCommand adapts to your needs. Every plan includes full analytics, real-time dashboards, and responsive UK-based support.
               </p>
               <p className="text-sm text-blue-200 mb-10">
-                14-day free trial · No credit card required · Cancel anytime
+                Contact sales to discuss your requirements
               </p>
 
               {isPreLaunch ? (
@@ -132,7 +132,7 @@ export default function PricingPage() {
                   href="/signup"
                   className="inline-block bg-white text-blue-700 px-8 py-4 rounded-xl font-semibold shadow hover:bg-blue-50 transition-all active:scale-95"
                 >
-                  Start Free Trial
+                  Get Started
                 </Link>
               )}
             </motion.div>
@@ -272,14 +272,14 @@ export default function PricingPage() {
                 onClick={() => setInterestOpen(true)}
                 className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
               >
-                Start Free Trial
+                Get Started
               </button>
             ) : (
               <Link
                 href="/signup"
                 className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
               >
-                Start Free Trial
+                Get Started
               </Link>
             )}
 
