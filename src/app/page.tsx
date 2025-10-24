@@ -1,10 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import MarketingNavigation from "../components/MarketingNavigation"
+import { useLaunchMode } from "@/hooks/useLaunchMode"
+import { LaunchCountdown } from "@/components/marketing/LaunchCountdown"
+import { RegisterInterestModal } from "@/components/marketing/RegisterInterestModal"
+import { SocialLinks } from "@/components/marketing/SocialLinks"
+import { MarketingFooter } from "@/components/marketing/MarketingFooter"
 
 export default function HomePage() {
+  const { isPreLaunch, preLaunchConfigured, launchDate, countdownStart, totalDurationMs } = useLaunchMode()
+  const [interestOpen, setInterestOpen] = useState(false)
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
       {/* Navbar */}
@@ -38,6 +47,16 @@ export default function HomePage() {
           unified, AI-powered command platform designed for professional event teams.
         </motion.p>
 
+        {preLaunchConfigured && (
+          <LaunchCountdown
+            launchDate={launchDate}
+            countdownStart={countdownStart}
+            totalDurationMs={totalDurationMs}
+            className="relative z-10"
+            progressBarClassName="bg-white/30"
+          />
+        )}
+
         {/* CTA Buttons */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -45,18 +64,37 @@ export default function HomePage() {
           transition={{ delay: 0.5 }}
           className="relative z-10 flex flex-wrap justify-center gap-4"
         >
-          <Link
-            href="/signup"
-            className="bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95"
-          >
-            Get Started Free
-          </Link>
+          {isPreLaunch ? (
+            <button
+              type="button"
+              onClick={() => setInterestOpen(true)}
+              className="bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95"
+            >
+              Register Interest
+            </button>
+          ) : (
+            <Link
+              href="/signup"
+              className="bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95"
+            >
+              Get Started Free
+            </Link>
+          )}
           <Link
             href="/pricing"
             className="bg-transparent border border-white text-white hover:bg-white/10 hover:-translate-y-0.5 hover:shadow-lg px-8 py-4 rounded-xl text-lg font-semibold shadow-md transition-all duration-300 active:scale-95"
           >
             View Pricing
           </Link>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="relative z-10 mt-8"
+        >
+          <SocialLinks />
         </motion.div>
 
         {/* Hero Illustration Placeholder */}
@@ -145,12 +183,22 @@ export default function HomePage() {
           Join hundreds of event and security teams using InCommand to run safer, more efficient operations.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link
-            href="/signup"
-            className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
-          >
-            Get Started Free
-          </Link>
+          {isPreLaunch ? (
+            <button
+              type="button"
+              onClick={() => setInterestOpen(true)}
+              className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+            >
+              Register Interest
+            </button>
+          ) : (
+            <Link
+              href="/signup"
+              className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+            >
+              Get Started Free
+            </Link>
+          )}
           <Link
             href="/pricing"
             className="border border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 shadow-md transition"
@@ -160,21 +208,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-blue-900 text-blue-100 py-8 text-center text-xs border-t border-blue-800/60">
-        <div className="flex justify-center gap-4 mb-2">
-          <Link href="/privacy" className="hover:underline">
-            Privacy Policy
-          </Link>
-          <span>|</span>
-          <Link href="/terms" className="hover:underline">
-            Terms of Use
-          </Link>
-        </div>
-        <p className="text-blue-200">
-          © {new Date().getFullYear()} InCommand. All rights reserved.
-        </p>
-      </footer>
+      <MarketingFooter />
+
+      <RegisterInterestModal open={interestOpen} onOpenChange={setInterestOpen} />
     </div>
   )
 }

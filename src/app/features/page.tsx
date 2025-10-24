@@ -16,6 +16,10 @@ import { FeatureModal } from '@/components/modals/FeatureModal'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { StackedPanel } from '@/components/ui/StackedPanel'
 import MarketingNavigation from '@/components/MarketingNavigation'
+import { useLaunchMode } from '@/hooks/useLaunchMode'
+import { RegisterInterestModal } from '@/components/marketing/RegisterInterestModal'
+import { SocialLinks } from '@/components/marketing/SocialLinks'
+import { MarketingFooter } from '@/components/marketing/MarketingFooter'
 
 const features = [
   {
@@ -58,6 +62,8 @@ const features = [
 
 export default function FeaturesPage() {
   const [selectedFeature, setSelectedFeature] = useState<typeof features[0] | null>(null)
+  const { isPreLaunch } = useLaunchMode()
+  const [interestOpen, setInterestOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
@@ -86,18 +92,31 @@ export default function FeaturesPage() {
               intelligent command platform for modern safety teams.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link
-                href="/signup"
-                className="bg-white text-blue-800 font-semibold px-8 py-4 rounded-xl shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
-              >
-                Start Free Trial
-              </Link>
+              {isPreLaunch ? (
+                <button
+                  type="button"
+                  onClick={() => setInterestOpen(true)}
+                  className="bg-white text-blue-800 font-semibold px-8 py-4 rounded-xl shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
+                >
+                  Register Interest
+                </button>
+              ) : (
+                <Link
+                  href="/signup"
+                  className="bg-white text-blue-800 font-semibold px-8 py-4 rounded-xl shadow-lg hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 active:scale-95"
+                >
+                  Start Free Trial
+                </Link>
+              )}
               <Link
                 href="/pricing"
                 className="border border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"
               >
                 View Pricing
               </Link>
+            </div>
+            <div className="mt-8">
+              <SocialLinks />
             </div>
           </motion.div>
 
@@ -225,12 +244,22 @@ export default function FeaturesPage() {
               Join hundreds of event and safety teams already using InCommand.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/signup"
-              className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
-            >
-              Get Started Free
-            </Link>
+              {isPreLaunch ? (
+                <button
+                  type="button"
+                  onClick={() => setInterestOpen(true)}
+                  className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+                >
+                  Register Interest
+                </button>
+              ) : (
+                <Link
+                  href="/signup"
+                  className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
+                >
+                  Get Started Free
+                </Link>
+              )}
             <a
               href="mailto:sales@incommand.uk?subject=Request Demo"
               className="border border-white text-white px-8 py-4 rounded-xl hover:bg-white/10 font-semibold transition-colors"
@@ -256,6 +285,8 @@ export default function FeaturesPage() {
           />
         )}
       </PageWrapper>
+      <MarketingFooter />
+      <RegisterInterestModal open={interestOpen} onOpenChange={setInterestOpen} />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -12,6 +13,10 @@ import {
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { StackedPanel } from '@/components/ui/StackedPanel'
 import MarketingNavigation from '@/components/MarketingNavigation'
+import { useLaunchMode } from '@/hooks/useLaunchMode'
+import { RegisterInterestModal } from '@/components/marketing/RegisterInterestModal'
+import { SocialLinks } from '@/components/marketing/SocialLinks'
+import { MarketingFooter } from '@/components/marketing/MarketingFooter'
 
 const values = [
   {
@@ -48,6 +53,9 @@ const stats = [
 ]
 
 export default function AboutPage() {
+  const { isPreLaunch } = useLaunchMode()
+  const [interestOpen, setInterestOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
       <MarketingNavigation />
@@ -80,6 +88,9 @@ export default function AboutPage() {
               We’re redefining event management and incident response with intelligent,
               real-time technology built by professionals who’ve been on the ground.
             </p>
+            <div className="mt-10 flex justify-center">
+              <SocialLinks />
+            </div>
           </motion.div>
         </section>
 
@@ -238,12 +249,22 @@ export default function AboutPage() {
               to make your operations safer, smarter, and more efficient.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/signup"
-              className="bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 shadow-md transition-transform active:scale-95"
-            >
-              Get Started
-            </Link>
+              {isPreLaunch ? (
+                <button
+                  type="button"
+                  onClick={() => setInterestOpen(true)}
+                  className="bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 shadow-md transition-transform active:scale-95"
+                >
+                  Register Interest
+                </button>
+              ) : (
+                <Link
+                  href="/signup"
+                  className="bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 shadow-md transition-transform active:scale-95"
+                >
+                  Get Started
+                </Link>
+              )}
             <a
               href="mailto:info@incommand.uk?subject=About InCommand"
               className="border border-blue-700 text-blue-700 px-8 py-4 rounded-xl hover:bg-blue-50 font-semibold transition-colors"
@@ -254,6 +275,8 @@ export default function AboutPage() {
           </div>
         </section>
       </PageWrapper>
+      <MarketingFooter />
+      <RegisterInterestModal open={interestOpen} onOpenChange={setInterestOpen} />
     </div>
   )
 }
