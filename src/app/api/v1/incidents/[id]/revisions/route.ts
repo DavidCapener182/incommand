@@ -6,10 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createRlsServerClient } from '@/lib/supabaseServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 
 import { getRevisionHistory } from '@/lib/auditableLogging'
 
@@ -23,10 +23,6 @@ export async function GET(
   try {
     const incidentId = params.id
 
-    // Get Supabase client with user session
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    
     // Get auth token from request
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -38,13 +34,7 @@ export async function GET(
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
+    const supabase = createRlsServerClient(token)
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -59,7 +49,7 @@ export async function GET(
     // Get the incident log
     const { data: incident, error: incidentError } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select('id, log_number, timestamp, callsign_from, callsign_to, occurrence, incident_type, action_taken, is_closed, event_id, status, priority, created_at, updated_at, time_of_occurrence, time_logged, entry_type, is_amended')
       .eq('id', incidentId)
       .single()
 
@@ -95,4 +85,3 @@ export async function GET(
     )
   }
 }
-

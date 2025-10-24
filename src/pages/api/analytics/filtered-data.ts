@@ -1,10 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -12,6 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const supabase = getServiceClient();
     const {
       eventId,
       from,
@@ -49,25 +46,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid compareTo date format' });
     }
 
-    // Build date range filters
-    const buildDateFilter = (fromDate?: string, toDate?: string) => {
-      let filter = supabase
-        .from('incident_logs')
-        .select('*');
-
-      if (fromDate) {
-        filter = filter.gte('timestamp', fromDate);
-      }
-
-      if (toDate) {
-        filter = filter.lte('timestamp', toDate);
-      }
-
-      return filter;
-    };
-
     // Fetch current period data
     const currentData = await fetchAnalyticsData(
+      supabase,
       eventId as string,
       from as string,
       to as string
@@ -80,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (compareEventId) {
         // Compare with specific event
         comparisonData = await fetchAnalyticsData(
+          supabase,
           compareEventId as string,
           compareFrom as string,
           compareTo as string
@@ -87,15 +69,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else if (compareFrom && compareTo) {
         // Compare with custom date range for same event
         comparisonData = await fetchAnalyticsData(
+          supabase,
           eventId as string,
           compareFrom as string,
           compareTo as string
         );
       } else {
         // Auto-detect previous event for comparison
-        const previousEvent = await findPreviousEvent(eventId as string);
+        const previousEvent = await findPreviousEvent(supabase, eventId as string);
         if (previousEvent) {
           comparisonData = await fetchAnalyticsData(
+            supabase,
             previousEvent.id,
             undefined,
             undefined
@@ -135,11 +119,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function fetchAnalyticsData(eventId: string, fromDate?: string, toDate?: string) {
+async function fetchAnalyticsData(
+  supabase: SupabaseClient,
+  eventId: string,
+  fromDate?: string,
+  toDate?: string
+) {
   // Fetch incidents
   let incidentsQuery = supabase
     .from('incident_logs')
-    .select('*')
+    .select('id,status,response_time,timestamp,is_closed,priority')
     .eq('event_id', eventId);
 
   if (fromDate) {
@@ -158,7 +147,7 @@ async function fetchAnalyticsData(eventId: string, fromDate?: string, toDate?: s
   // Fetch attendance data
   let attendanceQuery = supabase
     .from('attendance_logs')
-    .select('*')
+    .select('id,timestamp,count')
     .eq('event_id', eventId);
 
   if (fromDate) {
@@ -177,7 +166,7 @@ async function fetchAnalyticsData(eventId: string, fromDate?: string, toDate?: s
   // Fetch performance metrics
   let performanceQuery = supabase
     .from('performance_metrics')
-    .select('*')
+    .select('id,event_id,efficiency_score,timestamp')
     .eq('event_id', eventId);
 
   if (fromDate) {
@@ -256,11 +245,11 @@ function calculateComparisonMetrics(current: any, comparison: any) {
   };
 }
 
-async function findPreviousEvent(currentEventId: string) {
+async function findPreviousEvent(supabase: SupabaseClient, currentEventId: string) {
   // Get current event details
   const { data: currentEvent, error: currentError } = await supabase
     .from('events')
-    .select('*')
+    .select('id, organizer_id, start_date')
     .eq('id', currentEventId)
     .single();
 
@@ -271,7 +260,7 @@ async function findPreviousEvent(currentEventId: string) {
   // Find previous event by the same organizer
   const { data: previousEvents, error: previousError } = await supabase
     .from('events')
-    .select('*')
+    .select('id, start_date')
     .eq('organizer_id', currentEvent.organizer_id)
     .lt('start_date', currentEvent.start_date)
     .order('start_date', { ascending: false })

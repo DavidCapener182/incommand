@@ -2,11 +2,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { logger } from './logger';
 
 let serviceClient: SupabaseClient | null = null;
+let anonClient: SupabaseClient | null = null;
 
-function ensureEnv(key: string): string {
-  const value = process.env[key];
+function ensureEnv(key: string, fallbackKey?: string): string {
+  const value = process.env[key] ?? (fallbackKey ? process.env[fallbackKey] : undefined);
   if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
+    throw new Error(`Missing required environment variable: ${key}${fallbackKey ? ` (or ${fallbackKey})` : ''}`);
   }
   return value;
 }
@@ -16,7 +17,7 @@ export function getServiceSupabaseClient(): SupabaseClient {
     return serviceClient;
   }
 
-  const supabaseUrl = ensureEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
   const serviceRoleKey = ensureEnv('SUPABASE_SERVICE_ROLE_KEY');
 
   serviceClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -24,6 +25,39 @@ export function getServiceSupabaseClient(): SupabaseClient {
   });
 
   return serviceClient;
+}
+
+export function getServiceClient(): SupabaseClient {
+  return getServiceSupabaseClient();
+}
+
+export function getAnonServerClient(): SupabaseClient {
+  if (anonClient) {
+    return anonClient;
+  }
+
+  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = ensureEnv('SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+  anonClient = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false },
+  });
+
+  return anonClient;
+}
+
+export function createRlsServerClient(token: string): SupabaseClient {
+  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = ensureEnv('SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+  return createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
 }
 
 interface LogAIUsageParams {

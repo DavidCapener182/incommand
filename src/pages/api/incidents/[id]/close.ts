@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabaseServer';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const INCIDENT_FIELDS =
+  'id,event_id,is_closed,status,resolution_notes,resolved_at,escalation_level,updated_at,closed_by,priority,incident_type,occurrence';
 
 export async function POST(
   request: NextRequest,
@@ -12,6 +10,7 @@ export async function POST(
 ) {
   try {
     const incidentId = params.id;
+    const supabase = getServiceClient();
     
     if (!incidentId) {
       return NextResponse.json(
@@ -27,7 +26,7 @@ export async function POST(
     // Validate that the incident exists and is not already closed
     const { data: incident, error: fetchError } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select(INCIDENT_FIELDS)
       .eq('id', incidentId)
       .single();
 
@@ -65,7 +64,7 @@ export async function POST(
       .from('incident_logs')
       .update(updateData)
       .eq('id', incidentId)
-      .select()
+      .select(INCIDENT_FIELDS)
       .single();
 
     if (updateError) {
@@ -128,6 +127,7 @@ export async function GET(
 ) {
   try {
     const incidentId = params.id;
+    const supabase = getServiceClient();
     
     if (!incidentId) {
       return NextResponse.json(
@@ -139,7 +139,7 @@ export async function GET(
     // Get incident details
     const { data: incident, error } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select(INCIDENT_FIELDS)
       .eq('id', incidentId)
       .single();
 

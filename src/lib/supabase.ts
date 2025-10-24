@@ -1,9 +1,8 @@
 'use client'
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase as supabaseBrowserClient } from './supabaseBrowser'
 
-// Use the Next.js auth-helpers client so browser sessions are synced to server via cookies
-export const supabase = createClientComponentClient()
+export const supabase = supabaseBrowserClient
 
 export const createUser = async (email: string, password: string) => {
   try {

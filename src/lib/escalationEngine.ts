@@ -1,5 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { getServiceClient } from './supabaseServer';
+
+// Runtime guard to prevent client-side usage
+if (typeof window !== 'undefined') {
+  throw new Error('escalationEngine must only be used server-side');
+}
+
+const supabase = getServiceClient();
 
 export interface EscalationConfig {
   incident_type: string;
@@ -113,7 +119,7 @@ export async function getEscalationConfig(
   try {
     const { data: config, error } = await supabase
       .from('escalation_sla_config')
-      .select('*')
+      .select('incident_type, priority_level, escalation_timeout_minutes, escalation_levels, supervisor_roles, auto_escalate')
       .eq('incident_type', incidentType)
       .eq('priority_level', priority)
       .single();

@@ -4,16 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getServiceClient } from '@/lib/supabaseServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getServiceClient()
 
 // API Key validation
 function validateApiKey(request: NextRequest): boolean {
@@ -49,7 +45,32 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('incident_logs')
-      .select('*, incident_photos(*)', { count: 'exact' })
+      .select(
+        `
+          id,
+          event_id,
+          incident_type,
+          priority,
+          status,
+          occurrence,
+          action_taken,
+          timestamp,
+          is_closed,
+          time_logged,
+          logged_by_callsign,
+          callsign_from,
+          callsign_to,
+          location,
+          incident_photos (
+            id,
+            incident_id,
+            photo_url,
+            file_type,
+            created_at
+          )
+        `,
+        { count: 'exact' }
+      )
 
     if (eventId) query = query.eq('event_id', eventId)
     if (status === 'open') query = query.eq('is_closed', false)
@@ -137,7 +158,7 @@ export async function POST(request: NextRequest) {
         time_of_occurrence: body.time_of_occurrence || new Date().toISOString(),
         time_logged: new Date().toISOString()
       })
-      .select()
+      .select('id, event_id, incident_type, priority, occurrence, action_taken, timestamp, is_closed, logged_by_callsign, callsign_from, callsign_to, time_logged')
       .single()
 
     if (error) {

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 export interface RecentAction {
   id: string;
@@ -15,17 +15,12 @@ export interface RecentAction {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use the same Supabase client setup as get-current-event API
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
+    const supabase = getServiceClient();
     // Always limit to 5 notifications max
     const limit = 5;
     const actions: RecentAction[] = [];
@@ -56,7 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Exclude attendance incidents from notifications and limit to most recent
     const { data: incidents, error: incidentsError } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select(
+        'id, incident_type, log_number, occurrence, timestamp, is_closed, logged_by_user_id'
+      )
       .eq('event_id', currentEvent.id)
       .neq('incident_type', 'Attendance')  // Exclude attendance incidents
       .gt('timestamp', lastViewedDate.toISOString()) // Only get incidents newer than last viewed
@@ -75,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           'Evacuation', 'Medical', 'Suspicious Behaviour'
         ].includes(incident.incident_type);
 
-        const contributingUserId = incident.logged_by_user_id || incident.created_by_profile_id || incident.reported_by_profile_id;
+        const contributingUserId = incident.logged_by_user_id;
         if (contributingUserId) {
           profileIds.add(contributingUserId);
         }

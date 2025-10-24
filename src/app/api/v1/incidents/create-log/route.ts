@@ -6,10 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createRlsServerClient } from '@/lib/supabaseServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 
 import { createImmutableLog } from '@/lib/auditableLogging'
 
@@ -18,10 +18,6 @@ import { CreateAuditableLogRequest, CreateLogResponse } from '@/types/auditableL
 
 export async function POST(request: NextRequest) {
   try {
-    // Get Supabase client with user session
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    
     // Get auth token from request
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -33,13 +29,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
+    const supabase = createRlsServerClient(token)
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -109,12 +99,14 @@ export async function POST(request: NextRequest) {
     // Generate log number
     const { data: eventData } = await supabase
       .from('events')
-      .select('name, date')
+      .select('event_name, name, event_date, date')
       .eq('id', body.event_id)
       .single()
 
-    const eventPrefix = eventData?.name?.substring(0, 3).toUpperCase() || 'EVT'
-    const eventDate = eventData?.date ? new Date(eventData.date).toISOString().split('T')[0].replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '')
+    const eventNameValue = eventData?.event_name ?? eventData?.name ?? 'Event'
+    const eventPrefix = eventNameValue.substring(0, 3).toUpperCase()
+    const resolvedDate = eventData?.event_date ?? eventData?.date
+    const eventDate = resolvedDate ? new Date(resolvedDate).toISOString().split('T')[0].replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '')
     
     // Get count for log number
     const { count } = await supabase
@@ -171,4 +163,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

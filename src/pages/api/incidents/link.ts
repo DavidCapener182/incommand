@@ -1,14 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+import { getServiceClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const supabase = getServiceClient();
+
   if (req.method === 'POST') {
     const { incident_id, linked_incident_id, created_by } = req.body;
     const { error } = await supabase.from('incident_links').insert([{ incident_id, linked_incident_id }]);
-    await supabase.from('incident_events').insert([{ incident_id, event_type: 'link', event_data: { linked_incident_id }, created_by }]);
     if (error) return res.status(400).json({ error: error.message });
+
+    const { error: eventError } = await supabase.from('incident_events').insert([
+      { incident_id, event_type: 'link', event_data: { linked_incident_id }, created_by },
+    ]);
+    if (eventError) return res.status(400).json({ error: eventError.message });
+
     return res.status(200).json({ success: true });
   }
   if (req.method === 'DELETE') {

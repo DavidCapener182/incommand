@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabaseServer';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -11,19 +12,7 @@ function getHourKey(date: Date): string {
   return d.toISOString();
 }
 
-async function getEventTimings(eventId: string) {
-  // Create server-side supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-  
+async function getEventTimings(eventId: string, supabase: SupabaseClient) {
   // Fetch security_call_time and curfew_time for the event
   const { data, error } = await supabase
     .from('events')
@@ -52,24 +41,14 @@ function isWithinWindow(
 
 export async function POST(req: NextRequest) {
   try {
-    // Create server-side supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabase = getServiceClient();
 
     const { incidents, attendance, event } = await req.json();
     const eventId = event;
     if (!eventId) return NextResponse.json({ error: 'Missing event ID' }, { status: 400 });
 
     // Get event timings
-    const timings = await getEventTimings(eventId);
+    const timings = await getEventTimings(eventId, supabase);
     if (!timings) return NextResponse.json({ error: 'Event timings not found' }, { status: 400 });
 
     const now = new Date();

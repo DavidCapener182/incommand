@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
 
       if (incidentError) throw incidentError
 
-      const processedIncidents = incidents?.map(incident => ({
+      const processedIncidents = incidents?.map((incident: any) => ({
         ...incident,
         response_time_minutes: incident.updated_at && incident.created_at 
           ? Math.round((new Date(incident.updated_at).getTime() - new Date(incident.created_at).getTime()) / (1000 * 60))

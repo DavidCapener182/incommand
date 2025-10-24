@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  getEscalationHistory,
-  pauseEscalationTimer,
-  resumeEscalationTimer,
-  type EscalationEvent 
-} from '../lib/escalationEngine';
+// Removed direct import of server-only escalationEngine
+type EscalationEvent = {
+  id: string;
+  incident_id: string;
+  action: string;
+  timestamp: string;
+  reason?: string;
+};
 
 interface EscalationTimerProps {
   incidentId: string;
@@ -78,8 +80,18 @@ export default function EscalationTimer({
     setLoading(true);
     setError(null);
     try {
-      const history = await getEscalationHistory(incidentId);
-      setEscalationHistory(history || []);
+      const response = await fetch('/api/escalations/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incidentId })
+      });
+      
+      if (response.ok) {
+        const { history } = await response.json();
+        setEscalationHistory(history || []);
+      } else {
+        throw new Error('Failed to fetch escalation history');
+      }
     } catch (error) {
       console.error('Error loading escalation history:', error);
       // Set empty history and show user-friendly error state
@@ -99,7 +111,12 @@ export default function EscalationTimer({
     try {
       if (isPaused) {
         // Resume escalation
-        const success = await resumeEscalationTimer(incidentId, 'user');
+        const response = await fetch('/api/escalations/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ incidentId, reason: 'user' })
+        });
+        const { success } = response.ok ? await response.json() : { success: false };
         if (success) {
           setIsPaused(false);
           onEscalationChange?.();
@@ -108,7 +125,12 @@ export default function EscalationTimer({
         }
       } else {
         // Pause escalation
-        const success = await pauseEscalationTimer(incidentId, 'user');
+        const response = await fetch('/api/escalations/pause', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ incidentId, reason: 'user' })
+        });
+        const { success } = response.ok ? await response.json() : { success: false };
         if (success) {
           setIsPaused(true);
           onEscalationChange?.();

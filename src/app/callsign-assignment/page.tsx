@@ -194,8 +194,8 @@ export default function StaffCommandCentre() {
           setEventId(null);
           setEventName("");
         } else {
-          setEventId(data.id);
-          setEventName(data.event_name || "");
+          setEventId((data as any).id);
+          setEventName((data as any).event_name || "");
         }
       } catch (err: any) {
         setEventError("Error loading event: " + (err.message || err.toString()));
@@ -231,7 +231,7 @@ export default function StaffCommandCentre() {
         // Group roles by area
         const grouped: typeof groups = [];
         const areaMap: Record<string, any[]> = {};
-        roles.forEach((r) => {
+        roles.forEach((r: any) => {
           if (!areaMap[r.area]) areaMap[r.area] = [];
           areaMap[r.area].push({
             id: r.id,
@@ -251,7 +251,7 @@ export default function StaffCommandCentre() {
       if (assignmentsData && assignmentsData.length > 0) {
         // Map assignments by position_id
         const assignMap: Record<string, string> = {};
-        assignmentsData.forEach((a) => {
+        assignmentsData.forEach((a: any) => {
           if (a.user_id) {
             // store the id string for assignedStaff usage elsewhere
             // we keep assigned_name for legacy fallbacks
@@ -283,7 +283,7 @@ export default function StaffCommandCentre() {
       if (error) return;
       // Map: position_id -> unique names (most recent first)
       const map: Record<string, string[]> = {};
-      data?.forEach((row) => {
+      data?.forEach((row: any) => {
         if (!row.assigned_name) return;
         if (!map[row.position_id]) map[row.position_id] = [];
         if (!map[row.position_id].includes(row.assigned_name)) {
@@ -303,7 +303,7 @@ export default function StaffCommandCentre() {
         .select("assigned_name")
         .not("assigned_name", "is", null);
       if (error) return;
-      const names = Array.from(new Set((data || []).map((row) => row.assigned_name).filter(Boolean)));
+      const names = Array.from(new Set((data || []).map((row: any) => row.assigned_name).filter(Boolean)));
       setAllPreviousNames(names);
     };
     fetchAllNames();
@@ -384,7 +384,7 @@ export default function StaffCommandCentre() {
       // Upsert roles with correct conflict target
       const { data: upsertedRoles, error: rolesError } = await supabase
         .from("callsign_positions")
-        .upsert(uniqueRoles, { onConflict: "event_id,area,short_code" })
+        .upsert(uniqueRoles as any, { onConflict: "event_id,area,short_code" })
         .select();
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
@@ -407,7 +407,7 @@ export default function StaffCommandCentre() {
       if (assignmentsArr.length > 0) {
         const { error: assignError } = await supabase
           .from("callsign_assignments")
-          .upsert(assignmentsArr, { onConflict: "event_id,callsign_role_id" });
+          .upsert(assignmentsArr as any, { onConflict: "event_id,callsign_role_id" });
         if (assignError) throw assignError;
       }
       setSaveStatus("Saved successfully!");
@@ -526,19 +526,19 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       // 3. Map roles to categories
       const areaMap: Record<string, Position[]> = {};
       const assignedNamesArr: string[] = [];
-      roles?.forEach((role) => {
+      roles?.forEach((role: any) => {
         if (!areaMap[role.area]) areaMap[role.area] = [];
         // Find assignment for this role
-        const assignment = assignments?.find(a => a.position_id === role.id);
-        if (assignment?.assigned_name) assignedNamesArr.push(assignment.assigned_name);
+        const assignment = assignments?.find((a: any) => a.position_id === role.id);
+        if ((assignment as any)?.assigned_name) assignedNamesArr.push((assignment as any).assigned_name);
         areaMap[role.area].push({
           id: role.id,
           callsign: role.callsign,
           short: role.short_code,
           position: role.position,
           required: role.required,
-          assignedStaff: (assignment?.user_id as string) || undefined,
-          assignedName: assignment?.assigned_name || undefined,
+          assignedStaff: ((assignment as any)?.user_id as string) || undefined,
+          assignedName: (assignment as any)?.assigned_name || undefined,
         });
       });
       // 4. Map to defaultCategories structure

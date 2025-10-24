@@ -20,7 +20,7 @@ import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
 import { detectIncidentFromText } from '@/utils/incidentLogic'
 import { getRequiredSkillsForIncidentType } from '../lib/incidentAssignment'
-import { calculateEscalationTime } from '../lib/escalationEngine'
+// Removed direct import of server-only escalationEngine
 import IncidentDependencySelector from './IncidentDependencySelector'
 import { useToast } from './Toast'
 import EscalationTimer from './EscalationTimer'
@@ -3878,19 +3878,28 @@ export default function IncidentCreationModal({
       // Calculate escalation time only for medium/high/urgent
       if (insertedIncident?.id && ['medium', 'high', 'urgent'].includes((formData.priority || '').toLowerCase())) {
         try {
-          const escalationTime = await calculateEscalationTime(
-            formData.incident_type,
-            formData.priority
-          );
-
-          if (escalationTime) {
-            // Update incident with escalation time
-          await supabase
-            .from('incident_logs')
-            .update({
-              escalate_at: escalationTime.toISOString()
+          const response = await fetch('/api/escalations/calculate-time', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              incidentType: formData.incident_type,
+              priority: formData.priority,
+              eventId: formData.event_id
             })
-            .eq('id', insertedIncident.id);
+          });
+
+          if (response.ok) {
+            const { escalationTime } = await response.json();
+            
+            if (escalationTime) {
+              // Update incident with escalation time
+              await supabase
+                .from('incident_logs')
+                .update({
+                  escalate_at: escalationTime
+                })
+                .eq('id', insertedIncident.id);
+            }
           }
         } catch (escalationError) {
           console.error('Error calculating escalation time:', escalationError);

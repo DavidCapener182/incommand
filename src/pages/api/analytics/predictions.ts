@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { getServiceClient } from '@/lib/supabaseServer';
 
 function mode(arr: any[]) {
   if (!arr.length) return null;
@@ -20,6 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const supabase = getServiceClient();
     // Get all incidents
     const { data, error } = await supabase
       .from('incident_logs')

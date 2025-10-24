@@ -1,10 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
 import { chatCompletion as ollamaChatCompletion, isOllamaAvailable, OllamaModelNotFoundError } from '@/services/ollamaService';
 import { extractJsonFromText } from '@/lib/ai/jsonUtils';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { getServiceClient } from '@/lib/supabaseServer';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -84,6 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const supabase = getServiceClient();
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('event_name, venue_name, event_brief')

@@ -121,7 +121,7 @@ export default function AuditLogsPage() {
           .from('profiles')
           .select('id, first_name, last_name, email')
           .in('id', userIds)
-        profiles?.forEach(p => {
+        profiles?.forEach((p: any) => {
           userMap[p.id] = p.first_name || p.last_name ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (p.email || p.id)
         })
       }

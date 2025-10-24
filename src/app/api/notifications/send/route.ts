@@ -6,15 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { emailService } from '@/lib/notifications/emailService'
 import { smsService } from '@/lib/notifications/smsService'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabaseServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getServiceClient()
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (incidentId) {
       const { data, error } = await supabase
         .from('incident_logs')
-        .select('*')
+        .select('id, incident_type, occurrence, timestamp, status, is_closed, priority, location')
         .eq('id', incidentId)
         .single()
 

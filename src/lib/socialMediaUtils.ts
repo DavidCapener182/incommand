@@ -1,7 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { chatCompletion as ollamaChatCompletion, isOllamaAvailable, OllamaModelNotFoundError } from '@/services/ollamaService';
 import OpenAI from 'openai';
 import { extractJsonFromText } from '@/lib/ai/jsonUtils';
+import { getServiceClient } from './supabaseServer';
 
 // TypeScript interfaces
 export interface SocialPost {
@@ -44,9 +44,7 @@ const SENTIMENT_SYSTEM_PROMPT = `You are a sentiment analysis expert. Analyze ea
 Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1, 1]`;
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = getServiceClient();
 
 // Helper to parse/normalize sentiment arrays into fixed-length scores
 export function parseSentimentArray(candidate: string, expectedLength: number): SentimentScore[] {

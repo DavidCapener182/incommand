@@ -1,13 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { deriveFollowUpActions } from '@/lib/chat/followUpActions';
 import { ConversationContext, EventContext as ChatEventContext } from '@/types/chat';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getServiceClient } from '@/lib/supabaseServer';
 
 interface ChatMessage {
   id: string;
@@ -65,12 +59,13 @@ Always maintain a professional, calm, and authoritative tone suitable for emerge
 async function getEventContext(): Promise<EventContext | null> {
   try {
     console.log('🔍 Starting getEventContext...');
+    const supabase = getServiceClient();
     
     // Get current event
     console.log('🔍 Fetching current event...');
     const { data: events, error: eventError } = await supabase
       .from('events')
-      .select('*')
+      .select('id, event_name, venue_name, event_date, event_time, event_brief')
       .eq('is_current', true)
       .single();
 
@@ -90,7 +85,7 @@ async function getEventContext(): Promise<EventContext | null> {
     console.log('🔍 Fetching incidents for event:', events.id);
     const { data: incidents, error: incidentError } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select('id, incident_type, occurrence, timestamp, is_closed, status, priority, location, log_number, created_at')
       .eq('event_id', events.id)
       .order('created_at', { ascending: false });
 
@@ -111,12 +106,12 @@ async function getEventContext(): Promise<EventContext | null> {
     console.log('🔓 Open incidents:', openIncidents);
 
     // Get staff count for the event
-    const { data: staff, error: staffError } = await supabase
+    const { count: staffCountResult, error: staffError } = await supabase
       .from('staff')
-      .select('*')
+      .select('id', { count: 'exact', head: true })
       .eq('event_id', events.id);
 
-    const staffCount = staff?.length || 0;
+    const staffCount = staffCountResult || 0;
 
     const context = {
       eventId: events.id,

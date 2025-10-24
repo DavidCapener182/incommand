@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,16 +15,12 @@ type CachedPayload = {
 const INSIGHTS_CACHE: Map<CacheKey, CachedPayload> = new Map();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
+    const supabase = getServiceClient();
     // For POST, get the prompt from the body (if provided)
     let customPrompt = '';
     if (req.method === 'POST') {
@@ -34,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get the current event
     const { data: currentEvent } = await supabase
       .from('events')
-      .select('*')
+      .select('id, event_name, event_date, venue_name, name, date, venue')
       .eq('is_current', true)
       .maybeSingle();
 
@@ -56,7 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get comprehensive incident data for the current event
     const { data: incidents, error: incidentsError } = await supabase
       .from('incident_logs')
-      .select('*')
+      .select(
+        'id, incident_type, occurrence, timestamp, is_closed, status, location, log_number, priority'
+      )
       .eq('event_id', currentEvent.id)
       .order('timestamp', { ascending: false });
 
@@ -95,10 +93,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ) || [];
 
     // Prepare data for AI analysis
+    const eventName = currentEvent.event_name ?? currentEvent.name ?? 'Current Event';
+    const eventDate = currentEvent.event_date ?? currentEvent.date ?? null;
+    const venueName = currentEvent.venue_name ?? currentEvent.venue ?? 'Venue';
+
     const eventData = {
-      eventName: currentEvent.name,
-      eventDate: currentEvent.date,
-      venue: currentEvent.venue,
+      eventName,
+      eventDate,
+      venue: venueName,
       totalIncidents,
       openIncidents,
       highPriorityIncidents,
