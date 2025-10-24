@@ -18,7 +18,7 @@ export default function MarketingNavigation() {
             alt="InCommand Logo"
             width={360}
             height={360}
-            className="object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.25)]"
+            className="w-48 sm:w-72 md:w-80 lg:w-[360px] h-auto object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.25)]"
             priority
           />
         </div>
@@ -35,7 +35,7 @@ export default function MarketingNavigation() {
       </div>
 
        {/* Capsule Navigation */}
-       <nav className="absolute top-[calc(100%-0.75rem)] bg-blue-100/95 backdrop-blur-md border border-blue-200 shadow-md rounded-full px-8 py-1 sm:py-1.5 flex justify-center space-x-3 sm:space-x-6 z-20">
+       <nav className="absolute top-[calc(100%-0.75rem)] bg-blue-100/95 backdrop-blur-md border border-blue-200 shadow-md rounded-full px-4 sm:px-6 md:px-8 py-1 sm:py-1.5 flex justify-center space-x-2 sm:space-x-4 md:space-x-6 z-20">
         <Link
           href="/features"
           className={`px-5 py-1 rounded-full text-sm font-semibold transition-all ${

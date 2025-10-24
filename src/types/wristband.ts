@@ -23,3 +23,4 @@ export interface WristbandAccessLevel {
   wristband_type_id: string
   access_level_id: string
 }
+

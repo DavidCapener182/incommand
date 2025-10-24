@@ -9,6 +9,8 @@ import { LaunchCountdown } from "@/components/marketing/LaunchCountdown"
 import { RegisterInterestModal } from "@/components/marketing/RegisterInterestModal"
 import { SocialLinks } from "@/components/marketing/SocialLinks"
 import { MarketingFooter } from "@/components/marketing/MarketingFooter"
+import { Metadata } from "next"
+import { pageMetadata } from "@/config/seo.config"
 
 export default function HomePage() {
   const { isPreLaunch, preLaunchConfigured, launchDate, countdownStart, totalDurationMs } = useLaunchMode()
@@ -20,7 +22,7 @@ export default function HomePage() {
       <MarketingNavigation />
 
       {/* HERO SECTION */}
-      <section className="relative flex flex-col items-center justify-center text-center flex-grow px-6 pt-24 pb-32 overflow-hidden">
+      <section className="relative flex flex-col items-center justify-center text-center flex-grow px-6 pt-16 pb-20 sm:pt-24 sm:pb-32 overflow-hidden">
         {/* Subtle animated background overlay */}
         <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10 bg-[size:40px_40px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 via-blue-800/60 to-blue-700/70" />
@@ -31,20 +33,19 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="relative z-10 text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 max-w-4xl drop-shadow-lg"
+          className="relative z-10 text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 max-w-4xl drop-shadow-lg"
         >
-          Powerful Event Control{" "}
-          <span className="block text-blue-200 mt-2">Built for Real-World Operations</span>
+          Take Command of Every Event{" "}
+          <span className="block text-blue-200 mt-2">Safely, Efficiently, and in Real Time</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="relative z-10 text-blue-100 text-lg sm:text-xl max-w-2xl mb-10 leading-relaxed"
+          className="relative z-10 text-blue-100 text-base sm:text-lg max-w-2xl mb-10 leading-relaxed"
         >
-          Manage incidents, monitor attendance, and track performance in real time with a
-          unified, AI-powered command platform designed for professional event teams.
+          InCommand is the UK's all-in-one event control and incident management platform — built by safety professionals to help your team respond faster, communicate smarter, and maintain complete operational oversight.
         </motion.p>
 
         {preLaunchConfigured && (
@@ -70,21 +71,21 @@ export default function HomePage() {
               onClick={() => setInterestOpen(true)}
               className="bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95"
             >
-              Register Interest
+              Book a Demo
             </button>
           ) : (
             <Link
               href="/signup"
               className="bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95"
             >
-              Get Started Free
+              Book a Demo
             </Link>
           )}
           <Link
-            href="/pricing"
+            href="/features"
             className="bg-transparent border border-white text-white hover:bg-white/10 hover:-translate-y-0.5 hover:shadow-lg px-8 py-4 rounded-xl text-lg font-semibold shadow-md transition-all duration-300 active:scale-95"
           >
-            View Pricing
+            Explore Features
           </Link>
         </motion.div>
 
@@ -113,40 +114,45 @@ export default function HomePage() {
       </section>
 
       {/* KEY FEATURES */}
-      <section className="bg-white text-blue-900 py-20 px-6 lg:px-12 rounded-t-3xl">
-        <h2 className="text-center text-3xl sm:text-4xl font-bold mb-14 text-[#23408e]">
-          Why Teams Choose InCommand
+      <section className="relative bg-gradient-to-b from-[#23408e] to-[#2661F5]">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#23408e] to-[#2661F5]" />
+        <div className="relative z-10 bg-white text-blue-900 py-20 px-6 lg:px-12 rounded-t-3xl overflow-hidden">
+        <h2 className="text-center text-2xl sm:text-3xl lg:text-4xl font-bold mb-14 text-[#23408e]">
+          Why Event Professionals Choose InCommand
         </h2>
+        <p className="text-center text-lg text-blue-700 mb-16 max-w-3xl mx-auto">
+          Trusted by UK festivals, venues, and safety teams, InCommand brings together everything you need to manage incidents, monitor operations, and make confident decisions — all in one intuitive platform.
+        </p>
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
           {[
             {
-              title: "Multi-Tenancy & Event Management",
-              desc: "Manage multiple events simultaneously with isolated data, permissions, and real-time dashboards.",
+              title: "Seamless Multi-Event Control",
+              desc: "Manage multiple events with isolated dashboards, permissions, and data in real time.",
               link: "/features",
             },
             {
-              title: "AI-Powered Insights & Analytics",
-              desc: "Automated summaries, predictive analytics, and decision-support tools for faster response and better outcomes.",
+              title: "AI-Driven Insights",
+              desc: "Predict risks and analyse performance with intelligent reporting tools.",
               link: "/features",
             },
             {
-              title: "Real-Time Notifications",
-              desc: "Smart alerts and activity feeds keep your entire control room in sync instantly.",
+              title: "Real-Time Alerts",
+              desc: "Receive instant notifications on incidents and activity — wherever you are.",
               link: "/features",
             },
             {
-              title: "Staff Management & Callsigns",
-              desc: "Card-based assignment interface with skill coverage tracking and one-click reassignment.",
+              title: "Smarter Staff Management",
+              desc: "Assign, reassign, and track teams visually with callsigns and live status boards.",
               link: "/features",
             },
             {
               title: "Advanced Analytics Dashboard",
-              desc: "Heatmaps, incident timelines, and performance metrics for actionable operational insight.",
+              desc: "Heatmaps, incident timelines, and performance metrics designed for operational clarity.",
               link: "/features",
             },
             {
               title: "Security & Compliance",
-              desc: "Granular access control, audit logs, and compliance-ready data protection.",
+              desc: "Built for JESIP alignment and GDPR compliance, ensuring data integrity and audit-ready logs.",
               link: "/features",
             },
           ].map((item, index) => (
@@ -155,7 +161,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="p-8 bg-blue-50 rounded-2xl shadow-sm border border-blue-100 hover:shadow-lg hover:-translate-y-1 transition-all"
+              className="p-6 sm:p-8 bg-blue-50 rounded-2xl shadow-sm border border-blue-100 hover:shadow-lg hover:-translate-y-1 transition-all"
             >
               <h3 className="text-lg font-semibold text-[#23408e] mb-2">
                 {item.title}
@@ -172,15 +178,16 @@ export default function HomePage() {
             </motion.div>
           ))}
         </div>
+        </div>
       </section>
 
       {/* CTA BANNER */}
       <section className="bg-gradient-to-r from-[#23408e] to-[#2661F5] py-24 px-6 lg:px-12 text-center text-white">
-        <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 drop-shadow-md">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-4 drop-shadow-md">
           Ready to Transform Your Operations?
         </h2>
         <p className="text-blue-100 text-lg mb-12 leading-relaxed">
-          Join hundreds of event and security teams using InCommand to run safer, more efficient operations.
+          Join hundreds of event and safety teams using InCommand to deliver safer, smarter, more efficient live operations.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           {isPreLaunch ? (
@@ -189,21 +196,21 @@ export default function HomePage() {
               onClick={() => setInterestOpen(true)}
               className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
             >
-              Register Interest
+              Request a Demo
             </button>
           ) : (
             <Link
               href="/signup"
               className="bg-white text-blue-700 font-semibold px-8 py-4 rounded-xl hover:bg-blue-100 shadow-md transition-transform active:scale-95"
             >
-              Get Started Free
+              Request a Demo
             </Link>
           )}
           <Link
             href="/pricing"
             className="border border-white text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 shadow-md transition"
           >
-            View Pricing
+            See Pricing
           </Link>
         </div>
       </section>

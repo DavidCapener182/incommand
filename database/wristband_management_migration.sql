@@ -36,3 +36,4 @@ alter table public.vendor_accreditation_access_levels
 alter table public.vendor_accreditation_access_levels 
   add constraint vendor_accreditation_access_levels_access_level_id_fkey 
   foreign key (access_level_id) references public.accreditation_access_levels(id) on delete cascade;
+
