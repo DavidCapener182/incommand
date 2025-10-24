@@ -85,7 +85,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-[#23408e] to-[#2661F5] px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col justify-center bg-[#F1F4F9] px-4 sm:px-6 lg:px-8">
       <RedirectBanner />
 
       {/* Logo & Tagline */}
@@ -103,7 +103,7 @@ export default function LoginPage() {
           className="object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.35)] mb-6"
           priority
         />
-        <p className="text-blue-100 text-sm sm:text-base font-medium max-w-md leading-relaxed">
+        <p className="text-blue-700 text-sm sm:text-base font-medium max-w-md leading-relaxed">
           Modern incident tracking and event command for every scale of operation.
         </p>
       </motion.div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-8 sm:p-10"
+        className="w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl border border-blue-200 p-8 sm:p-10"
       >
         <h2 className="text-center text-3xl sm:text-4xl font-extrabold text-blue-900 mb-6">
           Welcome Back
@@ -182,7 +182,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#23408e] to-[#2661F5] hover:opacity-90 text-white font-semibold text-lg py-3 rounded-xl shadow-md transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg py-3 rounded-xl shadow-md transition-colors duration-200 active:scale-95"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           <p className="text-sm text-blue-700">New to InCommand?</p>
           <Link
             href="/signup"
-            className="w-full flex items-center justify-center py-3 px-4 rounded-xl text-base font-semibold text-white bg-gradient-to-r from-[#23408e] to-[#2661F5] hover:opacity-90 shadow-md transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
+            className="w-full flex items-center justify-center py-3 px-4 rounded-xl text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-colors duration-200 active:scale-95"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Create an account
@@ -206,7 +206,7 @@ export default function LoginPage() {
       </motion.div>
 
       {/* Footer */}
-      <footer className="mt-12 text-center text-xs text-blue-100 space-y-2">
+      <footer className="mt-12 text-center text-xs text-blue-600 space-y-2">
         <div className="flex justify-center gap-4">
           <button
             onClick={() => {
