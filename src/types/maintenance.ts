@@ -41,6 +41,12 @@ export interface WorkOrder {
   updated_at?: string
 }
 
+export interface MaintenanceVendor {
+  id: string
+  business_name: string
+  status?: string | null
+}
+
 export interface MaintenanceEventHook {
   id: string
   asset_id?: string | null

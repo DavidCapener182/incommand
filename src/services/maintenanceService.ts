@@ -1,5 +1,11 @@
 import { supabase } from '@/lib/supabase'
-import type { AssetRecord, MaintenanceEventHook, MaintenanceSchedule, WorkOrder } from '@/types/maintenance'
+import type {
+  AssetRecord,
+  MaintenanceEventHook,
+  MaintenanceSchedule,
+  MaintenanceVendor,
+  WorkOrder
+} from '@/types/maintenance'
 
 interface CreateWorkOrderPayload {
   asset_id?: string | null
@@ -10,6 +16,40 @@ interface CreateWorkOrderPayload {
   due_date?: string
   assigned_vendor_id?: string | null
   assigned_profile_id?: string | null
+}
+
+interface CreateAssetPayload {
+  asset_tag: string
+  name: string
+  description?: string
+  location?: string
+  status?: string
+  service_life_months?: number | null
+  commissioned_at?: string | null
+}
+
+interface CreateSchedulePayload {
+  asset_id: string
+  frequency_days: number
+  next_due_date?: string | null
+  webhook_endpoint?: string | null
+  enabled?: boolean
+}
+
+interface UpdateAssetPayload {
+  name?: string
+  description?: string
+  location?: string
+  status?: string
+  service_life_months?: number | null
+  commissioned_at?: string | null
+}
+
+interface UpdateWorkOrderDetailsPayload {
+  assigned_vendor_id?: string | null
+  assigned_profile_id?: string | null
+  priority?: string
+  due_date?: string | null
 }
 
 export async function fetchAssets(): Promise<AssetRecord[]> {
@@ -88,6 +128,11 @@ export async function updateWorkOrderStatus(workOrderId: string, status: string,
   if (status === 'completed') {
     fields.completed_at = new Date().toISOString()
     fields.completion_notes = completionNotes || null
+  } else {
+    fields.completed_at = null
+    if (completionNotes !== undefined) {
+      fields.completion_notes = completionNotes
+    }
   }
 
   const { error } = await supabase
@@ -113,4 +158,87 @@ export async function scheduleMaintenanceCompletion(scheduleId: string) {
   }
 }
 
-export type { CreateWorkOrderPayload }
+export async function createAsset(payload: CreateAssetPayload) {
+  const { data, error } = await supabase
+    .from('assets')
+    .insert([{ ...payload }])
+    .select('*')
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data as AssetRecord
+}
+
+export async function updateAsset(assetId: string, updates: UpdateAssetPayload) {
+  const { error } = await supabase
+    .from('assets')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', assetId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function createMaintenanceSchedule(payload: CreateSchedulePayload) {
+  const { data, error } = await supabase
+    .from('maintenance_schedules')
+    .insert([{ ...payload }])
+    .select('*')
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return data as MaintenanceSchedule
+}
+
+export async function toggleMaintenanceSchedule(scheduleId: string, enabled: boolean) {
+  const { error } = await supabase
+    .from('maintenance_schedules')
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq('id', scheduleId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function updateWorkOrderDetails(workOrderId: string, updates: UpdateWorkOrderDetailsPayload) {
+  const { error } = await supabase
+    .from('work_orders')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', workOrderId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function fetchMaintenanceVendors(): Promise<MaintenanceVendor[]> {
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('id, business_name, status')
+    .order('business_name', { ascending: true })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (data || []).map((vendor) => ({
+    id: vendor.id,
+    business_name: vendor.business_name,
+    status: vendor.status ?? null
+  }))
+}
+
+export type {
+  CreateWorkOrderPayload,
+  CreateAssetPayload,
+  CreateSchedulePayload,
+  UpdateWorkOrderDetailsPayload
+}

@@ -281,3 +281,25 @@ export async function refreshVendorAccreditationAccessLevels(accreditationId: st
     throw new Error(error.message)
   }
 }
+
+export async function deleteVendor(vendorId: string) {
+  const { error } = await supabase
+    .from('vendors')
+    .delete()
+    .eq('id', vendorId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
+
+export async function deleteVendorAccreditation(accreditationId: string) {
+  const { error } = await supabase
+    .from('vendor_accreditations')
+    .delete()
+    .eq('id', accreditationId)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}

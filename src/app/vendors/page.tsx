@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { Loader2, QrCode, Send, ShieldCheck, Users } from 'lucide-react'
+import { Loader2, QrCode, Send, ShieldCheck, Users, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { DomainSetupDebugCard } from '@/components/ui/DebugCard'
 import type {
@@ -18,7 +18,9 @@ import {
   fetchVendorInductionEvents,
   updateVendorAccreditationIdentity,
   updateVendorAccreditationStatus,
-  issueVendorPass
+  issueVendorPass,
+  deleteVendor,
+  deleteVendorAccreditation
 } from '@/services/vendorService'
 import {
   Dialog,
@@ -74,6 +76,11 @@ export default function VendorPortalPage() {
     id_document_reference: ''
   })
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [deleteVendorModalOpen, setDeleteVendorModalOpen] = useState(false)
+  const [deleteAccreditationModalOpen, setDeleteAccreditationModalOpen] = useState(false)
+  const [deletingVendorId, setDeletingVendorId] = useState<string | null>(null)
+  const [deletingAccreditationId, setDeletingAccreditationId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -296,6 +303,68 @@ export default function VendorPortalPage() {
     }
   }
 
+  const handleDeleteVendor = async () => {
+    if (!deletingVendorId) return
+
+    setDeleting(true)
+    try {
+      await deleteVendor(deletingVendorId)
+      addToast({
+        type: 'success',
+        title: 'Vendor deleted',
+        message: 'Vendor and all associated data have been removed.'
+      })
+      setDeleteVendorModalOpen(false)
+      setDeletingVendorId(null)
+      await loadData()
+    } catch (error) {
+      console.error(error)
+      addToast({
+        type: 'error',
+        title: 'Unable to delete vendor',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred.'
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDeleteAccreditation = async () => {
+    if (!deletingAccreditationId) return
+
+    setDeleting(true)
+    try {
+      await deleteVendorAccreditation(deletingAccreditationId)
+      addToast({
+        type: 'success',
+        title: 'Accreditation deleted',
+        message: 'Accreditation has been permanently removed.'
+      })
+      setDeleteAccreditationModalOpen(false)
+      setDeletingAccreditationId(null)
+      await loadData()
+    } catch (error) {
+      console.error(error)
+      addToast({
+        type: 'error',
+        title: 'Unable to delete accreditation',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred.'
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const openDeleteVendorModal = (vendorId: string) => {
+    setDeletingVendorId(vendorId)
+    setDeleteVendorModalOpen(true)
+  }
+
+  const openDeleteAccreditationModal = (accreditationId: string) => {
+    setDeletingAccreditationId(accreditationId)
+    setDeleteAccreditationModalOpen(true)
+  }
+
   return (
     <>
       <main className="module-container">
@@ -342,34 +411,46 @@ export default function VendorPortalPage() {
                   </div>
 
                   {selectedVendor ? (
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Service type</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.service_type || 'Not provided'}</dd>
+                    <div className="space-y-4">
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Service type</dt>
+                          <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.service_type || 'Not provided'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Contract expiry</dt>
+                          <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contract_expires_on || 'Not set'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Primary contact</dt>
+                          <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_name || 'Unknown'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Insurance</dt>
+                          <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.insurance_expires_on || 'Not provided'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Email</dt>
+                          <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_email || 'Not provided'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500 dark:text-gray-400">Status</dt>
+                          <dd>
+                            <span className="module-pill-info capitalize">{selectedVendor.status}</span>
+                          </dd>
+                        </div>
+                      </dl>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                          onClick={() => openDeleteVendorModal(selectedVendor.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Delete vendor
+                        </button>
                       </div>
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Contract expiry</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contract_expires_on || 'Not set'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Primary contact</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_name || 'Unknown'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Insurance</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.insurance_expires_on || 'Not provided'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Email</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{selectedVendor.contact_email || 'Not provided'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-500 dark:text-gray-400">Status</dt>
-                        <dd>
-                          <span className="module-pill-info capitalize">{selectedVendor.status}</span>
-                        </dd>
-                      </div>
-                    </dl>
+                    </div>
                   ) : (
                     <div className="module-empty">Select a vendor to view profile details.</div>
                   )}
@@ -443,7 +524,17 @@ export default function VendorPortalPage() {
                               Induction link sent {formatDateTime(accreditation.created_at)}
                             </p>
                           </div>
-                          <span className="module-pill-info">Waiting on applicant</span>
+                          <div className="flex items-center gap-2">
+                            <span className="module-pill-info">Waiting on applicant</span>
+                            <button
+                              type="button"
+                              className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                              onClick={() => openDeleteAccreditationModal(accreditation.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </li>
                     )
@@ -479,6 +570,14 @@ export default function VendorPortalPage() {
                                 onClick={() => openReviewModal(accreditation)}
                               >
                                 Review &amp; verify
+                              </button>
+                              <button
+                                type="button"
+                                className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                                onClick={() => openDeleteAccreditationModal(accreditation.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Delete
                               </button>
                             </div>
                           </div>
@@ -771,6 +870,80 @@ export default function VendorPortalPage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Vendor Confirmation Dialog */}
+      <Dialog open={deleteVendorModalOpen} onOpenChange={setDeleteVendorModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Vendor</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this vendor? This action cannot be undone and will remove all associated accreditations and data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => setDeleteVendorModalOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="button-danger"
+              onClick={handleDeleteVendor}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </span>
+              ) : (
+                'Delete vendor'
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Accreditation Confirmation Dialog */}
+      <Dialog open={deleteAccreditationModalOpen} onOpenChange={setDeleteAccreditationModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Accreditation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this accreditation? This action cannot be undone and will remove all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={() => setDeleteAccreditationModalOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="button-danger"
+              onClick={handleDeleteAccreditation}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </span>
+              ) : (
+                'Delete accreditation'
+              )}
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
