@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/types/supabase'
 import { 
   QuestionMarkCircleIcon, 
   ChatBubbleLeftRightIcon, 
@@ -73,34 +74,14 @@ const faqData: FAQItem[] = [
   }
 ];
 
-interface SupportTicket {
-  id: string;
-  user_id: string | null;
-  company_id?: string | null;
-  subject: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: 'general' | 'technical' | 'billing' | 'feature_request' | 'bug_report';
-  created_at: string | null;
-  updated_at: string | null;
-  resolved_at?: string | null;
-  assigned_to?: string | null;
-}
+type SupportTicket = Database['public']['Tables']['support_tickets']['Row']
 
-interface SupportMessage {
-  id: string;
-  ticket_id: string;
-  sender_id: string;
-  sender_type: 'user' | 'admin';
-  message: string;
-  is_internal: boolean;
-  created_at: string;
-  read_at?: string;
+type SupportMessage = Database['public']['Tables']['support_messages']['Row'] & {
   sender?: {
     id: string;
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 export default function SupportPage() {
@@ -194,7 +175,7 @@ export default function SupportPage() {
 
   const fetchSupportMessages = async (ticketId: string) => {
     try {
-      const { data: messages, error } = await supabase
+      const { data: messages, error } = await (supabase as any)
         .from('support_messages')
         .select(`
           *,
@@ -480,7 +461,7 @@ export default function SupportPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 dark:text-blue-100">
-                    <span>{ticket.category} • Created {new Date(ticket.created_at).toLocaleDateString()}</span>
+                    <span>{ticket.category} • Created {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : ''}</span>
                     <button
                       onClick={() => openTicketChat(ticket)}
                       className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
@@ -683,7 +664,7 @@ export default function SupportPage() {
                     </div>
                     <div className="text-sm">{message.message}</div>
                     <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleString()}
+                      {message.created_at ? new Date(message.created_at).toLocaleString() : ''}
                     </div>
                   </div>
                 </div>
