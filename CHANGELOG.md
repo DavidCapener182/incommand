@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Placeholder for future changes
+
+## [1.0.0-beta.1] - 2025-01-25
+
+### Added
 - **Step 7 - Build & Dependency Hygiene**: Comprehensive dependency cleanup and build optimization
   - Removed 543 unused packages from node_modules
   - Fixed 4 security vulnerabilities (3 moderate, 1 critical)
@@ -15,8 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented automated dependency validation and monitoring
   - Created optimized Docker multi-stage builds
   - Added comprehensive build analysis and health check scripts
-- Created `CHANGELOG.md` to track project changes.
-- ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen.
+- **Step 6 - Accessibility & SEO Enhancements**: Full WCAG 2.1 AA compliance and SEO optimization
+  - Added skip links, ARIA landmarks, and focus management
+  - Implemented comprehensive SEO metadata and structured data
+  - Created sitemap.xml and robots.txt for search engines
+  - Enhanced keyboard navigation and screen reader support
+  - Added Open Graph and Twitter Card metadata
+- **Public Updates Page**: Created `/updates` route for changelog display
+- Created `CHANGELOG.md` to track project changes
+- ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen
 - **Dashboard Enhancements**: Added "Last Updated" timestamp above incident table for real-time awareness
 - **Venue Occupancy Critical State**: Implemented pulse animation and red border styling when capacity reaches 100%
 - **Responsive KPI Grid**: Enhanced dashboard responsiveness with progressive grid layout (2→4→6→8 columns)
@@ -32,12 +44,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Visual Hierarchy**: Replaced pastel panels with neutral cards and subtle left accents
 - **Button Styling**: Updated all action buttons with modern design and proper contrast
 - **Mobile Responsiveness**: Improved layout across all screen sizes with logical stacking
+- **Build Performance**: Optimized with SWC minification and bundle splitting
+- **Security Posture**: Updated Next.js to latest secure version (14.2.33)
 
 ### Fixed
 - **Independent Scrolling**: Incident type list now scrolls independently without affecting other form fields
 - **Accessibility**: Added proper ARIA labels, keyboard navigation, and WCAG AA contrast compliance
 - **TypeScript Safety**: Enhanced type safety across all components
 - **Component Organization**: Better structure and maintainability
+- **Dependency Issues**: Resolved 4 security vulnerabilities and removed unused packages
+- **Build Process**: Fixed dependency separation and optimized CI/CD workflows
 
 ## [0.1.0] - 2024-07-29
 
