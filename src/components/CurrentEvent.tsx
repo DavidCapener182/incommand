@@ -81,51 +81,36 @@ export default function CurrentEvent({
 
   // Function to extract a title from a paragraph
   const extractTitleFromParagraph = (paragraph: string): string => {
-    // Remove markdown formatting and clean up text
-    const cleanText = paragraph
-      .replace(/\*\*\*/g, '') // Remove triple asterisks
-      .replace(/\*\*/g, '') // Remove double asterisks
-      .replace(/\*/g, '') // Remove single asterisks
-      .replace(/###\s*/g, '') // Remove markdown headers with optional spaces
-      .replace(/##\s*/g, '') // Remove markdown headers with optional spaces
-      .replace(/#\s*/g, '') // Remove markdown headers with optional spaces
-      .replace(/`([^`]+)`/g, '$1') // Remove backticks but keep content
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links but keep text
-      .replace(/_{2,}/g, '') // Remove multiple underscores
-      .replace(/_([^_]+)_/g, '$1') // Remove italic underscores but keep content
-      .replace(/~~([^~]+)~~/g, '$1') // Remove strikethrough but keep content
-      .replace(/^\s*>\s+/gm, '') // Remove blockquotes
-      .replace(/^\s*[-•]\s+/gm, '') // Remove bullet points
-      .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered lists
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim()
+    // First, try to extract the actual markdown header if it exists
+    const headerMatch = paragraph.match(/^#{1,6}\s*(.+)$/m);
+    if (headerMatch) {
+      return headerMatch[1].trim();
+    }
 
     // Look for common patterns to extract meaningful titles
-    const lowerText = cleanText.toLowerCase();
+    const lowerText = paragraph.toLowerCase();
     
-    if (lowerText.includes('incident') && (lowerText.includes('total') || lowerText.includes('open') || lowerText.includes('status'))) {
-      return 'Current Incidents'
+    if (lowerText.includes('current event status') || (lowerText.includes('incident') && (lowerText.includes('total') || lowerText.includes('open') || lowerText.includes('status')))) {
+      return 'Current Event Status'
     } else if (lowerText.includes('attendance') || lowerText.includes('capacity') || lowerText.includes('occupancy')) {
-      return 'Venue Status'
-    } else if (lowerText.includes('security') || lowerText.includes('safety')) {
-      return 'Security Update'
+      return 'Attendance & Capacity Analysis'
+    } else if (lowerText.includes('security') || lowerText.includes('safety') || lowerText.includes('operational concerns')) {
+      return 'Security & Operational Concerns'
+    } else if (lowerText.includes('urgent') || lowerText.includes('priority') || lowerText.includes('critical')) {
+      return 'Urgent Patterns or Concerns'
+    } else if (lowerText.includes('trend') || lowerText.includes('pattern') || lowerText.includes('location') || lowerText.includes('hotspot')) {
+      return 'Trending Locations or Incident Types'
+    } else if (lowerText.includes('recommendation') || lowerText.includes('suggest') || lowerText.includes('action')) {
+      return 'Actionable Recommendations'
     } else if (lowerText.includes('recent') || lowerText.includes('activity') || lowerText.includes('hour')) {
       return 'Recent Activity'
-    } else if (lowerText.includes('alert') || lowerText.includes('urgent') || lowerText.includes('priority')) {
-      return 'Priority Alerts'
-    } else if (lowerText.includes('recommendation') || lowerText.includes('suggest') || lowerText.includes('action')) {
-      return 'Action Items'
-    } else if (lowerText.includes('trend') || lowerText.includes('pattern') || lowerText.includes('analysis')) {
-      return 'Insights'
     } else if (lowerText.includes('weather') || lowerText.includes('condition')) {
       return 'Weather Status'
     } else if (lowerText.includes('behavioral') || lowerText.includes('crowd') || lowerText.includes('monitor')) {
       return 'Crowd Analysis'
-    } else if (lowerText.includes('location') || lowerText.includes('area') || lowerText.includes('hotspot')) {
-      return 'Location Focus'
     } else {
-      // Fallback: create a generic title based on content
-      return 'Event Update'
+      // Fallback: create a meaningful title based on content
+      return 'Event Analysis'
     }
   }
 
@@ -150,16 +135,12 @@ export default function CurrentEvent({
       const insights: AIInsight[] = paragraphs.map((paragraph: string) => ({
         title: extractTitleFromParagraph(paragraph),
         content: paragraph
-          .replace(/\*\*\*/g, '') // Remove triple asterisks
-          .replace(/\*\*/g, '') // Remove double asterisks
-          .replace(/\*/g, '') // Remove single asterisks
           .replace(/###\s*/g, '') // Remove markdown headers with optional spaces
           .replace(/##\s*/g, '') // Remove markdown headers with optional spaces
           .replace(/#\s*/g, '') // Remove markdown headers with optional spaces
-          .replace(/^\s*[-•]\s+/gm, '') // Remove bullet points (- or •)
-          .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered lists (1. 2. etc.)
-          .replace(/^\d+\.\s+/gm, '') // Remove numbered lists without leading spaces
-          .replace(/\b\d+\.\s+/g, '') // Remove numbered lists anywhere in text
+          .replace(/\*\*\*/g, '') // Remove triple asterisks
+          .replace(/\*\*/g, '') // Remove double asterisks
+          .replace(/\*/g, '') // Remove single asterisks
           .replace(/`([^`]+)`/g, '$1') // Remove backticks but keep content
           .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links but keep text
           .replace(/_{2,}/g, '') // Remove multiple underscores
@@ -167,6 +148,9 @@ export default function CurrentEvent({
           .replace(/~~([^~]+)~~/g, '$1') // Remove strikethrough but keep content
           .replace(/^\s*>\s+/gm, '') // Remove blockquotes
           .replace(/^\s*\|\s*/gm, '') // Remove table formatting
+          .replace(/^\s*[-•]\s+/gm, '• ') // Convert bullet points to clean bullets
+          .replace(/^\s*\d+\.\s+/gm, '• ') // Convert numbered lists to bullets
+          .replace(/\b\d+\.\s+/g, '• ') // Convert inline numbered lists to bullets
           .replace(/\s+/g, ' ') // Normalize whitespace
           .trim()
       }));
@@ -319,10 +303,7 @@ export default function CurrentEvent({
                 {/* AI Insights - modernized with better styling */}
                 {aiInsights.length > 0 && (
                   <div className="pt-2 border-t border-gray-200/60 dark:border-[#2d437a]/50">
-                    <h4 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 font-medium">
-                      AI Analysis
-                    </h4>
-                    <div className="min-h-[70px] max-h-[70px] overflow-hidden">
+                    <div className="min-h-[90px] max-h-[90px] overflow-hidden">
                       {aiLoading ? (
                         <div className="animate-pulse space-y-2">
                           <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
@@ -344,11 +325,16 @@ export default function CurrentEvent({
                           </div>
                         </div>
                       ) : (
-                        <div className="pb-4">
-                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">
-                            {aiInsights[currentInsightIndex]?.title}
-                          </h4>
-                          <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pr-1">
+                        <div className="pb-2">
+                          <div 
+                            className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pr-1"
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 4,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
                             {aiInsights[currentInsightIndex]?.content}
                           </div>
                         </div>

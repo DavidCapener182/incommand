@@ -209,7 +209,7 @@ Keep each section concise but informative. Focus on actionable intelligence for 
           messages: [
             {
               role: 'system',
-              content: 'You are an expert event security analyst. Provide clear, actionable intelligence for event control teams. Distinguish between attendance tracking (venue capacity) and actual security incidents.'
+              content: 'You are an AI security analyst for event management. Provide structured, actionable insights based on incident data. Focus on practical recommendations for security teams.'
             },
             {
               role: 'user',
@@ -217,7 +217,7 @@ Keep each section concise but informative. Focus on actionable intelligence for 
             }
           ],
           max_tokens: 1200,
-          temperature: 0.3
+          temperature: 0.4
         });
 
         const summary = (completion.choices[0]?.message?.content as string) || 'Unable to generate summary';
