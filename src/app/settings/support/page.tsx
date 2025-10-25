@@ -180,7 +180,13 @@ export default function SupportPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUserTickets(tickets || []);
+      // Normalize status to the allowed union to satisfy SupportTicket type
+      const allowedStatuses = ['open', 'in_progress', 'resolved', 'closed'] as const;
+      const normalized = (tickets || []).map((t: any) => ({
+        ...t,
+        status: (allowedStatuses as readonly string[]).includes(t.status) ? t.status : 'open',
+      })) as SupportTicket[];
+      setUserTickets(normalized);
     } catch (error) {
       console.error('Error fetching user tickets:', error);
     }
