@@ -64,7 +64,7 @@ interface Incident {
   logged_by_user_id?: string
   logged_by_callsign?: string
   is_amended?: boolean
-  original_entry_id?: string
+  original_entry_id?: number
 }
 
 const PRIORITY_FILTER_OPTIONS: NormalizedPriority[] = ['urgent', 'high', 'medium', 'low']
@@ -203,7 +203,10 @@ export default function IncidentTable({
           status: incident.status || 'open',
           entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
           retrospective_justification: incident.retrospective_justification || undefined,
-          logged_by_user_id: incident.logged_by_user_id || undefined
+          logged_by_user_id: incident.logged_by_user_id || undefined,
+          logged_by_callsign: incident.logged_by_callsign ?? undefined,
+          is_amended: incident.is_amended ?? false,
+          original_entry_id: incident.original_entry_id ?? undefined
         }))
       );
       setLastUpdated(new Date());
@@ -214,7 +217,10 @@ export default function IncidentTable({
             status: incident.status || 'open',
             entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
             retrospective_justification: incident.retrospective_justification || undefined,
-            logged_by_user_id: incident.logged_by_user_id || undefined
+            logged_by_user_id: incident.logged_by_user_id || undefined,
+            logged_by_callsign: incident.logged_by_callsign ?? undefined,
+            is_amended: incident.is_amended ?? false,
+            original_entry_id: incident.original_entry_id ?? undefined
           }))
         );
       }
@@ -295,7 +301,7 @@ export default function IncidentTable({
           .single();
 
         const newEventId = eventData?.id || null;
-        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId });
+        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId ?? undefined });
         setCurrentEventId(newEventId);
       } catch (err) {
         logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
@@ -559,16 +565,18 @@ export default function IncidentTable({
       const idToShort: Record<string, string> = {};
       const idToCallsign: Record<string, string> = {};
       roles?.forEach((r) => {
-        idToShort[r.id] = r.short_code;
-        idToCallsign[r.id] = r.callsign;
+        if (!r?.id) return;
+        if (r.short_code) idToShort[r.id] = r.short_code;
+        if (r.callsign) idToCallsign[r.id] = r.callsign;
       });
       const shortToName: Record<string, string> = {};
       const callsignToName: Record<string, string> = {};
       assignments?.forEach((a) => {
+        if (!a?.callsign_role_id) return;
         const short = idToShort[a.callsign_role_id];
         const cs = idToCallsign[a.callsign_role_id];
-        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
-        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+        if (short && a.assigned_name) shortToName[short.toUpperCase()] = a.assigned_name;
+        if (cs && a.assigned_name) callsignToName[cs.toUpperCase()] = a.assigned_name;
       });
       setCallsignAssignments(callsignToName);
       setCallsignShortToName(shortToName);
