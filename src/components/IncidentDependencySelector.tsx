@@ -7,7 +7,7 @@ interface Incident {
   incident_type: string;
   occurrence: string;
   action_taken: string;
-  status: string;
+  status: string | null;
   timestamp: string;
 }
 

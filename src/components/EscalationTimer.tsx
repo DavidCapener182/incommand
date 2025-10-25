@@ -3,9 +3,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 type EscalationEvent = {
   id: string;
   incident_id: string;
-  action: string;
-  timestamp: string;
+  action?: string;
+  timestamp?: string;
   reason?: string;
+  escalation_level?: number;
+  escalated_at?: string | Date;
+  notes?: string;
+  resolution_time?: number | string;
 };
 
 interface EscalationTimerProps {
@@ -328,7 +332,7 @@ export default function EscalationTimer({
                         Escalated to Level {event.escalation_level}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {event.escalated_at.toLocaleString()}
+                        {event.escalated_at ? new Date(event.escalated_at).toLocaleString() : ''}
                       </div>
                     </div>
                     {event.notes && (
