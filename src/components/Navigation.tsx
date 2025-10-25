@@ -487,15 +487,7 @@ export default function Navigation() {
                   </NavigationMenuList>
                 </NavigationMenu>
 
-                {/* Theme Toggle Button */}
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="ml-4 p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
-                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {theme === 'dark' ? SunIcon : MoonIcon}
-                </button>
+                {/* Theme Toggle Button removed from desktop nav as per Step 2A */}
               </div>
             </div>
             {/* User Avatar/Profile Dropdown - always far right */}
