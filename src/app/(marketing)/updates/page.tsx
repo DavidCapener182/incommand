@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import MarketingNavigation from '@/components/MarketingNavigation';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import SuggestionsBox from '@/components/SuggestionsBox';
 
 export default async function UpdatesPage() {
   const changelogPath = path.join(process.cwd(), 'CHANGELOG.md');
@@ -22,6 +23,7 @@ export default async function UpdatesPage() {
         </section>
       </PageWrapper>
       <MarketingFooter />
+      <SuggestionsBox />
     </div>
   );
 }

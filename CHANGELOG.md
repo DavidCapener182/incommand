@@ -1,74 +1,66 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.  
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)  
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)  
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
 ## [Unreleased]
 ### Added
-- Placeholder for future changes
+- **Suggestions Box:** Added interactive feedback form on `/updates` page for feature requests and improvements.
+- **Security Enhancement:** Hidden incident creation FAB on marketing pages to prevent unauthorized access.
+- Placeholder for upcoming improvements and refinements.
 
 ---
 
-## [1.0.0-beta.1] - 2025-01-25
+## [1.0.0-beta.1] – 2025-10-25
 
 ### Added
-- **Step 7 - Build & Dependency Hygiene**: Comprehensive dependency cleanup and build optimization
-  - Removed 543 unused packages from node_modules
-  - Fixed 4 security vulnerabilities (3 moderate, 1 critical)
-  - Enhanced build scripts for production, development, and CI/CD
-  - Implemented automated dependency validation and monitoring
-  - Created optimized Docker multi-stage builds
-  - Added comprehensive build analysis and health check scripts
-- **Step 6 - Accessibility & SEO Enhancements**: Full WCAG 2.1 AA compliance and SEO optimization
-  - Added skip links, ARIA landmarks, and focus management
-  - Implemented comprehensive SEO metadata and structured data
-  - Created sitemap.xml and robots.txt for search engines
-  - Enhanced keyboard navigation and screen reader support
-  - Added Open Graph and Twitter Card metadata
-- **Public Updates Page**: Created `/updates` route for changelog display
-- Created `CHANGELOG.md` to track project changes
-- ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen
-- **Dashboard Enhancements**: Added "Last Updated" timestamp above incident table for real-time awareness
-- **Venue Occupancy Critical State**: Implemented pulse animation and red border styling when capacity reaches 100%
-- **Responsive KPI Grid**: Enhanced dashboard responsiveness with progressive grid layout (2→4→6→8 columns)
-- **Incident Creation Modal Redesign**: Complete UI/UX overhaul with three-column responsive layout
-- **Quick Add Bar**: Moved to full-width top section for better visibility and accessibility
-- **Incident Type Chips**: Color-coded categories with search functionality and independent scrolling
-- **Enhanced Form Components**: Styled selects with custom chevrons, improved textareas with light backgrounds
-- **Sticky Footer Actions**: Red "Log Incident" button with icon, blue outline "Save as Draft", gray "Cancel"
+- **Performance Optimisation:** Major build and dependency cleanup improving load times and reliability.
+- **Accessibility & SEO Enhancements:** Full WCAG 2.1 AA compliance, improved screen reader support, ARIA landmarks, and complete SEO metadata (OpenGraph, Twitter Cards, sitemap, robots.txt).
+- **Public Updates Page:** Introduced `/updates` page to showcase all platform improvements.
+- **Dashboard Improvements:**
+  - Added “Last Updated” timestamp above incident tables for better situational awareness.
+  - New responsive KPI grid (2 → 4 → 6 → 8 columns).
+  - Venue occupancy critical state with animated pulse and red border at 100 % capacity.
+- **Incident Creation Experience:**
+  - Completely redesigned three-column responsive modal layout.
+  - Improved “Quick Add” bar with full-width top placement for better accessibility.
+  - Added colour-coded incident type chips with search and independent scrolling.
+  - Enhanced form components with refined selects, chevrons, and lighter text areas.
+  - New sticky footer actions — **Log Incident**, **Save as Draft**, **Cancel**.
+- **ProfileCard Popup:** Updated to appear as a dropdown beneath the profile image, always fully visible.
+- **General Enhancements:** Added comprehensive build analysis, improved CI/CD scripts, and optimised Docker builds.
 
 ### Changed
-- **Dashboard Layout**: Reduced KPI card padding for better space utilization
-- **Floating Button**: Fixed visibility when incident modal is open
-- **Visual Hierarchy**: Replaced pastel panels with neutral cards and subtle left accents
-- **Button Styling**: Updated all action buttons with modern design and proper contrast
-- **Mobile Responsiveness**: Improved layout across all screen sizes with logical stacking
-- **Build Performance**: Optimized with SWC minification and bundle splitting
-- **Security Posture**: Updated Next.js to latest secure version (14.2.33)
+- **Dashboard Layout:** Reduced KPI card padding and refined visual hierarchy for improved readability.
+- **Button Styling:** Updated all action buttons for higher contrast and accessibility compliance.
+- **Mobile Responsiveness:** Improved grid stacking and alignment across all screen sizes.
+- **Visual Design:** Replaced pastel panels with neutral cards and subtle accent bars.
+- **Security & Reliability:** Updated to latest secure Next.js version (v14.2.33) and optimised production build.
 
 ### Fixed
-- **Independent Scrolling**: Incident type list now scrolls independently without affecting other form fields
-- **Accessibility**: Added proper ARIA labels, keyboard navigation, and WCAG AA contrast compliance
-- **TypeScript Safety**: Enhanced type safety across all components
-- **Component Organization**: Better structure and maintainability
-- **Dependency Issues**: Resolved 4 security vulnerabilities and removed unused packages
-- **Build Process**: Fixed dependency separation and optimized CI/CD workflows
+- **Independent Scrolling:** Incident type lists now scroll independently without affecting other inputs.
+- **Accessibility:** Added complete ARIA labelling, keyboard navigation, and improved focus states.
+- **TypeScript Safety:** Strengthened type definitions for improved stability.
+- **Component Organisation:** Refactored for clarity and maintainability.
+- **Build Process:** Resolved dependency issues, optimised separation between development and production packages.
 
-## [0.1.0] - 2024-07-29
+---
+
+## [0.1.0] – 2025-04-10
 
 ### Added
-- **Analytics Dashboard**: Introduced a new page at `/analytics` to provide deep insights into event data.
-- **AI-Powered Debrief Summary**: Integrated with OpenAI to automatically generate detailed event debriefs, including an event overview, attendance analysis, a table of significant incidents, and actionable learning points.
-- **Event Log Management**: Added functionality to the settings page for `admin` and `superadmin` users to view and delete individual logs for the current event.
-- **Responsive Navigation**: The main navigation bar now collapses into a hamburger menu on tablet and mobile screen sizes to improve user experience on smaller devices.
+- **Analytics Dashboard:** New `/analytics` page providing detailed event insights.
+- **AI-Powered Debrief Summary:** Automatically generates structured event reports using OpenAI.
+- **Event Log Management:** Tools for admin and superadmin roles to review or delete event logs.
+- **Responsive Navigation:** Collapsible hamburger menu for tablet and mobile users.
 
 ### Changed
-- Updated the `README.md` to reflect the latest features and setup instructions.
+- Updated `README.md` with latest setup and feature documentation.
 
 ### Fixed
-- Resolved numerous bugs related to API data fetching, including environment variable loading and incorrect request parameters.
-- Corrected rendering issues on the analytics page, ensuring the debrief summary displays as a structured HTML report.
-- Fixed layout issues with the navigation bar and various dashboard components. 
+- Resolved API data-fetching and environment variable issues.
+- Corrected layout bugs on analytics and dashboard pages.
+- Fixed navigation rendering across all screen sizes.
