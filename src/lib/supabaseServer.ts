@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { logger } from './logger'
+import { env } from '@/config/env'
 
 type TypedSupabaseClient = SupabaseClient<Database>
 
@@ -13,6 +14,28 @@ function ensureEnv(key: string): string {
     throw new Error(`Missing required environment variable: ${key}`)
   }
   return value
+}
+
+/**
+ * Create a secure RLS-enabled Supabase client for server-side operations
+ * This client respects Row Level Security policies and user context
+ */
+export function createRlsServerClient(headers: Headers): TypedSupabaseClient {
+  const supabaseUrl = env.SUPABASE_URL
+  const anonKey = env.SUPABASE_ANON_KEY
+
+  return createClient<Database>(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: {
+        // Forward authorization header from request to maintain user context
+        Authorization: headers.get('authorization') || '',
+        // Forward other relevant headers for RLS
+        'x-forwarded-for': headers.get('x-forwarded-for') || '',
+        'user-agent': headers.get('user-agent') || '',
+      },
+    },
+  })
 }
 
 export function getServiceSupabaseClient(): TypedSupabaseClient {
@@ -49,9 +72,13 @@ export function getAnonServerClient(): TypedSupabaseClient {
   return anonClient
 }
 
-export function createRlsServerClient(token: string): TypedSupabaseClient {
-  const supabaseUrl = ensureEnv('SUPABASE_URL')
-  const anonKey = ensureEnv('SUPABASE_ANON_KEY')
+/**
+ * @deprecated Use createRlsServerClient(headers) instead for better security
+ * This method is kept for backward compatibility but should be migrated
+ */
+export function createRlsServerClientWithToken(token: string): TypedSupabaseClient {
+  const supabaseUrl = env.SUPABASE_URL
+  const anonKey = env.SUPABASE_ANON_KEY
 
   return createClient<Database>(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },

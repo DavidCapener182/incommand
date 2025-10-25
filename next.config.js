@@ -10,6 +10,11 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   swcMinify: true,
+  
+  // Security enhancements
+  compiler: {
+    removeConsole: isProd ? { exclude: ['error', 'warn'] } : false,
+  },
 
   // Image optimizations
   images: {
@@ -34,21 +39,36 @@ const nextConfig = {
   },
   async headers() {
     if (!isProd) {
-      // In development, send no security headers that could force HTTPS
-      return []
+      // In development, send minimal security headers
+      return [
+        {
+          source: '/(.*)',
+          headers: [
+            { key: 'X-Frame-Options', value: 'DENY' },
+            { key: 'X-Content-Type-Options', value: 'nosniff' },
+            { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          ],
+        },
+      ]
     }
 
     return [
       {
         source: '/(.*)',
         headers: [
-          // Keep HSTS only in production
+          // Security headers
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          // Performance headers
-          { key: 'X-DNS-Prefetch-Control', value: 'on' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
+          // Performance headers
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          // Additional security
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },
       {

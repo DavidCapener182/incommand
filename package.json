@@ -11,7 +11,7 @@
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
     "lighthouse": "npx @lhci/cli autorun",
-    "predeploy": "npm run typecheck && npm run analyze",
+    "predeploy": "npm run typecheck && npm run analyze && ts-node src/scripts/validateEnv.ts && ts-node src/scripts/securityAudit.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:detection": "jest src/utils/__tests__/detection.test.ts",

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabaseServer'
+import { secureApiHandler, sanitizeForLogging } from '@/lib/apiSecurity'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

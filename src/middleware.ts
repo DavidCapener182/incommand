@@ -11,8 +11,45 @@ const ERROR_MESSAGES = {
   PROFILE_NOT_FOUND: 'User profile not found. Please contact support',
 } as const
 
+/**
+ * Apply comprehensive security headers to all responses
+ */
+function applySecurityHeaders(res: NextResponse) {
+  // Core security headers
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
+  res.headers.set('X-XSS-Protection', '1; mode=block')
+  
+  // Content Security Policy
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://vercel.live",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob: https://*.supabase.co https://vercel.live",
+    "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com wss://*.supabase.co",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests"
+  ].join('; ')
+  res.headers.set('Content-Security-Policy', csp)
+  
+  // Additional security headers
+  res.headers.set('Cross-Origin-Embedder-Policy', 'require-corp')
+  res.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
+  res.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
+}
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+  
+  // Apply security headers to all responses
+  applySecurityHeaders(res)
+  
   const supabase = createMiddlewareClient({ req, res })
 
   const { pathname } = req.nextUrl
