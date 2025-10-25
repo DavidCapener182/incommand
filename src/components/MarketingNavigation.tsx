@@ -66,16 +66,6 @@ export default function MarketingNavigation() {
         >
           About
         </Link>
-        <Link
-          href="/updates"
-          className={`px-5 py-1 rounded-full text-sm font-semibold transition-all ${
-            pathname === "/updates"
-              ? "bg-blue-600 text-white shadow-md"
-              : "text-blue-800 hover:bg-blue-200/70 hover:text-blue-900"
-          }`}
-        >
-          Updates
-        </Link>
       </nav>
     </header>
   )
