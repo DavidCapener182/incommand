@@ -4,6 +4,7 @@ import { AuthProvider } from '../contexts/AuthContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import { NightModeProvider } from '../contexts/NightModeContext'
+import { ThemeProvider } from '../contexts/ThemeContext'
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
@@ -70,17 +71,19 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <NightModeProvider>
-          <AuthProvider>
-            <NotificationDrawerProvider>
-              <ToastProvider>
+        <ThemeProvider>
+          <NightModeProvider>
+            <AuthProvider>
+              <NotificationDrawerProvider>
+                <ToastProvider>
               <MaintenanceBanner />
               <OfflineIndicator />
               <LayoutWrapper>{children}</LayoutWrapper>
-            </ToastProvider>
-          </NotificationDrawerProvider>
-        </AuthProvider>
+              </ToastProvider>
+            </NotificationDrawerProvider>
+          </AuthProvider>
         </NightModeProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

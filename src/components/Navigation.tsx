@@ -314,7 +314,7 @@ export default function Navigation() {
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-            <Link href="/incidents" className="flex-shrink-0 flex items-center" data-tour="dashboard">
+                <Link href="/incidents" className="flex-shrink-0 flex items-center" data-tour="dashboard">
                 <Image
                   src="/inCommand.png"
                   alt="inCommand Logo"
@@ -487,7 +487,15 @@ export default function Navigation() {
                   </NavigationMenuList>
                 </NavigationMenu>
 
-                {/* Theme Toggle Button removed from desktop nav as per Step 2A */}
+                {/* Theme Toggle Button */}
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="ml-4 p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {theme === 'dark' ? SunIcon : MoonIcon}
+                </button>
               </div>
             </div>
             {/* User Avatar/Profile Dropdown - always far right */}
