@@ -171,3 +171,62 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// PATCH endpoint to sign in a radio
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const body = await request.json()
+    const { signout_id, signed_in_signature, signed_in_notes, condition_on_return } = body
+
+    // Validate required fields
+    if (!signout_id || !signed_in_signature) {
+      return NextResponse.json(
+        { error: 'signout_id and signed_in_signature are required' },
+        { status: 400 }
+      )
+    }
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Update sign-in record
+    const { data: signIn, error: signInError } = await supabase
+      .from('radio_signouts')
+      .update({
+        signed_in_at: new Date().toISOString(),
+        signed_in_signature,
+        signed_in_notes: signed_in_notes || null,
+        condition_on_return: condition_on_return || 'good',
+        status: 'in'
+      })
+      .eq('id', signout_id)
+      .select()
+      .single()
+
+    if (signInError) {
+      console.error('Sign-in error:', signInError)
+      return NextResponse.json(
+        { error: 'Failed to sign in radio' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      signin: signIn
+    })
+  } catch (error) {
+    console.error('Radio sign-in API error:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to sign in radio',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
