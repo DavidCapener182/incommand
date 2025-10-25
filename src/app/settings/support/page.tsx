@@ -205,7 +205,7 @@ export default function SupportPage() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setSupportMessages(messages || []);
+      setSupportMessages((messages || []) as any);
     } catch (error) {
       console.error('Error fetching support messages:', error);
     }
@@ -686,7 +686,7 @@ export default function SupportPage() {
                     </div>
                     <div className="text-sm">{message.message}</div>
                     <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleString()}
+                      {message.created_at ? new Date(message.created_at).toLocaleString() : ''}
                     </div>
                   </div>
                 </div>
