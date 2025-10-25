@@ -13,7 +13,7 @@ export default async function UpdatesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white text-blue-900 dark:bg-gradient-to-b dark:from-[#F8FAFC] dark:to-white dark:text-blue-900">
       <MarketingNavigation />
-      <PageWrapper>
+      <PageWrapper className="bg-white dark:bg-white">
         <section className="max-w-4xl mx-auto py-20 px-6">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-[#23408e] dark:text-[#23408e] mb-4">What&apos;s New at InCommand</h1>
           <p className="text-blue-700 dark:text-blue-700 mb-10 text-lg">See the latest improvements, enhancements, and fixes across the InCommand platform.</p>
