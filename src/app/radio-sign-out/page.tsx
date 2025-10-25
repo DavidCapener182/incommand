@@ -129,7 +129,7 @@ export default function RadioSignOutPage() {
       console.log('Confirming sign in for:', selectedSignOut.id);
       
       // Direct database update instead of API
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('radio_signouts')
         .update({
           signed_in_at: new Date().toISOString(),
@@ -138,16 +138,14 @@ export default function RadioSignOutPage() {
           condition_on_return: conditionOnReturn,
           status: 'in'
         })
-        .eq('id', selectedSignOut.id)
-        .select()
-        .single();
+        .eq('id', selectedSignOut.id);
 
       if (error) {
         console.error('Error signing in radio:', error);
         throw new Error('Failed to sign in radio');
       }
 
-      console.log('Successfully signed in radio:', data);
+      console.log('Successfully signed in radio');
       
       // Refresh the data
       await fetchSignOuts();
@@ -343,6 +341,63 @@ export default function RadioSignOutPage() {
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <div className="text-6xl mb-4">📻</div>
               <p>No radio sign-outs found</p>
+            </div>
+          )}
+        </div>
+
+        {/* Radio Log Table */}
+        <div className="mt-10 bg-white dark:bg-[#23408e] rounded-2xl border border-gray-200 dark:border-[#2d437a] shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a]">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Radio Log
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Track all sign-out and sign-in times
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-[#2d437a]">
+              <thead className="bg-gray-50 dark:bg-[#2d437a]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Radio Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Staff Member
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Signed Out
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Signed In
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
+                {signOuts.map((radio) => (
+                  <tr key={radio.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      Radio {radio.radio_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {radio.profile?.full_name || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {formatDateTime(radio.signed_out_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {radio.signed_in_at ? formatDateTime(radio.signed_in_at) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {signOuts.length === 0 && (
+            <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+              No radio logs yet.
             </div>
           )}
         </div>
