@@ -10,7 +10,7 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import OfflineIndicator from '../components/OfflineIndicator'
 import { defaultMetadata } from '../config/seo.config'
-import PrintInitializer from '../components/PrintInitializer'
+// import PrintInitializer from '../components/PrintInitializer'
 
 // Using system/Tailwind fonts to avoid network fetches during build
 
@@ -79,7 +79,7 @@ export default function RootLayout({
                 <ToastProvider>
               <MaintenanceBanner />
               <OfflineIndicator />
-              <PrintInitializer />
+              {/* <PrintInitializer /> */}
               <LayoutWrapper>{children}</LayoutWrapper>
               </ToastProvider>
             </NotificationDrawerProvider>
