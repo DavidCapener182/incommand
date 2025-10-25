@@ -486,6 +486,21 @@
   border: 0;
 }
 
+/* Focus ring for accessibility */
+:focus-visible { 
+  outline: 2px solid #2563eb; 
+  outline-offset: 2px; 
+}
+
+/* Enhanced focus states for better accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.focus-ring-dark {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900;
+}
+
 /* Battery and performance detection */
 @media (prefers-reduced-motion: reduce) {
   *,

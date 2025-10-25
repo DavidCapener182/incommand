@@ -196,7 +196,15 @@ export const RegisterInterestModal = ({ open, onOpenChange, className }: Registe
               </Select>
             </div>
 
-            {error && <p className="text-sm text-red-200">{error}</p>}
+            {error && (
+              <p 
+                role="alert" 
+                aria-live="polite"
+                className="text-sm text-red-200"
+              >
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"

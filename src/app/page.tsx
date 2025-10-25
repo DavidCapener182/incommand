@@ -2,11 +2,13 @@ export const revalidate = 3600
 export const dynamic = 'force-static'
 
 import Link from 'next/link'
+import Script from 'next/script'
 import MarketingNavigation from '../components/MarketingNavigation'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
 import { SocialLinks } from '@/components/marketing/SocialLinks'
 import { FadeIn } from '@/components/marketing/Motion'
 import { HeroActions } from '@/components/marketing/interactives/HeroActions'
+import { schemaMarkup } from '@/config/seo.config'
 
 const featureHighlights = [
   {
@@ -43,8 +45,17 @@ const featureHighlights = [
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
-      <MarketingNavigation />
+    <>
+      {/* JSON-LD Structured Data */}
+      <Script id="ld-json-org" type="application/ld+json">
+        {JSON.stringify(schemaMarkup.organization)}
+      </Script>
+      <Script id="ld-json-software" type="application/ld+json">
+        {JSON.stringify(schemaMarkup.softwareApplication)}
+      </Script>
+      
+      <div className="flex min-h-screen flex-col bg-gradient-to-b from-blue-900 via-blue-800 to-blue-700 text-white">
+        <MarketingNavigation />
 
       <section className="relative flex flex-col items-center justify-center overflow-hidden px-6 pt-16 pb-20 text-center sm:pt-24 sm:pb-32">
         <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] bg-[size:40px_40px] opacity-10" />
@@ -139,7 +150,8 @@ export default function HomePage() {
         </FadeIn>
       </section>
 
-      <MarketingFooter />
-    </div>
+        <MarketingFooter />
+      </div>
+    </>
   )
 }

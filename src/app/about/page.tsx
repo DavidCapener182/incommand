@@ -1,6 +1,7 @@
 export const revalidate = 3600
 export const dynamic = 'force-static'
 
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import MarketingNavigation from '@/components/MarketingNavigation'
 import { SocialLinks } from '@/components/marketing/SocialLinks'
@@ -13,6 +14,13 @@ import {
   CheckCircleIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
+import { pageMetadata, schemaMarkup } from '@/config/seo.config'
+import Script from 'next/script'
+
+export const metadata: Metadata = {
+  ...pageMetadata.about,
+  alternates: { canonical: '/about' },
+}
 
 const companyValues = [
   {
@@ -50,8 +58,14 @@ const impactStats = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#F1F4F9] text-slate-900">
-      <MarketingNavigation />
+    <>
+      {/* JSON-LD Structured Data */}
+      <Script id="ld-json-org-about" type="application/ld+json">
+        {JSON.stringify(schemaMarkup.organization)}
+      </Script>
+      
+      <div className="min-h-screen bg-[#F1F4F9] text-slate-900">
+        <MarketingNavigation />
 
       <section className="relative overflow-hidden">
         <div className="relative w-full bg-gradient-to-b from-[#23408e] to-[#2661F5] text-white">
@@ -204,7 +218,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <MarketingFooter />
-    </div>
+        <MarketingFooter />
+      </div>
+    </>
   )
 }

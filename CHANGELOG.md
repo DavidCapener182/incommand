@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Step 7 - Build & Dependency Hygiene**: Comprehensive dependency cleanup and build optimization
+  - Removed 543 unused packages from node_modules
+  - Fixed 4 security vulnerabilities (3 moderate, 1 critical)
+  - Enhanced build scripts for production, development, and CI/CD
+  - Implemented automated dependency validation and monitoring
+  - Created optimized Docker multi-stage builds
+  - Added comprehensive build analysis and health check scripts
 - Created `CHANGELOG.md` to track project changes.
 - ProfileCard popup now appears as a dropdown below the profile photo, at full size, and always fully inside the screen.
 - **Dashboard Enhancements**: Added "Last Updated" timestamp above incident table for real-time awareness

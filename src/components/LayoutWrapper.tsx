@@ -111,7 +111,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {showNav && <Navigation />}
           <div className="flex flex-col min-h-screen">
             <main 
-              className="flex-grow"
+              id="main"
+              role="main"
+              className="flex-grow outline-none focus:outline-none"
               style={{
                 paddingTop: 'max(env(safe-area-inset-top), 0px)',
                 paddingLeft: 'max(env(safe-area-inset-left), 0px)',

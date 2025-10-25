@@ -1,5 +1,8 @@
 import { Metadata } from 'next'
 
+// Site URL configuration
+export const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://incommand.uk'
+
 // Base SEO configuration
 export const defaultMetadata: Metadata = {
   title: {
@@ -27,14 +30,14 @@ export const defaultMetadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://incommand.uk'),
+  metadataBase: new URL(siteUrl),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_GB',
-    url: 'https://incommand.uk',
+    url: siteUrl,
     siteName: 'InCommand',
     title: 'InCommand | Event Management & Incident Response Platform (UK)',
     description: 'Manage incidents, monitor safety, and coordinate live operations with InCommand — the AI-powered event control platform built for professionals.',
@@ -108,7 +111,7 @@ export const schemaMarkup = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "InCommand",
-    "url": "https://incommand.uk",
+    "url": siteUrl,
     "logo": "https://incommand.uk/inCommand.png",
     "description": "UK-based event management and incident response platform built for real-world safety teams",
     "foundingDate": "2023",
@@ -132,7 +135,7 @@ export const schemaMarkup = {
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "description": "AI-powered event control and incident management platform for UK safety teams",
-    "url": "https://incommand.uk",
+    "url": siteUrl,
     "author": {
       "@type": "Organization",
       "name": "InCommand"

@@ -303,7 +303,7 @@ export default function Navigation() {
 
   return (
     <>
-      <nav className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
+      <nav role="banner" className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">

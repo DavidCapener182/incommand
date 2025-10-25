@@ -50,7 +50,7 @@ export function FooterSimple({
   copyright = `© ${new Date().getFullYear()} InCommand. All rights reserved.`,
 }: FooterSimpleProps) {
   return (
-    <footer className="border-t border-border bg-background pb-10">
+    <footer role="contentinfo" className="border-t border-border bg-background pb-10">
       <div className="mx-auto max-w-7xl px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

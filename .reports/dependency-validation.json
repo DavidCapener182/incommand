@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-10-25T01:33:14.245Z",
+  "totalDependencies": 61,
+  "totalDevDependencies": 31,
+  "criticalIssues": 0,
+  "warnings": 5,
+  "missingProdDeps": 0,
+  "issues": [
+    {
+      "package": "chart.js",
+      "issue": "Heavy visualization library - consider lazy loading",
+      "severity": "warning"
+    },
+    {
+      "package": "chartjs-adapter-date-fns",
+      "issue": "Heavy visualization library - consider lazy loading",
+      "severity": "warning"
+    },
+    {
+      "package": "chartjs-plugin-annotation",
+      "issue": "Heavy visualization library - consider lazy loading",
+      "severity": "warning"
+    },
+    {
+      "package": "react-chartjs-2",
+      "issue": "Heavy visualization library - consider lazy loading",
+      "severity": "warning"
+    },
+    {
+      "package": "recharts",
+      "issue": "Heavy visualization library - consider lazy loading",
+      "severity": "warning"
+    }
+  ],
+  "recommendations": [
+    "✅ No dev-only packages in production dependencies",
+    "⚠️  Consider lazy loading heavy visualization libraries",
+    "✅ All essential production dependencies present"
+  ]
+}

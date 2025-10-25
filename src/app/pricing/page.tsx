@@ -1,6 +1,7 @@
 export const revalidate = 3600
 export const dynamic = 'force-static'
 
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import MarketingNavigation from '@/components/MarketingNavigation'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
@@ -8,6 +9,12 @@ import { SocialLinks } from '@/components/marketing/SocialLinks'
 import { FadeIn } from '@/components/marketing/Motion'
 import { HeroActions } from '@/components/marketing/interactives/HeroActions'
 import { PricingPlans, type PricingPlan } from '@/components/marketing/interactives/PricingPlans'
+import { pageMetadata } from '@/config/seo.config'
+
+export const metadata: Metadata = {
+  ...pageMetadata.pricing,
+  alternates: { canonical: '/pricing' },
+}
 
 const plans: PricingPlan[] = [
   {
