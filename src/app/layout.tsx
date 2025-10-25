@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'InCommand'
   },
   formatDetection: {
@@ -30,7 +30,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#3b82f6'
+  themeColor: '#2A3990'
 }
 
 export default function RootLayout({
@@ -42,17 +42,18 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="InCommand" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#3b82f6" />
+        <meta name="msapplication-TileColor" content="#2A3990" />
         <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="theme-color" content="#2A3990" />
         
         {/* PWA Icons */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icon.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icon.png" />
-        <link rel="mask-icon" href="/icon.png" color="#3b82f6" />
+        <link rel="mask-icon" href="/icon.png" color="#2A3990" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://api.supabase.co" />
