@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,19 +7,22 @@ interface RadioSignOut {
   id: number;
   radio_number: string;
   user_id: string;
-  event_id: string;
-  signed_out_at: string;
-  signed_out_signature: string;
+  event_id: string | null;
+  signed_out_at: string | null;
+  signed_out_signature: string | null;
   signed_out_notes: string | null;
   signed_in_at: string | null;
   signed_in_signature: string | null;
   signed_in_notes: string | null;
   condition_on_return: string | null;
-  status: string;
-  profile: {
+  status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  overdue_notified_at: string | null;
+  profile?: {
     id: string;
-    full_name: string;
-    email: string;
+    full_name: string | null;
+    email: string | null;
     callsign?: string;
   };
 }
@@ -35,7 +38,7 @@ export default function RadioSignOutPage() {
   const [signInNotes, setSignInNotes] = useState('');
   const [conditionOnReturn, setConditionOnReturn] = useState<string>('good');
 
-  const fetchSignOuts = async () => {
+  const fetchSignOuts = useCallback(async () => {
     if (!eventId) return;
     
     setLoading(true);
@@ -47,14 +50,7 @@ export default function RadioSignOutPage() {
       // Direct database query instead of API
       const { data: signOutsData, error: signOutsError } = await supabase
         .from('radio_signouts')
-        .select(`
-          *,
-          profile:user_id (
-            id,
-            full_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('event_id', eventId)
         .order('signed_out_at', { ascending: false });
 
@@ -64,14 +60,32 @@ export default function RadioSignOutPage() {
       }
 
       console.log('Fetched signouts:', signOutsData);
-      setSignOuts(signOutsData || []);
+      
+      // Fetch profile data for each signout
+      if (signOutsData && signOutsData.length > 0) {
+        const userIds = [...new Set(signOutsData.map(s => s.user_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+        
+        // Merge profile data with signouts
+        const signOutsWithProfiles = signOutsData.map(signOut => ({
+          ...signOut,
+          profile: profilesData?.find(p => p.id === signOut.user_id)
+        }));
+        
+        setSignOuts(signOutsWithProfiles);
+      } else {
+        setSignOuts([]);
+      }
     } catch (err) {
       console.error('Error in fetchSignOuts:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
 
   useEffect(() => {
     const loadCurrentEvent = async () => {
@@ -100,7 +114,7 @@ export default function RadioSignOutPage() {
       console.log('Event ID set, fetching signouts...');
       fetchSignOuts();
     }
-  }, [eventId]);
+  }, [eventId, fetchSignOuts]);
 
   const handleSignIn = async (signOut: RadioSignOut) => {
     console.log('Signing in radio:', signOut);
@@ -147,11 +161,11 @@ export default function RadioSignOutPage() {
     }
   };
 
-  const getStatusColor = (status: string, signedOutAt: string, signedInAt: string | null) => {
+  const getStatusColor = (status: string | null, signedOutAt: string | null, signedInAt: string | null) => {
     if (status === 'in' || signedInAt) {
       return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
     }
-    if (status === 'out') {
+    if (status === 'out' && signedOutAt) {
       const outTime = new Date(signedOutAt);
       const now = new Date();
       const hoursOut = (now.getTime() - outTime.getTime()) / (1000 * 60 * 60);
