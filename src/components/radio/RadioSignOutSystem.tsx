@@ -184,14 +184,14 @@ export default function RadioSignOutSystem({
     const signature = signInCanvasRef.current.toDataURL()
     
     try {
-      const response = await fetch(`/api/v1/radio-signout/${selectedSignOut.id}`, {
+      const response = await fetch('/api/v1/radio-signout', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          signout_id: selectedSignOut.id,
           signed_in_signature: signature,
           signed_in_notes: signInNotes,
-          condition_on_return: conditionOnReturn,
-          status: 'returned'
+          condition_on_return: conditionOnReturn
         })
       })
       
@@ -363,6 +363,63 @@ export default function RadioSignOutSystem({
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <RadioIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">No radios currently signed out</p>
+          </div>
+        )}
+      </div>
+
+      {/* Radio Log Table */}
+      <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Radio Log
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Track all sign-out and sign-in times
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Radio Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Staff Member
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Signed Out
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Signed In
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {signOuts.map((radio) => (
+                <tr key={radio.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    Radio {radio.radio_number}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {radio.profile?.full_name || 'Unknown'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {radio.signed_out_at ? new Date(radio.signed_out_at).toLocaleString() : '—'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {radio.signed_in_at ? new Date(radio.signed_in_at).toLocaleString() : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {signOuts.length === 0 && (
+          <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+            No radio logs yet.
           </div>
         )}
       </div>
