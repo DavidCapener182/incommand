@@ -23,7 +23,7 @@ export default function AnalyticsDashboard({ data }: { data: any }) {
   return (
     <div className="space-y-8">
       <Suspense fallback={<KPISectionSkeleton />}>
-        <KPISection data={data.kpis} />
+        <KPISection />
       </Suspense>
 
       <Suspense fallback={<TrendsSkeleton />}>

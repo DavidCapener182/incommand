@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           title: `${incident.incident_type} ${incident.is_closed ? '(Closed)' : ''}`,
           description: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
           timestamp: incident.timestamp,
-          userId: contributingUserId,
+          userId: contributingUserId || undefined,
           priority: isHighPriority ? 'high' : 'medium',
           link: `/incidents#${incident.id}`
         });

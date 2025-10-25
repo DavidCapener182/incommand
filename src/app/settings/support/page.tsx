@@ -78,9 +78,10 @@ interface SupportTicket {
   user_id: string | null;
   company_id?: string | null;
   subject: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: 'general' | 'technical' | 'billing' | 'feature_request' | 'bug_report';
+  // Supabase returns plain strings; allow any string to avoid assignability errors
+  status: string;
+  priority: string;
+  category: string;
   created_at: string | null;
   updated_at: string | null;
   resolved_at?: string | null;
@@ -89,13 +90,13 @@ interface SupportTicket {
 
 interface SupportMessage {
   id: string;
-  ticket_id: string;
-  sender_id: string;
+  ticket_id: string | null;
+  sender_id: string | null;
   sender_type: 'user' | 'admin';
   message: string;
-  is_internal: boolean;
-  created_at: string;
-  read_at?: string;
+  is_internal: boolean | null;
+  created_at: string | null;
+  read_at?: string | null;
   sender?: {
     id: string;
     full_name: string;
@@ -204,7 +205,7 @@ export default function SupportPage() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setSupportMessages(messages || []);
+      setSupportMessages((messages || []) as any);
     } catch (error) {
       console.error('Error fetching support messages:', error);
     }
@@ -480,7 +481,9 @@ export default function SupportPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 dark:text-blue-100">
-                    <span>{ticket.category} • Created {new Date(ticket.created_at).toLocaleDateString()}</span>
+                    <span>
+                      {ticket.category} • Created {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'N/A'}
+                    </span>
                     <button
                       onClick={() => openTicketChat(ticket)}
                       className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
@@ -683,7 +686,7 @@ export default function SupportPage() {
                     </div>
                     <div className="text-sm">{message.message}</div>
                     <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleString()}
+                      {message.created_at ? new Date(message.created_at).toLocaleString() : ''}
                     </div>
                   </div>
                 </div>
