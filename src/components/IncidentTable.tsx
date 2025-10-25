@@ -135,10 +135,10 @@ export default function IncidentTable({
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [currentEventId, setCurrentEventId] = useState<string | undefined>(undefined)
   
   // Real-time revision tracking
-  const { revisionCount } = useLogRevisions(currentEventId, (notification) => {
+  const { revisionCount } = useLogRevisions(currentEventId ?? null, (notification) => {
     // Show toast for new revisions
     if (onToast) {
       onToast({
@@ -294,12 +294,12 @@ export default function IncidentTable({
           .eq('is_current', true)
           .single();
 
-        const newEventId = eventData?.id || null;
+        const newEventId = eventData?.id ?? undefined;
         logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId });
         setCurrentEventId(newEventId);
       } catch (err) {
         logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
-        setCurrentEventId(null);
+        setCurrentEventId(undefined);
       }
     };
 
