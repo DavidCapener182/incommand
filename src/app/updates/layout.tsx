@@ -13,10 +13,8 @@ export default function UpdatesLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className="bg-white text-gray-900">
-        {children}
-      </body>
-    </html>
+    <div className="bg-white text-gray-900">
+      {children}
+    </div>
   )
 }
