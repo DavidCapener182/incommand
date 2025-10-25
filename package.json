@@ -128,6 +128,7 @@
     "@types/uuid": "^10.0.0",
     "@types/web-push": "^3.6.4",
     "@what3words/api": "^5.4.0",
+    "autoprefixer": "10.4.21", // Required by Next.js build system
     "dotenv": "^16.4.5",
     "eslint": "^8",
     "eslint-config-next": "14.0.3",
