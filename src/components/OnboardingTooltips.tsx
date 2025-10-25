@@ -61,17 +61,17 @@ export default function OnboardingTooltips({ run }: OnboardingTooltipsProps) {
     const { status, action } = data
     if (status === STATUS.FINISHED) {
       completeTour()
-      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'finished', step_index: data.index ?? null, route: pathname }) } catch {}
+      try { await supabase.from('onboarding_events' as any).insert({ user_id: user?.id || null, event_type: 'finished', step_index: data.index ?? null, route: pathname }) } catch {}
     }
     if (action === 'skip') {
       skipTour()
-      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'skipped', step_index: data.index ?? null, route: pathname }) } catch {}
+      try { await supabase.from('onboarding_events' as any).insert({ user_id: user?.id || null, event_type: 'skipped', step_index: data.index ?? null, route: pathname }) } catch {}
     }
     if (action === 'start') {
-      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'started', step_index: data.index ?? 0, route: pathname }) } catch {}
+      try { await supabase.from('onboarding_events' as any).insert({ user_id: user?.id || null, event_type: 'started', step_index: data.index ?? 0, route: pathname }) } catch {}
     }
     if (action === 'next' || action === 'prev' || action === 'update') {
-      try { await supabase.from('onboarding_events').insert({ user_id: user?.id || null, event_type: 'step', step_index: data.index ?? null, route: pathname }) } catch {}
+      try { await supabase.from('onboarding_events' as any).insert({ user_id: user?.id || null, event_type: 'step', step_index: data.index ?? null, route: pathname }) } catch {}
     }
   }
 

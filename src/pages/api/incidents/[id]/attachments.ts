@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await supabase
       .from('incident_attachments')
       .select('id, incident_id, file_url, file_type, uploaded_by, created_at')
-      .eq('incident_id', id);
+      .eq('incident_id', Number(id));
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);
   }
@@ -16,11 +16,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { file_url, file_type, uploaded_by } = req.body;
     const { error } = await supabase
       .from('incident_attachments')
-      .insert([{ incident_id: id, file_url, file_type, uploaded_by }]);
+      .insert([{ incident_id: Number(id), file_url, file_type, uploaded_by }]);
     if (error) return res.status(400).json({ error: error.message });
 
     const { error: eventError } = await supabase.from('incident_events').insert([
-      { incident_id: id, event_type: 'attachment', event_data: { file_url, file_type }, created_by: uploaded_by },
+      { incident_id: Number(id), event_type: 'attachment', event_data: { file_url, file_type }, created_by: uploaded_by },
     ]);
     if (eventError) return res.status(400).json({ error: eventError.message });
 

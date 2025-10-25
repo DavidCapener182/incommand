@@ -18,10 +18,16 @@ export async function fetchWristbandTypes(eventId: string): Promise<WristbandTyp
     throw new Error(error.message)
   }
 
+  if (!data || Array.isArray((data as any).error)) {
+    return []
+  }
+
   // Transform the data to include access_levels directly
-  return (data || []).map(wristband => ({
+  return (data || []).map((wristband: any) => ({
     ...wristband,
-    access_levels: wristband.wristband_access_levels?.map((link: any) => link.accreditation_access_levels).filter(Boolean) || []
+    access_levels: Array.isArray(wristband.wristband_access_levels)
+      ? wristband.wristband_access_levels.map((link: any) => link.accreditation_access_levels).filter(Boolean)
+      : []
   })) as WristbandType[]
 }
 

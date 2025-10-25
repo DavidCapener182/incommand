@@ -47,7 +47,17 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
         throw fetchError;
       }
 
-      setIncidents(data || []);
+      setIncidents(
+        (data || []).map((row: any) => ({
+          ...row,
+          description: row.description ?? '',
+          status: row.status ?? '',
+          callsigns: Array.isArray(row.callsigns) ? row.callsigns.filter((c: any): c is string => typeof c === 'string') : [],
+          created_at: row.created_at ?? new Date().toISOString(),
+          updated_at: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+          created_by: row.created_by ?? ''
+        }))
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch incidents');
       addToast({

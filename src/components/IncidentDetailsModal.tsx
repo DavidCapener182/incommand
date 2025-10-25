@@ -55,7 +55,7 @@ interface IncidentUpdate {
 }
 
 interface Incident {
-  id: string
+  id: number
   log_number: string
   timestamp: string
   callsign_from: string
@@ -74,7 +74,7 @@ interface Incident {
   escalated?: boolean
   assigned_staff_ids?: string[]
   auto_assigned?: boolean
-  dependencies?: string[]
+  dependencies?: number[] | null
   what3words?: string
   // Auditable logging fields
   time_of_occurrence?: string
@@ -84,7 +84,7 @@ interface Incident {
   logged_by_user_id?: string
   logged_by_callsign?: string
   is_amended?: boolean
-  original_entry_id?: string
+  original_entry_id?: number | null
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
@@ -305,8 +305,20 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       if (incidentError) throw incidentError;
 
-      setIncident(incidentData as any);
-      setEditedIncident(incidentData as any);
+      const normalized = {
+        ...(incidentData as any),
+        id: Number((incidentData as any).id),
+        status: (incidentData as any).status ?? '',
+        logged_by_callsign: (incidentData as any).logged_by_callsign ?? undefined,
+        what3words: (incidentData as any).what3words ?? undefined,
+        dependencies: Array.isArray((incidentData as any).dependencies)
+          ? ((incidentData as any).dependencies as any[]).map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+          : null,
+        original_entry_id: (incidentData as any).original_entry_id ?? null,
+      } as Incident
+
+      setIncident(normalized);
+      setEditedIncident(normalized as Partial<Incident>);
 
       // Fetch revision count if incident has been amended
       if (incidentData?.is_amended) {
@@ -481,7 +493,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { error: auditError } = await supabase
         .from('incident_updates')
         .insert({
-          incident_id: parseInt(incident.id),
+          incident_id: Number(incident.id),
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
           updated_by: currentUserName
         });
