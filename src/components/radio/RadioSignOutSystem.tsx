@@ -546,7 +546,7 @@ export default function RadioSignOutSystem({
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full"
               onClick={(e) => e.stopPropagation()}
