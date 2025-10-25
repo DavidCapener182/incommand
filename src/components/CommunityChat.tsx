@@ -63,10 +63,11 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
           setError('Could not load messages');
           setMessages([]);
         } else {
-          setMessages(result.data || []);
+          const rows = (result.data || []) as any[];
+          setMessages(rows);
           // Toast for new message (if not from current user)
-          if (addToast && result.data && result.data.length > 0) {
-            const lastMsg = result.data[result.data.length - 1];
+          if (addToast && rows.length > 0) {
+            const lastMsg: any = rows[rows.length - 1];
             if (
               lastMsg.id !== lastToastMsgId.current &&
               lastMsg.user_id !== user?.id

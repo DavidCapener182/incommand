@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Incident {
-  id: string;
+  id: number;
   log_number: string;
   incident_type: string;
   occurrence: string;
@@ -67,8 +67,8 @@ export default function IncidentDependencySelector({
 
       // Filter out current incident if editing
       const filteredData = currentIncidentId 
-        ? data?.filter(incident => incident.id !== currentIncidentId) || []
-        : data || [];
+        ? (data || []).filter(incident => String(incident.id) !== currentIncidentId)
+        : (data || []);
 
       setIncidents(filteredData);
       setFilteredIncidents(filteredData);
@@ -166,7 +166,7 @@ export default function IncidentDependencySelector({
 
   // Get selected incident details
   const getSelectedIncident = useCallback((incidentId: string): Incident | undefined => {
-    return incidents.find(incident => incident.id === incidentId);
+    return incidents.find(incident => String(incident.id) === incidentId);
   }, [incidents]);
 
   // Check for circular dependencies with optimized traversal and memoization
@@ -379,7 +379,7 @@ export default function IncidentDependencySelector({
               ) : (
                 <div className="space-y-1">
                   {filteredIncidents.map(incident => {
-                    const isSelected = selectedDependencies.includes(incident.id);
+                    const isSelected = selectedDependencies.includes(String(incident.id));
                     const hasCircularDependency = circularDependencyCache[incident.id] || false;
 
                     return (
@@ -388,14 +388,14 @@ export default function IncidentDependencySelector({
                         className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${
                           isSelected ? 'bg-blue-50' : ''
                         } ${hasCircularDependency ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={async () => !hasCircularDependency && await handleDependencyToggle(incident.id)}
+                        onClick={async () => !hasCircularDependency && await handleDependencyToggle(String(incident.id))}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={async () => !hasCircularDependency && await handleDependencyToggle(incident.id)}
+                              onChange={async () => !hasCircularDependency && await handleDependencyToggle(String(incident.id))}
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                             <div>

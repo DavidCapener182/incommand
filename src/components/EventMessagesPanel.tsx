@@ -228,8 +228,12 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
       if (data) {
         setProfiles(prev => {
           const newProfiles = { ...prev };
-          data.forEach((p: Profile) => {
-            newProfiles[p.id] = p;
+          data.forEach((p: any) => {
+            newProfiles[p.id] = {
+              id: p.id,
+              full_name: p.full_name ?? undefined,
+              avatar_url: p.avatar_url ?? undefined
+            } as Profile;
           });
           return newProfiles;
         });
@@ -285,16 +289,16 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
 
     try {
       // Send voice message to the database
-      const { error } = await supabase
-        .from('event_chat_messages')
-        .insert({
-          group_id: selectedGroup,
-          sender: currentUserId,
-          text: '', // Voice messages have empty text
-          voice_url: voiceData.url,
-          duration: voiceData.duration,
-          message_type: 'voice'
-        });
+    const { error } = await supabase
+      .from('event_chat_messages')
+      .insert({
+        chat_id: selectedGroup,
+        user_id: currentUserId,
+        message: '', // Voice messages have empty text
+        voice_url: voiceData.url,
+        duration: voiceData.duration,
+        message_type: 'voice'
+      });
 
       if (error) {
         console.error('Error sending voice message:', error);
