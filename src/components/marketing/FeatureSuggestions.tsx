@@ -42,7 +42,7 @@ export default function FeatureSuggestions({ className = '' }: FeatureSuggestion
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`bg-white rounded-xl shadow-lg border border-blue-100 p-6 ${className}`}
+      className={`bg-white rounded-xl shadow-xl border border-blue-200 p-6 ring-1 ring-blue-100 ${className}`}
     >
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-blue-100 rounded-lg">

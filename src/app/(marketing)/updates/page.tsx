@@ -26,7 +26,7 @@ export default async function UpdatesPage() {
             </div>
             
             <div className="lg:col-span-1">
-              <div className="sticky top-8">
+              <div className="sticky top-8 bg-white/50 backdrop-blur-sm rounded-xl p-4">
                 <FeatureSuggestions />
               </div>
             </div>
