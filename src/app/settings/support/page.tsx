@@ -223,7 +223,7 @@ export default function SupportPage() {
 
     try {
       // Create the ticket
-      const { data: ticket, error: ticketError } = await supabase
+      const { data: ticket, error: ticketError } = await (supabase as any)
         .from('support_tickets')
         .insert({
           user_id: currentUser.id,
@@ -238,7 +238,7 @@ export default function SupportPage() {
       if (ticketError) throw ticketError;
 
       // Create the initial message
-      const { error: messageError } = await supabase
+      const { error: messageError } = await (supabase as any)
         .from('support_messages')
         .insert({
           ticket_id: ticket.id,
@@ -275,7 +275,7 @@ export default function SupportPage() {
     if (!currentTicket || !newMessage.trim() || !currentUser) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('support_messages')
         .insert({
           ticket_id: currentTicket.id,

@@ -3,9 +3,9 @@ import { calculateEscalationTime } from '@/lib/escalationEngine'
 
 export async function POST(req: NextRequest) {
   try {
-    const { incidentType, priority, eventId } = await req.json()
+    const { incidentType, priority } = await req.json()
     
-    const escalationTime = await calculateEscalationTime(incidentType, priority, eventId)
+    const escalationTime = await calculateEscalationTime(incidentType, priority)
     
     return NextResponse.json({ escalationTime })
   } catch (error) {

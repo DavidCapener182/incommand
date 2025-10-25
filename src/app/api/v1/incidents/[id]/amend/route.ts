@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 import { createRevision, canUserAmendLog, validateAmendmentRequest } from '@/lib/auditableLogging'
 
-import { AmendLogRequest, AmendLogResponse } from '@/types/auditableLog'
+import { AmendLogRequest, AmendLogResponse, AuditableIncidentLog } from '@/types/auditableLog'
 
 
 export async function POST(
@@ -78,7 +78,7 @@ export async function POST(
     const { data: currentLog, error: fetchError } = await supabase
       .from('incident_logs')
       .select('id, event_id, action_taken, incident_type, updated_at, priority, status, occurrence')
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single()
 
     if (fetchError || !currentLog) {
@@ -162,7 +162,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from('incident_logs')
       .update(updateData)
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
 
     if (updateError) {
       console.error('Error updating incident log value:', updateError)
@@ -172,13 +172,13 @@ export async function POST(
     const { data: updatedIncident } = await supabase
       .from('incident_logs')
       .select('id, log_number, timestamp, callsign_from, callsign_to, occurrence, incident_type, action_taken, is_closed, event_id, status, priority, created_at, updated_at, time_of_occurrence, time_logged, entry_type, is_amended')
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single()
 
     const response: AmendLogResponse = {
       success: true,
       revision: revisionResult.revision,
-      incident: updatedIncident || undefined
+      incident: updatedIncident as AuditableIncidentLog | undefined
     }
 
     return NextResponse.json(response, { status: 201 })

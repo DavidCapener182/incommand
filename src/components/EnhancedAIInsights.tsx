@@ -1,30 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import DOMPurify from 'dompurify';
-import { Line, Bar, Radar, Doughnut, Scatter } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  TimeScale,
-  Filler,
-  ChartOptions,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import annotationPlugin from 'chartjs-plugin-annotation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ExclamationTriangleIcon, 
   ChartBarIcon,
@@ -35,20 +16,16 @@ import {
   ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  TimeScale,
-  Filler,
-  annotationPlugin
+const ChartsSection = dynamic(
+  () => import('@/components/analytics/EnhancedAIInsightsVisuals'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-4 flex h-48 items-center justify-center rounded-lg bg-white/60 text-sm text-gray-500 dark:bg-slate-800/60 dark:text-gray-300">
+        Loading analytical visuals…
+      </div>
+    ),
+  }
 );
 
 interface AIInsight {
@@ -74,7 +51,7 @@ interface EnhancedAIInsightsProps {
   enablePredictiveMode?: boolean;
 }
 
-interface PredictiveForecast {
+export interface PredictiveForecast {
   timeHorizon: string;
   confidence: number;
   predictions: {
@@ -90,7 +67,7 @@ interface PredictiveForecast {
   };
 }
 
-interface PatternAnalysis {
+export interface PatternAnalysis {
   patternType: 'temporal' | 'spatial' | 'behavioral' | 'correlation';
   confidence: number;
   description: string;
@@ -261,184 +238,6 @@ export default function EnhancedAIInsights({
       ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id'],
       ALLOW_DATA_ATTR: false
     });
-  };
-
-  // Advanced Chart.js configurations
-  const getChartTheme = () => {
-    const isDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return {
-      textColor: isDark ? '#ffffff' : '#1f2937',
-      gridColor: isDark ? '#374151' : '#e5e7eb',
-      backgroundColor: isDark ? '#1f2937' : '#ffffff'
-    };
-  };
-
-  const chartTheme = getChartTheme();
-
-  // Predictive Forecast Chart
-  const forecastChartData = {
-    labels: ['Current', '30min', '1hr', '1.5hr', '2hr'],
-    datasets: [
-      {
-        label: 'Incident Probability',
-        data: predictiveData ? [
-          predictiveData.predictions.incidentCount * 0.5,
-          predictiveData.predictions.incidentCount * 0.7,
-          predictiveData.predictions.incidentCount * 0.85,
-          predictiveData.predictions.incidentCount * 0.95,
-          predictiveData.predictions.incidentCount
-        ] : [0, 0, 0, 0, 0],
-        borderColor: 'rgb(239, 68, 68)',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        fill: true,
-        tension: 0.4
-      },
-      {
-        label: 'Crowd Density',
-        data: predictiveData ? [
-          predictiveData.predictions.crowdDensity * 0.8,
-          predictiveData.predictions.crowdDensity * 0.9,
-          predictiveData.predictions.crowdDensity * 0.95,
-          predictiveData.predictions.crowdDensity * 0.98,
-          predictiveData.predictions.crowdDensity
-        ] : [0, 0, 0, 0, 0],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.4
-      }
-    ]
-  };
-
-  const forecastChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: chartTheme.textColor,
-          usePointStyle: true
-        }
-      },
-      title: {
-        display: true,
-        text: 'Predictive Forecast',
-        color: chartTheme.textColor,
-        font: { size: 16, weight: 'bold' }
-      }
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'Time Horizon',
-          color: chartTheme.textColor
-        },
-        ticks: { color: chartTheme.textColor },
-        grid: { color: chartTheme.gridColor }
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Probability (%)',
-          color: chartTheme.textColor
-        },
-        ticks: { color: chartTheme.textColor },
-        grid: { color: chartTheme.gridColor }
-      }
-    }
-  };
-
-  // Pattern Analysis Radar Chart
-  const patternRadarData = {
-    labels: ['Temporal', 'Spatial', 'Behavioral', 'Correlation', 'Seasonal', 'Anomaly'],
-    datasets: [
-      {
-        label: 'Pattern Confidence',
-        data: patternData.map(p => p.confidence),
-        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgb(59, 130, 246)',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: 'rgb(59, 130, 246)'
-      }
-    ]
-  };
-
-  const patternRadarOptions: ChartOptions<'radar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: { color: chartTheme.textColor }
-      },
-      title: {
-        display: true,
-        text: 'Pattern Recognition Analysis',
-        color: chartTheme.textColor,
-        font: { size: 16, weight: 'bold' }
-      }
-    },
-    scales: {
-      r: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          color: chartTheme.textColor,
-          backdropColor: 'transparent'
-        },
-        grid: {
-          color: chartTheme.gridColor
-        },
-        pointLabels: {
-          color: chartTheme.textColor
-        }
-      }
-    }
-  };
-
-  // Risk Assessment Doughnut Chart
-  const riskAssessmentData = {
-    labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
-    datasets: [
-      {
-        data: [25, 35, 25, 15],
-        backgroundColor: [
-          'rgba(34, 197, 94, 0.8)',
-          'rgba(234, 179, 8, 0.8)',
-          'rgba(249, 115, 22, 0.8)',
-          'rgba(239, 68, 68, 0.8)'
-        ],
-        borderColor: [
-          'rgb(34, 197, 94)',
-          'rgb(234, 179, 8)',
-          'rgb(249, 115, 22)',
-          'rgb(239, 68, 68)'
-        ],
-        borderWidth: 2
-      }
-    ]
-  };
-
-  const riskAssessmentOptions: ChartOptions<'doughnut'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-        labels: { color: chartTheme.textColor }
-      },
-      title: {
-        display: true,
-        text: 'Risk Assessment Distribution',
-        color: chartTheme.textColor,
-        font: { size: 16, weight: 'bold' }
-      }
-    }
   };
 
   const markdownComponents = {
@@ -623,16 +422,9 @@ export default function EnhancedAIInsights({
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={viewMode}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          {/* Insights View */}
-          {viewMode === 'insights' && (
+      <div key={viewMode}>
+        {/* Insights View */}
+        {viewMode === 'insights' && (
       <div className="relative">
         <div
           className={`transition-all duration-500 ease-in-out ${
@@ -669,127 +461,15 @@ export default function EnhancedAIInsights({
           </div>
         </div>
             </div>
-          )}
+        )}
 
-          {/* Charts View */}
-          {viewMode === 'charts' && showAdvancedCharts && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <Line data={forecastChartData} options={forecastChartOptions} />
-                </div>
-                <div className="h-64">
-                  <Radar data={patternRadarData} options={patternRadarOptions} />
-                </div>
-              </div>
-              <div className="h-64">
-                <Doughnut data={riskAssessmentData} options={riskAssessmentOptions} />
-              </div>
-            </div>
-          )}
-
-          {/* Predictions View */}
-          {viewMode === 'predictions' && predictiveData && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Predictive Forecast - {predictiveData.timeHorizon}
-                </h4>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {predictiveData.predictions.incidentCount}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Predicted Incidents</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {predictiveData.predictions.crowdDensity}%
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Crowd Density</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {predictiveData.predictions.riskLevel}%
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Risk Level</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {predictiveData.predictions.responseTime}m
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Avg Response</div>
-                  </div>
-                </div>
-                <div className="mt-4 p-4 bg-white dark:bg-gray-700 rounded-lg">
-                  <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Trend Analysis</h5>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {predictiveData.trends.direction === 'increasing' ? '📈' : '📉'} 
-                    {predictiveData.trends.direction.charAt(0).toUpperCase() + predictiveData.trends.direction.slice(1)} trend 
-                    ({predictiveData.trends.magnitude}% change)
-                  </p>
-                  <div className="mt-2">
-                    <h6 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Contributing Factors:</h6>
-                    <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                      {predictiveData.trends.factors.map((factor, index) => (
-                        <li key={index}>• {factor}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Patterns View */}
-          {viewMode === 'patterns' && patternData.length > 0 && (
-            <div className="space-y-4">
-              {patternData.map((pattern, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border-l-4 border-purple-500"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                          {pattern.patternType.charAt(0).toUpperCase() + pattern.patternType.slice(1)} Pattern
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {pattern.confidence}% confidence
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          pattern.impact === 'positive' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                            : pattern.impact === 'negative'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-                        }`}>
-                          {pattern.impact}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                        {pattern.description}
-                      </p>
-                      <div>
-                        <h6 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Recommendations:</h6>
-                        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                          {pattern.recommendations.map((rec, recIndex) => (
-                            <li key={recIndex}>• {rec}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+        <ChartsSection
+          viewMode={viewMode}
+          showAdvancedCharts={showAdvancedCharts}
+          predictiveData={predictiveData}
+          patternData={patternData}
+        />
+      </div>
 
       {/* Navigation Controls */}
         <div className="flex items-center justify-between mt-6">

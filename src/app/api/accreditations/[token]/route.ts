@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabaseClient } from '@/lib/supabaseServer'
+import { getServiceClient } from '@/lib/supabaseServer'
 
 interface RouteContext {
   params: { token: string }
@@ -13,7 +13,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
-    const supabase = getServiceSupabaseClient()
+    const supabase = getServiceClient()
     const { data, error } = await supabase
       .from('vendor_accreditations')
       .select('id, status, induction_completed, vendors:vendor_id ( business_name, contact_name, service_type )')
@@ -28,10 +28,10 @@ export async function GET(request: Request, context: RouteContext) {
     const ipAddress = forwardedFor?.split(',')[0]?.trim()
     const userAgent = request.headers.get('user-agent') || undefined
 
-    await supabase
+    await (supabase as any)
       .from('vendor_induction_events')
       .insert({
-        accreditation_id: data.id,
+        accreditation_id: (data as any).id,
         event_type: 'link_opened',
         ip_address: ipAddress || null,
         user_agent: userAgent || null
@@ -52,7 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const supabase = getServiceSupabaseClient()
+    const supabase = getServiceClient()
 
     const { data: accreditation, error: fetchError } = await supabase
       .from('vendor_accreditations')
@@ -64,7 +64,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Accreditation not found' }, { status: 404 })
     }
 
-    if (accreditation.status !== 'new') {
+    if ((accreditation as any).status !== 'new') {
       return NextResponse.json({ error: 'Induction already completed' }, { status: 409 })
     }
 
@@ -87,10 +87,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     const ipAddress = forwardedFor?.split(',')[0]?.trim()
     const userAgent = request.headers.get('user-agent') || undefined
 
-    await supabase
+    await (supabase as any)
       .from('vendor_induction_events')
       .insert({
-        accreditation_id: accreditation.id,
+        accreditation_id: (accreditation as any).id,
         event_type: 'completed',
         ip_address: ipAddress || null,
         user_agent: userAgent || null

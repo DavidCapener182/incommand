@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 import { getRevisionHistory } from '@/lib/auditableLogging'
 
-import { GetRevisionsResponse } from '@/types/auditableLog'
+import { GetRevisionsResponse, AuditableIncidentLog } from '@/types/auditableLog'
 
 
 export async function GET(
@@ -50,7 +50,7 @@ export async function GET(
     const { data: incident, error: incidentError } = await supabase
       .from('incident_logs')
       .select('id, log_number, timestamp, callsign_from, callsign_to, occurrence, incident_type, action_taken, is_closed, event_id, status, priority, created_at, updated_at, time_of_occurrence, time_logged, entry_type, is_amended')
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single()
 
     if (incidentError || !incident) {
@@ -73,7 +73,7 @@ export async function GET(
     const response: GetRevisionsResponse = {
       success: true,
       revisions: result.revisions,
-      incident: incident
+      incident: incident as AuditableIncidentLog
     }
 
     return NextResponse.json(response, { status: 200 })

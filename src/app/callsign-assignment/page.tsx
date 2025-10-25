@@ -566,8 +566,8 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
 
       if (error) throw error;
 
-      if (profile?.company_id) {
-        setUserCompanyId(profile.company_id);
+      if ((profile as any)?.company_id) {
+        setUserCompanyId((profile as any).company_id);
       } else {
         console.log("No company ID available, skipping staff fetch");
       }
@@ -592,7 +592,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       
       if (error) throw error;
 
-      const formattedStaff = data?.map(staff => ({
+      const formattedStaff = data?.map((staff: any) => ({
         id: staff.id,
         full_name: staff.full_name,
         contact_number: staff.contact_number,
@@ -745,7 +745,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         .eq('event_id', eventId);
       if (fetchError) throw fetchError;
       const roleIdMap = new Map();
-      (existingRoles || []).forEach(role => {
+      (existingRoles || []).forEach((role: any) => {
         roleIdMap.set(`${role.area}|${role.short_code}`, role.id);
       });
 
@@ -754,7 +754,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         .from('profiles')
         .select('id');
       if (userError) throw userError;
-      const validUserIds = new Set((validUsers || []).map(u => u.id));
+      const validUserIds = new Set((validUsers || []).map((u: any) => u.id));
 
       // 1. Upsert all positions (callsign_positions)
       const roles = categories.flatMap(category =>
@@ -782,7 +782,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
       const uniqueRoles = Array.from(uniqueRolesMap.values());
 
       // Upsert roles with correct conflict target
-      const { error: rolesError } = await supabase.from('callsign_positions').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
+      const { error: rolesError } = await (supabase as any).from('callsign_positions').upsert(uniqueRoles, { onConflict: 'event_id,area,short_code' });
       if (rolesError) throw rolesError;
       const idMap: Record<string, string> = {};
       uniqueRoles.forEach(role => {
@@ -810,7 +810,7 @@ function CallsignAssignmentView({ eventId }: { eventId: string | null }) {
         })
       );
       if (assignmentsArr.length > 0) {
-        const { error: assignError } = await supabase
+        const { error: assignError } = await (supabase as any)
           .from("callsign_assignments")
           .upsert(assignmentsArr, { onConflict: "event_id,position_id" });
         if (assignError) throw assignError;
@@ -1769,8 +1769,8 @@ function StaffListView() {
 
       if (error) throw error;
 
-      if (profile?.company_id) {
-        setUserCompanyId(profile.company_id);
+      if ((profile as any)?.company_id) {
+        setUserCompanyId((profile as any).company_id);
       } else {
         console.log("No company ID available, skipping staff fetch");
       }
@@ -1795,7 +1795,7 @@ function StaffListView() {
       
       if (error) throw error;
 
-      const formattedStaff = data?.map(staff => ({
+      const formattedStaff = data?.map((staff: any) => ({
         id: staff.id,
         full_name: staff.full_name,
         contact_number: staff.contact_number,
@@ -1850,7 +1850,7 @@ function StaffListView() {
     try {
       if (currentStaff.id) {
         // Update existing staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .update({
             full_name: currentStaff.full_name,
@@ -1865,7 +1865,7 @@ function StaffListView() {
         if (error) throw error;
       } else {
         // Create new staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .insert({
             full_name: currentStaff.full_name,

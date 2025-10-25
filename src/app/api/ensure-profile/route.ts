@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
         first_name: '',
         last_name: '',
         full_name: '',
+        company: 'Default Company', // TODO: Get from user input or settings
         role: 'user',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

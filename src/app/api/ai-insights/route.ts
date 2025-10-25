@@ -105,11 +105,15 @@ export async function POST(req: NextRequest) {
     // Log usage (simplified for now since logAIUsage function needs server-side client)
     try {
       await supabase.from('ai_usage').insert({
+        date: new Date().toISOString().split('T')[0],
+        service: 'openai',
+        usage_type: 'api_call',
+        tokens_used: totalTokens,
+        cost: totalCost,
+        description: 'AI insights generation',
         event_id: eventId,
         endpoint: '/api/ai-insights',
         model: 'gpt-3.5-turbo',
-        tokens_used: totalTokens,
-        cost_usd: totalCost,
         created_at: new Date().toISOString()
       });
     } catch (logError) {

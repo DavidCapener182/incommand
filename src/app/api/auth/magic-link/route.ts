@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: email,
         full_name: name,
+        company: 'Default Company', // TODO: Get from user input or settings
       }, { onConflict: 'id' });
 
     if (profileError) {
@@ -115,9 +116,12 @@ export async function POST(request: NextRequest) {
 
     // Log successful authentication
     await serviceSupabase.from('audit_log').insert({
+      table_name: 'profiles',
+      record_id: user.id,
+      action: 'magic_link_auth_success',
+      action_type: 'authentication',
       user_id: user.id,
       event_id: eventId,
-      action: 'magic_link_auth_success',
       details: {
         invite_id: inviteId,
         role: role,

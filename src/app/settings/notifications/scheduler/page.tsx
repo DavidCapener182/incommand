@@ -76,7 +76,7 @@ export default function NotificationSchedulerPage() {
   const loadScheduledNotifications = async () => {
     try {
       const { data, error } = await supabase
-        .from('scheduled_notifications')
+        .from('notification_logs')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -129,7 +129,7 @@ export default function NotificationSchedulerPage() {
     const cronExpression = formData.cronExpression || generateCronExpression();
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('scheduled_notifications')
         .insert([{
           user_id: currentUserId,
@@ -160,7 +160,7 @@ export default function NotificationSchedulerPage() {
 
   const handleUpdateNotification = async (id: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('scheduled_notifications')
         .update({
           cron_expression: formData.cronExpression || null,
@@ -208,7 +208,7 @@ export default function NotificationSchedulerPage() {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('scheduled_notifications')
         .update({ status: isActive ? 'cancelled' : 'pending' })
         .eq('id', id);

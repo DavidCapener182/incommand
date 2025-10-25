@@ -113,12 +113,14 @@ export async function POST(
 
     // Log invite creation using service client
     await serviceSupabase.from('audit_log').insert({
-      user_id: user.id,
+      table_name: 'event_invites',
+      record_id: invite.id,
       action: 'create_invite',
+      action_type: 'create',
+      user_id: user.id,
+      event_id: eventId,
       resource_type: 'event_invite',
-      resource_id: invite.id,
       details: {
-        event_id: eventId,
         role: body.role,
         intended_email: body.intended_email,
         expires_at: body.expires_at
@@ -320,12 +322,14 @@ export async function DELETE(
 
     // Log the operation
     await serviceSupabase.from('audit_log').insert({
-      user_id: user.id,
+      table_name: 'event_invites',
+      record_id: inviteId,
       action: actionType,
+      action_type: 'delete',
+      user_id: user.id,
+      event_id: eventId,
       resource_type: 'event_invite',
-      resource_id: inviteId,
       details: {
-        event_id: eventId,
         permanent: isPermanentDelete
       }
     });

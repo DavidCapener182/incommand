@@ -63,11 +63,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No embedding returned' }, { status: 500 })
     }
 
-    // Try RPC with pgvector similarity first
-    const { data, error } = await supabase.rpc('match_green_guide_chunks', {
-      query_embedding: embedding,
-      match_count: Math.min(Number(topK) || 5, 10)
-    })
+    // Query green guide chunks directly
+    const { data, error } = await supabase
+      .from('green_guide_chunks')
+      .select('*')
+      .limit(Math.min(Number(topK) || 5, 10))
 
     const sanitize = (items: any[]) =>
       (items || [])

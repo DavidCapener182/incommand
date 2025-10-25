@@ -100,12 +100,65 @@ Provide 2-3 paragraphs highlighting key insights, trends, and recommendations.`,
         branding: companyName ? { companyName } : undefined
       }
 
-      const content = await generateReport(reportData, options)
-      
-      const timestamp = new Date().toISOString().split('T')[0]
-      const filename = `analytics-report-${timestamp}.${format}`
-      
-      downloadReport(content, filename, format)
+      // Use server-only API for PDF generation
+      if (format === 'pdf') {
+        const report = {
+          title: 'Analytics Report',
+          subtitle: eventName || 'Event Analysis',
+          generatedAt: new Date().toISOString(),
+          sections: [
+            ...(includeSections.executiveSummary && aiSummary ? [{
+              heading: 'Executive Summary',
+              body: aiSummary
+            }] : []),
+            ...(includeSections.logQuality && quality ? [{
+              heading: 'Log Quality Analysis',
+              body: `Overall Score: ${quality?.overallScore || 'N/A'}\nCompleteness: ${quality?.completenessScore || 'N/A'}\nAccuracy: ${quality?.accuracyScore || 'N/A'}\nTimeliness: ${quality?.timelinessScore || 'N/A'}`
+            }] : []),
+            ...(includeSections.compliance && compliance ? [{
+              heading: 'Compliance Metrics',
+              body: `Legal Readiness: ${compliance?.legalReadinessScore || 'N/A'}\nDocumentation: ${compliance?.documentationScore || 'N/A'}\nAudit Readiness: ${compliance?.auditReadinessScore || 'N/A'}`
+            }] : []),
+            ...(includeSections.performance && performance ? [{
+              heading: 'Performance Metrics',
+              body: `Total Incidents: ${performance?.totalIncidents || 'N/A'}\nAverage Response Time: ${performance?.averageResponseTime || 'N/A'} minutes\nResolution Rate: ${performance?.resolutionRate || 'N/A'}%`
+            }] : [])
+          ],
+          metadata: {
+            eventId: eventId || '',
+            dateRange: `${dateRange.start} to ${dateRange.end}`,
+            generatedBy: companyName || 'InCommand System'
+          }
+        }
+
+        const res = await fetch('/api/reports/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report }),
+        })
+
+        if (!res.ok) {
+          const errorText = await res.text()
+          console.error('PDF generation failed:', res.status, errorText)
+          throw new Error(`Failed to generate PDF report: ${res.status} ${errorText}`)
+        }
+
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `analytics-report-${new Date().toISOString().split('T')[0]}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+      } else {
+        // For CSV/JSON, use existing client-side generation
+        const content = await generateReport(reportData, options)
+        const timestamp = new Date().toISOString().split('T')[0]
+        const filename = `analytics-report-${timestamp}.${format}`
+        downloadReport(content, filename, format)
+      }
 
       // Success - close modal after brief delay
       setTimeout(() => {

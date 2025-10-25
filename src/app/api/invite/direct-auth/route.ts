@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if invite has reached max uses
-    if (invite.used_count >= invite.max_uses && !invite.allow_multiple) {
+    if ((invite.used_count || 0) >= (invite.max_uses || 1) && !invite.allow_multiple) {
       return NextResponse.json({ error: 'Invite has reached its maximum uses' }, { status: 400 });
     }
 
@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
         id: userId,
         email: body.email,
         full_name: body.name,
+        company: 'Default Company', // TODO: Get from user input or settings
       }, { onConflict: 'id' });
 
     if (profileError) {
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('event_invites')
       .update({
-        used_count: invite.used_count + 1,
+        used_count: (invite.used_count || 0) + 1,
         last_used_at: new Date().toISOString(),
         status: invite.allow_multiple ? 'active' : 'locked'
       })
@@ -191,9 +192,12 @@ export async function POST(request: NextRequest) {
 
     // Log successful authentication
     await supabase.from('audit_log').insert({
+      table_name: 'profiles',
+      record_id: userId,
+      action: 'direct_auth_success',
+      action_type: 'authentication',
       user_id: userId,
       event_id: invite.event_id,
-      action: 'direct_auth_success',
       details: {
         invite_id: invite.id,
         role: invite.role,

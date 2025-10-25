@@ -217,12 +217,12 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
 
       // Generate AI insights inline to avoid circular dependency
       try {
-        const resolvedCount = incidentRecords.filter((incident) => incident.status === 'closed').length
+        const resolvedCount = incidentRecords.filter((incident: any) => incident.status === 'closed').length
         const prompt = `Analyze this event data and provide insights:
 
-Event: ${event.name}
-Date: ${event.event_date}
-Attendance: ${event.actual_attendance || 'Unknown'}/${event.max_capacity}
+Event: ${(event as any).name}
+Date: ${(event as any).event_date}
+Attendance: ${(event as any).actual_attendance || 'Unknown'}/${(event as any).max_capacity}
 Incidents: ${incidentRecords.length} total (${resolvedCount} resolved)
 Staff: ${staffAssignmentsResult.data?.length || 0} positions assigned
 

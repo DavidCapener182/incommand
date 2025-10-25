@@ -101,7 +101,7 @@ export default function EventsSettingsPage() {
     if (!currentEvent) return;
     setEndingEvent(true);
     setError(null);
-    const { error: endError } = await supabase
+    const { error: endError } = await (supabase as any)
       .from('events')
       .update({ is_current: false })
       .eq('id', currentEvent.id);
@@ -119,7 +119,7 @@ export default function EventsSettingsPage() {
     setReenablingEventId(event.id);
     setError(null);
     // Set all events to is_current=false first
-    const { error: clearError } = await supabase
+    const { error: clearError } = await (supabase as any)
       .from('events')
       .update({ is_current: false })
       .neq('id', event.id);
@@ -129,7 +129,7 @@ export default function EventsSettingsPage() {
       return;
     }
     // Set selected event to is_current=true
-    const { error: setCurrentError } = await supabase
+    const { error: setCurrentError } = await (supabase as any)
       .from('events')
       .update({ is_current: true })
       .eq('id', event.id);
@@ -205,9 +205,9 @@ export default function EventsSettingsPage() {
         .eq('incident_id', numericLogId);
       if (updatesError) logger.debug('Updates deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: updatesError });
 
-      // Delete staff assignments
+      // Delete staff assignments (using staff_assignments table)
       const { error: assignmentsError } = await supabase
-        .from('incident_staff_assignments')
+        .from('staff_assignments')
         .delete()
         .eq('incident_id', numericLogId);
       if (assignmentsError) logger.debug('Assignments deletion error', { component: 'EventsSettingsPage', action: 'handleDeleteLog', error: assignmentsError });

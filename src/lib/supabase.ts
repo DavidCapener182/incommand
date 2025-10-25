@@ -1,8 +1,9 @@
 'use client'
 
-import { supabase as supabaseBrowserClient } from './supabaseBrowser'
+import { supabaseBrowserClient } from './supabaseBrowser'
+import type { BrowserSupabaseClient } from './supabaseBrowser'
 
-export const supabase = supabaseBrowserClient
+export const supabase: BrowserSupabaseClient = supabaseBrowserClient
 
 export const createUser = async (email: string, password: string) => {
   try {

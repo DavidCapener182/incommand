@@ -3,8 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { FaUpload } from "react-icons/fa";
 import SignaturePad from "react-signature-canvas";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+// Removed client-side PDF imports - now using server-only API
 import OpenAI from "openai";
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { StackedPanel } from '@/components/ui/StackedPanel';
@@ -37,18 +36,18 @@ export default function ReportsPage() {
         .eq("is_current", true)
         .single();
       setEvent(event);
-      setHeadOfSecurity(event?.head_of_security || event?.head_of_security_name || "");
-      // Get event logs
+      setHeadOfSecurity((event as any)?.head_of_security || (event as any)?.head_of_security_name || "");
+      // Get event logs (using incident_logs as event_logs doesn't exist)
       const { data: eventLogs } = await supabase
-        .from("event_logs")
+        .from("incident_logs")
         .select("*")
-        .eq("event_id", event?.id || "")
+        .eq("event_id", (event as any)?.id || "")
         .order("timestamp", { ascending: true });
       // Get incident logs
       const { data: incidentLogs } = await supabase
         .from("incident_logs")
         .select("*")
-        .eq("event_id", event?.id || "")
+        .eq("event_id", (event as any)?.id || "")
         .order("timestamp", { ascending: true });
       setLogs(eventLogs || []); // keep for legacy use
       // Add showdown incident if showdownLog exists (legacy)
@@ -56,8 +55,8 @@ export default function ReportsPage() {
       setIncidents(allIncidents);
       // Merge logs for All Logs section
       let mergedLogs = [
-        ...(eventLogs || []).map(l => ({ ...l, _source: 'event_logs' })),
-        ...(incidentLogs || []).map(l => ({ ...l, _source: 'incident_logs' }))
+        ...(eventLogs || []).map((l: any) => ({ ...l, _source: 'event_logs' })),
+        ...(incidentLogs || []).map((l: any) => ({ ...l, _source: 'incident_logs' }))
       ];
       // Exclude attendance logs
       mergedLogs = mergedLogs.filter(l => (l.type || l.incident_type) !== 'Attendance');
@@ -73,11 +72,11 @@ export default function ReportsPage() {
       );
       if (staffBriefedLog) {
         // Try to extract time from occurrence/details, fallback to log.timestamp
-        let match = staffBriefedLog.occurrence?.match(/at (\d{1,2}:\d{2})/);
-        if (!match && staffBriefedLog.details) {
-          match = staffBriefedLog.details.match(/at (\d{1,2}:\d{2})/);
+        let match = (staffBriefedLog as any).occurrence?.match(/at (\d{1,2}:\d{2})/);
+        if (!match && (staffBriefedLog as any).details) {
+          match = (staffBriefedLog as any).details.match(/at (\d{1,2}:\d{2})/);
         }
-        setStaffBriefingTime(match ? match[1] : new Date(staffBriefedLog.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setStaffBriefingTime(match ? match[1] : new Date((staffBriefedLog as any).timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       } else {
         setStaffBriefingTime("-");
       }
@@ -90,7 +89,7 @@ export default function ReportsPage() {
            (log.details && log.details.toLowerCase().includes("showdown")))
       );
       if (showdownLog) {
-        setShowdownTime(new Date(showdownLog.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setShowdownTime(new Date((showdownLog as any).timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       } else {
         setShowdownTime("-");
       }
@@ -99,9 +98,9 @@ export default function ReportsPage() {
         (inc: any) => inc.incident_type === "Event Timing" && inc.occurrence === "Showdown"
       );
       if (showdownIncident) {
-        setShowdownTime(new Date(showdownIncident.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setShowdownTime(new Date((showdownIncident as any).timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       } else if (showdownLog) {
-        setShowdownTime(new Date(showdownLog.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setShowdownTime(new Date((showdownLog as any).timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
       } else {
         setShowdownTime("-");
       }
@@ -122,13 +121,13 @@ export default function ReportsPage() {
         .eq('event_id', event.id);
       const idToShort: Record<string, string> = {};
       const idToCallsign: Record<string, string> = {};
-      roles?.forEach((r) => {
+      roles?.forEach((r: any) => {
         idToShort[r.id] = r.short_code;
         idToCallsign[r.id] = r.callsign;
       });
       const shortToName: Record<string, string> = {};
       const callsignToName: Record<string, string> = {};
-      assignments?.forEach((a) => {
+      assignments?.forEach((a: any) => {
         const short = idToShort[a.callsign_role_id];
         const cs = idToCallsign[a.callsign_role_id];
         if (short) shortToName[short.toUpperCase()] = a.assigned_name;
@@ -303,19 +302,56 @@ export default function ReportsPage() {
 
   // PDF Download
   const handleDownloadPDF = async () => {
-    const report = document.getElementById("event-report-pdf");
-    if (!report) return;
-    const canvas = await html2canvas(report);
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    // Scale image to fit page width
-    const imgProps = { width: canvas.width, height: canvas.height };
-    const pdfWidth = pageWidth;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight > pageHeight ? pageHeight : pdfHeight);
-    pdf.save(`EndOfEventReport-${event?.event_name || "event"}.pdf`);
+    try {
+      const report = {
+        title: 'End of Event Report',
+        subtitle: event?.event_name || 'Event Report',
+        generatedAt: new Date().toISOString(),
+        sections: [
+          {
+            heading: 'Event Summary',
+            body: `Event: ${event?.event_name || 'N/A'}\nDate: ${event?.date || 'N/A'}\nHead of Security: ${headOfSecurity}\nStaff Briefed: ${staffBriefingTime}\nDoors Open: ${getDoorsOpenTime()}\nShowdown: ${showdownTime}\nVenue Clear: ${getVenueClearTime()}`
+          },
+          {
+            heading: 'AI Summary',
+            body: aiSummary || 'No AI summary available'
+          },
+          {
+            heading: 'Incident Summary',
+            body: `Total Incidents: ${incidents.length}\nTotal Logs: ${logs.length}`
+          }
+        ],
+        metadata: {
+          eventId: event?.id || '',
+          totalIncidents: incidents.length,
+          totalLogs: logs.length,
+          generatedBy: 'InCommand System'
+        }
+      }
+
+      const res = await fetch('/api/reports/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to generate PDF report')
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `EndOfEventReport-${event?.event_name || "event"}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Failed to generate PDF report')
+    }
   };
 
   // Improved extraction for Doors Open Time and Staff Briefed & In Position

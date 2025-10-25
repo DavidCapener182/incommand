@@ -131,8 +131,8 @@ export default function VendorPortalPage() {
         .select('id')
         .eq('is_current', true)
         .single()
-      setCurrentEventId(data?.id || null)
-      return data?.id || null
+      setCurrentEventId((data as any)?.id || null)
+      return (data as any)?.id || null
     } catch (error) {
       console.error('Error fetching current event:', error)
       setCurrentEventId(null)

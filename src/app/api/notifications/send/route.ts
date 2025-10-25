@@ -87,13 +87,13 @@ export async function POST(request: NextRequest) {
 
     // Log notification
     await supabase.from('notification_logs').insert({
-      type,
+      title: `Notification sent`,
+      body: `Sent to ${recipients.length} recipients`,
       incident_id: incidentId,
       recipients: recipients.length,
-      method,
-      email_success: results.email,
-      sms_success: results.sms,
-      errors: results.errors.length > 0 ? results.errors : null,
+      status: 'sent',
+      user_id: recipients[0] || '',
+      type: 'notification',
       sent_at: new Date().toISOString()
     })
 

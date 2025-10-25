@@ -76,6 +76,7 @@
     "next": "14.0.3",
     "openai": "^4.104.0",
     "patternomaly": "^1.3.2",
+    "pdf-lib": "^1.17.1",
     "plotly.js-basic-dist": "^2.35.2",
     "plotly.js-dist": "^3.1.0",
     "radix-ui": "^1.4.3",

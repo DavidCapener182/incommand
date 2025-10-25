@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const { data: photoRecord, error: dbError } = await supabase
       .from('incident_photos')
       .insert({
-        incident_id: incidentId,
+        incident_id: parseInt(incidentId),
         photo_url: urlData.publicUrl,
         file_name: file.name,
         file_size: file.size,

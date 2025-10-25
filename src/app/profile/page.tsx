@@ -50,8 +50,8 @@ export default function ProfilePage() {
         .single();
       if (error) setError(error.message);
       setProfile(data);
-      setFullName(data?.full_name || "");
-      setAvatarUrl(data?.avatar_url || null);
+      setFullName((data as any)?.full_name || "");
+      setAvatarUrl((data as any)?.avatar_url || null);
       setLoading(false);
     };
     fetchProfile();
@@ -62,7 +62,7 @@ export default function ProfilePage() {
     if (!user) return;
     setLoading(true);
     setError(null);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("profiles")
       .update({ full_name: fullName, avatar_url: avatarUrl })
       .eq("id", user.id);
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
     setAvatarUrl(data.publicUrl);
     // Update profile in DB
-    await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
+    await (supabase as any).from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
     // Re-fetch profile to update UI
     const { data: newProfile, error: fetchError } = await supabase
       .from('profiles')
@@ -95,8 +95,8 @@ export default function ProfilePage() {
       .single();
     if (!fetchError) {
       setProfile(newProfile);
-      setFullName(newProfile?.full_name || "");
-      setAvatarUrl(newProfile?.avatar_url || null);
+      setFullName((newProfile as any)?.full_name || "");
+      setAvatarUrl((newProfile as any)?.avatar_url || null);
     }
     setUploading(false);
   };

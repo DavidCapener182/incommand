@@ -94,7 +94,7 @@ const NotificationTemplatesPage: React.FC = () => {
       }
 
       if (editingTemplate) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('notification_templates')
           .update({
             ...templateData,
@@ -105,7 +105,7 @@ const NotificationTemplatesPage: React.FC = () => {
 
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('notification_templates')
           .insert([templateData])
 

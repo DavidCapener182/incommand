@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('incident_logs')
       .insert({
+        log_number: `LOG-${Date.now()}`, // Generate unique log number
         event_id: body.event_id,
         incident_type: body.incident_type,
         occurrence: body.occurrence,
@@ -154,9 +155,10 @@ export async function POST(request: NextRequest) {
         timestamp: body.timestamp || new Date().toISOString(),
         is_closed: body.is_closed || false,
         entry_type: body.entry_type || 'contemporaneous',
-        logged_by_callsign: body.logged_by_callsign || 'API',
         time_of_occurrence: body.time_of_occurrence || new Date().toISOString(),
-        time_logged: new Date().toISOString()
+        time_logged: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select('id, event_id, incident_type, priority, occurrence, action_taken, timestamp, is_closed, logged_by_callsign, callsign_from, callsign_to, time_logged')
       .single()

@@ -90,11 +90,11 @@ export default function GeneralSettingsPage() {
         setProfile(profileData);
 
         // Fetch company data if user has company_id
-        if (profileData?.company_id) {
+        if ((profileData as any)?.company_id) {
           const { data: companyData, error: companyError } = await supabase
             .from('companies')
             .select('*')
-            .eq('id', profileData.company_id)
+            .eq('id', (profileData as any).company_id)
             .single();
 
           if (!companyError) setCompany(companyData);
@@ -113,7 +113,7 @@ export default function GeneralSettingsPage() {
           .single();
 
         if (!eventError && currentEvent) {
-          setCurrentEventId(currentEvent.id);
+          setCurrentEventId((currentEvent as any).id);
         }
 
       } catch (error: any) {
@@ -134,7 +134,7 @@ export default function GeneralSettingsPage() {
     setSuccess(null);
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({ [field]: value })
         .eq('id', profile.id);
@@ -186,7 +186,7 @@ export default function GeneralSettingsPage() {
       setDarkMode(newTheme);
       document.documentElement.classList.toggle('dark', newTheme);
       if (user) {
-        await supabase.from('user_preferences').upsert({
+        await (supabase as any).from('user_preferences').upsert({
           user_id: user.id,
           theme: newTheme ? 'dark' : 'light',
           updated_at: new Date().toISOString()
@@ -515,7 +515,7 @@ export default function GeneralSettingsPage() {
                           enabled: next
                         }
                       }
-                      await supabase.from('user_preferences').upsert({
+                      await (supabase as any).from('user_preferences').upsert({
                         user_id: user.id,
                         notification_preferences: updated,
                         updated_at: new Date().toISOString()
@@ -559,7 +559,7 @@ export default function GeneralSettingsPage() {
                           enabled: next
                         }
                       }
-                      await supabase.from('user_preferences').upsert({
+                      await (supabase as any).from('user_preferences').upsert({
                         user_id: user.id,
                         notification_preferences: updated,
                         updated_at: new Date().toISOString()

@@ -58,50 +58,50 @@ export default function RadioSignOutPage() {
           .select('id')
           .eq('is_current', true)
           .single();
-        if (!event?.id) {
+        if (!(event as any)?.id) {
           setEventId(null);
           setAssignments([]);
           setLoading(false);
           return;
         }
-        setEventId(event.id);
+        setEventId((event as any).id);
 
         // 2) Fetch positions for event
         const { data: roles } = await supabase
           .from('callsign_positions')
           .select('id, callsign, position')
-          .eq('event_id', event.id);
-        const roleById = new Map((roles || []).map(r => [r.id, r]));
+          .eq('event_id', (event as any).id);
+        const roleById = new Map((roles || []).map((r: any) => [r.id, r]));
 
         // 3) Assignments for event
         const { data: assigns } = await supabase
           .from('callsign_assignments')
           .select('position_id, user_id, assigned_name')
-          .eq('event_id', event.id);
+          .eq('event_id', (event as any).id);
 
-        const withAssignee = (assigns || []).filter(a => a.user_id || a.assigned_name);
+        const withAssignee = (assigns || []).filter((a: any) => a.user_id || a.assigned_name);
 
         // 4) Map profile IDs to names
-        const profileIds = Array.from(new Set(withAssignee.map(a => a.user_id).filter(Boolean))) as string[];
+        const profileIds = Array.from(new Set(withAssignee.map((a: any) => a.user_id).filter(Boolean))) as string[];
         let profilesMap = new Map<string, string>();
         if (profileIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
             .select('id, full_name')
             .in('id', profileIds);
-          profilesMap = new Map((profiles || []).map(p => [p.id, p.full_name || '']));
+          profilesMap = new Map((profiles || []).map((p: any) => [p.id, p.full_name || '']));
         }
 
         // 5) Build assignment rows
         const rows: AssignmentRow[] = withAssignee
           .map(a => {
-            const role = roleById.get(a.position_id);
+            const role = roleById.get((a as any).position_id);
             if (!role) return null;
-            const name = a.user_id ? (profilesMap.get(a.user_id) || '') : (a.assigned_name || '');
+            const name = (a as any).user_id ? (profilesMap.get((a as any).user_id) || '') : ((a as any).assigned_name || '');
             if (!name) return null; // skip if we cannot resolve a name
             return {
-              id: `${a.position_id}`,
-              profileId: a.user_id || null,
+              id: `${(a as any).position_id}`,
+              profileId: (a as any).user_id || null,
               name,
               callsign: role.callsign,
               role: role.position,

@@ -19,7 +19,7 @@ export type ChangeType =
  */
 export interface AuditableIncidentLog {
   // Existing fields
-  id: string
+  id: number
   log_number: string
   timestamp: string                    // Legacy field, kept for compatibility
   callsign_from: string
@@ -49,7 +49,7 @@ export interface AuditableIncidentLog {
   retrospective_justification?: string // Required if retrospective
   logged_by_user_id?: string          // User who created the log
   logged_by_callsign?: string         // Their callsign at time of logging
-  is_amended: boolean                  // Has this log been amended?
+  is_amended: boolean | null           // Has this log been amended?
   original_entry_id?: string          // Reference to original if this is revision
 }
 
@@ -129,7 +129,7 @@ export interface CreateLogResponse {
 export interface AmendLogResponse {
   success: boolean
   revision?: LogRevision
-  incident?: AuditableIncidentLog    // Updated to show is_amended=true
+  incident?: AuditableIncidentLog | undefined    // Updated to show is_amended=true
   error?: string
 }
 

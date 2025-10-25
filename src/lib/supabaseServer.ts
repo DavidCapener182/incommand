@@ -1,87 +1,90 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { logger } from './logger';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
+import { logger } from './logger'
 
-let serviceClient: SupabaseClient | null = null;
-let anonClient: SupabaseClient | null = null;
+type TypedSupabaseClient = SupabaseClient<Database>
 
-function ensureEnv(key: string, fallbackKey?: string): string {
-  const value = process.env[key] ?? (fallbackKey ? process.env[fallbackKey] : undefined);
+let serviceClient: TypedSupabaseClient | null = null
+let anonClient: TypedSupabaseClient | null = null
+
+function ensureEnv(key: string): string {
+  const value = process.env[key]
   if (!value) {
-    throw new Error(`Missing required environment variable: ${key}${fallbackKey ? ` (or ${fallbackKey})` : ''}`);
+    throw new Error(`Missing required environment variable: ${key}`)
   }
-  return value;
+  return value
 }
 
-export function getServiceSupabaseClient(): SupabaseClient {
+export function getServiceSupabaseClient(): TypedSupabaseClient {
   if (serviceClient) {
-    return serviceClient;
+    return serviceClient
   }
 
-  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
-  const serviceRoleKey = ensureEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = ensureEnv('SUPABASE_URL')
+  const serviceRoleKey = ensureEnv('SUPABASE_SERVICE_ROLE_KEY')
 
-  serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+  serviceClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
-  });
+  })
 
-  return serviceClient;
+  return serviceClient
 }
 
-export function getServiceClient(): SupabaseClient {
-  return getServiceSupabaseClient();
+export function getServiceClient(): TypedSupabaseClient {
+  return getServiceSupabaseClient()
 }
 
-export function getAnonServerClient(): SupabaseClient {
+export function getAnonServerClient(): TypedSupabaseClient {
   if (anonClient) {
-    return anonClient;
+    return anonClient
   }
 
-  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
-  const anonKey = ensureEnv('SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const supabaseUrl = ensureEnv('SUPABASE_URL')
+  const anonKey = ensureEnv('SUPABASE_ANON_KEY')
 
-  anonClient = createClient(supabaseUrl, anonKey, {
+  anonClient = createClient<Database>(supabaseUrl, anonKey, {
     auth: { persistSession: false },
-  });
+  })
 
-  return anonClient;
+  return anonClient
 }
 
-export function createRlsServerClient(token: string): SupabaseClient {
-  const supabaseUrl = ensureEnv('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
-  const anonKey = ensureEnv('SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
+export function createRlsServerClient(token: string): TypedSupabaseClient {
+  const supabaseUrl = ensureEnv('SUPABASE_URL')
+  const anonKey = ensureEnv('SUPABASE_ANON_KEY')
 
-  return createClient(supabaseUrl, anonKey, {
+  return createClient<Database>(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     },
-  });
+  })
 }
 
 interface LogAIUsageParams {
-  event_id?: string;
-  user_id?: string;
-  endpoint: string;
-  model: string;
-  tokens_used?: number | null;
-  cost_usd?: number | null;
+  event_id?: string
+  user_id?: string
+  endpoint: string
+  model: string
+  tokens_used?: number | null
+  cost_usd?: number | null
 }
 
 export async function logAIUsage(
   params: LogAIUsageParams,
-  client?: SupabaseClient
+  client?: TypedSupabaseClient
 ) {
-  let supabase: SupabaseClient;
+  let supabase: TypedSupabaseClient
   if (client) {
-    supabase = client;
+    supabase = client
   } else {
     try {
-      supabase = getServiceSupabaseClient();
+      supabase = getServiceSupabaseClient()
     } catch (error) {
-      logger.error('Supabase configuration error when logging AI usage', error, params);
-      return;
+      logger.error('Supabase configuration error when logging AI usage', error, params)
+      return
     }
   }
 
@@ -95,14 +98,14 @@ export async function logAIUsage(
         tokens_used: params.tokens_used ?? null,
         cost_usd: params.cost_usd ?? null,
       },
-    ]);
+    ])
 
     if (error) {
-      logger.error('Failed to log AI usage', error, params);
+      logger.error('Failed to log AI usage', error, params)
     } else {
-      logger.debug('AI usage logged successfully', params);
+      logger.debug('AI usage logged successfully', params)
     }
   } catch (err) {
-    logger.error('Unexpected error logging AI usage', err, params);
+    logger.error('Unexpected error logging AI usage', err, params)
   }
 }

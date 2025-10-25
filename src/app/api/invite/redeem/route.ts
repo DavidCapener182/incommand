@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if invite has reached max uses
-    if (invite.used_count >= invite.max_uses) {
+    if ((invite.used_count || 0) >= (invite.max_uses || 1)) {
       return NextResponse.json({ error: 'Invite has reached maximum uses' }, { status: 410 });
     }
 
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
     const { error: updateInviteError } = await supabase
       .from('event_invites')
       .update({
-        used_count: invite.used_count + 1,
+        used_count: (invite.used_count || 0) + 1,
         last_used_at: new Date().toISOString()
       })
       .eq('id', invite.id);
@@ -228,12 +228,14 @@ export async function POST(request: NextRequest) {
 
     // Log invite redemption
     await supabase.from('audit_log').insert({
-      user_id: userId,
+      table_name: 'event_invites',
+      record_id: invite.id,
       action: 'redeem_invite',
+      action_type: 'redemption',
+      user_id: userId,
+      event_id: invite.event_id,
       resource_type: 'event_invite',
-      resource_id: invite.id,
       details: {
-        event_id: invite.event_id,
         role: invite.role,
         is_new_user: isNewUser,
         member_id: memberId
