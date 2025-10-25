@@ -159,9 +159,21 @@ export async function scheduleMaintenanceCompletion(scheduleId: string) {
 }
 
 export async function createAsset(payload: CreateAssetPayload) {
+  // Map to Supabase schema: assets.Insert
+  const insertPayload: any = {
+    asset_tag: payload.asset_tag ?? null,
+    asset_type: 'general',
+    name: payload.name,
+    description: payload.description ?? null,
+    location: payload.location ?? null,
+    status: payload.status ?? null,
+    service_life_months: payload.service_life_months ?? null,
+    commissioned_at: payload.commissioned_at ?? null,
+  }
+
   const { data, error } = await supabase
     .from('assets')
-    .insert([{ ...payload }])
+    .insert([insertPayload])
     .select('*')
     .single()
 
@@ -184,9 +196,23 @@ export async function updateAsset(assetId: string, updates: UpdateAssetPayload) 
 }
 
 export async function createMaintenanceSchedule(payload: CreateSchedulePayload) {
+  const insertPayload: any = {
+    asset_id: payload.asset_id ?? null,
+    description: null,
+    enabled: payload.enabled ?? null,
+    frequency_days: payload.frequency_days,
+    frequency_type: 'days',
+    is_active: payload.enabled ?? null,
+    last_completed_at: null,
+    next_due_date: payload.next_due_date ?? null,
+    schedule_name: `Every ${payload.frequency_days} days`,
+    schedule_type: 'recurring',
+    webhook_url: payload.webhook_endpoint ?? null,
+  }
+
   const { data, error } = await supabase
     .from('maintenance_schedules')
-    .insert([{ ...payload }])
+    .insert([insertPayload])
     .select('*')
     .single()
 

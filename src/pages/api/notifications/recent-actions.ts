@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           type: 'incident',
           icon: getIncidentIcon(incident.incident_type),
           title: `${incident.incident_type} ${incident.is_closed ? '(Closed)' : ''}`,
-          description: `Log ${incident.log_number}: ${incident.occurrence.substring(0, 80)}${incident.occurrence.length > 80 ? '...' : ''}`,
+          description: `Log ${incident.log_number}: ${(incident.occurrence ?? '').substring(0, 80)}${(incident.occurrence ?? '').length > 80 ? '...' : ''}`,
           timestamp: incident.timestamp,
           userId: contributingUserId,
           priority: isHighPriority ? 'high' : 'medium',

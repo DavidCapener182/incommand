@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await supabase
       .from('incident_events')
       .select('id, incident_id, event_type, event_data, created_at, created_by')
-      .eq('incident_id', id)
+      .eq('incident_id', Number(id))
       .order('created_at', { ascending: true });
     if (error) return res.status(400).json({ error: error.message });
     return res.status(200).json(data);

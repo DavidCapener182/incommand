@@ -198,23 +198,35 @@ export default function IncidentTable({
 
       if (error) throw error;
       setIncidents(
-        (data || []).map(incident => ({
+        (data || []).map((incident: any) => ({
           ...incident,
           status: incident.status || 'open',
           entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
           retrospective_justification: incident.retrospective_justification || undefined,
-          logged_by_user_id: incident.logged_by_user_id || undefined
+          logged_by_user_id: incident.logged_by_user_id || undefined,
+          logged_by_callsign: incident.logged_by_callsign ?? undefined,
+          what3words: incident.what3words ?? undefined,
+          is_amended: incident.is_amended ?? false,
+          dependencies: Array.isArray(incident.dependencies)
+            ? (incident.dependencies as any[]).map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+            : null,
         }))
       );
       setLastUpdated(new Date());
       if (onDataLoaded) {
         onDataLoaded(
-          (data || []).map(incident => ({
+          (data || []).map((incident: any) => ({
             ...incident,
             status: incident.status || 'open',
             entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
             retrospective_justification: incident.retrospective_justification || undefined,
-            logged_by_user_id: incident.logged_by_user_id || undefined
+            logged_by_user_id: incident.logged_by_user_id || undefined,
+            logged_by_callsign: incident.logged_by_callsign ?? undefined,
+            what3words: incident.what3words ?? undefined,
+            is_amended: incident.is_amended ?? false,
+            dependencies: Array.isArray(incident.dependencies)
+              ? (incident.dependencies as any[]).map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+              : null,
           }))
         );
       }
@@ -565,10 +577,12 @@ export default function IncidentTable({
       const shortToName: Record<string, string> = {};
       const callsignToName: Record<string, string> = {};
       assignments?.forEach((a) => {
-        const short = idToShort[a.callsign_role_id];
-        const cs = idToCallsign[a.callsign_role_id];
-        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
-        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+        if (!a || !a.callsign_role_id) return;
+        const key = a.callsign_role_id as unknown as string;
+        const short = idToShort[key];
+        const cs = idToCallsign[key];
+        if (short) shortToName[short.toUpperCase()] = (a.assigned_name ?? '').toString();
+        if (cs) callsignToName[cs.toUpperCase()] = (a.assigned_name ?? '').toString();
       });
       setCallsignAssignments(callsignToName);
       setCallsignShortToName(shortToName);
@@ -1036,9 +1050,9 @@ export default function IncidentTable({
                                     {incident.log_number}
                                   </span>
                                   <PriorityBadge priority={incident.priority} />
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(incident.timestamp ?? new Date().toISOString()).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                                 </div>
                                 <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">
                                   {incident.occurrence.length > 100 
@@ -1325,7 +1339,7 @@ export default function IncidentTable({
                       <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
                         <div className="max-w-[80px] mx-auto">
                           <span
-                            title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
+                            title={(incident.callsign_from ? (callsignShortToName[incident.callsign_from.toUpperCase()] || callsignAssignments[incident.callsign_from.toUpperCase()] || '') : undefined) || undefined}
                             className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
                             style={{
                               display: '-webkit-box',
@@ -1345,7 +1359,7 @@ export default function IncidentTable({
                       <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
                         <div className="max-w-[80px] mx-auto">
                           <span
-                            title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
+                            title={(incident.callsign_to ? (callsignShortToName[incident.callsign_to.toUpperCase()] || callsignAssignments[incident.callsign_to.toUpperCase()] || '') : undefined) || undefined}
                             className="underline decoration-dotted cursor-help font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
                             style={{
                               display: '-webkit-box',
@@ -1501,7 +1515,12 @@ export default function IncidentTable({
                   // Update the incident in the database
                   const { error: updateError } = await supabase
                     .from('incident_logs')
-                    .update(updates)
+                    .update({
+                      ...updates,
+                      dependencies: Array.isArray((updates as any).dependencies)
+                        ? ((updates as any).dependencies as any[]).map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+                        : (updates as any).dependencies ?? null,
+                    })
                     .eq('id', incident.id);
 
                   if (updateError) {

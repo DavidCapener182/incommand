@@ -14,7 +14,7 @@ interface LiveIncidentStatusProps {
 }
 
 interface Incident {
-  id: string;
+  id: number;
   incident_type: string;
   status: string;
   priority?: string;
@@ -165,14 +165,18 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('Filtered incidents:', filteredIncidents);
 
       // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
+      const latestOpen = filteredIncidents.find((incident: any) => 
         !incident.is_closed && incident.status !== 'Logged'
       );
 
       console.log('Latest open incident:', latestOpen);
 
       if (latestOpen) {
-        setCurrentIncident(latestOpen);
+        setCurrentIncident({
+          ...latestOpen,
+          id: Number(latestOpen.id),
+          status: latestOpen.status ?? ''
+        });
       } else {
         setCurrentIncident(null);
       }
@@ -222,14 +226,18 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('Filtered incidents:', filteredIncidents);
 
       // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
+      const latestOpen = filteredIncidents.find((incident: any) => 
         !incident.is_closed && incident.status !== 'Logged'
       );
 
       console.log('Latest open incident:', latestOpen);
 
       if (latestOpen) {
-        setCurrentIncident(latestOpen);
+        setCurrentIncident({
+          ...latestOpen,
+          id: Number(latestOpen.id),
+          status: latestOpen.status ?? ''
+        });
       } else {
         setCurrentIncident(null);
       }

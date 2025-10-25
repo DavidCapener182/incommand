@@ -569,7 +569,8 @@ export default function StaffCommandCentre() {
         // Map assignments by callsign_role_id
         const assignMap: Record<string, string> = {};
         assignmentsData.forEach((a) => {
-          assignMap[a.callsign_role_id] = a.assigned_name;
+          if (!a || !a.callsign_role_id) return;
+          assignMap[a.callsign_role_id] = a.assigned_name ?? '';
         });
         setAssignments(assignMap);
       } else {
@@ -590,11 +591,12 @@ export default function StaffCommandCentre() {
         .eq("event_id", eventId)
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
+        const names = Array.from(new Set((data || []).map((r) => r.assigned_name ?? '')))
+          .filter((n) => n && n.trim().length > 0) as string[];
         setAllPreviousNames(names);
         // Group by first letter for better organization
         const grouped: Record<string, string[]> = {};
-        names.forEach((name) => {
+        names.forEach((name: string) => {
           const firstLetter = name.charAt(0).toUpperCase();
           if (!grouped[firstLetter]) grouped[firstLetter] = [];
           grouped[firstLetter].push(name);
@@ -613,7 +615,8 @@ export default function StaffCommandCentre() {
         .select("assigned_name")
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
+        const names = Array.from(new Set((data || []).map((r) => r.assigned_name ?? '')))
+          .filter((n) => n && n.trim().length > 0) as string[];
         setAllPreviousNames(names);
       }
     };
