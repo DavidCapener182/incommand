@@ -60,6 +60,7 @@ export async function middleware(req: NextRequest) {
     "/features", 
     "/pricing", 
     "/about", 
+    "/updates",
     "/help",
     "/privacy",
     "/terms",
