@@ -31,14 +31,14 @@ import { useEventMembership } from '@/hooks/useEventMembership';
 
 interface UserProfile {
   id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  company_id: string;
-  phone?: string;
-  bio?: string;
-  avatar_url?: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;
+  company_id: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
 }
 
 interface CompanyData {
