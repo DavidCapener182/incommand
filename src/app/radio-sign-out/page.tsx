@@ -2,15 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
-import { 
-  RadioIcon, 
-  ArrowDownTrayIcon, 
-  CheckCircleIcon, 
-  ClockIcon,
-  ExclamationTriangleIcon,
-  UserIcon
-} from '@heroicons/react/24/outline';
 
 interface RadioSignOut {
   id: number;
@@ -51,18 +42,31 @@ export default function RadioSignOutPage() {
     setError(null);
     
     try {
-      const response = await fetch(`/api/v1/radio-signout?event_id=${eventId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.log('Fetching signouts for event:', eventId);
       
-      if (!response.ok) {
+      // Direct database query instead of API
+      const { data: signOutsData, error: signOutsError } = await supabase
+        .from('radio_signouts')
+        .select(`
+          *,
+          profile:user_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('event_id', eventId)
+        .order('signed_out_at', { ascending: false });
+
+      if (signOutsError) {
+        console.error('Error fetching signouts:', signOutsError);
         throw new Error('Failed to fetch radio sign-outs');
       }
-      
-      const data = await response.json();
-      setSignOuts(data.signOuts || []);
+
+      console.log('Fetched signouts:', signOutsData);
+      setSignOuts(signOutsData || []);
     } catch (err) {
+      console.error('Error in fetchSignOuts:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -72,12 +76,14 @@ export default function RadioSignOutPage() {
   useEffect(() => {
     const loadCurrentEvent = async () => {
       try {
+        console.log('Loading current event...');
         const { data: event } = await supabase
           .from('events')
           .select('id')
           .eq('is_current', true)
           .single();
         
+        console.log('Current event:', event);
         if (event?.id) {
           setEventId(event.id);
         }
@@ -91,11 +97,13 @@ export default function RadioSignOutPage() {
 
   useEffect(() => {
     if (eventId) {
+      console.log('Event ID set, fetching signouts...');
       fetchSignOuts();
     }
   }, [eventId]);
 
   const handleSignIn = async (signOut: RadioSignOut) => {
+    console.log('Signing in radio:', signOut);
     setSelectedSignOut(signOut);
     setShowSignInModal(true);
   };
@@ -104,21 +112,29 @@ export default function RadioSignOutPage() {
     if (!selectedSignOut) return;
 
     try {
-      const response = await fetch('/api/v1/radio-signout', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signout_id: selectedSignOut.id,
-          signed_in_signature: 'Digital signature placeholder', // You can implement actual signature capture
+      console.log('Confirming sign in for:', selectedSignOut.id);
+      
+      // Direct database update instead of API
+      const { data, error } = await supabase
+        .from('radio_signouts')
+        .update({
+          signed_in_at: new Date().toISOString(),
+          signed_in_signature: 'Digital signature placeholder',
           signed_in_notes: signInNotes,
-          condition_on_return: conditionOnReturn
+          condition_on_return: conditionOnReturn,
+          status: 'in'
         })
-      });
+        .eq('id', selectedSignOut.id)
+        .select()
+        .single();
 
-      if (!response.ok) {
+      if (error) {
+        console.error('Error signing in radio:', error);
         throw new Error('Failed to sign in radio');
       }
 
+      console.log('Successfully signed in radio:', data);
+      
       // Refresh the data
       await fetchSignOuts();
       setShowSignInModal(false);
@@ -126,6 +142,7 @@ export default function RadioSignOutPage() {
       setSignInNotes('');
       setConditionOnReturn('good');
     } catch (err) {
+      console.error('Error in confirmSignIn:', err);
       setError(err instanceof Error ? err.message : 'Sign-in failed');
     }
   };
@@ -147,46 +164,9 @@ export default function RadioSignOutPage() {
     return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
   };
 
-  const getStatusIcon = (status: string, signedInAt: string | null) => {
-    if (status === 'in' || signedInAt) {
-      return <CheckCircleIcon className="h-4 w-4" />;
-    }
-    if (status === 'out') {
-      return <ClockIcon className="h-4 w-4" />;
-    }
-    return <ExclamationTriangleIcon className="h-4 w-4" />;
-  };
-
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return 'Not signed in';
     return new Date(dateString).toLocaleString();
-  };
-
-  const exportCSV = () => {
-    const csvData = signOuts.map(signOut => ({
-      'Radio Number': signOut.radio_number,
-      'Staff Member': signOut.profile.full_name,
-      'Callsign': signOut.profile.callsign || 'N/A',
-      'Sign Out Time': formatDateTime(signOut.signed_out_at),
-      'Sign In Time': formatDateTime(signOut.signed_in_at),
-      'Status': signOut.status === 'in' ? 'Returned' : 'Out',
-      'Condition': signOut.condition_on_return || 'N/A'
-    }));
-
-    const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `radio-signouts-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
   };
 
   if (loading) {
@@ -207,7 +187,7 @@ export default function RadioSignOutPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center">
-            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <div className="text-red-500 text-6xl mb-4">⚠️</div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Error Loading Radio Sign-outs
             </h3>
@@ -240,15 +220,13 @@ export default function RadioSignOutPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={exportCSV}
-              className="px-3 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center gap-2 text-sm font-medium"
-            >
-              <ArrowDownTrayIcon className="h-4 w-4" />
-              Export CSV
-            </button>
-          </div>
+        </div>
+
+        {/* Debug Info */}
+        <div className="mb-4 p-4 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">
+            <strong>Debug:</strong> Event ID: {eventId || 'Not found'} | Sign-outs: {signOuts.length}
+          </p>
         </div>
 
         {/* Radio Sign-outs Table */}
@@ -288,17 +266,11 @@ export default function RadioSignOutPage() {
               </thead>
               <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
                 {signOuts.map((signOut) => (
-                  <motion.tr
-                    key={signOut.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
+                  <tr key={signOut.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <RadioIcon className="h-5 w-5 text-blue-500 mr-2" />
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {signOut.radio_number}
+                          Radio {signOut.radio_number}
                         </span>
                       </div>
                     </td>
@@ -306,15 +278,17 @@ export default function RadioSignOutPage() {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8">
                           <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                            <UserIcon className="h-4 w-4 text-white" />
+                            <span className="text-white text-sm font-medium">
+                              {signOut.profile?.full_name?.charAt(0) || '?'}
+                            </span>
                           </div>
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {signOut.profile.full_name}
+                            {signOut.profile?.full_name || 'Unknown Staff'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {signOut.profile.callsign || signOut.profile.email}
+                            {signOut.profile?.email || 'No email'}
                           </div>
                         </div>
                       </div>
@@ -327,26 +301,25 @@ export default function RadioSignOutPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(signOut.status, signOut.signed_out_at, signOut.signed_in_at)}`}>
-                        {getStatusIcon(signOut.status, signOut.signed_in_at)}
-                        {signOut.status === 'in' || signOut.signed_in_at ? 'Returned' : 'Out'}
+                        {signOut.status === 'in' || signOut.signed_in_at ? '✅ Returned' : '⏰ Out'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {signOut.status === 'out' && !signOut.signed_in_at && (
                         <button
                           onClick={() => handleSignIn(signOut)}
-                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-semibold"
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-semibold bg-green-100 dark:bg-green-900/20 px-3 py-1 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
                         >
                           Sign In
                         </button>
                       )}
-                      {signOut.status === 'in' || signOut.signed_in_at && (
-                        <span className="text-gray-500 dark:text-gray-400">
+                      {(signOut.status === 'in' || signOut.signed_in_at) && (
+                        <span className="text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg">
                           Completed
                         </span>
                       )}
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -354,7 +327,7 @@ export default function RadioSignOutPage() {
 
           {signOuts.length === 0 && (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <RadioIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <div className="text-6xl mb-4">📻</div>
               <p>No radio sign-outs found</p>
             </div>
           )}
@@ -363,12 +336,7 @@ export default function RadioSignOutPage() {
         {/* Sign In Modal */}
         {showSignInModal && selectedSignOut && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6"
-            >
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Sign In Radio {selectedSignOut.radio_number}
               </h3>
@@ -379,7 +347,7 @@ export default function RadioSignOutPage() {
                     Staff Member
                   </label>
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {selectedSignOut.profile.full_name}
+                    {selectedSignOut.profile?.full_name || 'Unknown Staff'}
                   </div>
                 </div>
 
@@ -432,7 +400,7 @@ export default function RadioSignOutPage() {
                   Sign In Radio
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
       </div>
