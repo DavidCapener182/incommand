@@ -75,16 +75,16 @@ const faqData: FAQItem[] = [
 
 interface SupportTicket {
   id: string;
-  user_id: string;
-  company_id?: string;
+  user_id: string | null;
+  company_id?: string | null;
   subject: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   category: 'general' | 'technical' | 'billing' | 'feature_request' | 'bug_report';
-  created_at: string;
-  updated_at: string;
-  resolved_at?: string;
-  assigned_to?: string;
+  created_at: string | null;
+  updated_at: string | null;
+  resolved_at?: string | null;
+  assigned_to?: string | null;
 }
 
 interface SupportMessage {
