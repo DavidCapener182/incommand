@@ -14,8 +14,8 @@ interface EventContext {
   eventId: string;
   eventName: string;
   venueName: string;
-  eventDate: string;
-  eventTime: string;
+  eventDate: string | null;
+  eventTime: string | null;
   totalIncidents: number;
   openIncidents: number;
   recentIncidents: any[];
@@ -61,17 +61,38 @@ async function getEventContext(): Promise<EventContext | null> {
     console.log('🔍 Starting getEventContext...');
     const supabase = getServiceClient();
     
-    // Get current event
+    // Get current event - try multiple approaches
     console.log('🔍 Fetching current event...');
-    const { data: events, error: eventError } = await supabase
+    let events = null;
+    
+    // First try: events with is_current = true
+    const { data: currentEventData, error: currentEventError } = await supabase
       .from('events')
-      .select('id, event_name, venue_name, event_date, event_time, event_brief')
+      .select('id, event_name, venue_name, start_datetime, description')
       .eq('is_current', true)
       .single();
 
-    if (eventError) {
-      console.error('❌ Error fetching current event:', eventError);
-      return null;
+    if (currentEventData) {
+      events = currentEventData;
+    } else {
+      console.log('🔍 No current event with is_current=true, trying fallback...');
+      // Fallback: get the most recent event that's happening today or in the future
+      const today = new Date().toISOString().split('T')[0];
+      const { data: recentEvent, error: recentError } = await supabase
+        .from('events')
+        .select('id, event_name, venue_name, start_datetime, description')
+        .gte('start_datetime', today)
+        .order('start_datetime', { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (recentEvent) {
+        events = recentEvent;
+        console.log('✅ Found recent event as fallback:', recentEvent.event_name);
+      } else {
+        console.error('❌ No current event found and no recent events available');
+        return null;
+      }
     }
 
     if (!events) {
@@ -117,13 +138,13 @@ async function getEventContext(): Promise<EventContext | null> {
       eventId: events.id,
       eventName: events.event_name,
       venueName: events.venue_name,
-      eventDate: events.event_date,
-      eventTime: events.event_time,
+      eventDate: events.start_datetime,
+      eventTime: events.start_datetime,
       totalIncidents,
       openIncidents,
       recentIncidents: countableIncidents || [],
       attendanceData: [],
-      eventBrief: events.event_brief || '',
+      eventBrief: events.description || '',
       staffCount,
     };
 

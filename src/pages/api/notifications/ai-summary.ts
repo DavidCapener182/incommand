@@ -27,12 +27,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       customPrompt = req.body?.prompt || '';
     }
 
-    // Get the current event
-    const { data: currentEvent } = await supabase
+    // Get the current event - try multiple approaches
+    let currentEvent = null;
+    
+    // First try: events with is_current = true
+    const { data: currentEventData } = await supabase
       .from('events')
-      .select('id, event_name, event_date, venue_name, name, date, venue')
+      .select('id, event_name, start_datetime, venue_name')
       .eq('is_current', true)
       .maybeSingle();
+
+    if (currentEventData) {
+      currentEvent = currentEventData;
+    } else {
+      // Fallback: get the most recent event that's happening today or in the future
+      const today = new Date().toISOString().split('T')[0];
+      const { data: recentEvent } = await supabase
+        .from('events')
+        .select('id, event_name, start_datetime, venue_name')
+        .gte('start_datetime', today)
+        .order('start_datetime', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      if (recentEvent) {
+        currentEvent = recentEvent;
+      }
+    }
 
     if (!currentEvent) {
       return res.status(200).json({
@@ -93,9 +114,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ) || [];
 
     // Prepare data for AI analysis
-    const eventName = currentEvent.event_name ?? currentEvent.name ?? 'Current Event';
-    const eventDate = currentEvent.event_date ?? currentEvent.date ?? null;
-    const venueName = currentEvent.venue_name ?? currentEvent.venue ?? 'Venue';
+    const eventName = currentEvent.event_name ?? 'Current Event';
+    const eventDate = currentEvent.start_datetime ?? null;
+    const venueName = currentEvent.venue_name ?? 'Venue';
 
     const eventData = {
       eventName,
