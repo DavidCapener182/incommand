@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase'
 import { generateEventReport, type EventReportData, type EventReportOptions } from '@/lib/analytics/eventReportGenerator'
 import { useToast } from '@/components/Toast'
 import { Card } from '@/components/ui/card'
+import { printWithNoMargins, printElement } from '@/utils/printUtils'
 
 interface EndOfEventReportProps {
   eventId?: string
@@ -591,7 +592,14 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         }
 
         window.addEventListener('afterprint', restoreTheme)
-        window.print()
+        // Use enhanced print function with no margins
+        printWithNoMargins({
+          showDialog: true,
+          forceNoMargins: true,
+          orientation: 'landscape',
+          pageSize: 'A4',
+          includePrintStyles: true
+        })
         // Safety fallback in case afterprint doesn't fire in some contexts
         setTimeout(restoreTheme, 1000)
       }
@@ -897,14 +905,45 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       {/* Print styles */}
       <style jsx global>{`
         @media print {
-          @page { size: A4 landscape; margin: 0; }
-          html, body { margin: 0 !important; padding: 0 !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+          @page { 
+            size: A4 landscape; 
+            margin: 0 !important; 
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 100% !important;
+            height: 100% !important;
+            overflow: visible !important;
+          }
+          * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            color-adjust: exact !important; 
+            box-sizing: border-box !important;
+          }
           body * { visibility: hidden !important; }
           #end-of-event-print, #end-of-event-print * { visibility: visible !important; }
-          #end-of-event-print { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; padding: 0 !important; margin: 0 !important; }
+          #end-of-event-print { 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            height: 100% !important;
+            background: #fff !important; 
+            padding: 0 !important; 
+            margin: 0 !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+          }
           .no-print { display: none !important; }
-          .rounded-lg, .rounded-xl, .card-modal { box-shadow: none !important; border-color: #e5e7eb !important; }
+          .rounded-lg, .rounded-xl, .card-modal { 
+            box-shadow: none !important; 
+            border-color: #e5e7eb !important; 
+          }
           .p-6 { padding: 14px !important; }
           .p-5 { padding: 12px !important; }
           .px-4, .py-4, .px-6, .py-6 { padding: 10px !important; }
@@ -913,7 +952,19 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
           .print\:border { border: 1px solid #e5e7eb !important; }
           .print\:p-4 { padding: 12px !important; }
           .card-depth { box-shadow: none !important; }
-          .break-inside-avoid, .avoid-break { break-inside: avoid-page !important; page-break-inside: avoid !important; }
+          .break-inside-avoid, .avoid-break { 
+            break-inside: avoid-page !important; 
+            page-break-inside: avoid !important; 
+          }
+          /* Force no margins on all elements */
+          *, *::before, *::after {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          /* Override any browser default margins */
+          @page :first { margin: 0 !important; }
+          @page :left { margin: 0 !important; }
+          @page :right { margin: 0 !important; }
         }
       `}</style>
       {/* Compact brand bar */}
@@ -943,21 +994,17 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <span>Email Report</span>
           </button>
           <button
-            onClick={() => generateReport('pdf')}
-            disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            onClick={() => printElement('end-of-event-print', {
+              showDialog: true,
+              forceNoMargins: true,
+              orientation: 'landscape',
+              pageSize: 'A4',
+              includePrintStyles: true
+            })}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
-            {generating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Generating...</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownTrayIcon className="h-5 w-5" />
-                <span>Print/PDF</span>
-              </>
-            )}
+            <ArrowDownTrayIcon className="h-5 w-5" />
+            <span>Print/PDF</span>
           </button>
           <button
             onClick={() => generateReport('csv')}

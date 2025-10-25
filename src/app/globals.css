@@ -1118,13 +1118,37 @@ input:-webkit-autofill {
   }
 }
 
-/* Print styles - disable animations */
+/* Print styles - disable animations and ensure no margins */
 @media print {
+  @page {
+    margin: 0 !important;
+    padding: 0 !important;
+    size: A4 landscape;
+  }
+  
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
   * {
     animation: none !important;
     transition: none !important;
     transform: none !important;
+    box-sizing: border-box !important;
   }
+  
+  /* Force no margins on all elements */
+  *, *::before, *::after {
+    margin: 0 !important;
+  }
+  
+  /* Override any browser default margins */
+  @page :first { margin: 0 !important; }
+  @page :left { margin: 0 !important; }
+  @page :right { margin: 0 !important; }
   
   .card-glow:hover,
   .widget-update:hover {
