@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
@@ -1498,10 +1499,20 @@ export default function IncidentTable({
                   const incident = incidents.find(inc => inc.id.toString() === id);
                   if (!incident) return;
 
+                  // Normalize payload to match Supabase column types (e.g., dependencies: number[] | null)
+                  type IncidentLogUpdate = Database['public']['Tables']['incident_logs']['Update']
+                  const normalizedUpdates: IncidentLogUpdate = { ...(updates as any) }
+
+                  // Only transform dependencies if it is present in the update payload
+                  if (Object.prototype.hasOwnProperty.call(updates as any, 'dependencies')) {
+                    const deps = (updates as any).dependencies as Array<string | number> | undefined
+                    normalizedUpdates.dependencies = deps && deps.length > 0 ? deps.map((d) => Number(d)) : null
+                  }
+
                   // Update the incident in the database
                   const { error: updateError } = await supabase
                     .from('incident_logs')
-                    .update(updates)
+                    .update(normalizedUpdates)
                     .eq('id', incident.id);
 
                   if (updateError) {
