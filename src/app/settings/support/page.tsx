@@ -181,9 +181,9 @@ export default function SupportPage() {
 
       if (error) throw error;
       setUserTickets(
-        (tickets || []).map(t => ({
+        (tickets || []).map((t) => ({
           ...t,
-          status: t.status as "open" | "in_progress" | "closed" | "resolved",
+          status: (t.status as "open" | "in_progress" | "closed" | "resolved") ?? "open",
           priority: t.priority as "low" | "medium" | "high" | "urgent",
           category: t.category as "general" | "technical" | "billing" | "feature_request" | "bug_report",
         }))
