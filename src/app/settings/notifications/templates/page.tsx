@@ -49,8 +49,10 @@ const NotificationTemplatesPage: React.FC = () => {
 
   const loadTemplates = async () => {
     try {
+      // TODO: Create notification_templates table in database
+      // For now, use notifications table as a temporary solution
       const { data, error } = await supabase
-        .from('notification_templates')
+        .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -59,7 +61,23 @@ const NotificationTemplatesPage: React.FC = () => {
         return
       }
 
-      setTemplates(data || [])
+      // Transform notifications data to match NotificationTemplate interface
+      const transformedData = (data || []).map((item: any) => ({
+        id: item.id,
+        template_name: item.title || 'Untitled Template',
+        subject: item.title || '',
+        body: item.message || '',
+        category: 'general' as const,
+        is_active: true,
+        is_admin_managed: false,
+        variables: [],
+        created_at: item.created_at,
+        updated_at: item.created_at,
+        created_by: item.user_id,
+        version: 1
+      }))
+      
+      setTemplates(transformedData)
     } catch (error) {
       console.error('Error loading templates:', error)
     } finally {
@@ -95,7 +113,7 @@ const NotificationTemplatesPage: React.FC = () => {
 
       if (editingTemplate) {
         const { error } = await (supabase as any)
-          .from('notification_templates')
+          .from('notifications')
           .update({
             ...templateData,
             version: editingTemplate.version + 1,
@@ -106,7 +124,7 @@ const NotificationTemplatesPage: React.FC = () => {
         if (error) throw error
       } else {
         const { error } = await (supabase as any)
-          .from('notification_templates')
+          .from('notifications')
           .insert([templateData])
 
         if (error) throw error
@@ -146,7 +164,7 @@ const NotificationTemplatesPage: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('notification_templates')
+        .from('notifications')
         .delete()
         .eq('id', templateId)
 
