@@ -314,7 +314,7 @@ export default function Navigation() {
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-                <Link href="/" className="flex-shrink-0 flex items-center" data-tour="dashboard">
+            <Link href="/incidents" className="flex-shrink-0 flex items-center" data-tour="dashboard">
                 <Image
                   src="/inCommand.png"
                   alt="inCommand Logo"

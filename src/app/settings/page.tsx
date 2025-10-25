@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline';
 import InviteManagement from '@/components/InviteManagement';
 import { useEventMembership } from '@/hooks/useEventMembership';
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface UserProfile {
   id: string;
@@ -414,6 +415,17 @@ export default function GeneralSettingsPage() {
           </div>
 
           <div className="space-y-4">
+            {/* Theme selection using shared ThemeToggle (light/dark/system) */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Theme</div>
+                  <div className="text-sm text-gray-500 dark:text-blue-300">Choose Light, Dark, or System</div>
+                </div>
+              </div>
+              <ThemeToggle />
+            </div>
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {darkMode ? (
