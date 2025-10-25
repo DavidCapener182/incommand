@@ -320,23 +320,23 @@ export default function EscalationTimer({
               {escalationHistory.map((event, index) => (
                 <div key={event.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                   <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600">{event.escalation_level}</span>
+                    <span className="text-xs font-medium text-blue-600">{(event as any).escalation_level || 'N/A'}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-gray-900">
-                        Escalated to Level {event.escalation_level}
+                        Escalated to Level {(event as any).escalation_level || 'N/A'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {event.escalated_at.toLocaleString()}
+                        {(event as any).escalated_at?.toLocaleString() || 'Unknown'}
                       </div>
                     </div>
-                    {event.notes && (
-                      <div className="text-xs text-gray-600 mt-1">{event.notes}</div>
+                    {(event as any).notes && (
+                      <div className="text-xs text-gray-600 mt-1">{(event as any).notes}</div>
                     )}
-                    {event.resolution_time && (
+                    {(event as any).resolution_time && (
                       <div className="text-xs text-green-600 mt-1">
-                        Resolved in {event.resolution_time}
+                        Resolved in {(event as any).resolution_time}
                       </div>
                     )}
                   </div>

@@ -84,7 +84,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
               addToast({
                 type: 'info',
                 title: 'New Message',
-                message: `${lastMsg.profiles?.full_name || 'Someone'}: ${lastMsg.message}`,
+                message: `${(lastMsg as any).profiles?.full_name || 'Someone'}: ${lastMsg.message}`,
               });
               lastToastMsgId.current = lastMsg.id;
             }

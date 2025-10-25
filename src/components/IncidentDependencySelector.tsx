@@ -67,11 +67,11 @@ export default function IncidentDependencySelector({
 
       // Filter out current incident if editing
       const filteredData = currentIncidentId 
-        ? data?.filter(incident => incident.id !== currentIncidentId) || []
+        ? data?.filter(incident => incident.id !== (currentIncidentId as any)) || []
         : data || [];
 
-      setIncidents(filteredData);
-      setFilteredIncidents(filteredData);
+      setIncidents(filteredData as any);
+      setFilteredIncidents(filteredData as any);
     } catch (err) {
       console.error('Error fetching incidents:', err);
       setError('Failed to load incidents');
@@ -217,7 +217,7 @@ export default function IncidentDependencySelector({
         const { data: incidentData, error } = await supabase
           .from('incident_logs')
           .select('dependencies')
-          .eq('id', currentId)
+          .eq('id', Number(currentId))
           .single() as { data: { dependencies?: string[] } | null, error: any };
         
         if (error) {

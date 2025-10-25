@@ -95,7 +95,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
 
             if (!userMap.has(log.logged_by_user_id)) {
               userMap.set(log.logged_by_user_id, {
-                callsign: log.logged_by_callsign,
+                callsign: log.logged_by_callsign || undefined,
                 logs: [],
                 retrospective: 0,
                 amended: 0

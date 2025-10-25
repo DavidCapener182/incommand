@@ -315,7 +315,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
       const { error: insertError, data: insertedEvent } = await supabase
         .from('events')
-        .insert([eventData])
+        .insert([eventData as any])
         .select()
 
       if (insertError) throw insertError

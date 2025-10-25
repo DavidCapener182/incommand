@@ -113,15 +113,15 @@ Provide 2-3 paragraphs highlighting key insights, trends, and recommendations.`,
             }] : []),
             ...(includeSections.logQuality && quality ? [{
               heading: 'Log Quality Analysis',
-              body: `Overall Score: ${quality?.overallScore || 'N/A'}\nCompleteness: ${quality?.completenessScore || 'N/A'}\nAccuracy: ${quality?.accuracyScore || 'N/A'}\nTimeliness: ${quality?.timelinessScore || 'N/A'}`
+              body: `Overall Score: ${quality?.overallScore || 'N/A'}\nCompleteness: ${quality?.completeness || 'N/A'}\nFactual Language: ${quality?.factualLanguage || 'N/A'}\nTimeliness: ${quality?.timeliness || 'N/A'}`
             }] : []),
             ...(includeSections.compliance && compliance ? [{
               heading: 'Compliance Metrics',
-              body: `Legal Readiness: ${compliance?.legalReadinessScore || 'N/A'}\nDocumentation: ${compliance?.documentationScore || 'N/A'}\nAudit Readiness: ${compliance?.auditReadinessScore || 'N/A'}`
+              body: `Legal Readiness: ${compliance?.legalReadinessScore || 'N/A'}\nAudit Trail Completeness: ${compliance?.auditTrailCompleteness || 'N/A'}\nImmutability Score: ${compliance?.immutabilityScore || 'N/A'}`
             }] : []),
             ...(includeSections.performance && performance ? [{
               heading: 'Performance Metrics',
-              body: `Total Incidents: ${performance?.totalIncidents || 'N/A'}\nAverage Response Time: ${performance?.averageResponseTime || 'N/A'} minutes\nResolution Rate: ${performance?.resolutionRate || 'N/A'}%`
+              body: `Total Incidents: ${performance?.totalIncidents || 'N/A'}\nAverage Response Time: ${performance?.averageResponseTime || 'N/A'} minutes\nResponse Quality: ${performance?.responseQuality || 'N/A'}%`
             }] : [])
           ],
           metadata: {

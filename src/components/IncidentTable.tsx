@@ -197,10 +197,26 @@ export default function IncidentTable({
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
-      setIncidents(data || []);
+      setIncidents(
+        (data || []).map(incident => ({
+          ...incident,
+          status: incident.status || 'open',
+          entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+          retrospective_justification: incident.retrospective_justification || undefined,
+          logged_by_user_id: incident.logged_by_user_id || undefined
+        }))
+      );
       setLastUpdated(new Date());
       if (onDataLoaded) {
-        onDataLoaded(data || []);
+        onDataLoaded(
+          (data || []).map(incident => ({
+            ...incident,
+            status: incident.status || 'open',
+            entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+            retrospective_justification: incident.retrospective_justification || undefined,
+            logged_by_user_id: incident.logged_by_user_id || undefined
+          }))
+        );
       }
     } catch (err) {
       logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: currentEventId || undefined });

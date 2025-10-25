@@ -3884,7 +3884,7 @@ export default function IncidentCreationModal({
             body: JSON.stringify({
               incidentType: formData.incident_type,
               priority: formData.priority,
-              eventId: formData.event_id
+              eventId: (formData as any).event_id
             })
           });
 

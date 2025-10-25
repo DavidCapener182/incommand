@@ -228,7 +228,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
       if (data) {
         setProfiles(prev => {
           const newProfiles = { ...prev };
-          data.forEach((p: Profile) => {
+          data.forEach((p: any) => {
             newProfiles[p.id] = p;
           });
           return newProfiles;
@@ -294,7 +294,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
           voice_url: voiceData.url,
           duration: voiceData.duration,
           message_type: 'voice'
-        });
+        } as any);
 
       if (error) {
         console.error('Error sending voice message:', error);

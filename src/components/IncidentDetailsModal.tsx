@@ -256,7 +256,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         const assignmentsMap: Record<string, string> = {};
         const shortToNameMap: Record<string, string> = {};
         
-        assignmentsData.forEach(assignment => {
+        assignmentsData.forEach((assignment: any) => {
           if (assignment.callsign && assignment.staff_name) {
             assignmentsMap[assignment.callsign.toUpperCase()] = assignment.staff_name;
             shortToNameMap[assignment.callsign.toUpperCase()] = assignment.staff_name;
@@ -300,20 +300,20 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { data: incidentData, error: incidentError } = await supabase
         .from('incident_logs')
         .select('*')
-        .eq('id', incidentId)
+        .eq('id', Number(incidentId))
         .single();
 
       if (incidentError) throw incidentError;
 
-      setIncident(incidentData);
-      setEditedIncident(incidentData);
+      setIncident(incidentData as any);
+      setEditedIncident(incidentData as any);
 
       // Fetch revision count if incident has been amended
       if (incidentData?.is_amended) {
         const { count } = await supabase
           .from('incident_log_revisions')
           .select('*', { count: 'exact', head: true })
-          .eq('incident_log_id', incidentId)
+          .eq('incident_log_id', Number(incidentId))
         setRevisionCount(count || 0)
       } else {
         setRevisionCount(0)
@@ -323,12 +323,12 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { data: updatesData, error: updatesError } = await supabase
         .from('incident_updates')
         .select('*')
-        .eq('incident_id', incidentId)
+        .eq('incident_id', Number(incidentId))
         .order('created_at', { ascending: false });
 
       if (updatesError) throw updatesError;
 
-      setUpdates(updatesData || []);
+      setUpdates((updatesData || []) as any);
 
       // Fetch additional data
       await Promise.all([
@@ -385,7 +385,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { error } = await supabase
         .from('incident_updates')
         .insert({
-          incident_id: incident.id,
+          incident_id: Number(incident.id),
           update_text: newUpdate,
           updated_by: currentUserName
         });
@@ -398,17 +398,17 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       try {
         // Get current actions (fresh)
         const { data: current, error: selErr } = await supabase
-          .from('incident_logs')
-          .select('action_taken')
-          .eq('id', incident.id)
-          .single();
+        .from('incident_logs')
+        .select('action_taken')
+        .eq('id', Number(incident.id))
+        .single();
         if (selErr) throw selErr;
         const prevActions = (current?.action_taken as string) || '';
         const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
         const { error: updErr } = await supabase
           .from('incident_logs')
           .update({ action_taken: updatedActions, updated_at: new Date().toISOString() })
-          .eq('id', incident.id);
+          .eq('id', Number(incident.id));
         if (updErr) throw updErr;
         // Reflect locally
         setIncident(prev => prev ? { ...prev, action_taken: updatedActions } : prev);
@@ -437,7 +437,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           callsign_to: editedIncident.callsign_to,
           updated_at: new Date().toISOString()
         })
-        .eq('id', incident.id);
+        .eq('id', Number(incident.id));
 
       if (error) throw error;
 
@@ -445,7 +445,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { error: auditError } = await supabase
         .from('incident_updates')
         .insert({
-          incident_id: incident.id,
+          incident_id: Number(incident.id),
           update_text: 'Incident details updated',
           updated_by: currentUserName
         });
@@ -473,7 +473,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           is_closed: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', incident.id);
+        .eq('id', Number(incident.id));
 
       if (updateError) throw updateError;
 
@@ -481,7 +481,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       const { error: auditError } = await supabase
         .from('incident_updates')
         .insert({
-          incident_id: incident.id,
+          incident_id: parseInt(incident.id),
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
           updated_by: currentUserName
         });

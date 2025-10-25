@@ -180,7 +180,14 @@ export default function SupportPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUserTickets(tickets || []);
+      setUserTickets(
+        (tickets || []).map(t => ({
+          ...t,
+          status: t.status as "open" | "in_progress" | "closed" | "resolved",
+          priority: t.priority as "low" | "medium" | "high" | "urgent",
+          category: t.category as "general" | "technical" | "billing" | "feature_request" | "bug_report",
+        }))
+      );
     } catch (error) {
       console.error('Error fetching user tickets:', error);
     }
@@ -204,7 +211,7 @@ export default function SupportPage() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setSupportMessages(messages || []);
+      setSupportMessages((messages || []) as unknown as SupportMessage[]);
     } catch (error) {
       console.error('Error fetching support messages:', error);
     }
@@ -480,7 +487,7 @@ export default function SupportPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 dark:text-blue-100">
-                    <span>{ticket.category} • Created {new Date(ticket.created_at).toLocaleDateString()}</span>
+                    <span>{ticket.category} • Created {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'Unknown'}</span>
                     <button
                       onClick={() => openTicketChat(ticket)}
                       className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"

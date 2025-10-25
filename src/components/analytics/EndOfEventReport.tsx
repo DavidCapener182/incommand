@@ -172,7 +172,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
         throw eventError
       }
 
-      setEventData(event)
+      setEventData(event as unknown as EventData)
 
       const { data: incidents, error: incidentError } = await supabase
         .from('incident_logs')
