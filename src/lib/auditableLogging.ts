@@ -103,16 +103,20 @@ export async function createImmutableLog(
         ...logData,
         logged_by_user_id: userId,
         is_amended: false,
-        timestamp: logData.time_of_occurrence // Keep for backward compatibility
+        timestamp: logData.time_of_occurrence, // Keep for backward compatibility
+        dependencies: logData.dependencies ? logData.dependencies.map(dep => parseInt(dep)) : null
       })
       .select()
       .single()
 
     if (error) throw error
 
-    return {
-      success: true,
-      log: data as AuditableIncidentLog,
+      return {
+        success: true,
+        log: {
+          ...data,
+          dependencies: data.dependencies ? data.dependencies.map(dep => dep.toString()) : undefined
+        } as AuditableIncidentLog,
       warnings: validation.warnings
     }
   } catch (error: any) {
@@ -190,14 +194,17 @@ export async function getRevisionHistory(
     const { data, error } = await supabase
       .from('incident_log_revision_history')
       .select('*')
-      .eq('incident_log_id', incidentLogId)
+      .eq('incident_log_id', parseInt(incidentLogId))
       .order('revision_number', { ascending: true })
 
     if (error) throw error
 
     return {
       success: true,
-      revisions: data as LogRevisionWithDetails[]
+      revisions: data.map(revision => ({
+        ...revision,
+        incident_log_id: revision.incident_log_id?.toString() || ''
+      })) as LogRevisionWithDetails[]
     }
   } catch (error: any) {
     return {

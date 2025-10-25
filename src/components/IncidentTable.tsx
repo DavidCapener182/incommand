@@ -203,7 +203,10 @@ export default function IncidentTable({
           status: incident.status || 'open',
           entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
           retrospective_justification: incident.retrospective_justification || undefined,
-          logged_by_user_id: incident.logged_by_user_id || undefined
+          logged_by_user_id: incident.logged_by_user_id || undefined,
+          logged_by_callsign: incident.logged_by_callsign ?? undefined,
+          is_amended: incident.is_amended ?? undefined,
+          original_entry_id: incident.original_entry_id?.toString() || undefined
         }))
       );
       setLastUpdated(new Date());
@@ -214,7 +217,10 @@ export default function IncidentTable({
             status: incident.status || 'open',
             entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
             retrospective_justification: incident.retrospective_justification || undefined,
-            logged_by_user_id: incident.logged_by_user_id || undefined
+            logged_by_user_id: incident.logged_by_user_id || undefined,
+            logged_by_callsign: incident.logged_by_callsign ?? undefined,
+            is_amended: incident.is_amended ?? undefined,
+            original_entry_id: incident.original_entry_id?.toString() || undefined
           }))
         );
       }
@@ -295,7 +301,7 @@ export default function IncidentTable({
           .single();
 
         const newEventId = eventData?.id || null;
-        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId });
+        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
         setCurrentEventId(newEventId);
       } catch (err) {
         logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
@@ -559,16 +565,18 @@ export default function IncidentTable({
       const idToShort: Record<string, string> = {};
       const idToCallsign: Record<string, string> = {};
       roles?.forEach((r) => {
-        idToShort[r.id] = r.short_code;
+        idToShort[r.id] = r.short_code || '';
         idToCallsign[r.id] = r.callsign;
       });
       const shortToName: Record<string, string> = {};
       const callsignToName: Record<string, string> = {};
       assignments?.forEach((a) => {
-        const short = idToShort[a.callsign_role_id];
-        const cs = idToCallsign[a.callsign_role_id];
-        if (short) shortToName[short.toUpperCase()] = a.assigned_name;
-        if (cs) callsignToName[cs.toUpperCase()] = a.assigned_name;
+        if (a.callsign_role_id) {
+          const short = idToShort[a.callsign_role_id];
+          const cs = idToCallsign[a.callsign_role_id];
+          if (short && a.assigned_name) shortToName[short.toUpperCase()] = a.assigned_name;
+          if (cs && a.assigned_name) callsignToName[cs.toUpperCase()] = a.assigned_name;
+        }
       });
       setCallsignAssignments(callsignToName);
       setCallsignShortToName(shortToName);
@@ -1498,10 +1506,19 @@ export default function IncidentTable({
                   const incident = incidents.find(inc => inc.id.toString() === id);
                   if (!incident) return;
 
+                  // Convert dependencies from string[] to number[] if present
+                  const processedUpdates: any = {
+                    ...updates
+                  };
+                  
+                  if (updates.dependencies) {
+                    processedUpdates.dependencies = updates.dependencies.map(dep => parseInt(dep));
+                  }
+
                   // Update the incident in the database
                   const { error: updateError } = await supabase
                     .from('incident_logs')
-                    .update(updates)
+                    .update(processedUpdates)
                     .eq('id', incident.id);
 
                   if (updateError) {

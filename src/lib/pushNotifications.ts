@@ -184,9 +184,15 @@ export class PushNotificationManager {
         browser: this.getBrowserInfo()
       };
 
+      // Convert id to string if present
+      const dataToInsert = {
+        ...subscriptionData,
+        id: subscriptionData.id?.toString()
+      };
+
       const { error } = await supabase
         .from('push_subscriptions')
-        .upsert(subscriptionData, { onConflict: 'user_id,endpoint' });
+        .upsert(dataToInsert, { onConflict: 'user_id,endpoint' });
 
       if (error) {
         throw error;

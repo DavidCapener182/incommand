@@ -145,14 +145,14 @@ class EnhancedOfflineSync {
     switch (operation.type) {
       case 'INSERT':
         const { error: insertError } = await supabase
-          .from(operation.table)
+          .from(operation.table as any)
           .insert(operation.data)
         if (insertError) throw insertError
         break
 
       case 'UPDATE':
         const { error: updateError } = await supabase
-          .from(operation.table)
+          .from(operation.table as any)
           .update(operation.data)
           .eq('id', operation.data.id)
         if (updateError) throw updateError
@@ -160,7 +160,7 @@ class EnhancedOfflineSync {
 
       case 'DELETE':
         const { error: deleteError } = await supabase
-          .from(operation.table)
+          .from(operation.table as any)
           .delete()
           .eq('id', operation.data.id)
         if (deleteError) throw deleteError

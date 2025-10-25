@@ -30,7 +30,7 @@ vi.mock('@/lib/supabase', () => ({
     })),
     channel: vi.fn(() => ({
       on: vi.fn(() => ({
-        subscribe: vi.fn((callback) => {
+        subscribe: vi.fn((callback: (status: string) => void) => {
           callback('SUBSCRIBED');
           return Promise.resolve();
         })

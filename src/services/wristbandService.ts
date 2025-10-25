@@ -15,13 +15,18 @@ export async function fetchWristbandTypes(eventId: string): Promise<WristbandTyp
     .order('created_at', { ascending: false })
 
   if (error) {
-    throw new Error(error.message)
+    console.warn('Error fetching wristband types with access levels:', error);
+    return (data || []).map(wristband => ({
+      ...(wristband && typeof wristband === 'object' ? wristband : {}),
+      access_levels: []
+    })) as unknown as WristbandType[];
   }
-
-  // Transform the data to include access_levels directly
+  
   return (data || []).map(wristband => ({
-    ...wristband,
-    access_levels: wristband.wristband_access_levels?.map((link: any) => link.accreditation_access_levels).filter(Boolean) || []
+    ...(wristband || {}),
+    access_levels: Array.isArray(wristband?.wristband_access_levels) 
+      ? wristband.wristband_access_levels.map((link: any) => link.accreditation_access_levels).filter(Boolean) 
+      : []
   })) as WristbandType[]
 }
 

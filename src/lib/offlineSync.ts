@@ -247,7 +247,7 @@ class OfflineSyncManager {
       }
 
       // Append the new photo URL
-      const currentPhotos = incidentData?.photos || [];
+      const currentPhotos = Array.isArray(incidentData?.photos) ? incidentData.photos : [];
       const updatedPhotos = [...currentPhotos, publicUrl];
 
       const { error: updateError } = await supabase

@@ -30,18 +30,7 @@ export interface ComplianceTrend {
   grade: string
 }
 
-interface IncidentLog {
-  id: string
-  time_of_occurrence?: string
-  time_logged?: string
-  entry_type?: 'contemporaneous' | 'retrospective'
-  retrospective_justification?: string
-  is_amended?: boolean
-  logged_by_user_id?: string
-  logged_by_callsign?: string
-  created_at: string
-  updated_at?: string
-}
+import { IncidentLog } from '../../types/shared'
 
 interface LogRevision {
   id: string
@@ -193,20 +182,23 @@ async function checkAmendmentJustification(
   })
 
   // Check amendments (would need to query revisions table)
-  const amendedLogs = logs.filter(log => log.is_amended)
+  const amendedLogs = logs.filter(log => log.is_amended).map(log => ({
+    ...log,
+    id: log.id.toString()
+  }))
   
   try {
     if (amendedLogs.length > 0) {
       const { data: revisions, error } = await supabase
         .from('incident_log_revisions')
         .select('incident_log_id, change_reason')
-        .in('incident_log_id', amendedLogs.map(l => l.id))
+        .in('incident_log_id', amendedLogs.map(l => parseInt(l.id)))
 
       if (!error && revisions) {
         amendedLogs.forEach(log => {
           totalRequiringJustification++
           const hasReason = revisions.some(
-            r => r.incident_log_id === log.id && r.change_reason?.trim()
+            r => r.incident_log_id === parseInt(log.id) && r.change_reason?.trim()
           )
           if (hasReason) {
             totalWithJustification++
@@ -338,11 +330,17 @@ export async function calculateComplianceMetrics(
       }
     }
 
+    // Convert logs to have string IDs for compatibility
+    const convertedLogs = logs.map(log => ({
+      ...log,
+      id: log.id.toString()
+    }))
+
     // Calculate individual metrics
-    const auditTrail = await checkAuditTrailCompleteness(logs)
-    const immutability = await checkImmutability(logs)
-    const timestamps = checkTimestampAccuracy(logs)
-    const justification = await checkAmendmentJustification(logs)
+    const auditTrail = await checkAuditTrailCompleteness(convertedLogs as any)
+    const immutability = await checkImmutability(convertedLogs as any)
+    const timestamps = checkTimestampAccuracy(convertedLogs as any)
+    const justification = await checkAmendmentJustification(convertedLogs as any)
 
     // Calculate overall compliance (weighted average)
     const overallCompliance = (

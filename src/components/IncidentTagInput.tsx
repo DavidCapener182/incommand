@@ -74,7 +74,14 @@ export default function IncidentTagInput({
         .limit(10)
 
       if (error) throw error
-      setSuggestions(data || [])
+      setSuggestions(
+        (data || []).map(tag => ({
+          ...tag,
+          category: tag.category || '',
+          color: tag.color || '',
+          description: tag.description || ''
+        }))
+      )
       setShowSuggestions(true)
     } catch (error) {
       console.error('Error loading tag suggestions:', error)

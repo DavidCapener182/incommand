@@ -114,9 +114,9 @@ export class ShiftHandoffAutomation {
       ).slice(0, 10) || []
 
       // Staff metrics
-      const staffCallsigns = new Set(staffLogs?.map(log => log.logged_by_callsign))
+      const staffCallsigns = new Set(staffLogs?.map(log => log.logged_by_callsign).filter(callsign => callsign !== null))
       const operatorActivity = Array.from(staffCallsigns).map(callsign => ({
-        callsign,
+        callsign: callsign!,
         logCount: staffLogs?.filter(log => log.logged_by_callsign === callsign).length || 0
       })).sort((a, b) => b.logCount - a.logCount)
 

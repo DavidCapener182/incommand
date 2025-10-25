@@ -550,13 +550,15 @@ export default function StaffCommandCentre() {
         const grouped: typeof groups = [];
         const areaMap: Record<string, any[]> = {};
         roles.forEach((r) => {
-          if (!areaMap[r.area]) areaMap[r.area] = [];
-          areaMap[r.area].push({
-            id: r.id,
-            callsign: r.callsign,
-            short: r.short_code,
-            position: r.position,
-          });
+          if (r.area) {
+            if (!areaMap[r.area]) areaMap[r.area] = [];
+            areaMap[r.area].push({
+              id: r.id,
+              callsign: r.callsign,
+              short: r.short_code,
+              position: r.position,
+            });
+          }
         });
         for (const area in areaMap) {
           grouped.push({ group: area, positions: areaMap[area] });
@@ -569,7 +571,9 @@ export default function StaffCommandCentre() {
         // Map assignments by callsign_role_id
         const assignMap: Record<string, string> = {};
         assignmentsData.forEach((a) => {
-          assignMap[a.callsign_role_id] = a.assigned_name;
+          if (a.callsign_role_id && a.assigned_name) {
+            assignMap[a.callsign_role_id] = a.assigned_name;
+          }
         });
         setAssignments(assignMap);
       } else {
@@ -590,7 +594,7 @@ export default function StaffCommandCentre() {
         .eq("event_id", eventId)
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
+        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
         setAllPreviousNames(names);
         // Group by first letter for better organization
         const grouped: Record<string, string[]> = {};
@@ -613,7 +617,7 @@ export default function StaffCommandCentre() {
         .select("assigned_name")
         .not("assigned_name", "is", null);
       if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name)));
+        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
         setAllPreviousNames(names);
       }
     };

@@ -42,8 +42,8 @@ jest.mock('next/server', () => {
 
 const { getServiceSupabaseClient } = require('@/lib/supabaseServer') as { getServiceSupabaseClient: jest.Mock }
 const { emailService } = require('@/lib/notifications/emailService') as { emailService: { send: jest.Mock } }
-const { POST: createAccreditation } = require('@/app/api/accreditations/route') as { POST: CreateAccreditationHandler }
-const { PATCH: completeInduction } = require('@/app/api/accreditations/[token]/route') as { PATCH: CompleteInductionHandler }
+const { POST: createAccreditation } = require('@/app/api/accreditations/route') as { POST: typeof CreateAccreditationHandler }
+const { PATCH: completeInduction } = require('@/app/api/accreditations/[token]/route') as { PATCH: typeof CompleteInductionHandler }
 
 const BASE_URL = 'https://example.com'
 

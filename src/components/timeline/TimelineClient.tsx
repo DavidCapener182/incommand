@@ -34,12 +34,14 @@ function Timeline({ incidents }: Props) {
                   <MotionDiv
                     ref={provided.innerRef}
                     {...provided.draggableProps}
-                    {...provided.dragHandleProps}
                     whileHover={{ scale: 1.02 }}
                     className="p-4 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-grab"
+                    style={provided.draggableProps.style}
                   >
-                    <p className="font-semibold text-blue-900">{incident.title}</p>
-                    <p className="text-xs text-blue-700">{incident.timestamp}</p>
+                    <div {...provided.dragHandleProps}>
+                      <p className="font-semibold text-blue-900">{incident.title}</p>
+                      <p className="text-xs text-blue-700">{incident.timestamp}</p>
+                    </div>
                   </MotionDiv>
                 )}
               </Draggable>

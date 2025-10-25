@@ -99,7 +99,7 @@ export async function broadcastIncidentSummaryUpdateByIncidentId(
     const { data: incident, error: incidentError } = await supabase
       .from('incident_logs')
       .select('event_id')
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .maybeSingle()
 
     if (incidentError || !incident?.event_id) {

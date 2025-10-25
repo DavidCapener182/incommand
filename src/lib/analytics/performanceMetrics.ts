@@ -34,19 +34,7 @@ export interface ResponseTimeDistribution {
   percentage: number
 }
 
-interface IncidentLog {
-  id: string
-  created_at: string
-  updated_at?: string
-  responded_at?: string
-  resolved_at?: string
-  is_closed: boolean
-  status: string
-  incident_type: string
-  priority?: string
-  logged_by_user_id?: string
-  logged_by_callsign?: string
-}
+import { IncidentLog } from '../../types/shared'
 
 /**
  * Calculate response time (from creation to first response)
@@ -121,7 +109,7 @@ function calculateStaffUtilization(
     
     if (!staffMap.has(log.logged_by_user_id)) {
       staffMap.set(log.logged_by_user_id, {
-        callsign: log.logged_by_callsign,
+        callsign: log.logged_by_callsign || 'Unknown',
         logs: [],
         totalHandlingTime: 0
       })
@@ -278,13 +266,20 @@ export async function calculatePerformanceMetrics(
     // Filter out Attendance incidents from operational metrics
     const operationalLogs = logs.filter(log => log.incident_type !== 'Attendance')
 
+    // Convert logs to match IncidentLog interface
+    const convertedLogs = operationalLogs.map(log => ({
+      ...log,
+      id: log.id.toString(),
+      responded_at: log.responded_at ?? undefined
+    }))
+
     // Calculate response times (excluding Attendance incidents)
-    const responseTimes = operationalLogs
-      .map(log => calculateResponseTime(log))
+    const responseTimes = convertedLogs
+      .map(log => calculateResponseTime(log as any))
       .filter((time): time is number => time !== null)
     
-    const resolutionTimes = operationalLogs
-      .map(log => calculateResolutionTime(log))
+    const resolutionTimes = convertedLogs
+      .map(log => calculateResolutionTime(log as any))
       .filter((time): time is number => time !== null)
 
     const averageResponseTime = responseTimes.length > 0

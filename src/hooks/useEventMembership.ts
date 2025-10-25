@@ -76,7 +76,11 @@ export function useEventMembership() {
           if (membershipData.expires_at && new Date(membershipData.expires_at) < new Date()) {
             setMembership(null);
           } else {
-            setMembership(membershipData);
+            setMembership({
+              ...membershipData,
+              is_temporary: membershipData.is_temporary ?? false,
+              status: membershipData.status as 'active' | 'revoked' | 'expired'
+            });
           }
         }
       } catch (err) {

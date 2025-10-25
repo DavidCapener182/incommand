@@ -50,7 +50,7 @@ export interface AuditableIncidentLog {
   logged_by_user_id?: string          // User who created the log
   logged_by_callsign?: string         // Their callsign at time of logging
   is_amended: boolean | null           // Has this log been amended?
-  original_entry_id?: string          // Reference to original if this is revision
+  original_entry_id?: number | null   // Reference to original if this is revision
 }
 
 /**

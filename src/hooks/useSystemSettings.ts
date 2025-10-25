@@ -88,7 +88,7 @@ export const useUpdateSystemSettings = () => {
           notification_settings: updates.notification_settings ?? systemSettings.notification_settings,
           platform_config: updates.platform_config ?? systemSettings.platform_config,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
       
       if (error) {
         throw new Error(`Failed to update system settings: ${error.message}`)

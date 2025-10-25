@@ -208,14 +208,12 @@ async function logAIUsage(operation: string, postsAnalyzed: number, tokensUsed: 
     const { error } = await supabase
       .from('ai_usage_logs')
       .insert({
-        operation,
+        endpoint: 'social_media_analysis',
+        model: source === 'openai' ? 'gpt-4' : 'ollama-model',
         tokens_used: tokensUsed,
-        metadata: {
-          posts_analyzed: postsAnalyzed,
-          timestamp: new Date().toISOString(),
-          ai_source: source,
-          ...extraMetadata,
-        },
+        cost_usd: null,
+        event_id: null,
+        user_id: null,
       });
 
     if (error) {

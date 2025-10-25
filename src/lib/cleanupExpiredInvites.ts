@@ -42,10 +42,11 @@ export async function cleanupExpiredInvites() {
     // Log cleanup activity
     if (expiredInvites && expiredInvites.length > 0) {
       await supabase.from('audit_log').insert({
-        user_id: null, // System action
+        performed_by: null, // System action
         action: 'cleanup_expired_invites',
-        resource_type: 'system',
-        resource_id: null,
+        action_type: 'system',
+        record_id: 'system',
+        table_name: 'system',
         details: {
           expired_invites_count: expiredInvites.length,
           expired_members_count: expiredMembers?.length || 0
@@ -136,10 +137,11 @@ export async function revokeInviteAndSessions(inviteId: string, eventId: string)
 
     // Log revocation
     await supabase.from('audit_log').insert({
-      user_id: null, // System action
+      performed_by: null, // System action
       action: 'revoke_invite_and_sessions',
-      resource_type: 'event_invite',
-      resource_id: inviteId,
+      action_type: 'event_invite',
+      record_id: inviteId,
+      table_name: 'event_invites',
       details: {
         event_id: eventId,
         affected_members_count: members?.length || 0

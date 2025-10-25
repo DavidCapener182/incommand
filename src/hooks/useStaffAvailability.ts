@@ -304,9 +304,12 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
         // Apply incremental updates
         const updatedData = [...allStaffData];
         changes?.forEach(change => {
-          const index = updatedData.findIndex(staff => staff.id === change.id);
-          if (index !== -1) {
-            updatedData[index] = { ...updatedData[index], ...change };
+          if (change && typeof change === 'object' && 'id' in change && !('code' in change)) {
+            const changeWithId = change as { id: string } & Record<string, any>;
+            const index = updatedData.findIndex(staff => staff.id === changeWithId.id);
+            if (index !== -1) {
+              updatedData[index] = { ...updatedData[index], ...changeWithId };
+            }
           }
         });
 

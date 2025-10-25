@@ -28,24 +28,7 @@ export interface LogQualityTrend {
   logCount: number
 }
 
-interface IncidentLog {
-  id: string
-  time_of_occurrence?: string
-  time_logged?: string
-  entry_type?: 'contemporaneous' | 'retrospective'
-  headline?: string
-  source?: string
-  facts_observed?: string
-  actions_taken?: string
-  outcome?: string
-  occurrence?: string
-  action_taken?: string
-  incident_type?: string
-  is_amended?: boolean
-  retrospective_justification?: string
-  logged_by_user_id?: string
-  created_at: string
-}
+import { IncidentLog } from '../../types/shared'
 
 /**
  * Calculate completeness score for a log entry
@@ -66,8 +49,7 @@ function calculateCompletenessScore(log: IncidentLog): number {
     'headline',
     'source',
     'facts_observed',
-    'actions_taken',
-    'outcome'
+    'action_taken'
   ]
 
   // Check if structured template is used
@@ -80,8 +62,8 @@ function calculateCompletenessScore(log: IncidentLog): number {
     if (log.headline?.trim()) filledCount++
     if (log.source?.trim()) filledCount++
     if (log.facts_observed?.trim()) filledCount++
-    if (log.actions_taken?.trim()) filledCount++
-    if (log.outcome?.trim()) filledCount++
+    if (log.action_taken?.trim()) filledCount++ // Use action_taken instead of actions_taken
+    // Note: outcome field doesn't exist in database schema, removing from scoring
 
     return (filledCount / totalFields) * 100
   }
@@ -261,18 +243,25 @@ export async function calculateLogQualityMetrics(
       }
     }
 
-    // Calculate individual scores
-    const completenessScores = logs.map(log => calculateCompletenessScore(log))
-    const timelinessScores = logs.map(log => calculateTimelinessScore(log))
-    const factualScores = logs.map(log => calculateFactualLanguageScore(log))
+    // Convert logs to match IncidentLog interface
+    const convertedLogs = logs.map(log => ({
+      ...log,
+      id: log.id.toString(),
+      entry_type: log.entry_type as 'contemporaneous' | 'retrospective' | undefined
+    }))
 
-    const avgCompleteness = completenessScores.reduce((a, b) => a + b, 0) / logs.length
-    const avgTimeliness = timelinessScores.reduce((a, b) => a + b, 0) / logs.length
-    const avgFactual = factualScores.reduce((a, b) => a + b, 0) / logs.length
+    // Calculate individual scores
+    const completenessScores = convertedLogs.map(log => calculateCompletenessScore(log as any))
+    const timelinessScores = convertedLogs.map(log => calculateTimelinessScore(log as any))
+    const factualScores = convertedLogs.map(log => calculateFactualLanguageScore(log as any))
+
+    const avgCompleteness = completenessScores.reduce((a, b) => a + b, 0) / convertedLogs.length
+    const avgTimeliness = timelinessScores.reduce((a, b) => a + b, 0) / convertedLogs.length
+    const avgFactual = factualScores.reduce((a, b) => a + b, 0) / convertedLogs.length
 
     // Calculate rates
-    const amendmentRate = (logs.filter(log => log.is_amended).length / logs.length) * 100
-    const retrospectiveRate = (logs.filter(log => log.entry_type === 'retrospective').length / logs.length) * 100
+    const amendmentRate = (convertedLogs.filter(log => log.is_amended).length / convertedLogs.length) * 100
+    const retrospectiveRate = (convertedLogs.filter(log => log.entry_type === 'retrospective').length / convertedLogs.length) * 100
 
     // Overall score (weighted average)
     const overallScore = (
@@ -355,9 +344,9 @@ export function calculateSingleLogQuality(log: IncidentLog): {
   timeliness: number
   factualLanguage: number
 } {
-  const completeness = calculateCompletenessScore(log)
-  const timeliness = calculateTimelinessScore(log)
-  const factualLanguage = calculateFactualLanguageScore(log)
+  const completeness = calculateCompletenessScore(log as any)
+  const timeliness = calculateTimelinessScore(log as any)
+  const factualLanguage = calculateFactualLanguageScore(log as any)
 
   const score = (
     completeness * 0.35 +
@@ -414,7 +403,7 @@ export async function getTopPerformingOperators(
       if (!userMap.has(log.logged_by_user_id)) {
         userMap.set(log.logged_by_user_id, { 
           logs: [], 
-          callsign: log.logged_by_callsign 
+          callsign: log.logged_by_callsign ?? undefined 
         })
       }
       userMap.get(log.logged_by_user_id)!.logs.push(log)

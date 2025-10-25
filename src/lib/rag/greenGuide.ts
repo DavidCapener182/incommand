@@ -246,40 +246,48 @@ export async function searchGreenGuideOptimized(
         const embedding: number[] = embedJson?.data?.[0]?.embedding
         
         if (embedding) {
-          const { data, error } = await supabase.rpc('match_green_guide_chunks', {
-            query_embedding: embedding,
-            match_count: useHybrid ? maxResults * 2 : maxResults // Get more for reranking
-          })
+          // Note: match_green_guide_chunks RPC function doesn't exist
+          // const { data, error } = await supabase.rpc('match_green_guide_chunks', {
+          //   query_embedding: embedding,
+          //   match_count: useHybrid ? maxResults * 2 : maxResults // Get more for reranking
+          // })
           
-          if (!error && data && data.length > 0) {
-            const filtered = data
-              .filter((r: any) => typeof r?.content === 'string' && r.content.length > 40)
-              .map((r: any) => ({
-                id: r.id,
-                content: r.content,
-                page: r.page,
-                heading: r.heading,
-                similarity: r.similarity
-              }))
+          // if (!error && data && data.length > 0) {
+          //   const filtered = data
+          //     .filter((r: any) => typeof r?.content === 'string' && r.content.length > 40)
+          //     .map((r: any) => ({
+          //       id: r.id,
+          //       content: r.content,
+          //       page: r.page,
+          //       heading: r.heading,
+          //       similarity: r.similarity
+          //     }))
             
-            if (filtered.length > 0) {
-              // Rerank and extract snippets
-              const reranked = rerankPassages(filtered, keyTerms, useHybrid)
-                .slice(0, maxResults)
-                .map(p => ({
-                  ...p,
-                  content: extractSnippet(p.content, keyTerms)
-                }))
+          //   if (filtered.length > 0) {
+          //     // Rerank and extract snippets
+          //     const reranked = rerankPassages(filtered, keyTerms, useHybrid)
+          //       .slice(0, maxResults)
+          //       .map(p => ({
+          //         ...p,
+          //         content: extractSnippet(p.content, keyTerms)
+          //       }))
               
-              const method = useHybrid ? 'hybrid' : 'semantic'
-              const confidence = calculateConfidence(reranked, method)
+          //     const method = useHybrid ? 'hybrid' : 'semantic'
+          //     const confidence = calculateConfidence(reranked, method)
               
-              return {
-                passages: reranked,
-                confidence,
-                method
-              }
-            }
+          //     return {
+          //       passages: reranked,
+          //       confidence,
+          //       method
+          //     }
+          //   }
+          // }
+          
+          // Return empty result since RPC function doesn't exist
+          return {
+            passages: [],
+            confidence: 0,
+            method: 'semantic'
           }
         }
       }

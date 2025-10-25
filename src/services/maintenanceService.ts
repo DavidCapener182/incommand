@@ -21,6 +21,7 @@ interface CreateWorkOrderPayload {
 interface CreateAssetPayload {
   asset_tag: string
   name: string
+  asset_type: string
   description?: string
   location?: string
   status?: string
@@ -30,6 +31,7 @@ interface CreateAssetPayload {
 
 interface CreateSchedulePayload {
   asset_id: string
+  schedule_name: string
   frequency_days: number
   next_due_date?: string | null
   webhook_endpoint?: string | null

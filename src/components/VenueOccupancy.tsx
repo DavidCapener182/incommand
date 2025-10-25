@@ -98,7 +98,9 @@ export default function VenueOccupancy({ currentEventId }: Props) {
         
         let newExpected = 0
         if (eventData?.expected_attendance) {
-          newExpected = parseInt(eventData.expected_attendance)
+          newExpected = typeof eventData.expected_attendance === 'string' 
+            ? parseInt(eventData.expected_attendance) 
+            : eventData.expected_attendance
           setExpectedAttendance(newExpected)
         } else {
           setExpectedAttendance(1000) // Default fallback

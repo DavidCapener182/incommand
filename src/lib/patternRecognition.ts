@@ -543,19 +543,18 @@ export class PatternRecognitionEngine {
     try {
       const patternData = patterns.map(pattern => ({
         event_id: this.eventId,
-        pattern_type: pattern.patternType,
-        confidence: pattern.confidence,
+        pattern_name: pattern.patternType,
+        severity_level: Math.round(pattern.confidence * 10), // Convert 0-1 to 1-10 scale
         description: pattern.description,
-        factors: pattern.factors,
-        impact: pattern.impact,
-        recommendations: pattern.recommendations,
-        detected_at: pattern.detectedAt.toISOString(),
-        last_updated: pattern.lastUpdated.toISOString()
+        conditions: pattern.factors as any, // Cast to Json type
+        is_active: true,
+        created_at: pattern.detectedAt.toISOString(),
+        updated_at: pattern.lastUpdated.toISOString()
       }));
 
       const { error } = await supabase
         .from('incident_patterns')
-        .upsert(patternData, { onConflict: 'event_id,pattern_type' });
+        .upsert(patternData, { onConflict: 'event_id,pattern_name' });
 
       if (error) throw error;
 

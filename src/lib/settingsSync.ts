@@ -229,20 +229,20 @@ async function attemptSyncWithRetry(
           .from('user_preferences')
           .insert({
             user_id: userId,
-            ...preferences,
+            ...preferences as any,
             updated_at: new Date().toISOString()
           })
         if (insertError) throw insertError
         return { success: true, conflicts: [] }
       }
 
-      const conflicts = await detectConflicts(userId, preferences as UserPreferences, remotePreferences)
+      const conflicts = await detectConflicts(userId, preferences as UserPreferences, remotePreferences as unknown as UserPreferences)
       if (conflicts.length === 0) {
         const { error: updateError } = await supabase
           .from('user_preferences')
           .upsert({
             user_id: userId,
-            ...preferences,
+            ...preferences as any,
             updated_at: new Date().toISOString()
           })
         if (updateError) throw updateError
@@ -254,7 +254,7 @@ async function attemptSyncWithRetry(
         .from('user_preferences')
         .upsert({
           user_id: userId,
-          ...resolvedPreferences,
+          ...resolvedPreferences as any,
           updated_at: new Date().toISOString()
         })
       if (saveError) throw saveError
@@ -512,7 +512,7 @@ export async function getSyncStatus(userId: string): Promise<SyncStatus> {
     
     return {
       isSyncing,
-      lastSyncTime: lastSync?.created_at || null,
+      lastSyncTime: lastSync && 'timestamp' in lastSync ? (lastSync.timestamp as string) : null,
       conflicts: [],
       errors: []
     }
@@ -563,7 +563,8 @@ export async function batchSyncSettings(
     
     // Prepare batch update
     const batchUpdate: Partial<UserPreferences> = {
-      ...currentPreferences,
+      ...(currentPreferences as any),
+      user_id: currentPreferences?.user_id || userId, // Ensure user_id is not null
       updated_at: new Date().toISOString()
     }
     
@@ -592,7 +593,7 @@ export async function batchSyncSettings(
       .from('user_preferences')
       .upsert({
         user_id: userId,
-        ...resolvedPreferences,
+        ...resolvedPreferences as any,
         updated_at: new Date().toISOString()
       })
     

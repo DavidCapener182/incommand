@@ -131,10 +131,10 @@ export async function getEscalationConfig(
     return {
       incident_type: config.incident_type,
       priority_level: config.priority_level,
-      escalation_timeout_minutes: config.escalation_timeout_minutes,
-      escalation_levels: config.escalation_levels,
+      escalation_timeout_minutes: config.escalation_timeout_minutes || 0,
+      escalation_levels: config.escalation_levels || 0,
       supervisor_roles: config.supervisor_roles || [],
-      auto_escalate: config.auto_escalate
+      auto_escalate: config.auto_escalate || false
     };
   } catch (error) {
     console.error('Error getting escalation config:', error);
@@ -172,10 +172,10 @@ export async function getSupervisors(
 
     return supervisors?.map(supervisor => ({
       id: supervisor.id,
-      name: supervisor.name,
-      role: supervisor.role,
-      callsign: supervisor.callsign,
-      contact_methods: supervisor.contact_methods || []
+      name: supervisor.name || 'Unknown',
+      role: supervisor.role || 'Unknown',
+      callsign: supervisor.callsign || 'Unknown',
+      contact_methods: (supervisor.contact_methods as any) || []
     })) || [];
 
   } catch (error) {
@@ -204,9 +204,9 @@ export async function checkEscalations(): Promise<string[]> {
     const escalatedIncidentIds: string[] = [];
     
     for (const incident of incidents || []) {
-      const escalated = await escalateIncident(incident.id);
+      const escalated = await escalateIncident(incident.id.toString());
       if (escalated) {
-        escalatedIncidentIds.push(incident.id);
+        escalatedIncidentIds.push(incident.id.toString());
       }
     }
 
@@ -229,7 +229,7 @@ export async function escalateIncident(incidentId: string): Promise<boolean> {
         *,
         events!inner(id, name)
       `)
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single();
 
     if (incidentError || !incident) {
@@ -245,13 +245,13 @@ export async function escalateIncident(incidentId: string): Promise<boolean> {
     }
 
     // Check if incident can escalate further
-    if (incident.escalation_level >= config.escalation_levels) {
+    if ((incident.escalation_level || 0) >= config.escalation_levels) {
       console.log(`Incident ${incidentId} already at maximum escalation level`);
       return false;
     }
 
     // Calculate new escalation level
-    const newEscalationLevel = incident.escalation_level + 1;
+    const newEscalationLevel = (incident.escalation_level || 0) + 1;
 
     // Get supervisors for notification
     const supervisors = await getSupervisors(incident.event_id, config.supervisor_roles);
@@ -264,7 +264,7 @@ export async function escalateIncident(incidentId: string): Promise<boolean> {
         escalated: true,
         escalation_notes: `Auto-escalated to level ${newEscalationLevel} at ${new Date().toISOString()}`
       })
-      .eq('id', incidentId);
+      .eq('id', parseInt(incidentId));
 
     if (updateError) {
       console.error('Error updating incident escalation:', updateError);
@@ -275,11 +275,11 @@ export async function escalateIncident(incidentId: string): Promise<boolean> {
     const { error: logError } = await supabase
       .from('incident_escalations')
       .insert({
-        incident_id: incidentId,
+        incident_id: parseInt(incidentId),
         escalation_level: newEscalationLevel,
         escalated_by: null, // Auto-escalation
         supervisor_notified: supervisors.length > 0,
-        notes: `Auto-escalated from level ${incident.escalation_level} to ${newEscalationLevel}`
+        notes: `Auto-escalated from level ${incident.escalation_level || 0} to ${newEscalationLevel}`
       });
 
     if (logError) {
@@ -293,7 +293,7 @@ export async function escalateIncident(incidentId: string): Promise<boolean> {
         escalation_level: newEscalationLevel,
         incident_type: incident.incident_type,
         priority: incident.priority,
-        description: incident.description,
+        description: incident.occurrence || incident.headline || 'No description available',
         assigned_staff: incident.assigned_staff_ids || [],
         supervisors,
         escalation_time: new Date()
@@ -586,7 +586,7 @@ async function sendDatabaseNotification(notification: EscalationNotification): P
       supabase
         .from('notifications')
         .insert({
-          staff_id: supervisor.id,
+          user_id: supervisor.id,
           title: `Incident Escalation - Level ${notification.escalation_level}`,
           message: `${notification.incident_type} incident requires immediate attention`,
           type: 'escalation',
@@ -786,14 +786,11 @@ async function triggerEmergencyProcedures(
 
     // Log emergency event
     const { error: logError } = await supabase
-      .from('emergency_logs')
+      .from('incident_escalations')
       .insert({
-        incident_id: incidentId,
-        event_id: eventId,
+        incident_id: parseInt(incidentId),
         escalation_level: escalationLevel,
-        emergency_type: 'notification_failure',
-        triggered_at: new Date().toISOString(),
-        status: 'active',
+        escalated_at: new Date().toISOString(),
         notes: 'All notification methods failed. Emergency procedures activated.'
       });
 
@@ -836,7 +833,7 @@ async function contactEmergencyContacts(incidentId: string, eventId: string): Pr
         const contactMethods = ['phone', 'email', 'sms'];
         
         for (const method of contactMethods) {
-          if (contact[method]) {
+          if ((contact as any)[method]) {
             const success = await contactEmergencyContact(contact, method, incidentId);
             if (success) break; // Stop if one method succeeds
           }
@@ -931,7 +928,7 @@ export async function getEscalationHistory(incidentId: string): Promise<Escalati
         *,
         staff:escalated_by(id, name, callsign)
       `)
-      .eq('incident_id', incidentId)
+      .eq('incident_id', parseInt(incidentId))
       .order('escalated_at', { ascending: false });
 
     if (error) {
@@ -941,14 +938,14 @@ export async function getEscalationHistory(incidentId: string): Promise<Escalati
 
     return escalations?.map(escalation => ({
       id: escalation.id,
-      incident_id: escalation.incident_id,
+      incident_id: escalation.incident_id?.toString() || '',
       escalation_level: escalation.escalation_level,
-      escalated_at: new Date(escalation.escalated_at),
+      escalated_at: escalation.escalated_at ? new Date(escalation.escalated_at) : new Date(),
       escalated_by: escalation.escalated_by,
-      supervisor_notified: escalation.supervisor_notified,
-      resolution_time: escalation.resolution_time,
+      supervisor_notified: escalation.supervisor_notified || false,
+      resolution_time: escalation.resolution_time?.toString(),
       notes: escalation.notes
-    })) || [];
+    } as EscalationEvent)) || [];
 
   } catch (error) {
     console.error('Error in getEscalationHistory:', error);
@@ -967,7 +964,7 @@ export async function pauseEscalationTimer(incidentId: string, pausedBy: string)
         escalate_at: null, // Remove escalation time
         escalation_notes: `Escalation paused by ${pausedBy} at ${new Date().toISOString()}`
       })
-      .eq('id', incidentId);
+      .eq('id', parseInt(incidentId));
 
     if (error) {
       console.error('Error pausing escalation timer:', error);
@@ -994,7 +991,7 @@ export async function resumeEscalationTimer(
     const { data: incident, error: incidentError } = await supabase
       .from('incident_logs')
       .select('incident_type, priority')
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single();
 
     if (incidentError || !incident) {
@@ -1016,7 +1013,7 @@ export async function resumeEscalationTimer(
         escalated: false,
         escalation_notes: `Escalation resumed by ${resumedBy} at ${new Date().toISOString()}`
       })
-      .eq('id', incidentId);
+      .eq('id', parseInt(incidentId));
 
     if (error) {
       console.error('Error resuming escalation timer:', error);
@@ -1069,12 +1066,16 @@ export async function getEscalationStats(eventId: string): Promise<{
         (escalationByLevel[escalation.escalation_level] || 0) + 1;
 
       // Count by type
-      const incidentType = escalation.incident_logs?.incident_type || 'unknown';
+      const incidentType = (escalation as any).incident_logs 
+        ? (escalation as any).incident_logs.incident_type 
+        : 'unknown';
       escalationByType[incidentType] = (escalationByType[incidentType] || 0) + 1;
 
       // Calculate response time if available
       if (escalation.resolution_time) {
-        const responseMinutes = parseInt(escalation.resolution_time);
+        const responseMinutes = typeof escalation.resolution_time === 'string' 
+          ? parseInt(escalation.resolution_time) 
+          : escalation.resolution_time;
         if (!isNaN(responseMinutes)) {
           totalResponseTime += responseMinutes;
           responseTimeCount++;

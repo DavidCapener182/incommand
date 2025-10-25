@@ -299,6 +299,7 @@ export default function MaintenancePage() {
       const payload: CreateAssetPayload = {
         asset_tag: assetForm.asset_tag.trim(),
         name: assetForm.name.trim(),
+        asset_type: 'equipment', // Default asset type
         status: assetForm.status,
         description: assetForm.description.trim() || undefined,
         location: assetForm.location.trim() || undefined,
@@ -344,6 +345,7 @@ export default function MaintenancePage() {
 
       const payload: CreateSchedulePayload = {
         asset_id: scheduleForm.asset_id,
+        schedule_name: `Maintenance for ${assets.find(a => a.id === scheduleForm.asset_id)?.name || 'Asset'}`,
         frequency_days: Number(scheduleForm.frequency_days) || 0,
         next_due_date: scheduleForm.next_due_date || null,
         webhook_endpoint: scheduleForm.webhook_endpoint || null,

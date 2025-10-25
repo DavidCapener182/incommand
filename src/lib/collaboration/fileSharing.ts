@@ -148,7 +148,7 @@ export class FileSharing {
         status: 'complete'
       })
 
-      return fileRecord as SharedFile
+      return fileRecord as unknown as SharedFile
     } catch (error: any) {
       console.error('File upload error:', error)
       
@@ -180,14 +180,14 @@ export class FileSharing {
       if (error) throw error
 
       // Check permissions
-      if (!file.is_public && !file.shared_with.includes(userId)) {
+      if (!file.is_public && !file.shared_with?.includes(userId)) {
         throw new Error('Access denied')
       }
 
       // Increment download count
       await supabase
         .from('shared_files')
-        .update({ download_count: file.download_count + 1 })
+        .update({ download_count: (file.download_count || 0) + 1 })
         .eq('id', fileId)
 
       // Trigger download
@@ -262,7 +262,7 @@ export class FileSharing {
       if (error) throw error
 
       // Filter by permissions
-      let files = data as SharedFile[]
+      let files = data as unknown as SharedFile[]
       if (filters.userId) {
         files = files.filter(file =>
           file.isPublic ||

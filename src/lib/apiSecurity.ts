@@ -46,7 +46,7 @@ export async function secureApiHandler(
       )
     }
     
-    if (profile.status !== 'active') {
+    if (profile && 'status' in profile && profile.status !== 'active') {
       return NextResponse.json(
         { error: 'Account is not active' }, 
         { status: 403 }
@@ -126,7 +126,7 @@ export function validateRequestBody<T>(body: any, schema?: any): T {
   if (schema) {
     const result = schema.safeParse(sanitized)
     if (!result.success) {
-      throw new Error(`Invalid request data: ${result.error.errors.map(e => e.message).join(', ')}`)
+      throw new Error(`Invalid request data: ${result.error.errors.map((e: any) => e.message).join(', ')}`)
     }
     return result.data
   }

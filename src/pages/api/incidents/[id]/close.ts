@@ -27,7 +27,7 @@ export async function POST(
     const { data: incident, error: fetchError } = await supabase
       .from('incident_logs')
       .select(INCIDENT_FIELDS)
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single();
 
     if (fetchError || !incident) {
@@ -63,7 +63,7 @@ export async function POST(
     const { data: updatedIncident, error: updateError } = await supabase
       .from('incident_logs')
       .update(updateData)
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .select(INCIDENT_FIELDS)
       .single();
 
@@ -80,25 +80,23 @@ export async function POST(
       .from('audit_logs')
       .insert({
         action: 'incident_closed',
+        action_type: 'update',
         table_name: 'incident_logs',
         record_id: incidentId,
-        user_id: closed_by || 'system',
+        performed_by: closed_by || 'system',
         details: {
           resolution_notes,
           resolution_time: updateData.resolved_at
         },
-        timestamp: new Date().toISOString()
+        created_at: new Date().toISOString()
       });
 
     // Clear any pending escalation timers for this incident
+    // Clear any pending escalation timers for this incident
     await supabase
       .from('escalation_timers')
-      .update({ 
-        is_active: false, 
-        resolved_at: new Date().toISOString() 
-      })
-      .eq('incident_id', incidentId)
-      .eq('is_active', true);
+      .delete()
+      .eq('incident_id', parseInt(incidentId));
 
     // Notify relevant supervisors of the closure (if escalation system is active)
     if (incident.escalation_level) {
@@ -140,7 +138,7 @@ export async function GET(
     const { data: incident, error } = await supabase
       .from('incident_logs')
       .select(INCIDENT_FIELDS)
-      .eq('id', incidentId)
+      .eq('id', parseInt(incidentId))
       .single();
 
     if (error || !incident) {

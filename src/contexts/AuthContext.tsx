@@ -104,7 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadSystemSettings = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .rpc('get_system_settings')
+        .from('system_settings')
+        .select('*')
         .single()
 
       if (error) {

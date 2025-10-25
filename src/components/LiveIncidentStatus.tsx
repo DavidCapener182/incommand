@@ -172,7 +172,11 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('Latest open incident:', latestOpen);
 
       if (latestOpen) {
-        setCurrentIncident(latestOpen);
+        setCurrentIncident({
+          ...latestOpen,
+          id: latestOpen.id.toString(),
+          status: latestOpen.status || 'open'
+        });
       } else {
         setCurrentIncident(null);
       }
@@ -229,7 +233,11 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('Latest open incident:', latestOpen);
 
       if (latestOpen) {
-        setCurrentIncident(latestOpen);
+        setCurrentIncident({
+          ...latestOpen,
+          id: latestOpen.id.toString(),
+          status: latestOpen.status || 'open'
+        });
       } else {
         setCurrentIncident(null);
       }

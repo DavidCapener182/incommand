@@ -253,15 +253,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function logAIUsage(operation: string, tokensUsed: number, metadata: Record<string, any>) {
   try {
+    const supabase = getServiceClient();
     const { error } = await supabase
       .from('ai_usage_logs')
       .insert({
-        operation,
+        endpoint: 'debrief_summary_generation',
+        model: 'gpt-4',
         tokens_used: tokensUsed,
-        metadata: {
-          ...metadata,
-          timestamp: new Date().toISOString(),
-        },
+        cost_usd: null,
+        event_id: null,
+        user_id: null
       });
     if (error) {
       console.error('Error logging AI usage:', error);

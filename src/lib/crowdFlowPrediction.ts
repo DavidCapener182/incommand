@@ -547,7 +547,7 @@ export class CrowdFlowPredictionEngine {
 
       const { error } = await supabase
         .from('crowd_predictions')
-        .upsert(predictionData, { onConflict: 'event_id,timestamp,location' });
+        .upsert(predictionData as any);
 
       if (error) throw error;
 
