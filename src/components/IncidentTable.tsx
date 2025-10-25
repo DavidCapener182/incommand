@@ -202,6 +202,7 @@ export default function IncidentTable({
           ...incident,
           status: incident.status || 'open',
           entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+          logged_by_callsign: incident.logged_by_callsign ?? undefined,
           retrospective_justification: incident.retrospective_justification || undefined,
           logged_by_user_id: incident.logged_by_user_id || undefined
         }))
@@ -213,6 +214,7 @@ export default function IncidentTable({
             ...incident,
             status: incident.status || 'open',
             entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+            logged_by_callsign: incident.logged_by_callsign ?? undefined,
             retrospective_justification: incident.retrospective_justification || undefined,
             logged_by_user_id: incident.logged_by_user_id || undefined
           }))
