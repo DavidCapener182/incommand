@@ -18,16 +18,22 @@ type ScheduledNotification = {
   id: string;
   user_id: string;
   template_id?: string;
-  schedule_type: 'one_time' | 'recurring' | 'conditional';
+  schedule_type?: 'one_time' | 'recurring' | 'conditional';
   cron_expression?: string;
   scheduled_at?: string;
   next_run_at?: string;
-  status: 'pending' | 'sent' | 'failed' | 'cancelled';
-  variables: Record<string, any>;
-  retry_count: number;
-  max_retries: number;
-  created_at: string;
-  updated_at: string;
+  status?: 'pending' | 'sent' | 'failed' | 'cancelled';
+  variables?: Record<string, any>;
+  retry_count?: number;
+  max_retries?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Additional fields that may come from database
+  body?: string | null;
+  data?: any;
+  delivered_at?: string | null;
+  error_message?: string | null;
+  incident_id?: number | null;
   // UI-only fields
   title?: string;
   message?: string;
@@ -81,7 +87,30 @@ export default function NotificationSchedulerPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setScheduledNotifications(data || []);
+      
+      // Transform the data to match our ScheduledNotification type
+      const transformedData = (data || []).map((item: any) => ({
+        id: item.id,
+        user_id: item.user_id,
+        template_id: item.template_id,
+        schedule_type: item.schedule_type || 'one_time',
+        cron_expression: item.cron_expression,
+        scheduled_at: item.scheduled_at,
+        next_run_at: item.next_run_at,
+        status: item.status || 'pending',
+        variables: item.variables || {},
+        retry_count: item.retry_count || 0,
+        max_retries: item.max_retries || 3,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        body: item.body,
+        data: item.data,
+        delivered_at: item.delivered_at,
+        error_message: item.error_message,
+        incident_id: item.incident_id,
+      }));
+      
+      setScheduledNotifications(transformedData);
     } catch (error) {
       console.error('Error loading scheduled notifications:', error);
     }
@@ -89,13 +118,9 @@ export default function NotificationSchedulerPage() {
 
   const loadNotificationQueue = async () => {
     try {
-      const { data, error } = await supabase
-        .from('notification_queue')
-        .select('*')
-        .order('scheduledFor', { ascending: false });
-
-      if (error) throw error;
-      setNotificationQueue(data || []);
+      // TODO: Implement notification queue when table is available
+      // For now, set empty array
+      setNotificationQueue([]);
     } catch (error) {
       console.error('Error loading notification queue:', error);
     }
@@ -130,7 +155,7 @@ export default function NotificationSchedulerPage() {
     
     try {
       const { data, error } = await (supabase as any)
-        .from('scheduled_notifications')
+        .from('notification_logs')
         .insert([{
           user_id: currentUserId,
           schedule_type: 'recurring',
@@ -161,7 +186,7 @@ export default function NotificationSchedulerPage() {
   const handleUpdateNotification = async (id: string) => {
     try {
       const { error } = await (supabase as any)
-        .from('scheduled_notifications')
+        .from('notification_logs')
         .update({
           cron_expression: formData.cronExpression || null,
           variables: { title: formData.title, message: formData.message },
@@ -194,7 +219,7 @@ export default function NotificationSchedulerPage() {
   const handleDeleteNotification = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('scheduled_notifications')
+        .from('notification_logs')
         .delete()
         .eq('id', id);
 
@@ -209,7 +234,7 @@ export default function NotificationSchedulerPage() {
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
       const { error } = await (supabase as any)
-        .from('scheduled_notifications')
+        .from('notification_logs')
         .update({ status: isActive ? 'cancelled' : 'pending' })
         .eq('id', id);
 

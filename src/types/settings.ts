@@ -176,17 +176,23 @@ export interface NotificationTemplate {
 export interface ScheduledNotification {
   id: string;
   user_id: string;
-  template_id: string;
-  schedule_type: 'one_time' | 'recurring' | 'conditional';
+  template_id?: string;
+  schedule_type?: 'one_time' | 'recurring' | 'conditional';
   cron_expression?: string;
   scheduled_at?: string;
   next_run_at?: string;
-  status: 'pending' | 'sent' | 'failed' | 'cancelled';
-  variables: Record<string, any>;
-  retry_count: number;
-  max_retries: number;
-  created_at: string;
-  updated_at: string;
+  status?: 'pending' | 'sent' | 'failed' | 'cancelled';
+  variables?: Record<string, any>;
+  retry_count?: number;
+  max_retries?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Additional fields that may come from database
+  body?: string | null;
+  data?: any;
+  delivered_at?: string | null;
+  error_message?: string | null;
+  incident_id?: number | null;
 }
 
 export interface SettingsAuditLog {
