@@ -358,7 +358,7 @@ export default function Navigation() {
                           </li>
                           <li>
                             <NavigationMenuLink asChild>
-                              <Link href="/reports" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                              <Link href="/analytics?tab=end-of-event" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
                                 <div className="text-sm font-medium tracking-tight leading-relaxed text-white">End of Event Report</div>
                                 <div className="text-xs text-white/80 leading-relaxed">Generate comprehensive event reports.</div>
                               </Link>
@@ -656,7 +656,7 @@ export default function Navigation() {
                     Analytics
                   </Link>
                   <Link 
-                    href="/reports" 
+                    href="/analytics?tab=end-of-event" 
                     className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
                     onClick={() => setMobileMenuOpen(false)}
                   >

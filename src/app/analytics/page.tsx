@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { 
   Sparkles, RefreshCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock, 
   PieChart, Activity, UserX, UserCheck, Eye, Zap, Target, Calendar,
@@ -85,6 +86,7 @@ export default function AnalyticsPage() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
   const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event'>('operational')
+  const searchParams = useSearchParams()
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   
@@ -102,6 +104,15 @@ export default function AnalyticsPage() {
     () => incidentData.filter((incident) => incident.status !== 'closed').length,
     [incidentData]
   )
+  // Sync active tab from URL param (?tab=...)
+  useEffect(() => {
+    if (!searchParams) return
+    const tabParam = searchParams.get('tab')
+    const allowed = ['operational','quality','compliance','staff','ai-insights','custom-metrics','custom-dashboards','benchmarking','end-of-event'] as const
+    if (tabParam && (allowed as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam as typeof allowed[number])
+    }
+  }, [searchParams, activeTab])
 
   const closedIncidentsCount = useMemo(
     () => incidentData.filter((incident) => incident.status === 'closed').length,

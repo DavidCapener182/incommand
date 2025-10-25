@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   DocumentTextIcon,
@@ -63,6 +63,29 @@ interface LessonsLearned {
   confidence: number
 }
 
+// Logs that are not actionable incidents and should be excluded from stats/AI
+const isInformationalLog = (incident: any): boolean => {
+  const typeRaw = String(incident?.incident_type || incident?.type || '').toLowerCase().trim()
+  const typeKey = typeRaw.replace(/\s+/g, '')
+  return typeKey === 'attendance' || typeKey === 'sitrep' || typeKey === 'situationreport'
+}
+
+// Performance/Timing logs to exclude from incidents and display in Event Timings card
+const isPerformanceTimingLog = (incident: any): boolean => {
+  const typeRaw = String(incident?.incident_type || incident?.type || '').toLowerCase().trim()
+  const typeKey = typeRaw.replace(/\s+/g, '')
+  return typeKey === 'artistonstage' || typeKey === 'artistoffstage' || typeKey === 'showdown'
+}
+
+interface TimingEvent {
+  label: string
+  time: string
+  timestampMs: number
+  type: 'artistonstage' | 'artistoffstage' | 'showdown' | 'eventtiming'
+  note?: string
+  artistName?: string
+}
+
 const buildIncidentSummary = (incidents: any[]): IncidentSummary => {
   if (!incidents || incidents.length === 0) {
     return {
@@ -75,7 +98,16 @@ const buildIncidentSummary = (incidents: any[]): IncidentSummary => {
     }
   }
 
-  const resolvedIncidents = incidents.filter((incident) => incident.status === 'closed')
+  // Treat 'logged' as closed and prefer boolean is_closed when present
+  const isResolved = (incident: any) => {
+    if (typeof incident.is_closed === 'boolean') {
+      return incident.is_closed
+    }
+    const s = String(incident.status || '').toLowerCase()
+    return s === 'closed' || s === 'logged'
+  }
+
+  const resolvedIncidents = incidents.filter((incident) => isResolved(incident))
   const incidentsWithResponse = incidents.filter((incident) => incident.updated_at && incident.created_at)
   const avgResponseTime =
     incidentsWithResponse.length > 0
@@ -100,7 +132,7 @@ const buildIncidentSummary = (incidents: any[]): IncidentSummary => {
     }, {}),
     avgResponseTime,
     resolved: resolvedIncidents.length,
-    open: incidents.length - resolvedIncidents.length
+    open: incidents.filter((incident) => !isResolved(incident)).length
   }
 }
 
@@ -124,7 +156,7 @@ const buildStaffPerformance = (
 
 export default function EndOfEventReport({ eventId, className = '' }: EndOfEventReportProps) {
   const { addToast } = useToast()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(!!eventId)
   const [generating, setGenerating] = useState(false)
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [incidentSummary, setIncidentSummary] = useState<IncidentSummary | null>(null)
@@ -133,6 +165,8 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [aiInsights, setAiInsights] = useState<string>('')
   const [showPreview, setShowPreview] = useState(false)
   const [detailedIncidents, setDetailedIncidents] = useState<any[]>([])
+  const [currentAttendance, setCurrentAttendance] = useState<number | null>(null)
+  const [performanceTimings, setPerformanceTimings] = useState<TimingEvent[]>([])
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [emailForm, setEmailForm] = useState({
     recipients: '',
@@ -141,6 +175,8 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
     includeAttachment: true
   })
   const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const isFetchingRef = useRef(false)
 
 
   const fetchEventData = useCallback(async () => {
@@ -152,14 +188,13 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       setAiInsights('')
       setDetailedIncidents([])
       setLoading(false)
+      setError(null)
       return
     }
 
-    // Prevent multiple simultaneous fetches
-    if (loading) {
-      return
-    }
-
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+    setError(null)
     setLoading(true)
     try {
       const { data: event, error: eventError } = await supabase
@@ -184,9 +219,106 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
         console.warn('Incident summary error:', incidentError)
       }
 
-      const incidentRecords = incidents || []
-      setDetailedIncidents(incidentRecords)
-      const summary = buildIncidentSummary(incidentRecords)
+      // Exclude informational logs (Attendance, Sit Rep, etc.) from all stats and tables
+      const perfLogs = (incidents || []).filter((l: any) => {
+        const typeRaw = String(l.incident_type || l.type || '').toLowerCase().trim()
+        const typeKey = typeRaw.replace(/\s+/g, '')
+        if (typeKey === 'artistonstage' || typeKey === 'artistoffstage' || typeKey === 'showdown') return true
+        // Some showdown entries come via Sit Rep text
+        const isSitRep = typeKey === 'sitrep' || typeKey === 'situationreport'
+        const occStr = String(l.occurrence || '').toLowerCase().trim()
+        const text = `${occStr} ${(l.details || '')}`.toLowerCase()
+        // Exclude maintenance-like entries such as "artist at Main Stage 00:56"
+        if (/^artist\s+at\b/i.test(String(l.occurrence || ''))) return false
+        if (isSitRep && text.includes('showdown')) return true
+        return false
+      })
+      const timings: TimingEvent[] = perfLogs.map((l: any): TimingEvent => {
+        const raw = String(l.incident_type || l.type || '').toLowerCase().trim().replace(/\s+/g, '')
+        const typeRaw: TimingEvent['type'] = raw === 'artistonstage'
+          ? 'artistonstage'
+          : raw === 'artistoffstage'
+          ? 'artistoffstage'
+          : raw === 'showdown'
+          ? 'showdown'
+          : 'eventtiming'
+        const ts = new Date(l.timestamp || l.created_at).getTime()
+        let label = l.occurrence || l.description || ''
+        if (!label) {
+          label = typeRaw === 'showdown' ? 'Showdown' : typeRaw === 'artistonstage' ? 'Artist On Stage' : typeRaw === 'artistoffstage' ? 'Artist Off Stage' : 'Event Timing'
+        }
+        // Normalize common phrasing (do not re-add on/off stage)
+        label = label
+          .replace(/^artist on stage:?\s*/i, 'Artist On Stage: ')
+          .replace(/^artist off stage:?\s*/i, 'Artist Off Stage: ')
+          .replace(/^showdown:?\s*/i, 'Showdown: ')
+        if ((typeRaw === 'sitrep' as any) && label.toLowerCase().includes('showdown')) label = 'Showdown'
+        // Pull a brief note only for Artist Off Stage entries when details contain noteworthy info
+        let note: string | undefined
+        if (typeRaw === 'artistoffstage') {
+          const details = String(l.details || '').trim()
+          const occurrence = String(l.occurrence || '').trim()
+          const combined = `${occurrence} ${details}`.toLowerCase()
+          const hasNoIssue = /\bno\s+(issues?|problem(s)?|concern(s)?)\b/.test(combined)
+          const hasMeaning = /(crowd\s*surfer(s)?|medical|delay|stoppage|egress|evac|restart|fight|police|ambulance|welfare|injur|collapse|assault)/.test(combined)
+          if (!hasNoIssue && hasMeaning) {
+            let rawNote = (details || occurrence).trim()
+            rawNote = rawNote
+              .replace(/artist\s*(on|off)?\s*stage:?/gi, '')
+              .replace(/at\s*(main\s*)?stage:?/gi, '')
+              .trim()
+            note = rawNote.slice(0, 160)
+          }
+        }
+        // Extract artist name robustly from common formats
+        const occ = String(l.occurrence || '').trim()
+        // Prefer formats like "Qendresa on stage" or "Weezer off stage"
+        let artistName: string | undefined
+        const beforeOnOff = occ.match(/^(.*?)\s*(?:on|off)\s*stage\b/i)
+        if (beforeOnOff && beforeOnOff[1]) {
+          artistName = beforeOnOff[1].trim()
+        }
+        if (!artistName) {
+          artistName = occ
+          .replace(/^(artist|act)\s*(on|off)?\s*stage:?/i, '')
+          .replace(/at\s*(main\s*)?stage:?/i, '')
+          .trim()
+        }
+        if (!artistName || artistName.toLowerCase().startsWith('artist') || artistName === '') {
+          artistName = l.description?.trim() || 'Unknown Act'
+        }
+
+        // Final cleanup of label and artist name to remove any residual boilerplate
+        label = label
+          .replace(/artist\s*(on|off)?\s*stage:?/gi, '')
+          .replace(/at\s*(main\s*)?stage:?/gi, '')
+          .replace(/showdown:?/gi, '')
+          .replace(/—/g, '')
+          .trim()
+
+        if (artistName) {
+          artistName = artistName
+            .replace(/artist\s*(on|off)?\s*stage:?/gi, '')
+            .replace(/at\s*(main\s*)?stage:?/gi, '')
+            .replace(/showdown:?/gi, '')
+            .trim()
+        }
+        const timing: TimingEvent = {
+          label,
+          time: new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestampMs: ts,
+          type: (typeRaw === 'showdown' ? 'showdown' : typeRaw === 'artistonstage' ? 'artistonstage' : typeRaw === 'artistoffstage' ? 'artistoffstage' : 'eventtiming'),
+          note,
+          artistName
+        }
+        return timing
+      }).sort((a, b) => a.timestampMs - b.timestampMs)
+      setPerformanceTimings(timings)
+      const filteredIncidents = (incidents || [])
+        .filter((i: any) => !isInformationalLog(i))
+        .filter((i: any) => !isPerformanceTimingLog(i))
+      setDetailedIncidents(filteredIncidents)
+      const summary = buildIncidentSummary(filteredIncidents)
       setIncidentSummary(summary)
 
       const [staffAssignmentsResult, radioSignoutsResult] = await Promise.all([
@@ -215,15 +347,36 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       )
       setStaffPerformance(performance)
 
+      // Fetch latest attendance (Venue Occupancy)
+      try {
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('attendance_records')
+          .select('count')
+          .eq('event_id', eventId)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (!attendanceError && attendanceData && typeof attendanceData.count === 'number') {
+          setCurrentAttendance(attendanceData.count)
+        } else {
+          setCurrentAttendance(null)
+        }
+      } catch {
+        setCurrentAttendance(null)
+      }
+
       // Generate AI insights inline to avoid circular dependency
       try {
-        const resolvedCount = incidentRecords.filter((incident: any) => incident.status === 'closed').length
+        // Treat 'logged' as closed
+        const isResolvedAI = (inc: any) => (inc?.is_closed === true) || ['closed','logged'].includes(String(inc?.status || '').toLowerCase())
+        const resolvedCount = filteredIncidents.filter(isResolvedAI).length
         const prompt = `Analyze this event data and provide insights:
 
 Event: ${(event as any).name}
 Date: ${(event as any).event_date}
 Attendance: ${(event as any).actual_attendance || 'Unknown'}/${(event as any).max_capacity}
-Incidents: ${incidentRecords.length} total (${resolvedCount} resolved)
+Incidents: ${filteredIncidents.length} total (${resolvedCount} resolved incl. "logged").
 Staff: ${staffAssignmentsResult.data?.length || 0} positions assigned
 
 Provide:
@@ -231,6 +384,9 @@ Provide:
 2. 3 areas for improvement
 3. 3 actionable recommendations for future events
 4. Overall assessment with confidence score (0-100)
+
+Important context:
+- Treat entries with status "logged" as completed/resolved for reporting purposes.
 
 Format as JSON with keys: strengths, improvements, recommendations, confidence`
 
@@ -303,7 +459,7 @@ Format as JSON with keys: strengths, improvements, recommendations, confidence`
         const summaryPrompt = `Provide a concise executive summary for this event:
 
 Event: ${event.name}
-Incidents: ${incidentRecords.length} (${resolvedCount} resolved)
+Incidents: ${filteredIncidents.length} (${resolvedCount} resolved incl. "logged")
 Staff Performance: ${staffAssignmentsResult.data?.length || 0} positions
 Response Time: ${summary?.avgResponseTime?.toFixed(1) || 'N/A'} minutes average
 
@@ -330,6 +486,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch')
       const isResourceError = error instanceof Error && error.message.includes('ERR_INSUFFICIENT_RESOURCES')
       
+      setError('Failed to load event data')
       addToast({
         type: 'error',
         title: 'Event Data Error',
@@ -340,17 +497,18 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       })
     } finally {
       setLoading(false)
+      isFetchingRef.current = false
     }
   }, [eventId, addToast])
 
   useEffect(() => {
-    // Debounce the fetch to prevent excessive calls
-    const timeoutId = setTimeout(() => {
+    if (!eventId) {
+      setLoading(false)
+      setError(null)
+      return
+    }
     fetchEventData()
-    }, 300)
-
-    return () => clearTimeout(timeoutId)
-  }, [fetchEventData])
+  }, [eventId])
 
   const generateCSVReport = useCallback((): string => {
     const rows = [
@@ -415,7 +573,27 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         document.body.removeChild(a)
       } else {
         // For PDF, create a print-friendly version
+        const root = document.documentElement
+        const themeBefore = root.classList.contains('dark') ? 'dark' : 'light'
+        const storedBefore = typeof window !== 'undefined' ? localStorage.getItem('theme') : null
+
+        const restoreTheme = () => {
+          const finalTheme = (storedBefore as 'light' | 'dark') || themeBefore
+          if (finalTheme === 'dark') {
+            root.classList.add('dark')
+          } else {
+            root.classList.remove('dark')
+          }
+          try {
+            localStorage.setItem('theme', finalTheme)
+          } catch {}
+          window.removeEventListener('afterprint', restoreTheme)
+        }
+
+        window.addEventListener('afterprint', restoreTheme)
         window.print()
+        // Safety fallback in case afterprint doesn't fire in some contexts
+        setTimeout(restoreTheme, 1000)
       }
 
       addToast({
@@ -502,6 +680,33 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
   }, [emailForm, eventData, incidentSummary, staffPerformance, lessonsLearned, aiInsights, addToast])
 
   // All useMemo hooks must also be before conditional returns
+  const eventDuration = useMemo(() => {
+    if (!detailedIncidents || detailedIncidents.length === 0) return null
+
+    let earliest: number | null = null
+    let latest: number | null = null
+
+    for (const inc of detailedIncidents) {
+      const created = inc.created_at ? new Date(inc.created_at).getTime() : (inc.timestamp ? new Date(inc.timestamp).getTime() : null)
+      const ended = inc.updated_at ? new Date(inc.updated_at).getTime() : (inc.created_at ? new Date(inc.created_at).getTime() : (inc.timestamp ? new Date(inc.timestamp).getTime() : null))
+
+      if (created != null) {
+        earliest = earliest == null ? created : Math.min(earliest, created)
+      }
+      if (ended != null) {
+        latest = latest == null ? ended : Math.max(latest, ended)
+      }
+    }
+
+    if (earliest == null || latest == null || latest < earliest) return null
+
+    const totalMinutes = Math.max(1, Math.round((latest - earliest) / (1000 * 60)))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (hours > 0) return `${hours}h ${minutes}m`
+    return `${minutes}m`
+  }, [detailedIncidents])
+
   const computedMetrics = useMemo(() => {
     const totalIncidents = incidentSummary?.total ?? 0
     const resolvedIncidents = incidentSummary?.resolved ?? 0
@@ -514,8 +719,8 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         ? Object.entries(incidentSummary.byType).sort((a, b) => b[1] - a[1])[0]
         : null
     const attendanceFill =
-      eventData?.actual_attendance && eventData?.max_capacity
-        ? Math.round((eventData.actual_attendance / eventData.max_capacity) * 100)
+      (currentAttendance != null) && eventData?.max_capacity
+        ? Math.round((currentAttendance / eventData.max_capacity) * 100)
         : null
     const staffingCoverage = staffPerformance
       ? Math.round(staffPerformance.efficiencyScore)
@@ -534,7 +739,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       openIncidents: incidentSummary?.open ?? 0,
       radiosOut: staffPerformance?.radioSignouts ?? 0
     }
-  }, [eventData, incidentSummary, staffPerformance])
+  }, [eventData, incidentSummary, staffPerformance, currentAttendance])
 
   const priorityBreakdown = useMemo(() => {
     if (!incidentSummary?.total) {
@@ -657,6 +862,21 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     )
   }
 
+  // Show error state
+  if (error) {
+    return (
+      <Card className={`p-6 text-center ${className}`}>
+        <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          Error loading data
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          {error}
+        </p>
+      </Card>
+    )
+  }
+
   // If data couldn't be loaded after loading completed
   if (!eventData) {
     return (
@@ -673,7 +893,34 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div id="end-of-event-print" className={`space-y-6 ${className}`}>
+      {/* Print styles */}
+      <style jsx global>{`
+        @media print {
+          @page { size: A4 landscape; margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+          body * { visibility: hidden !important; }
+          #end-of-event-print, #end-of-event-print * { visibility: visible !important; }
+          #end-of-event-print { position: absolute; left: 0; top: 0; width: 100%; background: #fff !important; padding: 0 !important; margin: 0 !important; }
+          .no-print { display: none !important; }
+          .rounded-lg, .rounded-xl, .card-modal { box-shadow: none !important; border-color: #e5e7eb !important; }
+          .p-6 { padding: 14px !important; }
+          .p-5 { padding: 12px !important; }
+          .px-4, .py-4, .px-6, .py-6 { padding: 10px !important; }
+          .gap-6 { gap: 14px !important; }
+          .grid { break-inside: avoid; }
+          .print\:border { border: 1px solid #e5e7eb !important; }
+          .print\:p-4 { padding: 12px !important; }
+          .card-depth { box-shadow: none !important; }
+          .break-inside-avoid, .avoid-break { break-inside: avoid-page !important; page-break-inside: avoid !important; }
+        }
+      `}</style>
+      {/* Compact brand bar */}
+      <div className="hidden print:block rounded-t-xl bg-[#2A3990] px-3 py-2 mb-3 print:bg-[#2A3990]">
+        <img src="/inCommand.png" alt="inCommand Logo" className="h-5 w-auto" />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -685,7 +932,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <p className="text-gray-600 dark:text-gray-400">Comprehensive analysis for {eventData.name || eventData.venue_name || `Event ${eventData.id.slice(0, 8)}`}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 no-print">
           <button
             onClick={() => setIsEmailModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
@@ -723,7 +970,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       </div>
 
       {operationalHighlights.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 avoid-break">
           {operationalHighlights.map((metric) => (
             <Card key={metric.title} className="p-5 sm:p-6">
               <div className="flex items-center justify-between gap-3">
@@ -748,7 +995,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       )}
 
       {/* Event Overview */}
-      <Card className="p-6">
+      <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Event Overview</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="flex items-center gap-3">
@@ -772,7 +1019,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Attendance</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {eventData.actual_attendance || 'N/A'} / {eventData.max_capacity}
+                {(currentAttendance ?? eventData.actual_attendance ?? 'N/A')?.toLocaleString?.() || (currentAttendance ?? eventData.actual_attendance ?? 'N/A')}
               </p>
             </div>
           </div>
@@ -781,7 +1028,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {eventData.start_time} - {eventData.end_time}
+                {eventDuration ?? '-'}
               </p>
             </div>
           </div>
@@ -789,9 +1036,9 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       </Card>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 print:gap-4">
         {/* Incident Summary */}
-        <Card className="p-6">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
@@ -869,7 +1116,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </Card>
 
         {/* Staff Performance */}
-        <Card className="p-6">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
@@ -921,7 +1168,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </Card>
 
         {/* Risk & Priority */}
-        <Card className="p-6">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
               <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
@@ -968,7 +1215,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
 
       {/* AI Insights */}
       {aiInsights && (
-        <Card className="p-6">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
           <div className="flex items-center gap-3 mb-4">
             <SparklesIcon className="h-6 w-6 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Executive Summary</h3>
@@ -987,8 +1234,90 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </Card>
       )}
 
+      {/* Event Timings */}
+      <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+              <ClockIcon className="h-6 w-6 text-indigo-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Timings</h3>
+          </div>
+        </div>
+
+        {performanceTimings && performanceTimings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {(() => {
+              // Group events by detected artist name
+              const groups: Record<string, TimingEvent[]> = {}
+              const cleanName = (n?: string) => (n || '').trim() || 'Unknown Act'
+              for (const t of performanceTimings) {
+                const key = cleanName(t.artistName)
+                if (!groups[key]) groups[key] = []
+                groups[key].push(t)
+              }
+
+              // Determine showdown (global) and main act = latest on-stage before showdown if present
+              const allShowdowns = performanceTimings.filter(e => e.type === 'showdown').sort((a,b)=>a.timestampMs-b.timestampMs)
+              const showdown = allShowdowns.length > 0 ? allShowdowns[allShowdowns.length - 1] : undefined
+              let mainActName: string | undefined
+              if (showdown) {
+                let latestOn: { name: string; ts: number } | undefined
+                Object.entries(groups).forEach(([name, evts]) => {
+                  const on = evts.filter(e => e.type === 'artistonstage' && e.timestampMs <= showdown.timestampMs).sort((a,b)=>a.timestampMs-b.timestampMs).pop()
+                  if (on) {
+                    if (!latestOn || on.timestampMs > latestOn.ts) {
+                      latestOn = { name, ts: on.timestampMs }
+                    }
+                  }
+                })
+                mainActName = latestOn?.name
+              }
+
+              const rows: JSX.Element[] = []
+              Object.entries(groups).forEach(([artist, events], idx) => {
+                const sorted = events.sort((a,b)=>a.timestampMs-b.timestampMs)
+                const firstOn = sorted.find(e => e.type === 'artistonstage')
+                const offList = sorted.filter(e => e.type === 'artistoffstage')
+                const lastOff = offList.length > 0 ? offList[offList.length - 1] : undefined
+                const isMain = showdown && artist === mainActName
+                const endEvt = isMain && showdown ? showdown : lastOff
+                if (!firstOn && !endEvt) return
+                const label = artist === 'Unknown Act' ? 'Act' : artist
+                const startLabel = firstOn ? firstOn.time : ''
+                const endLabel = endEvt ? (endEvt.type === 'showdown' ? `Showdown ${endEvt.time}` : endEvt.time) : ''
+
+                // Collate notable notes from on/off entries
+                const notes = [firstOn?.note, lastOff?.note].filter(Boolean).join(' | ')
+
+                // Two main columns: left (artist | start | end), right (notes)
+                rows.push(
+                  <div
+                    key={`${artist}-${idx}-left`}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 grid grid-cols-3 gap-2 items-center"
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white truncate">{label}</span>
+                    <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{startLabel || '—'}</span>
+                    <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{endLabel || '—'}</span>
+                  </div>,
+                  <div
+                    key={`${artist}-${idx}-right`}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
+                  >
+                    <span className="text-gray-700 dark:text-gray-300 text-sm">{notes ? `Notes: ${notes}` : '—'}</span>
+                  </div>
+                )
+              })
+              return rows
+            })()}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No timing entries recorded.</p>
+        )}
+      </Card>
+
       {/* Detailed Incident Logs Table */}
-      <Card className="p-6">
+      <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <DocumentTextIcon className="h-6 w-6 text-gray-600" />
@@ -1161,7 +1490,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
 
       {/* Lessons Learned */}
       {lessonsLearned && (
-        <Card className="p-6">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200">
           <div className="flex items-center gap-3 mb-4">
             <LightBulbIcon className="h-6 w-6 text-yellow-600" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Lessons Learned</h3>

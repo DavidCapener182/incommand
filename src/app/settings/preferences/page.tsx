@@ -31,8 +31,6 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline'
 import { useTooltipOnboarding } from '@/hooks/useTooltipOnboarding'
-import ThemeToggle from '@/components/ThemeToggle'
-import { useTheme } from '@/contexts/ThemeContext'
 
 const PreferencesPage: React.FC = () => {
   const { preferences, isLoading } = useUserPreferences()
@@ -52,8 +50,6 @@ const PreferencesPage: React.FC = () => {
       return true
     }
   })
-
-  const { resolvedTheme } = useTheme()
 
   const persistGreenGuide = (value: boolean) => {
     setGreenGuideEnabled(value)
@@ -260,12 +256,6 @@ const PreferencesPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Display Theme
-                </label>
-                <ThemeToggle />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Theme
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -297,7 +287,7 @@ const PreferencesPage: React.FC = () => {
                   Current Theme
                 </span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {resolvedTheme === 'dark' ? 'Dark' : 'Light'}
+                  {isDark ? 'Dark' : 'Light'}
                 </span>
               </div>
             </div>
