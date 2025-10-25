@@ -238,7 +238,7 @@ export async function DELETE(request: NextRequest) {
 
     // Verify assignment belongs to user's company
     const { data: assignment, error: fetchError } = await supabase
-      .from('staff_assignments')
+      .from('position_assignments')
       .select(`
         id,
         event_id,
