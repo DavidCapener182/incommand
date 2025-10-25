@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- **Suggestions Box:** Added interactive feedback form on `/updates` page for feature requests and improvements.
-- **Security Enhancement:** Hidden incident creation FAB on marketing pages to prevent unauthorized access.
 - Placeholder for upcoming improvements and refinements.
 
 ---
