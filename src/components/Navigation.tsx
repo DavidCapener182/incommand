@@ -379,7 +379,7 @@ export default function Navigation() {
 
                     <NavigationMenuItem>
                       <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
-                        Help & Glossary
+                        Help
                       </Link>
                     </NavigationMenuItem>
 
@@ -673,7 +673,7 @@ export default function Navigation() {
             >
               Staff
             </Link>
-            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help & Glossary</Link>
+            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
             {canAccessAdminFeatures && (
               <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
             )}

@@ -86,7 +86,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   // Define routes that should never show the main application navigation
   // Marketing pages have their own navigation, so hide the main nav on all of them
-  const noNavRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup'];
+  // Note: '/help' is intentionally excluded so Help pages show the top nav
+  const noNavRoutes = ['/', '/features', '/pricing', '/about', '/privacy', '/terms', '/login', '/signup'];
   
   // Only show the main application navigation for authenticated users on operational pages
   const showNav = user && !noNavRoutes.includes(pathname);
