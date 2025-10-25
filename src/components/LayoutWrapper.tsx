@@ -27,7 +27,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     // Define public routes that don't require authentication
-    const publicRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup', '/staffing', '/admin/green-guide', '/invite', '/auth/magic-link'];
+    const publicRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup', '/staffing', '/admin/green-guide', '/invite', '/auth/magic-link', '/updates'];
     
     if (!loading && !user && !publicRoutes.includes(pathname)) {
       router.push('/login');
