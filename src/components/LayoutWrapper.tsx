@@ -108,6 +108,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <EscalationToastProvider>
         <>
           <AuthGate>
+          {/* Top status filler to match nav colour on iOS */}
+          {showNav && (
+            <div className="bg-[#2A3990]" style={{ height: 'env(safe-area-inset-top)' }} />
+          )}
           {showNav && <Navigation />}
           <div className="flex flex-col min-h-screen">
             <main 

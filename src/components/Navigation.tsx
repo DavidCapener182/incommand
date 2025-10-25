@@ -301,9 +301,16 @@ export default function Navigation() {
     fetchChats();
   }, [currentEvent]);
 
+  // Prefer profile avatar; fall back to user metadata if profile lacks it
+  const effectiveAvatarUrl = (profile?.avatar_url || user?.user_metadata?.avatar_url || null) as string | null;
+  const displayName = (profile?.full_name || user?.user_metadata?.full_name || user?.email || '') as string;
+
   return (
     <>
-      <nav role="banner" className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow">
+      <nav
+        role="banner"
+        className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow"
+      >
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
@@ -515,18 +522,22 @@ export default function Navigation() {
                     onClick={() => setShowProfileCard(true)}
                     aria-label="Open profile"
                   >
-                    {profile && profile.avatar_url ? (
+                    {effectiveAvatarUrl ? (
                       <Image
-                        src={profile.avatar_url}
+                        src={effectiveAvatarUrl}
                         alt="Profile"
                         width={36}
                         height={36}
                         className="w-10 h-10 md:w-9 md:h-9 rounded-full object-cover border-2 border-blue-500"
                         unoptimized
+                        onError={(e) => {
+                          // If image fails to load, hide it so initials show
+                          (e.currentTarget as unknown as HTMLImageElement).style.display = 'none';
+                        }}
                       />
                     ) : (
                       <div className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
-                        {getInitials(profile?.full_name ? profile.full_name : user.email)}
+                        {getInitials(displayName)}
                       </div>
                     )}
                   </button>
