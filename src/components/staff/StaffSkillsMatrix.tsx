@@ -58,6 +58,9 @@ export default function StaffSkillsMatrix({
   const [selectedMemberForSIA, setSelectedMemberForSIA] = useState<StaffMember | null>(null)
   const [siaBadgeNumber, setSiaBadgeNumber] = useState('')
   const [siaExpiryDate, setSiaExpiryDate] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [skillFilter, setSkillFilter] = useState('')
+  const [siaBadgeFilter, setSiaBadgeFilter] = useState('all')
   const [newSkillName, setNewSkillName] = useState('')
   const [newCertificationDate, setNewCertificationDate] = useState('')
   const [newExpiryDate, setNewExpiryDate] = useState('')
@@ -204,6 +207,32 @@ export default function StaffSkillsMatrix({
     return hasSIASkills(member) && (!member.sia_badge_number || !member.expiry_date)
   }
 
+  const filteredStaff = staff.filter(member => {
+    // Search by staff member name
+    const nameMatch = searchTerm === '' || 
+      member.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Filter by skill
+    const skillMatch = skillFilter === '' || 
+      member.skills.some(skill => 
+        skill.skill_name.toLowerCase().includes(skillFilter.toLowerCase())
+      )
+    
+    // Filter by SIA badge status
+    let siaBadgeMatch = true
+    if (siaBadgeFilter === 'has') {
+      siaBadgeMatch = !!member.sia_badge_number
+    } else if (siaBadgeFilter === 'missing') {
+      siaBadgeMatch = !member.sia_badge_number
+    } else if (siaBadgeFilter === 'expired') {
+      siaBadgeMatch = member.expiry_date && new Date(member.expiry_date) < new Date()
+    } else if (siaBadgeFilter === 'expiring') {
+      siaBadgeMatch = member.expiry_date && isExpiringSoon(member.expiry_date)
+    }
+    
+    return nameMatch && skillMatch && siaBadgeMatch
+  })
+
   const openSIABadgeModal = (member: StaffMember) => {
     setSelectedMemberForSIA(member)
     setSiaBadgeNumber(member.sia_badge_number || '')
@@ -340,6 +369,76 @@ export default function StaffSkillsMatrix({
         </div>
       </div>
 
+      {/* Filter Section */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search by Staff Member */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Search Staff Member
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Enter staff name..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            />
+          </div>
+
+          {/* Filter by Skill */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Filter by Skill
+            </label>
+            <input
+              type="text"
+              value={skillFilter}
+              onChange={(e) => setSkillFilter(e.target.value)}
+              placeholder="Enter skill name..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            />
+          </div>
+
+          {/* Filter by SIA Badge Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              SIA Badge Status
+            </label>
+            <select
+              value={siaBadgeFilter}
+              onChange={(e) => setSiaBadgeFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            >
+              <option value="all">All Staff</option>
+              <option value="has">Has SIA Badge</option>
+              <option value="missing">Missing SIA Badge</option>
+              <option value="expired">Expired Badge</option>
+              <option value="expiring">Expiring Soon</option>
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setSkillFilter('')
+                setSiaBadgeFilter('all')
+              }}
+              className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+          Showing {filteredStaff.length} of {staff.length} staff members
+        </div>
+      </div>
+
       {/* Skills Matrix Grid */}
       <div className="p-6">
         <div className="overflow-x-auto">
@@ -367,7 +466,20 @@ export default function StaffSkillsMatrix({
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {staff.map((member) => (
+              {filteredStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <p className="text-lg font-medium">No staff members found</p>
+                      <p className="text-sm">Try adjusting your search criteria</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredStaff.map((member) => (
                 <motion.tr
                   key={member.profile_id}
                   initial={{ opacity: 0, y: 20 }}
@@ -458,7 +570,8 @@ export default function StaffSkillsMatrix({
                     </button>
                   </td>
                 </motion.tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
