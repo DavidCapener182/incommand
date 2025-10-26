@@ -357,14 +357,6 @@ export default function RadioSignOutSystem({
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
               >
                 {staff.profile.full_name}
-                {staff.profile.callsign && (
-                  <span className="ml-2 text-xs bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded">
-                    {staff.profile.callsign}
-                  </span>
-                )}
-                <span className="ml-2 text-xs bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded">
-                  {staff.position_name}
-                </span>
               </span>
             ))}
           </div>
@@ -567,7 +559,7 @@ export default function RadioSignOutSystem({
                     <option value="">Select staff member...</option>
                     {assignedStaff.map((staff) => (
                       <option key={staff.profile.id} value={staff.profile.id}>
-                        {staff.profile.full_name} {staff.profile.callsign && `(${staff.profile.callsign})`} - {staff.position_name}
+                        {staff.profile.full_name}
                       </option>
                     ))}
                   </select>
