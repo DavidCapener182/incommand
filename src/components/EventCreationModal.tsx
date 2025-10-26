@@ -129,7 +129,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       switch (updatedFormData.event_type) {
         case 'Concert':
           return updatedFormData.venue_name && updatedFormData.artist_name;
-        case 'Football':
+        case 'Other':
           return updatedFormData.venue_name && updatedFormData.home_team && updatedFormData.away_team;
         case 'Parade':
           return updatedFormData.venue_name && updatedFormData.parade_route;
@@ -247,7 +247,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     }
 
     // Auto-generate event name for football events
-    if (formData.event_type === 'Football') {
+    if (formData.event_type === 'Other') {
       if (name === 'home_team' || name === 'away_team' || name === 'event_date') {
         const homeTeam = name === 'home_team' ? value : formData.home_team || '';
         const awayTeam = name === 'away_team' ? value : formData.away_team || '';
@@ -389,7 +389,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         case 'Concert':
           requiredFields.push('show_stop_meeting_time', 'doors_open_time', 'main_act_start_time', 'show_down_time');
           break;
-        case 'Football':
+        case 'Other':
           requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
           break;
         case 'Parade':
@@ -535,7 +535,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   <option value="Concert">Concert</option>
                   <option value="Parade">Parade</option>
                   <option value="Festival">Festival</option>
-                  <option value="Football">Football</option>
+                  <option value="Other">Football</option>
                 </select>
               </div>
             </div>
@@ -552,7 +552,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Name <span className="text-red-500">*</span>
                 </label>
-                {formData.event_type === 'Football' ? (
+                {formData.event_type === 'Other' ? (
                   <div className="mt-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                     <span className="text-sm font-medium">Auto-generated: </span>
                     <span className="text-sm">{formData.event_name || 'Will be generated when teams and date are entered'}</span>
@@ -588,7 +588,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </div>
               )}
 
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'Other' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -682,7 +682,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {/* Event Date - Show early for football events */}
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'Other' && (
                 <div>
                   <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Match Date <span className="text-red-500">*</span>
@@ -776,7 +776,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     value={formData.description || ''}
                     onChange={handleInputChange}
                     rows={6}
-                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Football' ? 'team' : 'event'} details are filled`}
+                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Other' ? 'team' : 'event'} details are filled`}
                     className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     disabled={descriptionLoading}
                   />
@@ -854,7 +854,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'Other' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -972,7 +972,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 let personnel = [];
                 
                 switch (formData.event_type) {
-                  case 'Football':
+                  case 'Other':
                     personnel = [
                       {
                         title: 'Safety Officer',
