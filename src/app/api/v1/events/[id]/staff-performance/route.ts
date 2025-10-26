@@ -57,6 +57,21 @@ export async function GET(
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
 
+    // First, verify the event exists
+    console.log('Verifying event exists:', eventId)
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id, name')
+      .eq('id', eventId)
+      .single()
+
+    if (eventError || !event) {
+      console.error('Event not found:', eventError)
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
+    console.log('Event found:', event.name)
+
     // Get user's company
     console.log('Getting user...')
     const { data: { user } } = await supabase.auth.getUser()
@@ -97,6 +112,15 @@ export async function GET(
 
     console.log('Found staff:', staff?.length || 0, 'members')
 
+    if (!staff || staff.length === 0) {
+      console.log('No staff members found for company')
+      return NextResponse.json({
+        success: true,
+        performances: [],
+        message: 'No staff members found for this company'
+      })
+    }
+
     // Get all incident logs for the event to use for fuzzy matching
     console.log('Fetching incident logs for event:', eventId)
     const { data: allIncidentLogs, error: logsError } = await supabase
@@ -110,6 +134,16 @@ export async function GET(
     }
 
     console.log('Found incident logs:', allIncidentLogs?.length || 0, 'logs')
+
+    // If no incident logs, return empty performance data
+    if (!allIncidentLogs || allIncidentLogs.length === 0) {
+      console.log('No incident logs found for event')
+      return NextResponse.json({
+        success: true,
+        performances: [],
+        message: 'No incident logs found for this event'
+      })
+    }
 
     // Calculate performance metrics for each staff member using fuzzy matching
     const performances = []

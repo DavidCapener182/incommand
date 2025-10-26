@@ -51,18 +51,25 @@ export default function StaffPerformanceDashboard({
     setError(null)
     
     try {
+      console.log('Fetching performance data for event:', eventId)
       const response = await fetch(`/api/v1/events/${eventId}/staff-performance`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
       
+      console.log('Performance API response status:', response.status)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch performance data')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Performance API error:', errorData)
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch performance data`)
       }
       
       const data = await response.json()
+      console.log('Performance data received:', data)
       setPerformances(data.performances || [])
     } catch (err) {
+      console.error('Performance fetch error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
