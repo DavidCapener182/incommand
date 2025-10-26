@@ -118,12 +118,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    const { radio_number, event_id, staff_id, signed_out_signature, signed_out_notes } = body
+    const { radio_number, event_id, staff_id, equipment } = body
 
     // Validate required fields
-    if (!radio_number || !event_id || !staff_id || !signed_out_signature) {
+    if (!radio_number || !event_id || !staff_id) {
       return NextResponse.json(
-        { error: 'radio_number, event_id, staff_id, and signed_out_signature are required' },
+        { error: 'radio_number, event_id, and staff_id are required' },
         { status: 400 }
       )
     }
@@ -141,8 +141,7 @@ export async function POST(request: NextRequest) {
         radio_number,
         event_id,
         user_id: user.id, // Use current user's profile ID
-        signed_out_signature,
-        signed_out_notes: signed_out_notes || null,
+        equipment_signed_out: equipment || {},
         status: 'out'
       })
       .select()
@@ -177,7 +176,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    const { signout_id, signed_in_at, status } = body
+    const { signout_id, signed_in_at, status, equipment_returned } = body
 
     // Validate required fields
     if (!signout_id) {
@@ -198,7 +197,8 @@ export async function PATCH(request: NextRequest) {
       .from('radio_signouts')
       .update({
         signed_in_at: signed_in_at || new Date().toISOString(),
-        status: status || 'returned'
+        status: status || 'returned',
+        equipment_returned: equipment_returned || {}
       })
       .eq('id', signout_id)
       .select()
@@ -221,6 +221,54 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Failed to sign in radio',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+
+// DELETE endpoint to delete a radio signout record
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const { searchParams } = new URL(request.url)
+    const signoutId = searchParams.get('id')
+
+    if (!signoutId) {
+      return NextResponse.json({ error: 'Signout ID is required' }, { status: 400 })
+    }
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Delete the signout record
+    const { error: deleteError } = await supabase
+      .from('radio_signouts')
+      .delete()
+      .eq('id', signoutId)
+
+    if (deleteError) {
+      console.error('Delete signout error:', deleteError)
+      return NextResponse.json(
+        { error: 'Failed to delete radio signout' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Radio signout deleted successfully'
+    })
+  } catch (error) {
+    console.error('Delete radio signout API error:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to delete radio signout',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

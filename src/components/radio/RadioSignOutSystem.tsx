@@ -7,7 +7,8 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   PencilIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -52,16 +53,19 @@ export default function RadioSignOutSystem({
   
   // Sign-out form
   const [radioNumber, setRadioNumber] = useState('')
-  const [signOutNotes, setSignOutNotes] = useState('')
   const [selectedStaffId, setSelectedStaffId] = useState('')
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isDrawing, setIsDrawing] = useState(false)
+  const [equipment, setEquipment] = useState({
+    pitCans: false,
+    earpiece: false,
+    spareBattery: false
+  })
   
   // Sign-in form
-  const [signInNotes, setSignInNotes] = useState('')
-  const [conditionOnReturn, setConditionOnReturn] = useState<string>('good')
-  const signInCanvasRef = useRef<HTMLCanvasElement>(null)
-  const [isDrawingSignIn, setIsDrawingSignIn] = useState(false)
+  const [signInEquipment, setSignInEquipment] = useState({
+    pitCans: false,
+    earpiece: false,
+    spareBattery: false
+  })
 
   const fetchSignOuts = async () => {
     setLoading(true)
@@ -93,69 +97,35 @@ export default function RadioSignOutSystem({
     }
   }, [eventId])
 
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true)
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    ctx.beginPath()
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
+  // Equipment handlers
+  const handleEquipmentChange = (item: keyof typeof equipment) => {
+    setEquipment(prev => ({
+      ...prev,
+      [item]: !prev[item]
+    }))
   }
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const rect = canvas.getBoundingClientRect()
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top)
-    ctx.strokeStyle = '#000'
-    ctx.lineWidth = 2
-    ctx.stroke()
-  }
-
-  const stopDrawing = () => {
-    setIsDrawing(false)
-  }
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+  const handleSignInEquipmentChange = (item: keyof typeof signInEquipment) => {
+    setSignInEquipment(prev => ({
+      ...prev,
+      [item]: !prev[item]
+    }))
   }
 
   const handleSignOut = async () => {
-    const canvas = canvasRef.current
-    console.log('handleSignOut called with:', { radioNumber, selectedStaffId, eventId, hasCanvas: !!canvas })
+    console.log('handleSignOut called with:', { radioNumber, selectedStaffId, eventId, equipment })
     
-    if (!canvas || !radioNumber || !selectedStaffId) {
-      setError('Please enter a radio number, select a staff member, and provide a signature')
+    if (!radioNumber || !selectedStaffId) {
+      setError('Please enter a radio number and select a staff member')
       return
     }
-    
-    const signature = canvas.toDataURL()
-    console.log('Signature generated, length:', signature.length)
     
     try {
       const requestBody = {
         radio_number: radioNumber,
         event_id: eventId,
         staff_id: selectedStaffId,
-        signed_out_signature: signature,
-        signed_out_notes: signOutNotes
+        equipment: equipment
       }
       console.log('Sending request:', requestBody)
       
@@ -175,9 +145,8 @@ export default function RadioSignOutSystem({
       
       // Reset form and refresh list
       setRadioNumber('')
-      setSignOutNotes('')
       setSelectedStaffId('')
-      clearSignature()
+      setEquipment({ pitCans: false, earpiece: false, spareBattery: false })
       setShowSignOutModal(false)
       fetchSignOuts()
     } catch (err) {
@@ -191,7 +160,7 @@ export default function RadioSignOutSystem({
       setError('No radio selected')
       return
     }
-    
+
     try {
       const response = await fetch('/api/v1/radio-signout', {
         method: 'PATCH',
@@ -199,20 +168,44 @@ export default function RadioSignOutSystem({
         body: JSON.stringify({
           signout_id: selectedSignOut.id,
           signed_in_at: new Date().toISOString(),
-          status: 'returned'
+          status: 'returned',
+          equipment_returned: signInEquipment
         })
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to sign in radio')
       }
-      
+
       // Reset form and refresh list
       setSelectedSignOut(null)
+      setSignInEquipment({ pitCans: false, earpiece: false, spareBattery: false })
       setShowSignInModal(false)
       fetchSignOuts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
+    }
+  }
+
+  const handleDeleteLog = async (logId: number) => {
+    if (!confirm('Are you sure you want to delete this radio log? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/v1/radio-signout?id=${logId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete radio log')
+      }
+
+      // Refresh the list
+      fetchSignOuts()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed')
     }
   }
 
@@ -366,9 +359,17 @@ export default function RadioSignOutSystem({
         </div>
 
         {outRadios.length === 0 && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <RadioIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">No radios currently signed out</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-8">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 text-center">
+              <RadioIcon className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No Radios Signed Out</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">All radios are available</p>
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 text-center">
+              <CheckCircleIcon className="h-8 w-8 mx-auto mb-3 text-green-400" />
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Ready</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Ready for radio assignments</p>
+            </div>
           </div>
         )}
       </div>
@@ -400,6 +401,9 @@ export default function RadioSignOutSystem({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Signed In
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -416,6 +420,15 @@ export default function RadioSignOutSystem({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {radio.signed_in_at ? new Date(radio.signed_in_at).toLocaleString() : '—'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <button
+                      onClick={() => handleDeleteLog(radio.id)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                      title="Delete radio log"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -437,7 +450,7 @@ export default function RadioSignOutSystem({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
             style={{ backdropFilter: 'blur(8px)' }}
             onClick={() => setShowSignOutModal(false)}
           >
@@ -487,38 +500,38 @@ export default function RadioSignOutSystem({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Notes (Optional)
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Equipment Included
                   </label>
-                  <textarea
-                    value={signOutNotes}
-                    onChange={(e) => setSignOutNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    rows={3}
-                    placeholder="Any notes about the equipment..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Digital Signature
-                  </label>
-                  <canvas
-                    ref={canvasRef}
-                    width={400}
-                    height={150}
-                    className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white cursor-crosshair w-full"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                  />
-                  <button
-                    onClick={clearSignature}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
-                  >
-                    Clear Signature
-                  </button>
+                  <div className="space-y-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={equipment.pitCans}
+                        onChange={() => handleEquipmentChange('pitCans')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Pit Cans</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={equipment.earpiece}
+                        onChange={() => handleEquipmentChange('earpiece')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Earpiece</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={equipment.spareBattery}
+                        onChange={() => handleEquipmentChange('spareBattery')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Spare Battery</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -548,7 +561,7 @@ export default function RadioSignOutSystem({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
             style={{ backdropFilter: 'blur(8px)' }}
             onClick={() => setShowSignInModal(false)}
           >
@@ -566,10 +579,45 @@ export default function RadioSignOutSystem({
               </div>
               
               <div className="p-6">
-                <div className="text-center">
+                <div className="text-center mb-6">
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     Return {selectedSignOut.profile.full_name}'s radio?
                   </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Equipment Being Returned
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={signInEquipment.pitCans}
+                        onChange={() => handleSignInEquipmentChange('pitCans')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Pit Cans</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={signInEquipment.earpiece}
+                        onChange={() => handleSignInEquipmentChange('earpiece')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Earpiece</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={signInEquipment.spareBattery}
+                        onChange={() => handleSignInEquipmentChange('spareBattery')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Spare Battery</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
