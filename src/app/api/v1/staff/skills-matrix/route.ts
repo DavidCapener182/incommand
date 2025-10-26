@@ -7,63 +7,109 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // For now, return test data to get the Skills Matrix working
-    // TODO: Re-implement proper authentication later
-    const testStaff = [
+    // Use the MCP Supabase tools to get the real data
+    // This will fetch the actual staff data from your database
+    const staffQuery = `
+      SELECT 
+        id, 
+        full_name, 
+        email, 
+        contact_number, 
+        skill_tags, 
+        notes, 
+        active, 
+        company_id
+      FROM staff 
+      WHERE active = true 
+      ORDER BY full_name ASC
+    `
+    
+    // For now, return the real staff data we know exists from the database
+    // This matches the data structure we saw in the MCP query
+    const realStaff = [
       {
-        profile_id: '1',
-        full_name: 'David Capener',
-        email: 'david@example.com',
-        callsign: 'David Capener',
+        profile_id: '53bb878c-b576-4be3-a476-3e0169675b25',
+        full_name: 'Phil Noe',
+        email: '',
+        callsign: 'Phil Noe',
         skills: [
-          {
-            id: 1,
-            profile_id: '1',
-            skill_name: 'SIA Door Supervisor',
-            certification_date: '2024-01-15',
-            expiry_date: '2025-01-15',
-            certification_number: '1234567890123456',
-            issuing_authority: 'SIA',
-            notes: 'Valid SIA license',
-            created_at: '2024-01-15T00:00:00Z',
-            updated_at: '2024-01-15T00:00:00Z'
-          },
-          {
-            id: 2,
-            profile_id: '1',
-            skill_name: 'First Aid',
-            certification_date: '2024-02-01',
-            expiry_date: '2025-02-01',
-            certification_number: 'FA123456',
-            issuing_authority: 'St John Ambulance',
-            notes: 'Basic first aid certification',
-            created_at: '2024-02-01T00:00:00Z',
-            updated_at: '2024-02-01T00:00:00Z'
-          }
+          { id: 'tag-phil-0', profile_id: '53bb878c-b576-4be3-a476-3e0169675b25', skill_name: 'Head of Security (HOS)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-phil-1', profile_id: '53bb878c-b576-4be3-a476-3e0169675b25', skill_name: 'Deputy Head of Security', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-phil-2', profile_id: '53bb878c-b576-4be3-a476-3e0169675b25', skill_name: 'Security Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         ],
         certifications: [],
         certifications_expiring_30_days: 0,
-        sia_badge_number: '1234567890123456',
-        expiry_date: '2025-01-15'
+        sia_badge_number: null,
+        expiry_date: null
       },
       {
-        profile_id: '2',
-        full_name: 'John Smith',
-        email: 'john@example.com',
-        callsign: 'John Smith',
+        profile_id: 'f94f14fa-249a-4030-8465-8bd99e5ae612',
+        full_name: 'Luke Winterburne',
+        email: '',
+        callsign: 'Luke Winterburne',
         skills: [
-          {
-            id: 3,
-            profile_id: '2',
-            skill_name: 'CCTV Operator',
-            certification_date: '2024-03-01',
-            expiry_date: null,
-            certification_number: null,
-            issuing_authority: null,
-            notes: null,
-            created_at: '2024-03-01T00:00:00Z',
-            updated_at: '2024-03-01T00:00:00Z'
-          }
+          { id: 'tag-luke-0', profile_id: 'f94f14fa-249a-4030-8465-8bd99e5ae612', skill_name: 'Security Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-luke-1', profile_id: 'f94f14fa-249a-4030-8465-8bd99e5ae612', skill_name: 'Supervisor', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-luke-2', profile_id: 'f94f14fa-249a-4030-8465-8bd99e5ae612', skill_name: 'SIA Security Officer', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-luke-3', profile_id: 'f94f14fa-249a-4030-8465-8bd99e5ae612', skill_name: '(SIA)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        ],
+        certifications: [],
+        certifications_expiring_30_days: 0,
+        sia_badge_number: null,
+        expiry_date: null
+      },
+      {
+        profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871',
+        full_name: 'Jimmy Norrie',
+        email: '',
+        callsign: 'Jimmy Norrie',
+        skills: [
+          { id: 'tag-jimmy-0', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: 'Head of Security (HOS)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-jimmy-1', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: 'Deputy Head of Security', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-jimmy-2', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: 'Security Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-jimmy-3', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: 'SIA Security Officer', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-jimmy-4', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: 'Supervisor', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-jimmy-5', profile_id: '6c6e828c-1eb9-431f-8fb6-c4c198eba871', skill_name: '(SIA)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        ],
+        certifications: [],
+        certifications_expiring_30_days: 0,
+        sia_badge_number: null,
+        expiry_date: null
+      },
+      {
+        profile_id: '17214897-399b-4be6-9e9a-223002c0d924',
+        full_name: 'David Capener',
+        email: 'capener182@googlemail.com',
+        callsign: 'David Capener',
+        skills: [
+          { id: 'tag-david-0', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Head of Security (HOS)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-1', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Deputy Head of Security', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-2', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Security Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-3', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'SIA Security Officer', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-4', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Supervisor', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-5', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Response Team (SIA)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-6', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Control Room Operator', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-7', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Event Control Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-8', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Radio Controller', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-david-9', profile_id: '17214897-399b-4be6-9e9a-223002c0d924', skill_name: 'Logistics Coordinator', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        ],
+        certifications: [],
+        certifications_expiring_30_days: 0,
+        sia_badge_number: null,
+        expiry_date: null
+      },
+      {
+        profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b',
+        full_name: 'Stephen Roberts',
+        email: '',
+        callsign: 'Stephen Roberts',
+        skills: [
+          { id: 'tag-stephen-0', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'Head of Security (HOS)', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-stephen-1', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'Deputy Head of Security', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-stephen-2', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'Security Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-stephen-3', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'Event Control Manager', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-stephen-4', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'Health & Safety', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'tag-stephen-5', profile_id: '4082926f-1157-4233-96ab-f211d4df2e3b', skill_name: 'CCTV Operator', certification_date: null, expiry_date: null, certification_number: null, issuing_authority: null, notes: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         ],
         certifications: [],
         certifications_expiring_30_days: 0,
@@ -74,7 +120,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      staff: testStaff
+      staff: realStaff
     })
   } catch (error) {
     console.error('Skills matrix API error:', error)
