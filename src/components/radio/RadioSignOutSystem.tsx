@@ -555,7 +555,7 @@ export default function RadioSignOutSystem({
               <div className="p-6">
                 <div className="text-center">
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Return {selectedSignOut.profile.full_name} radio?
+                    Return {selectedSignOut.profile.full_name}'s radio?
                   </p>
                 </div>
               </div>
