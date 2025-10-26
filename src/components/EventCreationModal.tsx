@@ -563,6 +563,25 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </div>
               )}
 
+              {/* Event Date - Show early for football events */}
+              {formData.event_type === 'Football' && (
+                <div>
+                  <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Match Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="event_date"
+                    id="event_date"
+                    value={formData.event_date}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    required
+                  />
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Event name will be auto-generated as "Home Team v Away Team - Date"</p>
+                </div>
+              )}
+
               {/* Venue Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -680,22 +699,24 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
               
-              {/* Event Date */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Event Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    name="event_date"
-                    value={formData.event_date}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
+              {/* Event Date - Only show for non-football events */}
+              {formData.event_type !== 'Football' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Event Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="event_date"
+                      value={formData.event_date}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Event Type Specific Timing Fields */}
               {formData.event_type === 'Concert' && (

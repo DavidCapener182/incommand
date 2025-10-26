@@ -1857,6 +1857,30 @@ export default function Dashboard() {
         {/* Log Review Reminder for Silver Commanders */}
         <LogReviewReminder />
 
+        {/* Mobile FAB - New Incident (only show if there's an active event) */}
+        {hasCurrentEvent && (
+          <div className="md:hidden fixed bottom-6 right-6 z-50" data-fab>
+            <button
+              onClick={() => setIsIncidentModalOpen(true)}
+              className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target"
+              style={{ 
+                backgroundColor: '#3b82f6',
+                backdropFilter: 'none',
+                WebkitBackdropFilter: 'none',
+                background: '#3b82f6',
+                opacity: '1',
+                backgroundImage: 'none',
+                backgroundBlendMode: 'normal',
+                mixBlendMode: 'normal'
+              }}
+              aria-label="Create new incident"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        )}
 
     </PageWrapper>
   )
