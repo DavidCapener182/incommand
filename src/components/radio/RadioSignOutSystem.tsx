@@ -120,6 +120,11 @@ export default function RadioSignOutSystem({
       return
     }
     
+    if (!eventId) {
+      setError('Event ID is missing')
+      return
+    }
+    
     try {
       const requestBody = {
         radio_number: radioNumber,
@@ -193,18 +198,24 @@ export default function RadioSignOutSystem({
     }
 
     try {
+      console.log('Deleting radio log with ID:', logId)
       const response = await fetch(`/api/v1/radio-signout?id=${logId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       })
 
+      console.log('Delete response status:', response.status)
+      const responseData = await response.json()
+      console.log('Delete response data:', responseData)
+
       if (!response.ok) {
-        throw new Error('Failed to delete radio log')
+        throw new Error(`Failed to delete radio log: ${responseData.error || 'Unknown error'}`)
       }
 
       // Refresh the list
       fetchSignOuts()
     } catch (err) {
+      console.error('Delete error:', err)
       setError(err instanceof Error ? err.message : 'Delete failed')
     }
   }
