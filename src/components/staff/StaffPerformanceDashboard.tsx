@@ -179,12 +179,12 @@ export default function StaffPerformanceDashboard({
                 <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                   <p className="mb-2">To get performance tracking working, you need to:</p>
                   <ol className="list-decimal list-inside space-y-1">
-                    <li><strong>Assign staff to callsigns</strong> - Go to the Callsign Assignment tab and assign staff members to positions (e.g., "Alpha 1", "Sierra 2")</li>
-                    <li><strong>Staff use their assigned callsigns</strong> - When staff send incidents or messages, they should use their assigned callsign (e.g., "Alpha 1" sends message to Event Control)</li>
-                    <li><strong>Incident logs match callsigns</strong> - The system will match incident logs with callsign_from/assigned_to fields to the staff member's assigned callsign</li>
+                    <li><strong>Assign staff to callsigns</strong> - Go to the Callsign Assignment tab and assign staff members to positions (e.g., &quot;Alpha 1&quot;, &quot;Sierra 2&quot;)</li>
+                    <li><strong>Staff use their assigned callsigns</strong> - When staff send incidents or messages, they should use their assigned callsign (e.g., &quot;Alpha 1&quot; sends message to Event Control)</li>
+                    <li><strong>Incident logs match callsigns</strong> - The system will match incident logs with callsign_from/assigned_to fields to the staff member&apos;s assigned callsign</li>
                   </ol>
                   <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
-                    Performance metrics are calculated based on incident logs attributed to each staff member's assigned callsigns.
+                    Performance metrics are calculated based on incident logs attributed to each staff member&apos;s assigned callsigns.
                   </p>
                 </div>
               </div>
