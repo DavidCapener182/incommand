@@ -390,7 +390,7 @@ export default function StaffSkillsMatrix({
                         {selectedStaff.full_name}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedStaff.callsign || selectedStaff.email}
+                        {selectedStaff.callsign ? `Callsign: ${selectedStaff.callsign}` : selectedStaff.email ? `Email: ${selectedStaff.email}` : 'Staff Member'}
                       </p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
