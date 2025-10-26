@@ -349,7 +349,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
   const renderTimeInput = (name: string, label: string, required: boolean = false) => (
     <div>
-      <label className="block text-sm font-medium text-gray-700">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input
@@ -373,14 +373,14 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         return (
           <div className="space-y-4">
             <div>
-              <label htmlFor="event_type" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Event Type <span className="text-red-500">*</span>
               </label>
               <select
                 name="event_type"
                 id="event_type"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.event_type}
                 onChange={handleInputChange}
               >
@@ -398,7 +398,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         return (
           <div className="space-y-4">
             <div>
-              <label htmlFor="event_name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Event Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -406,13 +406,13 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 name="event_name"
                 id="event_name"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.event_name}
                 onChange={handleInputChange}
               />
             </div>
             <div>
-              <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Venue Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -420,13 +420,13 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 name="venue_name"
                 id="venue_name"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.venue_name}
                 onChange={handleInputChange}
               />
             </div>
             <div>
-              <label htmlFor="artist_name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="artist_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Artist/Band Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -434,14 +434,14 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 name="artist_name"
                 id="artist_name"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.artist_name}
                 onChange={handleInputChange}
               />
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">Security Brief</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Security Brief</label>
                 <button
                   type="button"
                   className="md:hidden text-xs text-blue-600 underline focus:outline-none"
@@ -457,20 +457,20 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   onChange={handleInputChange}
                   rows={6}
                   placeholder={descriptionLoading ? "Generating security brief..." : "Security brief will be automatically generated when venue and artist names are filled"}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   disabled={descriptionLoading}
                 />
                 {descriptionLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-50 rounded-lg">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 bg-opacity-50 dark:bg-opacity-50 rounded-lg">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                   </div>
                 )}
-                <p className="mt-1 text-sm text-gray-500">Brief is automatically generated based on historical data and risk assessment</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Brief is automatically generated based on historical data and risk assessment</p>
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">Event Brief (from client)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Event Brief (from client)</label>
               </div>
               <div className="mt-1 relative">
                 <textarea
@@ -479,7 +479,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   onChange={handleInputChange}
                   rows={6}
                   placeholder="Paste or type the event brief provided by the client here."
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-sm text-gray-500">This field is for the client&apos;s event brief and can contain large pasted text.</p>
               </div>
@@ -490,7 +490,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         return (
           <div className="space-y-6">
             <div>
-              <label htmlFor="venue_address" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="venue_address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Venue Address <span className="text-red-500">*</span>
               </label>
               <input
@@ -498,13 +498,13 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 name="venue_address"
                 id="venue_address"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.venue_address}
                 onChange={handleInputChange}
               />
             </div>
             <div>
-              <label htmlFor="expected_attendance" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="expected_attendance" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Expected Attendance <span className="text-red-500">*</span>
               </label>
               <input
@@ -512,7 +512,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 name="expected_attendance"
                 id="expected_attendance"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 value={formData.expected_attendance || ''}
                 onChange={handleInputChange}
               />
@@ -524,7 +524,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -558,7 +558,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                       setFormData(prev => ({ ...prev, support_acts: newActs }));
                     }}
                     placeholder="Act Name"
-                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                   <input
                     type="text"
@@ -591,7 +591,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     maxLength={5}
                     inputMode="numeric"
                     pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               ))}
@@ -640,7 +640,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               }
             ].map((manager) => (
               <div key={manager.field}>
-                <label className="block text-sm font-medium text-gray-700">{manager.title} *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{manager.title} *</label>
                 <input
                   type="text"
                   name={manager.field}
@@ -653,46 +653,47 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
             ))}
           </div>
         )
+      default:
+        return null
     }
   }
 
   return (
     isOpen ? (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-        <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-gray-900">Create New Event</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                type="button"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
+        <div className="card-modal w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create New Event</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none transition-colors"
+              type="button"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
             
             {error && (
-              <div className="mt-4 p-4 rounded-md bg-red-50 border border-red-200">
+              <div className="mt-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className="h-5 w-5 text-red-400 dark:text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">Error</h3>
-                    <div className="mt-2 text-sm text-red-700">{error}</div>
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                    <div className="mt-2 text-sm text-red-700 dark:text-red-300">{error}</div>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
               {/* Progress Bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(step / 5) * 100}%` }}
                 />
               </div>
@@ -702,15 +703,15 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 {renderStep()}
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between pt-4 border-t border-gray-200">
+                <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setStep(prev => prev - 1)}
                     disabled={step === 1}
-                    className={`px-4 py-2 text-sm font-medium rounded-md ${
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                       step === 1
-                        ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                        : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                        ? 'text-gray-400 dark:text-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                        : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
                     Previous
@@ -719,7 +720,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     <button
                       type="button"
                       onClick={onClose}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
@@ -727,7 +728,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                       <button
                         type="button"
                         onClick={() => setStep(prev => prev + 1)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
+                        className="px-4 py-2 text-sm font-medium text-white bg-[#2A3990] dark:bg-[#3B4BA8] rounded-lg hover:bg-[#1e2a6a] dark:hover:bg-[#2A3990] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990] transition-colors"
                       >
                         Next
                       </button>
@@ -735,7 +736,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                       <button
                         type="submit"
                         disabled={loading}
-                        className="px-4 py-2 text-sm font-medium text-white bg-[#2A3990] rounded-md hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 text-sm font-medium text-white bg-[#2A3990] dark:bg-[#3B4BA8] rounded-lg hover:bg-[#1e2a6a] dark:hover:bg-[#2A3990] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {loading ? 'Creating...' : 'Create Event'}
                       </button>
