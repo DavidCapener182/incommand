@@ -73,19 +73,31 @@ export default function StaffSkillsMatrix({
     setError(null)
     
     try {
-      const response = await fetch('/api/v1/staff/skills-matrix', {
+      // Try the main API first
+      let response = await fetch('/api/v1/staff/skills-matrix', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
+      
+      let data
+      if (!response.ok) {
+        // If main API fails, try the simple fallback
+        console.log('Main API failed, trying simple fallback...')
+        response = await fetch('/api/v1/staff/skills-matrix/simple', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
       
       if (!response.ok) {
         throw new Error('Failed to fetch staff skills')
       }
       
-      const data = await response.json()
-      setStaff(data.staff)
+      data = await response.json()
+      setStaff(data.staff || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      console.error('Error fetching staff skills:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch staff skills')
     } finally {
       setLoading(false)
     }

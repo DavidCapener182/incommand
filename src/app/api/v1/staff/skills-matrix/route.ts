@@ -26,59 +26,103 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all staff in the company with their profile information
-    const { data: staff, error: staffError } = await supabase
-      .from('staff')
-      .select(`
-        id, 
-        full_name, 
-        email, 
-        contact_number, 
-        skill_tags, 
-        notes, 
-        active, 
-        company_id,
-        profile_id
-      `)
-      .eq('company_id', profile.company_id)
-      .order('full_name', { ascending: true })
+    let staff = []
+    try {
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select(`
+          id, 
+          full_name, 
+          email, 
+          contact_number, 
+          skill_tags, 
+          notes, 
+          active, 
+          company_id,
+          profile_id
+        `)
+        .eq('company_id', profile.company_id)
+        .order('full_name', { ascending: true })
 
-    if (staffError) {
-      console.error('Staff fetch error:', staffError)
+      if (staffError) {
+        console.error('Staff fetch error:', staffError)
+        return NextResponse.json(
+          { error: 'Failed to fetch staff', details: staffError.message },
+          { status: 500 }
+        )
+      }
+
+      staff = staffData || []
+    } catch (error) {
+      console.error('Staff table access error:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch staff' },
+        { error: 'Failed to access staff table', details: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }
       )
     }
 
-    // Get skills for all staff (using staff_id instead of profile_id)
-    const { data: skills, error: skillsError } = await supabase
-      .from('staff_skills')
-      .select('*')
+    if (!staff || staff.length === 0) {
+      return NextResponse.json({
+        success: true,
+        staff: []
+      })
+    }
 
-    if (skillsError) {
-      console.error('Skills fetch error:', skillsError)
-      // Continue without skills if table doesn't exist
+    // Get skills for all staff (using staff_id instead of profile_id)
+    let skills = []
+    try {
+      const { data: skillsData, error: skillsError } = await supabase
+        .from('staff_skills')
+        .select('*')
+
+      if (skillsError) {
+        console.error('Skills fetch error:', skillsError)
+        // Continue without skills if table doesn't exist
+      } else {
+        skills = skillsData || []
+      }
+    } catch (error) {
+      console.error('Skills table access error:', error)
+      // Table might not exist, continue without skills
     }
 
     // Get certifications for all staff (using staff_id instead of profile_id)
-    const { data: certifications, error: certificationsError } = await supabase
-      .from('staff_certifications')
-      .select('*')
+    let certifications = []
+    try {
+      const { data: certificationsData, error: certificationsError } = await supabase
+        .from('staff_certifications')
+        .select('*')
 
-    if (certificationsError) {
-      console.error('Certifications fetch error:', certificationsError)
-      // Continue without certifications if table doesn't exist
+      if (certificationsError) {
+        console.error('Certifications fetch error:', certificationsError)
+        // Continue without certifications if table doesn't exist
+      } else {
+        certifications = certificationsData || []
+      }
+    } catch (error) {
+      console.error('Certifications table access error:', error)
+      // Table might not exist, continue without certifications
     }
 
     // Get profile information for SIA badge data
-    const profileIds = staff.map(member => member.profile_id).filter(Boolean)
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, sia_badge_number, expiry_date')
-      .in('id', profileIds)
+    let profiles = []
+    try {
+      const profileIds = staff.map(member => member.profile_id).filter(Boolean)
+      if (profileIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, sia_badge_number, expiry_date')
+          .in('id', profileIds)
 
-    if (profilesError) {
-      console.error('Profiles fetch error:', profilesError)
+        if (profilesError) {
+          console.error('Profiles fetch error:', profilesError)
+          // Continue without profile data
+        } else {
+          profiles = profilesData || []
+        }
+      }
+    } catch (error) {
+      console.error('Profiles table access error:', error)
       // Continue without profile data
     }
 
