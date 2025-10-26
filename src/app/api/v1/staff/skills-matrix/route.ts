@@ -25,10 +25,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get all staff in the company
+    // Get all staff in the company with their profile information
     const { data: staff, error: staffError } = await supabase
       .from('staff')
-      .select('id, full_name, email, contact_number, skill_tags, notes, active, company_id, profile_id')
+      .select(`
+        id, 
+        full_name, 
+        email, 
+        contact_number, 
+        skill_tags, 
+        notes, 
+        active, 
+        company_id,
+        profile_id
+      `)
       .eq('company_id', profile.company_id)
       .order('full_name', { ascending: true })
 
@@ -40,7 +50,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get skills for all staff
+    // Get skills for all staff (using staff_id instead of profile_id)
     const { data: skills, error: skillsError } = await supabase
       .from('staff_skills')
       .select('*')
@@ -48,6 +58,16 @@ export async function GET(request: NextRequest) {
     if (skillsError) {
       console.error('Skills fetch error:', skillsError)
       // Continue without skills if table doesn't exist
+    }
+
+    // Get certifications for all staff (using staff_id instead of profile_id)
+    const { data: certifications, error: certificationsError } = await supabase
+      .from('staff_certifications')
+      .select('*')
+
+    if (certificationsError) {
+      console.error('Certifications fetch error:', certificationsError)
+      // Continue without certifications if table doesn't exist
     }
 
     // Get profile information for SIA badge data
@@ -95,7 +115,10 @@ export async function GET(request: NextRequest) {
         email: member.email,
         callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
         skills: allSkills,
-        certifications: [],
+        certifications: certifications?.filter(cert => cert.staff_id === member.id || cert.profile_id === member.id).map(cert => ({
+          ...cert,
+          profile_id: member.id // Ensure profile_id is set
+        })) || [],
         certifications_expiring_30_days: 0, // Calculate if needed
         sia_badge_number: profileData?.sia_badge_number || null,
         expiry_date: profileData?.expiry_date || null

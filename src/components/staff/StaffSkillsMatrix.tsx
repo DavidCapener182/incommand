@@ -228,6 +228,8 @@ export default function StaffSkillsMatrix({
       siaBadgeMatch = member.expiry_date && new Date(member.expiry_date) < new Date()
     } else if (siaBadgeFilter === 'expiring') {
       siaBadgeMatch = member.expiry_date && isExpiringSoon(member.expiry_date)
+    } else if (siaBadgeFilter === 'needs_sia') {
+      siaBadgeMatch = needsSIABadgeInfo(member)
     }
     
     return nameMatch && skillMatch && siaBadgeMatch
@@ -415,6 +417,7 @@ export default function StaffSkillsMatrix({
               <option value="missing">Missing SIA Badge</option>
               <option value="expired">Expired Badge</option>
               <option value="expiring">Expiring Soon</option>
+              <option value="needs_sia">Needs SIA Badge Info</option>
             </select>
           </div>
 
