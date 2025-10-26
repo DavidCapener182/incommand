@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       .insert({
         radio_number,
         event_id,
-        user_id: staff_id, // Use staff_id instead of user.id
+        user_id: user.id, // Use current user's profile ID
         signed_out_signature,
         signed_out_notes: signed_out_notes || null,
         status: 'out'
