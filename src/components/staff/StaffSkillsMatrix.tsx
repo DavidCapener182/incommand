@@ -389,9 +389,6 @@ export default function StaffSkillsMatrix({
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                         {selectedStaff.full_name}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Staff Member
-                      </p>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">
