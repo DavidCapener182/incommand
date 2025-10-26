@@ -39,10 +39,38 @@ interface EventFormData {
   // Event type specific fields
   home_team?: string;
   away_team?: string;
+  competition?: string;
   parade_route?: string;
   festival_theme?: string;
   [key: string]: any; // Add index signature for dynamic access
 }
+
+// English football competitions
+const COMPETITIONS = [
+  'Premier League',
+  'Championship',
+  'League One',
+  'League Two',
+  'FA Cup',
+  'EFL Cup',
+  'Community Shield',
+  'Champions League',
+  'Europa League',
+  'Europa Conference League',
+  'Women\'s Super League',
+  'Women\'s Championship',
+  'Women\'s FA Cup',
+  'UEFA Women\'s Champions League',
+  'National League',
+  'National League North',
+  'National League South',
+  'FA Trophy',
+  'FA Vase',
+  'County Cup',
+  'Pre-Season Friendly',
+  'International Friendly',
+  'Other'
+];
 
 interface Props {
   isOpen: boolean
@@ -73,6 +101,11 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     assistant_head_of_security_name: '',
     event_control_name: '',
     event_brief: '',
+    home_team: '',
+    away_team: '',
+    competition: '',
+    parade_route: '',
+    festival_theme: '',
   })
   const [loading, setLoading] = useState(false)
   const [descriptionLoading, setDescriptionLoading] = useState(false)
@@ -114,6 +147,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         artistName: updatedFormData.artist_name,
         homeTeam: updatedFormData.home_team,
         awayTeam: updatedFormData.away_team,
+        competition: updatedFormData.competition,
         paradeRoute: updatedFormData.parade_route,
         festivalTheme: updatedFormData.festival_theme
       };
@@ -219,7 +253,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     setFormData(updatedFormData);
 
     // If we're updating fields that affect security brief generation, debounce the description generation
-    const fieldsThatTriggerBrief = ['venue_name', 'artist_name', 'home_team', 'away_team', 'parade_route', 'festival_theme'];
+    const fieldsThatTriggerBrief = ['venue_name', 'artist_name', 'home_team', 'away_team', 'competition', 'parade_route', 'festival_theme'];
     if (fieldsThatTriggerBrief.includes(name)) {
       if (descriptionTimeoutRef.current) {
         clearTimeout(descriptionTimeoutRef.current);
@@ -563,6 +597,28 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                       onChange={handleInputChange}
                     />
                   </div>
+                </div>
+                
+                {/* Competition Field */}
+                <div>
+                  <label htmlFor="competition" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Competition <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="competition"
+                    id="competition"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.competition || ''}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Competition</option>
+                    {COMPETITIONS.map((competition) => (
+                      <option key={competition} value={competition}>
+                        {competition}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
