@@ -857,7 +857,7 @@ export default function StaffSkillsMatrix({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+              className="bg-white dark:bg-gray-800 rounded-xl w-[95vw] max-w-none max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -866,7 +866,7 @@ export default function StaffSkillsMatrix({
                 </h3>
               </div>
               
-              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Select Skills to Add for {selectedStaff.full_name}
@@ -931,16 +931,16 @@ export default function StaffSkillsMatrix({
                               <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                               Security Skills ({availableSkillsByCategory.security.length})
                             </h5>
-                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                               {availableSkillsByCategory.security.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-red-100 dark:hover:bg-red-800/30 p-2 rounded">
+                                <label key={skill} className="flex items-center space-x-2 cursor-pointer hover:bg-red-100 dark:hover:bg-red-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
                                     onChange={() => handleSkillToggle(skill)}
                                     className="rounded border-gray-300 text-red-600 focus:ring-red-500"
                                   />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{skill}</span>
+                                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{skill}</span>
                                 </label>
                               ))}
                             </div>
@@ -954,16 +954,16 @@ export default function StaffSkillsMatrix({
                               <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
                               Operations Management Skills ({availableSkillsByCategory.operations.length})
                             </h5>
-                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                               {availableSkillsByCategory.operations.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800/30 p-2 rounded">
+                                <label key={skill} className="flex items-center space-x-2 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
                                     onChange={() => handleSkillToggle(skill)}
                                     className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                                   />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{skill}</span>
+                                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{skill}</span>
                                 </label>
                               ))}
                             </div>
@@ -977,16 +977,16 @@ export default function StaffSkillsMatrix({
                               <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
                               Venue Skills ({availableSkillsByCategory.venue.length})
                             </h5>
-                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                               {availableSkillsByCategory.venue.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-800/30 p-2 rounded">
+                                <label key={skill} className="flex items-center space-x-2 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
                                     onChange={() => handleSkillToggle(skill)}
                                     className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                   />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{skill}</span>
+                                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{skill}</span>
                                 </label>
                               ))}
                             </div>
@@ -1000,16 +1000,16 @@ export default function StaffSkillsMatrix({
                               <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
                               Maintenance Skills ({availableSkillsByCategory.maintenance.length})
                             </h5>
-                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                               {availableSkillsByCategory.maintenance.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/30 p-2 rounded">
+                                <label key={skill} className="flex items-center space-x-2 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
                                     onChange={() => handleSkillToggle(skill)}
                                     className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
                                   />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{skill}</span>
+                                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{skill}</span>
                                 </label>
                               ))}
                             </div>
@@ -1023,16 +1023,16 @@ export default function StaffSkillsMatrix({
                               <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                               Production Skills ({availableSkillsByCategory.production.length})
                             </h5>
-                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                               {availableSkillsByCategory.production.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800/30 p-2 rounded">
+                                <label key={skill} className="flex items-center space-x-2 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
                                     onChange={() => handleSkillToggle(skill)}
                                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                   />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{skill}</span>
+                                  <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{skill}</span>
                                 </label>
                               ))}
                             </div>
