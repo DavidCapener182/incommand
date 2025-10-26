@@ -163,6 +163,17 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     return `${homeTeam} v ${awayTeam} - ${formattedDate}`;
   };
 
+  // Format date for display as DD/MM/YYYY
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const updatedFormData = { ...formData, [name]: value };
@@ -570,16 +581,25 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Match Date <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="date"
-                    name="event_date"
-                    id="event_date"
-                    value={formData.event_date}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                    style={{ colorScheme: 'light' }}
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="event_date"
+                      id="event_date"
+                      value={formData.event_date}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      required
+                      style={{ colorScheme: 'light' }}
+                    />
+                    {formData.event_date && (
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {formatDateForDisplay(formData.event_date)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Event name will be auto-generated as "Home Team v Away Team - DD/MM/YYYY"</p>
                 </div>
               )}

@@ -14,11 +14,45 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { venueName, artistName } = await request.json();
+    const { 
+      eventType, 
+      venueName, 
+      artistName, 
+      homeTeam, 
+      awayTeam, 
+      paradeRoute, 
+      festivalTheme 
+    } = await request.json();
 
-    if (!venueName || !artistName) {
+    if (!venueName) {
       return NextResponse.json(
-        { error: 'Venue name and artist name are required' },
+        { error: 'Venue name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check for required fields based on event type
+    let hasRequiredFields = false;
+    switch (eventType) {
+      case 'Concert':
+        hasRequiredFields = !!artistName;
+        break;
+      case 'Football':
+        hasRequiredFields = !!homeTeam && !!awayTeam;
+        break;
+      case 'Parade':
+        hasRequiredFields = !!paradeRoute;
+        break;
+      case 'Festival':
+        hasRequiredFields = !!festivalTheme;
+        break;
+      default:
+        hasRequiredFields = true;
+    }
+
+    if (!hasRequiredFields) {
+      return NextResponse.json(
+        { error: 'Required fields for this event type are missing' },
         { status: 400 }
       );
     }
@@ -31,12 +65,58 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `Provide a concise security brief for an upcoming event featuring ${artistName} at ${venueName}. The brief should:
+    // Generate event-specific prompt
+    let eventDescription = '';
+    let prompt = '';
+    
+    switch (eventType) {
+      case 'Concert':
+        eventDescription = `concert featuring ${artistName}`;
+        prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
 \t•\tSummarise any previous incidents or issues related to the artist or venue, based on credible online sources or news reports.
 \t•\tHighlight crowd dynamics typically associated with this artist or venue (e.g., audience demographics, expected behaviour, potential flashpoints).
 \t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
 \t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-energy rock concert with mosh pits likely", "family-friendly daytime festival", etc).
-\t•\tMention any special considerations for security planning based on past events.
+\t•\tMention any special considerations for security planning based on past events.`;
+        break;
+      case 'Football':
+        eventDescription = `football match between ${homeTeam} and ${awayTeam}`;
+        prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to these teams or the venue, based on credible online sources or news reports.
+\t•\tHighlight crowd dynamics typically associated with this fixture (e.g., fan demographics, expected behaviour, potential flashpoints, rivalry factors).
+\t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees, fan base characteristics).
+\t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-intensity derby match with passionate fan bases", "family-friendly match", etc).
+\t•\tMention any special considerations for security planning based on past events, including any known trouble spots or fan behavior patterns.`;
+        break;
+      case 'Parade':
+        eventDescription = `parade along ${paradeRoute}`;
+        prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to this parade route or venue, based on credible online sources or news reports.
+\t•\tHighlight crowd dynamics typically associated with this type of parade (e.g., audience demographics, expected behaviour, potential flashpoints).
+\t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
+\t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "large-scale street parade with multiple viewing points", "family-friendly community event", etc).
+\t•\tMention any special considerations for security planning based on past events, including crowd control and traffic management.`;
+        break;
+      case 'Festival':
+        eventDescription = `${festivalTheme} festival`;
+        prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to this type of festival or venue, based on credible online sources or news reports.
+\t•\tHighlight crowd dynamics typically associated with this festival type (e.g., audience demographics, expected behaviour, potential flashpoints).
+\t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
+\t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "multi-day music festival with camping", "family-friendly cultural festival", etc).
+\t•\tMention any special considerations for security planning based on past events, including crowd management and safety protocols.`;
+        break;
+      default:
+        eventDescription = `event`;
+        prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to this venue, based on credible online sources or news reports.
+\t•\tHighlight crowd dynamics typically associated with this type of event (e.g., audience demographics, expected behaviour, potential flashpoints).
+\t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
+\t•\tProvide a very brief overview of the type of event and what security should expect.
+\t•\tMention any special considerations for security planning based on past events.`;
+    }
+
+    const fullPrompt = `${prompt}
 
 Keep the brief to two paragraphs, suitable for use in an operational security handover or briefing document.`;
 
@@ -49,7 +129,7 @@ Keep the brief to two paragraphs, suitable for use in an operational security ha
         },
         {
           role: "user",
-          content: prompt
+          content: fullPrompt
         }
       ],
       temperature: 0.7,
