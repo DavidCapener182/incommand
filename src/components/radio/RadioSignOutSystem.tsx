@@ -139,28 +139,38 @@ export default function RadioSignOutSystem({
 
   const handleSignOut = async () => {
     const canvas = canvasRef.current
+    console.log('handleSignOut called with:', { radioNumber, selectedStaffId, eventId, hasCanvas: !!canvas })
+    
     if (!canvas || !radioNumber || !selectedStaffId) {
       setError('Please enter a radio number, select a staff member, and provide a signature')
       return
     }
     
     const signature = canvas.toDataURL()
+    console.log('Signature generated, length:', signature.length)
     
     try {
+      const requestBody = {
+        radio_number: radioNumber,
+        event_id: eventId,
+        staff_id: selectedStaffId,
+        signed_out_signature: signature,
+        signed_out_notes: signOutNotes
+      }
+      console.log('Sending request:', requestBody)
+      
       const response = await fetch('/api/v1/radio-signout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          radio_number: radioNumber,
-          event_id: eventId,
-          staff_id: selectedStaffId,
-          signed_out_signature: signature,
-          signed_out_notes: signOutNotes
-        })
+        body: JSON.stringify(requestBody)
       })
       
+      console.log('Response status:', response.status)
+      const responseData = await response.json()
+      console.log('Response data:', responseData)
+      
       if (!response.ok) {
-        throw new Error('Failed to sign out radio')
+        throw new Error(`Failed to sign out radio: ${responseData.error || 'Unknown error'}`)
       }
       
       // Reset form and refresh list
@@ -171,6 +181,7 @@ export default function RadioSignOutSystem({
       setShowSignOutModal(false)
       fetchSignOuts()
     } catch (err) {
+      console.error('Sign out error:', err)
       setError(err instanceof Error ? err.message : 'Sign out failed')
     }
   }
