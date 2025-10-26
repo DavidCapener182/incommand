@@ -149,13 +149,38 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     }
   };
 
+  // Auto-generate event name for football events
+  const generateFootballEventName = (homeTeam: string, awayTeam: string, eventDate: string) => {
+    if (!homeTeam || !awayTeam || !eventDate) return '';
+    
+    const date = new Date(eventDate);
+    const formattedDate = date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    return `${homeTeam} v ${awayTeam} - ${formattedDate}`;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const updatedFormData = { ...formData, [name]: value };
 
-    // Auto-fill artist_name with event_name if event_name is being changed
-    if (name === 'event_name') {
+    // Auto-fill artist_name with event_name if event_name is being changed (for concerts)
+    if (name === 'event_name' && formData.event_type === 'Concert') {
       updatedFormData.artist_name = value;
+    }
+
+    // Auto-generate event name for football events
+    if (formData.event_type === 'Football') {
+      if (name === 'home_team' || name === 'away_team' || name === 'event_date') {
+        const homeTeam = name === 'home_team' ? value : formData.home_team || '';
+        const awayTeam = name === 'away_team' ? value : formData.away_team || '';
+        const eventDate = name === 'event_date' ? value : formData.event_date || '';
+        
+        updatedFormData.event_name = generateFootballEventName(homeTeam, awayTeam, eventDate);
+      }
     }
 
     setFormData(updatedFormData);
@@ -433,15 +458,22 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="event_name"
-                  id="event_name"
-                  required
-                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.event_name}
-                  onChange={handleInputChange}
-                />
+                {formData.event_type === 'Football' ? (
+                  <div className="mt-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium">Auto-generated: </span>
+                    <span className="text-sm">{formData.event_name || 'Will be generated when teams and date are entered'}</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    name="event_name"
+                    id="event_name"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.event_name}
+                    onChange={handleInputChange}
+                  />
+                )}
               </div>
 
               {/* Event Type Specific Fields */}
@@ -567,15 +599,24 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <label htmlFor="venue_address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Venue Address <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="venue_address"
-                  id="venue_address"
-                  required
-                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  value={formData.venue_address}
-                  onChange={handleInputChange}
-                />
+                <div className="mt-1 relative">
+                  <input
+                    type="text"
+                    name="venue_address"
+                    id="venue_address"
+                    required
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.venue_address}
+                    onChange={handleInputChange}
+                    placeholder={addressLoading ? "Generating address..." : "Address will be auto-filled when venue name is entered"}
+                  />
+                  {addressLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 bg-opacity-50 dark:bg-opacity-50 rounded-lg">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Address will be automatically generated based on venue name</p>
               </div>
               {/* Security Brief */}
               <div>
