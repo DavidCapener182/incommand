@@ -228,10 +228,11 @@ export default function StaffSkillsMatrix({
     try {
       // Add each selected skill
       const promises = selectedSkills.map(skill => 
-        fetch(`/api/v1/staff/skills/${selectedStaff.profile_id}`, {
+        fetch('/api/v1/staff/skills', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            profile_id: selectedStaff.profile_id,
             skill_name: skill,
             certification_date: newCertificationDate || null,
             expiry_date: newExpiryDate || null,
