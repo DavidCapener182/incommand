@@ -389,23 +389,23 @@ export default function RadioSignOutSystem({
 
       {/* Radio List */}
       <div className="p-6">
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {outRadios.map((signOut) => (
             <motion.div
               key={signOut.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex items-center justify-between p-4 sm:p-5 rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 ${
+              className={`p-4 sm:p-5 rounded-xl border shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 ${
                 signOut.status === 'overdue'
                   ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
                   : 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
               }`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 mb-4">
                 <div className="flex-shrink-0">
                   <RadioIcon className="h-8 w-8 text-blue-600" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-xs font-semibold text-gray-600 uppercase">Radio #{signOut.radio_number}</p>
                   <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {signOut.profile.full_name}
@@ -422,7 +422,7 @@ export default function RadioSignOutSystem({
                   setSelectedSignOut(signOut)
                   setShowSignInModal(true)
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium"
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium"
               >
                 Sign In
               </button>
