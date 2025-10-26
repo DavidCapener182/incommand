@@ -575,59 +575,6 @@ export default function StaffSkillsMatrix({
           Showing {filteredStaff.length} of {staff.length} staff members
         </div>
         
-        {/* Available Skills Overview - Grouped by Category */}
-        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-3">
-            All Available Skills ({getAllAvailableSkills().length})
-          </h4>
-          
-          {/* Skills grouped by category */}
-          <div className="space-y-4">
-            {(() => {
-              const skillsByCategory = getSkillsByCategory()
-              const allSkills = getAllAvailableSkills()
-              
-              return Object.entries(skillsByCategory).map(([category, skills]) => {
-                const availableSkills = skills.filter(skill => allSkills.includes(skill))
-                if (availableSkills.length === 0) return null
-                
-                const categoryColors = {
-                  security: 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100',
-                  operations: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
-                  venue: 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100',
-                  maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100',
-                  production: 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
-                }
-                
-                const categoryNames = {
-                  security: 'Security Skills',
-                  operations: 'Operations Management Skills',
-                  venue: 'Venue Skills',
-                  maintenance: 'Maintenance Skills',
-                  production: 'Production Skills'
-                }
-                
-                return (
-                  <div key={category}>
-                    <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                      {categoryNames[category as keyof typeof categoryNames]}
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {availableSkills.map((skill) => (
-                        <span
-                          key={skill}
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categoryColors[category as keyof typeof categoryColors]}`}
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })
-            })()}
-          </div>
-        </div>
       </div>
 
       {/* Skills Matrix Grid */}
@@ -919,11 +866,44 @@ export default function StaffSkillsMatrix({
                 </h3>
               </div>
               
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Select Skills to Add for {selectedStaff.full_name}
                   </h4>
+                  
+                  {/* Selected Skills Summary */}
+                  {selectedSkills.length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Selected Skills ({selectedSkills.length})
+                        </span>
+                        <button
+                          onClick={() => setSelectedSkills([])}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {selectedSkills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+                          >
+                            {skill}
+                            <button
+                              onClick={() => handleSkillToggle(skill)}
+                              className="ml-1 hover:text-blue-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {(() => {
                     const availableSkillsByCategory = getAvailableSkillsForStaffByCategory(selectedStaff)
@@ -931,9 +911,14 @@ export default function StaffSkillsMatrix({
                     
                     if (!hasAnyAvailableSkills) {
                       return (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {selectedStaff.full_name} already has all available skills.
-                        </p>
+                        <div className="text-center py-8">
+                          <div className="text-gray-400 dark:text-gray-500 mb-2">
+                            <AcademicCapIcon className="h-12 w-12 mx-auto" />
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {selectedStaff.full_name} already has all available skills.
+                          </p>
+                        </div>
                       )
                     }
                     
@@ -941,11 +926,14 @@ export default function StaffSkillsMatrix({
                       <div className="space-y-6">
                         {/* Security Skills */}
                         {availableSkillsByCategory.security.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-red-700 dark:text-red-300 mb-3 uppercase tracking-wide">Security Skills</h5>
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="border border-red-200 dark:border-red-800 rounded-lg p-4 bg-red-50 dark:bg-red-900/20">
+                            <h5 className="text-sm font-semibold text-red-700 dark:text-red-300 mb-3 uppercase tracking-wide flex items-center">
+                              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                              Security Skills ({availableSkillsByCategory.security.length})
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                               {availableSkillsByCategory.security.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-2 cursor-pointer">
+                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-red-100 dark:hover:bg-red-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
@@ -961,11 +949,14 @@ export default function StaffSkillsMatrix({
 
                         {/* Operations Skills */}
                         {availableSkillsByCategory.operations.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-3 uppercase tracking-wide">Operations Management Skills</h5>
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                            <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-3 uppercase tracking-wide flex items-center">
+                              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                              Operations Management Skills ({availableSkillsByCategory.operations.length})
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                               {availableSkillsByCategory.operations.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-2 cursor-pointer">
+                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
@@ -981,11 +972,14 @@ export default function StaffSkillsMatrix({
 
                         {/* Venue Skills */}
                         {availableSkillsByCategory.venue.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 uppercase tracking-wide">Venue Skills</h5>
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                            <h5 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 uppercase tracking-wide flex items-center">
+                              <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                              Venue Skills ({availableSkillsByCategory.venue.length})
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                               {availableSkillsByCategory.venue.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-2 cursor-pointer">
+                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
@@ -1001,11 +995,14 @@ export default function StaffSkillsMatrix({
 
                         {/* Maintenance Skills */}
                         {availableSkillsByCategory.maintenance.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-3 uppercase tracking-wide">Maintenance Skills</h5>
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/20">
+                            <h5 className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-3 uppercase tracking-wide flex items-center">
+                              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                              Maintenance Skills ({availableSkillsByCategory.maintenance.length})
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                               {availableSkillsByCategory.maintenance.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-2 cursor-pointer">
+                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
@@ -1021,11 +1018,14 @@ export default function StaffSkillsMatrix({
 
                         {/* Production Skills */}
                         {availableSkillsByCategory.production.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3 uppercase tracking-wide">Production Skills</h5>
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                            <h5 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3 uppercase tracking-wide flex items-center">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                              Production Skills ({availableSkillsByCategory.production.length})
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                               {availableSkillsByCategory.production.map((skill) => (
-                                <label key={skill} className="flex items-center space-x-2 cursor-pointer">
+                                <label key={skill} className="flex items-center space-x-3 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800/30 p-2 rounded">
                                   <input
                                     type="checkbox"
                                     checked={selectedSkills.includes(skill)}
