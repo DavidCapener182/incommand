@@ -33,6 +33,8 @@ interface StaffMember {
   callsign: string | null
   skills: StaffSkill[]
   certifications_expiring_30_days: number
+  sa_badge_number?: string
+  expiry_date?: string
 }
 
 interface StaffSkillsMatrixProps {
@@ -181,6 +183,13 @@ export default function StaffSkillsMatrix({
     }
   }
 
+  const isExpiringSoon = (expiryDate: string) => {
+    const expiry = new Date(expiryDate)
+    const now = new Date()
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0
+  }
+
   const exportSkillsMatrix = async () => {
     try {
       const response = await fetch('/api/v1/staff/skills-matrix/export', {
@@ -286,12 +295,18 @@ export default function StaffSkillsMatrix({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Staff Member
                 </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Skills
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Skills
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  SA Badge Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Expiry Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -315,15 +330,12 @@ export default function StaffSkillsMatrix({
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {member.full_name}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {member.callsign || member.email}
-                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {member.skills.slice(0, 3).map((skill) => {
+                    <div className="grid grid-cols-1 gap-1 max-h-20 overflow-y-auto">
+                      {member.skills.map((skill) => {
                         const status = getSkillStatus(skill)
                         return (
                           <span
@@ -335,12 +347,22 @@ export default function StaffSkillsMatrix({
                           </span>
                         )
                       })}
-                      {member.skills.length > 3 && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          +{member.skills.length - 3} more
-                        </span>
-                      )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {member.sa_badge_number || '—'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {member.expiry_date ? new Date(member.expiry_date).toLocaleDateString() : '—'}
+                    </div>
+                    {member.expiry_date && isExpiringSoon(member.expiry_date) && (
+                      <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                        ⚠️ Expires Soon
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
