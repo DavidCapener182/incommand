@@ -374,19 +374,33 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       }
       const company_id = profile.company_id;
 
-      // Validate required fields
-      const requiredFields = [
+      // Validate required fields based on event type
+      let requiredFields = [
         'event_name',
         'event_type',
         'venue_name',
         'venue_address',
         'event_date',
-        'security_call_time',
-        'show_stop_meeting_time',
-        'doors_open_time',
-        'main_act_start_time',
-        'show_down_time'
-      ]
+        'security_call_time'
+      ];
+
+      // Add event-type-specific required fields
+      switch (formData.event_type) {
+        case 'Concert':
+          requiredFields.push('show_stop_meeting_time', 'doors_open_time', 'main_act_start_time', 'show_down_time');
+          break;
+        case 'Football':
+          requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
+          break;
+        case 'Parade':
+          requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
+          break;
+        case 'Festival':
+          requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
+          break;
+        default:
+          requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
+      }
 
       const missingFields = requiredFields.filter(field => !formData[field])
       if (missingFields.length > 0) {
