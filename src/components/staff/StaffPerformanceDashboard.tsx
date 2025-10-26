@@ -158,23 +158,49 @@ export default function StaffPerformanceDashboard({
   if (performances.length === 0) {
     return (
       <section className={`card-depth ${className}`}>
-        <div className="p-6 text-center">
+        <div className="p-6">
           <div className="flex items-center justify-center mb-4">
             <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide ml-2">
               Staff Performance Dashboard
             </h3>
           </div>
-          <div className="py-8">
+          
+          {/* Debug Information Box */}
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Debug: Performance Tracking Setup Required
+                </h4>
+                <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <p className="mb-2">To get performance tracking working, you need to:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li><strong>Assign staff to callsigns</strong> - Go to the Callsign Assignment tab and assign staff members to positions (e.g., "Alpha 1", "Sierra 2")</li>
+                    <li><strong>Staff use their assigned callsigns</strong> - When staff send incidents or messages, they should use their assigned callsign (e.g., "Alpha 1" sends message to Event Control)</li>
+                    <li><strong>Incident logs match callsigns</strong> - The system will match incident logs with callsign_from/assigned_to fields to the staff member's assigned callsign</li>
+                  </ol>
+                  <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                    Performance metrics are calculated based on incident logs attributed to each staff member's assigned callsigns.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center py-8">
             <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No Performance Data Available
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Performance metrics will appear here once staff members start logging incidents and activities.
+              Performance metrics will appear here once staff members are assigned to callsigns and start using them in incident logs.
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
-              Data is calculated from incident logs, response times, and supervisor ratings.
+              Data is calculated from incident logs matched to staff callsign assignments.
             </p>
           </div>
         </div>
