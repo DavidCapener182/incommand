@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon,
   PencilIcon,
   ArrowDownTrayIcon,
+  ArrowPathIcon,
   TrashIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
@@ -107,6 +108,18 @@ export default function RadioSignOutSystem({
     }
   }, [eventId])
 
+  // Auto-refresh every 30 seconds to keep data in sync
+  useEffect(() => {
+    if (!eventId) return
+
+    const interval = setInterval(() => {
+      console.log('Auto-refreshing radio signouts...')
+      fetchSignOuts()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [eventId])
+
   // Equipment handlers
   const handleEquipmentChange = (item: keyof typeof equipment) => {
     setEquipment(prev => ({
@@ -163,7 +176,8 @@ export default function RadioSignOutSystem({
       setSelectedStaffId('')
       setEquipment({ pitCans: false, earpiece: false, spareBattery: false })
       setShowSignOutModal(false)
-      fetchSignOuts()
+      await fetchSignOuts()
+      console.log('Sign-out completed, list refreshed')
     } catch (err) {
       console.error('Sign out error:', err)
       setError(err instanceof Error ? err.message : 'Sign out failed')
@@ -196,7 +210,8 @@ export default function RadioSignOutSystem({
       setSelectedSignOut(null)
       setSignInEquipment({ pitCans: false, earpiece: false, spareBattery: false })
       setShowSignInModal(false)
-      fetchSignOuts()
+      await fetchSignOuts()
+      console.log('Sign-in completed, list refreshed')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
     }
@@ -295,6 +310,13 @@ export default function RadioSignOutSystem({
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               Export CSV
+            </button>
+            <button
+              onClick={fetchSignOuts}
+              className="px-3 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-medium"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              Refresh
             </button>
             <button
               onClick={() => setShowSignOutModal(true)}
