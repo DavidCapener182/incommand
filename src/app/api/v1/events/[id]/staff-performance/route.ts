@@ -151,14 +151,57 @@ export async function GET(
       })
     }
 
-    // Calculate performance metrics for each staff member using fuzzy matching
+    // Get callsign assignments for this event
+    console.log('Fetching callsign assignments for event:', eventId)
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('position_assignments')
+      .select('staff_id, callsign, position_name, department')
+      .eq('event_id', eventId)
+
+    if (assignmentsError) {
+      console.error('Error fetching assignments:', assignmentsError)
+      return NextResponse.json({ error: 'Failed to fetch callsign assignments', details: assignmentsError.message }, { status: 500 })
+    }
+
+    console.log('Found assignments:', assignments?.length || 0, 'assignments')
+
+    // If no assignments, return empty performance data
+    if (!assignments || assignments.length === 0) {
+      console.log('No callsign assignments found for event')
+      return NextResponse.json({
+        success: true,
+        performances: [],
+        message: 'No callsign assignments found for this event. Assign staff to callsigns to track performance.'
+      })
+    }
+
+    // Create a mapping of callsigns to staff members
+    const callsignToStaff = new Map()
+    if (assignments) {
+      for (const assignment of assignments) {
+        callsignToStaff.set(assignment.callsign, assignment.staff_id)
+      }
+    }
+
+    // Calculate performance metrics for each staff member using callsign matching
     const performances = []
     
     for (const member of staff) {
-      // Use fuzzy matching to find incidents for this staff member
-      const { matched, incidents } = findStaffInLogs(member.full_name, allIncidentLogs || [])
+      // Find this staff member's callsign assignments
+      const memberAssignments = assignments?.filter(a => a.staff_id === member.id) || []
       
-      if (!matched) {
+      if (memberAssignments.length === 0) {
+        continue // Skip staff members with no callsign assignments
+      }
+
+      // Find incidents for this staff member's callsigns
+      const memberCallsigns = memberAssignments.map(a => a.callsign)
+      const incidents = allIncidentLogs.filter(log => 
+        memberCallsigns.includes(log.callsign_from) || 
+        memberCallsigns.includes(log.assigned_to)
+      )
+      
+      if (incidents.length === 0) {
         continue // Skip staff members with no matching incidents
       }
 
@@ -204,13 +247,18 @@ export async function GET(
         profile_id: member.id,
         full_name: member.full_name,
         email: member.email,
-        callsign: member.full_name,
+        callsign: memberAssignments.map(a => a.callsign).join(', '), // Show assigned callsigns
         incidents_logged: incidentsCount,
         avg_response_time: avgResponseTime,
         log_quality_score: logQualityScore,
         overall_score: Math.min(100, Math.max(0, overallScore)),
         experience_level: 'intermediate',
-        active_assignments: member.is_staff ? 1 : 0
+        active_assignments: member.is_staff ? 1 : 0,
+        assigned_callsigns: memberAssignments.map(a => ({
+          callsign: a.callsign,
+          position_name: a.position_name,
+          department: a.department
+        }))
       })
     }
 
