@@ -88,7 +88,6 @@ export default function StaffSkillsMatrix({
     const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     
     if (daysUntilExpiry < 0) return 'expired'
-    if (daysUntilExpiry <= 30) return 'expiring'
     return 'valid'
   }
 
@@ -96,8 +95,6 @@ export default function StaffSkillsMatrix({
     switch (status) {
       case 'valid':
         return 'text-green-600 bg-green-100'
-      case 'expiring':
-        return 'text-yellow-600 bg-yellow-100'
       case 'expired':
         return 'text-red-600 bg-red-100'
       default:
@@ -109,8 +106,6 @@ export default function StaffSkillsMatrix({
     switch (status) {
       case 'valid':
         return <CheckCircleIcon className="h-4 w-4" />
-      case 'expiring':
-        return <ClockIcon className="h-4 w-4" />
       case 'expired':
         return <ExclamationTriangleIcon className="h-4 w-4" />
       default:
@@ -223,15 +218,12 @@ export default function StaffSkillsMatrix({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Staff Member
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Skills
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Expiring Soon
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Skills
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -282,16 +274,6 @@ export default function StaffSkillsMatrix({
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {member.certifications_expiring_30_days > 0 ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-yellow-800 bg-yellow-100">
-                        <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
-                        {member.certifications_expiring_30_days} expiring
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-500 dark:text-gray-400">None</span>
-                    )}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => setSelectedStaff(member)}
@@ -321,7 +303,7 @@ export default function StaffSkillsMatrix({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
             onClick={() => setSelectedStaff(null)}
           >
             <motion.div
@@ -459,7 +441,7 @@ export default function StaffSkillsMatrix({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
             onClick={() => setShowEditSkillModal(false)}
           >
             <motion.div
