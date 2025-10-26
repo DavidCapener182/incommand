@@ -336,9 +336,9 @@ export default function Navigation() {
                     {/* Reports Dropdown */}
                     <NavigationMenuItem>
                       <NavigationMenuTrigger 
-                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         onClick={() => {
-                          if (!hasCurrentEvent) {
+                          if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
                             setShowNoEventModal(true);
                             return;
                           }
@@ -371,7 +371,7 @@ export default function Navigation() {
                     <NavigationMenuItem>
                       <Link 
                         href="/staffing" 
-                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                       >
                         Staff
                       </Link>
@@ -668,7 +668,7 @@ export default function Navigation() {
 
             <Link 
               href="/staffing" 
-              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Staff

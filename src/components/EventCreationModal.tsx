@@ -129,7 +129,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       switch (updatedFormData.event_type) {
         case 'Concert':
           return updatedFormData.venue_name && updatedFormData.artist_name;
-        case 'Other':
+        case 'Football':
           return updatedFormData.venue_name && updatedFormData.home_team && updatedFormData.away_team;
         case 'Parade':
           return updatedFormData.venue_name && updatedFormData.parade_route;
@@ -239,6 +239,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    console.log('🔄 Input changed:', name, '=', value);
     const updatedFormData = { ...formData, [name]: value };
 
     // Auto-fill artist_name with event_name if event_name is being changed (for concerts)
@@ -247,7 +248,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     }
 
     // Auto-generate event name for football events
-    if (formData.event_type === 'Other') {
+    if (formData.event_type === 'Football') {
       if (name === 'home_team' || name === 'away_team' || name === 'event_date') {
         const homeTeam = name === 'home_team' ? value : formData.home_team || '';
         const awayTeam = name === 'away_team' ? value : formData.away_team || '';
@@ -346,10 +347,12 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     window.dispatchEvent(new CustomEvent('eventModalChange', { detail: { isOpen } }))
   }, [isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault()
+      console.log('🚀 Form submitted with event_type:', formData.event_type);
+      console.log('📋 Full form data:', formData);
+      setLoading(true)
+      setError(null)
 
     try {
       // Check if user is authenticated
@@ -389,7 +392,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         case 'Concert':
           requiredFields.push('show_stop_meeting_time', 'doors_open_time', 'main_act_start_time', 'show_down_time');
           break;
-        case 'Other':
+        case 'Football':
           requiredFields.push('doors_open_time', 'main_act_start_time', 'show_down_time');
           break;
         case 'Parade':
@@ -403,12 +406,15 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       }
 
       const missingFields = requiredFields.filter(field => !formData[field])
+      console.log('🔍 Required fields check:', { requiredFields, missingFields, formData });
       if (missingFields.length > 0) {
         setError(`Please fill in all required fields: ${missingFields.join(', ')}`)
         setLoading(false)
         return
       }
+      console.log('✅ All required fields validated');
 
+      console.log('🔄 Starting database operations...');
       // First, set all events' is_current to false for this company only
       const { error: updateError } = await supabase
         .from('events')
@@ -417,8 +423,10 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         .neq('id', '00000000-0000-0000-0000-000000000000')
 
       if (updateError) throw updateError
+      console.log('✅ Updated existing events is_current to false');
 
       // Format the event data
+      console.log('🔍 Event type being sent to database:', formData.event_type);
       const eventData = {
         event_name: formData.event_name,
         event_type: formData.event_type,
@@ -458,12 +466,17 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         event_brief: formData.event_brief || null,
       }
 
+      console.log('🔄 Inserting new event into database...');
       const { error: insertError, data: insertedEvent } = await supabase
         .from('events')
         .insert([eventData as any])
         .select()
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('❌ Insert error:', insertError);
+        throw insertError;
+      }
+      console.log('✅ Event created successfully:', insertedEvent);
 
       // Insert support acts if any
       if (formData.support_acts.length > 0 && insertedEvent?.[0]?.id) {
@@ -535,7 +548,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   <option value="Concert">Concert</option>
                   <option value="Parade">Parade</option>
                   <option value="Festival">Festival</option>
-                  <option value="Other">Football</option>
+                  <option value="Football">Football</option>
                 </select>
               </div>
             </div>
@@ -552,7 +565,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Name <span className="text-red-500">*</span>
                 </label>
-                {formData.event_type === 'Other' ? (
+                {formData.event_type === 'Football' ? (
                   <div className="mt-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                     <span className="text-sm font-medium">Auto-generated: </span>
                     <span className="text-sm">{formData.event_name || 'Will be generated when teams and date are entered'}</span>
@@ -588,7 +601,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </div>
               )}
 
-              {formData.event_type === 'Other' && (
+              {formData.event_type === 'Football' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -682,7 +695,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {/* Event Date - Show early for football events */}
-              {formData.event_type === 'Other' && (
+              {formData.event_type === 'Football' && (
                 <div>
                   <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Match Date <span className="text-red-500">*</span>
@@ -776,7 +789,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     value={formData.description || ''}
                     onChange={handleInputChange}
                     rows={6}
-                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Other' ? 'team' : 'event'} details are filled`}
+                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Football' ? 'team' : 'event'} details are filled`}
                     className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     disabled={descriptionLoading}
                   />
@@ -854,7 +867,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Other' && (
+              {formData.event_type === 'Football' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -972,7 +985,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 let personnel = [];
                 
                 switch (formData.event_type) {
-                  case 'Other':
+                  case 'Football':
                     personnel = [
                       {
                         title: 'Safety Officer',

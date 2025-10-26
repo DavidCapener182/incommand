@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       case 'Concert':
         hasRequiredFields = !!artistName;
         break;
-      case 'Other':
+      case 'Football':
         hasRequiredFields = !!homeTeam && !!awayTeam;
         break;
       case 'Parade':
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 \t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-energy rock concert with mosh pits likely", "family-friendly daytime festival", etc).
 \t•\tMention any special considerations for security planning based on past events.`;
         break;
-      case 'Other':
+      case 'Football':
         eventDescription = `football match between ${homeTeam} and ${awayTeam}`;
         prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
 \t•\tSummarise any previous incidents or issues related to these teams or the venue, based on credible online sources or news reports.
