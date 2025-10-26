@@ -25,10 +25,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get all staff in the company
+    // Get all staff in the company with their profile information
     const { data: staff, error: staffError } = await supabase
       .from('staff')
-      .select('id, full_name, email, contact_number, skill_tags, notes, active, company_id')
+      .select(`
+        id, 
+        full_name, 
+        email, 
+        contact_number, 
+        skill_tags, 
+        notes, 
+        active, 
+        company_id,
+        profile_id
+      `)
       .eq('company_id', profile.company_id)
       .order('full_name', { ascending: true })
 
@@ -60,6 +70,18 @@ export async function GET(request: NextRequest) {
       // Continue without certifications if table doesn't exist
     }
 
+    // Get profile information for SIA badge data
+    const profileIds = staff.map(member => member.profile_id).filter(Boolean)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, sia_badge_number, expiry_date')
+      .in('id', profileIds)
+
+    if (profilesError) {
+      console.error('Profiles fetch error:', profilesError)
+      // Continue without profile data
+    }
+
     // Combine staff with their skills and certifications
     const staffWithDetails = staff.map(member => {
       // Get skills from both staff_skills table and skill_tags array
@@ -84,6 +106,9 @@ export async function GET(request: NextRequest) {
       
       const allSkills = [...staffSkills, ...skillTagSkills]
       
+      // Get profile data for SIA badge information
+      const profileData = profiles?.find(p => p.id === member.profile_id)
+      
       return {
         profile_id: member.id, // Keep profile_id for compatibility with component
         full_name: member.full_name,
@@ -94,7 +119,9 @@ export async function GET(request: NextRequest) {
           ...cert,
           profile_id: member.id // Ensure profile_id is set
         })) || [],
-        certifications_expiring_30_days: 0 // Calculate if needed
+        certifications_expiring_30_days: 0, // Calculate if needed
+        sia_badge_number: profileData?.sia_badge_number || null,
+        expiry_date: profileData?.expiry_date || null
       }
     })
 

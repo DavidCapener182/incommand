@@ -54,6 +54,10 @@ export default function StaffSkillsMatrix({
   const [showAddSkillModal, setShowAddSkillModal] = useState(false)
   const [showEditSkillModal, setShowEditSkillModal] = useState(false)
   const [editingSkill, setEditingSkill] = useState<StaffSkill | null>(null)
+  const [showSIABadgeModal, setShowSIABadgeModal] = useState(false)
+  const [selectedMemberForSIA, setSelectedMemberForSIA] = useState<StaffMember | null>(null)
+  const [siaBadgeNumber, setSiaBadgeNumber] = useState('')
+  const [siaExpiryDate, setSiaExpiryDate] = useState('')
   const [newSkillName, setNewSkillName] = useState('')
   const [newCertificationDate, setNewCertificationDate] = useState('')
   const [newExpiryDate, setNewExpiryDate] = useState('')
@@ -198,6 +202,53 @@ export default function StaffSkillsMatrix({
 
   const needsSIABadgeInfo = (member: StaffMember) => {
     return hasSIASkills(member) && (!member.sia_badge_number || !member.expiry_date)
+  }
+
+  const openSIABadgeModal = (member: StaffMember) => {
+    setSelectedMemberForSIA(member)
+    setSiaBadgeNumber(member.sia_badge_number || '')
+    setSiaExpiryDate(member.expiry_date || '')
+    setShowSIABadgeModal(true)
+  }
+
+  const handleSaveSIABadge = async () => {
+    if (!selectedMemberForSIA || !siaBadgeNumber || !siaExpiryDate) {
+      alert('Please fill in both SIA Badge Number and Expiry Date')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/v1/staff/sia-badge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile_id: selectedMemberForSIA.profile_id,
+          sia_badge_number: siaBadgeNumber,
+          expiry_date: siaExpiryDate
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save SIA badge information')
+      }
+
+      // Update local state
+      setStaff(prevStaff => 
+        prevStaff.map(member => 
+          member.profile_id === selectedMemberForSIA.profile_id
+            ? { ...member, sia_badge_number: siaBadgeNumber, expiry_date: siaExpiryDate }
+            : member
+        )
+      )
+
+      setShowSIABadgeModal(false)
+      setSelectedMemberForSIA(null)
+      setSiaBadgeNumber('')
+      setSiaExpiryDate('')
+    } catch (err) {
+      console.error('Error saving SIA badge:', err)
+      alert('Failed to save SIA badge information')
+    }
   }
 
   const exportSkillsMatrix = async () => {
@@ -355,17 +406,23 @@ export default function StaffSkillsMatrix({
                       })}
                     </div>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
+                  <td 
+                    className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30' : ''}`}
+                    onClick={needsSIABadgeInfo(member) ? () => openSIABadgeModal(member) : undefined}
+                  >
                     <div className="text-sm text-gray-900 dark:text-white">
                       {member.sia_badge_number || '—'}
                     </div>
                     {needsSIABadgeInfo(member) && (
                       <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                        ⚠️ SIA Badge Required
+                        ⚠️ SIA Badge Required - Click to add
                       </div>
                     )}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
+                  <td 
+                    className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30' : ''}`}
+                    onClick={needsSIABadgeInfo(member) ? () => openSIABadgeModal(member) : undefined}
+                  >
                     <div className="text-sm text-gray-900 dark:text-white">
                       {member.expiry_date ? new Date(member.expiry_date).toLocaleDateString() : '—'}
                     </div>
@@ -376,7 +433,7 @@ export default function StaffSkillsMatrix({
                     )}
                     {needsSIABadgeInfo(member) && !member.expiry_date && (
                       <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                        ⚠️ Expiry Date Required
+                        ⚠️ Expiry Date Required - Click to add
                       </div>
                     )}
                   </td>
@@ -649,6 +706,89 @@ export default function StaffSkillsMatrix({
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Add Skill
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* SIA Badge Modal */}
+        {showSIABadgeModal && selectedMemberForSIA && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
+            style={{ backdropFilter: 'blur(8px)' }}
+            onClick={() => setShowSIABadgeModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Add SIA Badge Information
+                </h3>
+                <button
+                  onClick={() => setShowSIABadgeModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Adding SIA badge information for <strong>{selectedMemberForSIA.full_name}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    SIA Badge Number (16 digits)
+                  </label>
+                  <input
+                    type="text"
+                    value={siaBadgeNumber}
+                    onChange={(e) => setSiaBadgeNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Enter 16-digit SIA badge number"
+                    maxLength={16}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={siaExpiryDate}
+                    onChange={(e) => setSiaExpiryDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowSIABadgeModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSIABadge}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save SIA Badge
                 </button>
               </div>
             </motion.div>
