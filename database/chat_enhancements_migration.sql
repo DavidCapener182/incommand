@@ -266,3 +266,4 @@ BEGIN
   ORDER BY p.display_name;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+

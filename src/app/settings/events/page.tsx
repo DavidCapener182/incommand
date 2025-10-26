@@ -101,18 +101,33 @@ export default function EventsSettingsPage() {
     if (!currentEvent) return;
     setEndingEvent(true);
     setError(null);
-    const { error: endError } = await (supabase as any)
-      .from('events')
-      .update({ is_current: false })
-      .eq('id', currentEvent.id);
-    setEndingEvent(false);
-    if (endError) {
-      setError('Failed to end event: ' + endError.message);
-      return;
+    
+    try {
+      const response = await fetch(`/api/events/${currentEvent.id}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to end event');
+      }
+
+      // Show success message
+      setError(null);
+      
+      // Single full refresh after ending
+      await fetchEvents(false);
+      await fetchLogs(currentEvent?.id);
+      
+    } catch (error) {
+      setError('Failed to end event: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setEndingEvent(false);
     }
-    // Single full refresh after ending
-    await fetchEvents(false);
-    await fetchLogs(currentEvent?.id);
   };
 
   const handleReenableEvent = async (event: any) => {
