@@ -25,6 +25,16 @@ interface RadioSignOut {
   signed_in_notes: string | null
   condition_on_return: string | null
   status: 'out' | 'returned' | 'overdue' | 'lost'
+  equipment_signed_out?: {
+    pitCans?: boolean
+    earpiece?: boolean
+    spareBattery?: boolean
+  }
+  equipment_returned?: {
+    pitCans?: boolean
+    earpiece?: boolean
+    spareBattery?: boolean
+  }
   profile: {
     id: string
     full_name: string
@@ -615,33 +625,46 @@ export default function RadioSignOutSystem({
                     Equipment Being Returned
                   </label>
                   <div className="space-y-3">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={signInEquipment.pitCans}
-                        onChange={() => handleSignInEquipmentChange('pitCans')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Pit Cans</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={signInEquipment.earpiece}
-                        onChange={() => handleSignInEquipmentChange('earpiece')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Earpiece</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={signInEquipment.spareBattery}
-                        onChange={() => handleSignInEquipmentChange('spareBattery')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Spare Battery</span>
-                    </label>
+                    {selectedSignOut.equipment_signed_out?.pitCans && (
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={signInEquipment.pitCans}
+                          onChange={() => handleSignInEquipmentChange('pitCans')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Pit Cans</span>
+                      </label>
+                    )}
+                    {selectedSignOut.equipment_signed_out?.earpiece && (
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={signInEquipment.earpiece}
+                          onChange={() => handleSignInEquipmentChange('earpiece')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Earpiece</span>
+                      </label>
+                    )}
+                    {selectedSignOut.equipment_signed_out?.spareBattery && (
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={signInEquipment.spareBattery}
+                          onChange={() => handleSignInEquipmentChange('spareBattery')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Spare Battery</span>
+                      </label>
+                    )}
+                    {(!selectedSignOut.equipment_signed_out?.pitCans && 
+                      !selectedSignOut.equipment_signed_out?.earpiece && 
+                      !selectedSignOut.equipment_signed_out?.spareBattery) && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                        No equipment was signed out with this radio.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
