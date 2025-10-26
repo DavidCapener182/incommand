@@ -62,15 +62,66 @@ export default function StaffSkillsMatrix({
   const [skillFilter, setSkillFilter] = useState('')
   const [siaBadgeFilter, setSiaBadgeFilter] = useState('all')
   
-  // Get all unique skills across all staff
+  // Comprehensive skills database organized by discipline
   const getAllAvailableSkills = () => {
-    const allSkills = new Set<string>()
+    const comprehensiveSkills = [
+      // Security Skills
+      'SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding',
+      'Security Manager', 'Deputy Security Manager', 'Head of Security (HOS)', 'Security Supervisor',
+      'Control Room Operator', 'Radio Controller', 'Event Security', 'Crowd Control', 'Access Control',
+      'Incident Response', 'Emergency Response', 'Conflict Resolution', 'Customer Service Security',
+      
+      // Stewarding Skills
+      'Senior Steward', 'Steward', 'Head Steward', 'Deputy Head Steward', 'Crowd Management',
+      'Queue Management', 'Customer Service', 'Guest Relations', 'VIP Stewarding', 'Hospitality Steward',
+      'Event Stewarding', 'Venue Stewarding', 'Concert Stewarding', 'Sports Stewarding',
+      
+      // Bar Staff Skills
+      'Bar Manager', 'Deputy Bar Manager', 'Senior Bar Staff', 'Bar Staff', 'Cocktail Bartender',
+      'Beer Service', 'Wine Service', 'Spirits Service', 'Cellar Management', 'Stock Control',
+      'Cash Handling', 'Till Operation', 'Customer Service Bar', 'Barista', 'Coffee Service',
+      'Food Service', 'Table Service', 'Kitchen Porter', 'Glass Collection',
+      
+      // Medical Skills
+      'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid',
+      'CPR', 'AED Operation', 'Medical Response', 'Paramedic', 'Nurse', 'Medical Coordinator',
+      'Health & Safety', 'Risk Assessment', 'Medical Equipment', 'Emergency Medical Response',
+      
+      // Venue Management Skills
+      'Venue Manager', 'Deputy Venue Manager', 'Operations Manager', 'Event Manager', 'Event Coordinator',
+      'Logistics Coordinator', 'Facilities Manager', 'Maintenance', 'Cleaning Supervisor',
+      'Health & Safety Officer', 'Fire Marshal', 'Evacuation Coordinator', 'Crowd Safety',
+      'Accessibility Coordinator', 'Disability Liaison', 'Customer Service Manager',
+      
+      // Technical Skills
+      'Sound Engineer', 'Lighting Technician', 'Stage Manager', 'Rigging', 'AV Technician',
+      'IT Support', 'Network Management', 'Digital Systems', 'Broadcast Technician',
+      
+      // Administrative Skills
+      'Administration', 'Office Management', 'Data Entry', 'Report Writing', 'Scheduling',
+      'Staff Coordination', 'Training Coordinator', 'Compliance Officer', 'Documentation',
+      
+      // Communication Skills
+      'Radio Communication', 'Public Address', 'Customer Service', 'Complaint Handling',
+      'Language Skills', 'Sign Language', 'Translation', 'Public Speaking',
+      
+      // Specialized Skills
+      'CCTV Operation', 'Alarm Systems', 'Access Control Systems', 'Fire Safety',
+      'Evacuation Procedures', 'Emergency Procedures', 'Risk Management', 'Incident Reporting',
+      'Health & Safety', 'Manual Handling', 'COSHH', 'RIDDOR', 'GDPR Compliance'
+    ]
+    
+    // Get existing skills from staff
+    const existingSkills = new Set<string>()
     staff.forEach(member => {
       member.skills.forEach(skill => {
-        allSkills.add(skill.skill_name)
+        existingSkills.add(skill.skill_name)
       })
     })
-    return Array.from(allSkills).sort()
+    
+    // Combine comprehensive skills with existing skills
+    const allSkills = [...new Set([...comprehensiveSkills, ...existingSkills])]
+    return allSkills.sort()
   }
   
   // Get skills that the selected staff member doesn't have yet
@@ -124,6 +175,26 @@ export default function StaffSkillsMatrix({
   const handleAddSkill = async () => {
     if (!selectedStaff || !newSkillName.trim()) {
       setError('Skill name is required')
+      return
+    }
+
+    // Check if required certification fields are filled for skills that need them
+    const skillsRequiringCertification = ['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding']
+    const skillsRequiringExpiry = ['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation']
+    const skillsRequiringIssuingAuthority = ['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation', 'Health & Safety', 'Fire Marshal']
+
+    if (skillsRequiringCertification.includes(newSkillName) && !newCertificationNumber.trim()) {
+      setError('Certification number is required for this skill')
+      return
+    }
+
+    if (skillsRequiringExpiry.includes(newSkillName) && !newExpiryDate) {
+      setError('Expiry date is required for this skill')
+      return
+    }
+
+    if (skillsRequiringIssuingAuthority.includes(newSkillName) && !newIssuingAuthority.trim()) {
+      setError('Issuing authority is required for this skill')
       return
     }
 
@@ -471,20 +542,97 @@ export default function StaffSkillsMatrix({
           Showing {filteredStaff.length} of {staff.length} staff members
         </div>
         
-        {/* Available Skills Overview */}
+        {/* Available Skills Overview - Grouped by Discipline */}
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-3">
             All Available Skills ({getAllAvailableSkills().length})
           </h4>
-          <div className="flex flex-wrap gap-2">
-            {getAllAvailableSkills().map((skill) => (
-              <span
-                key={skill}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
-              >
-                {skill}
-              </span>
-            ))}
+          
+          {/* Skills grouped by discipline */}
+          <div className="space-y-4">
+            {/* Security Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Security</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  ['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'Security Manager', 'Deputy Security Manager', 'Head of Security (HOS)', 'Security Supervisor', 'Control Room Operator', 'Radio Controller', 'Event Security', 'Crowd Control', 'Access Control', 'Incident Response', 'Emergency Response', 'Conflict Resolution', 'Customer Service Security'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Stewarding Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Stewarding</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  ['Senior Steward', 'Steward', 'Head Steward', 'Deputy Head Steward', 'Crowd Management', 'Queue Management', 'Customer Service', 'Guest Relations', 'VIP Stewarding', 'Hospitality Steward', 'Event Stewarding', 'Venue Stewarding', 'Concert Stewarding', 'Sports Stewarding'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Bar Staff Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Bar Staff</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  ['Bar Manager', 'Deputy Bar Manager', 'Senior Bar Staff', 'Bar Staff', 'Cocktail Bartender', 'Beer Service', 'Wine Service', 'Spirits Service', 'Cellar Management', 'Stock Control', 'Cash Handling', 'Till Operation', 'Customer Service Bar', 'Barista', 'Coffee Service', 'Food Service', 'Table Service', 'Kitchen Porter', 'Glass Collection'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Medical Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Medical</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  ['First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation', 'Medical Response', 'Paramedic', 'Nurse', 'Medical Coordinator', 'Health & Safety', 'Risk Assessment', 'Medical Equipment', 'Emergency Medical Response'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Venue Management Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Venue Management</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  ['Venue Manager', 'Deputy Venue Manager', 'Operations Manager', 'Event Manager', 'Event Coordinator', 'Logistics Coordinator', 'Facilities Manager', 'Maintenance', 'Cleaning Supervisor', 'Health & Safety Officer', 'Fire Marshal', 'Evacuation Coordinator', 'Crowd Safety', 'Accessibility Coordinator', 'Disability Liaison', 'Customer Service Manager'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Other Skills */}
+            <div>
+              <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Other Skills</h5>
+              <div className="flex flex-wrap gap-2">
+                {getAllAvailableSkills().filter(skill => 
+                  !['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'Security Manager', 'Deputy Security Manager', 'Head of Security (HOS)', 'Security Supervisor', 'Control Room Operator', 'Radio Controller', 'Event Security', 'Crowd Control', 'Access Control', 'Incident Response', 'Emergency Response', 'Conflict Resolution', 'Customer Service Security', 'Senior Steward', 'Steward', 'Head Steward', 'Deputy Head Steward', 'Crowd Management', 'Queue Management', 'Customer Service', 'Guest Relations', 'VIP Stewarding', 'Hospitality Steward', 'Event Stewarding', 'Venue Stewarding', 'Concert Stewarding', 'Sports Stewarding', 'Bar Manager', 'Deputy Bar Manager', 'Senior Bar Staff', 'Bar Staff', 'Cocktail Bartender', 'Beer Service', 'Wine Service', 'Spirits Service', 'Cellar Management', 'Stock Control', 'Cash Handling', 'Till Operation', 'Customer Service Bar', 'Barista', 'Coffee Service', 'Food Service', 'Table Service', 'Kitchen Porter', 'Glass Collection', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation', 'Medical Response', 'Paramedic', 'Nurse', 'Medical Coordinator', 'Health & Safety', 'Risk Assessment', 'Medical Equipment', 'Emergency Medical Response', 'Venue Manager', 'Deputy Venue Manager', 'Operations Manager', 'Event Manager', 'Event Coordinator', 'Logistics Coordinator', 'Facilities Manager', 'Maintenance', 'Cleaning Supervisor', 'Health & Safety Officer', 'Fire Marshal', 'Evacuation Coordinator', 'Crowd Safety', 'Accessibility Coordinator', 'Disability Liaison', 'Customer Service Manager'].includes(skill)
+                ).map((skill) => (
+                  <span key={skill} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -802,56 +950,65 @@ export default function StaffSkillsMatrix({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Certification Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newCertificationDate}
-                      onChange={(e) => setNewCertificationDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newExpiryDate}
-                      onChange={(e) => setNewExpiryDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                </div>
+                {/* Certification fields - only show for skills that typically require certification */}
+                {newSkillName && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Certification Date
+                          {['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation', 'Health & Safety', 'Fire Marshal'].includes(newSkillName) && <span className="text-red-500"> *</span>}
+                        </label>
+                        <input
+                          type="date"
+                          value={newCertificationDate}
+                          onChange={(e) => setNewCertificationDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Expiry Date
+                          {['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation'].includes(newSkillName) && <span className="text-red-500"> *</span>}
+                        </label>
+                        <input
+                          type="date"
+                          value={newExpiryDate}
+                          onChange={(e) => setNewExpiryDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Certification Number
-                  </label>
-                  <input
-                    type="text"
-                    value={newCertificationNumber}
-                    onChange={(e) => setNewCertificationNumber(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Enter certification number"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Certification Number
+                        {['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding'].includes(newSkillName) && <span className="text-red-500"> *</span>}
+                      </label>
+                      <input
+                        type="text"
+                        value={newCertificationNumber}
+                        onChange={(e) => setNewCertificationNumber(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Enter certification number"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Issuing Authority
-                  </label>
-                  <input
-                    type="text"
-                    value={newIssuingAuthority}
-                    onChange={(e) => setNewIssuingAuthority(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Enter issuing authority"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Issuing Authority
+                        {['SIA Door Supervisor', 'SIA Security Officer', 'SIA CCTV Operator', 'SIA Close Protection', 'SIA Key Holding', 'First Aid', 'Emergency First Aid', 'First Aid at Work', 'Paediatric First Aid', 'Mental Health First Aid', 'CPR', 'AED Operation', 'Health & Safety', 'Fire Marshal'].includes(newSkillName) && <span className="text-red-500"> *</span>}
+                      </label>
+                      <input
+                        type="text"
+                        value={newIssuingAuthority}
+                        onChange={(e) => setNewIssuingAuthority(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Enter issuing authority"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
