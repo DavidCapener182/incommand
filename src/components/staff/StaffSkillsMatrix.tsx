@@ -360,9 +360,9 @@ export default function StaffSkillsMatrix({
     } else if (siaBadgeFilter === 'missing') {
       siaBadgeMatch = !member.sia_badge_number
     } else if (siaBadgeFilter === 'expired') {
-      siaBadgeMatch = member.expiry_date && new Date(member.expiry_date) < new Date()
+      siaBadgeMatch = Boolean(member.expiry_date && new Date(member.expiry_date) < new Date())
     } else if (siaBadgeFilter === 'expiring') {
-      siaBadgeMatch = member.expiry_date && isExpiringSoon(member.expiry_date)
+      siaBadgeMatch = Boolean(member.expiry_date && isExpiringSoon(member.expiry_date))
     } else if (siaBadgeFilter === 'needs_sia') {
       siaBadgeMatch = needsSIABadgeInfo(member)
     }
