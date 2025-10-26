@@ -177,12 +177,12 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    const { signout_id, signed_in_signature, signed_in_notes, condition_on_return } = body
+    const { signout_id, signed_in_at, status } = body
 
     // Validate required fields
-    if (!signout_id || !signed_in_signature) {
+    if (!signout_id) {
       return NextResponse.json(
-        { error: 'signout_id and signed_in_signature are required' },
+        { error: 'signout_id is required' },
         { status: 400 }
       )
     }
@@ -197,11 +197,8 @@ export async function PATCH(request: NextRequest) {
     const { data: signIn, error: signInError } = await supabase
       .from('radio_signouts')
       .update({
-        signed_in_at: new Date().toISOString(),
-        signed_in_signature,
-        signed_in_notes: signed_in_notes || null,
-        condition_on_return: condition_on_return || 'good',
-        status: 'in'
+        signed_in_at: signed_in_at || new Date().toISOString(),
+        status: status || 'returned'
       })
       .eq('id', signout_id)
       .select()

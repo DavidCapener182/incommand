@@ -176,12 +176,10 @@ export default function RadioSignOutSystem({
   }
 
   const handleSignIn = async () => {
-    if (!selectedSignOut || !signInCanvasRef.current) {
-      setError('Please provide a signature')
+    if (!selectedSignOut) {
+      setError('No radio selected')
       return
     }
-    
-    const signature = signInCanvasRef.current.toDataURL()
     
     try {
       const response = await fetch('/api/v1/radio-signout', {
@@ -189,9 +187,8 @@ export default function RadioSignOutSystem({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           signout_id: selectedSignOut.id,
-          signed_in_signature: signature,
-          signed_in_notes: signInNotes,
-          condition_on_return: conditionOnReturn
+          signed_in_at: new Date().toISOString(),
+          status: 'returned'
         })
       })
       
@@ -200,8 +197,6 @@ export default function RadioSignOutSystem({
       }
       
       // Reset form and refresh list
-      setSignInNotes('')
-      setConditionOnReturn('good')
       setSelectedSignOut(null)
       setShowSignInModal(false)
       fetchSignOuts()
@@ -557,70 +552,14 @@ export default function RadioSignOutSystem({
                 </h3>
               </div>
               
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Condition on Return
-                  </label>
-                  <select
-                    value={conditionOnReturn}
-                    onChange={(e) => setConditionOnReturn(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="good">Good</option>
-                    <option value="damaged">Damaged</option>
-                    <option value="missing_parts">Missing Parts</option>
-                    <option value="faulty">Faulty</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Notes (Optional)
-                  </label>
-                  <textarea
-                    value={signInNotes}
-                    onChange={(e) => setSignInNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    rows={3}
-                    placeholder="Any issues or notes..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Digital Signature
-                  </label>
-                  <canvas
-                    ref={signInCanvasRef}
-                    width={400}
-                    height={150}
-                    className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white cursor-crosshair w-full"
-                    onMouseDown={(e) => {
-                      setIsDrawingSignIn(true)
-                      const canvas = signInCanvasRef.current
-                      if (!canvas) return
-                      const rect = canvas.getBoundingClientRect()
-                      const ctx = canvas.getContext('2d')
-                      if (!ctx) return
-                      ctx.beginPath()
-                      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
-                    }}
-                    onMouseMove={(e) => {
-                      if (!isDrawingSignIn) return
-                      const canvas = signInCanvasRef.current
-                      if (!canvas) return
-                      const rect = canvas.getBoundingClientRect()
-                      const ctx = canvas.getContext('2d')
-                      if (!ctx) return
-                      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top)
-                      ctx.strokeStyle = '#000'
-                      ctx.lineWidth = 2
-                      ctx.stroke()
-                    }}
-                    onMouseUp={() => setIsDrawingSignIn(false)}
-                    onMouseLeave={() => setIsDrawingSignIn(false)}
-                  />
+              <div className="p-6">
+                <div className="text-center">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Are you sure you want to sign in Radio #{selectedSignOut.radio_number}?
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                    This will mark the radio as returned.
+                  </p>
                 </div>
               </div>
 
