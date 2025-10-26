@@ -49,7 +49,8 @@ export async function GET(
 ) {
   try {
     console.log('Staff performance API called with eventId:', params.id)
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     const eventId = params.id
 
     if (!eventId) {
@@ -81,11 +82,16 @@ export async function GET(
     }
 
     console.log('Getting user profile for user:', user.id)
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
+      return NextResponse.json({ error: 'Failed to fetch user profile', details: profileError.message }, { status: 500 })
+    }
 
     if (!userProfile) {
       console.log('No user profile found')
@@ -105,7 +111,7 @@ export async function GET(
     if (staffError) {
       console.error('Staff fetch error:', staffError)
       return NextResponse.json(
-        { error: 'Failed to fetch staff' },
+        { error: 'Failed to fetch staff', details: staffError.message },
         { status: 500 }
       )
     }
@@ -130,7 +136,7 @@ export async function GET(
 
     if (logsError) {
       console.error('Error fetching incident logs:', logsError)
-      return NextResponse.json({ error: 'Failed to fetch incident logs' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch incident logs', details: logsError.message }, { status: 500 })
     }
 
     console.log('Found incident logs:', allIncidentLogs?.length || 0, 'logs')
