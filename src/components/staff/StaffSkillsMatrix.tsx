@@ -61,6 +61,24 @@ export default function StaffSkillsMatrix({
   const [searchTerm, setSearchTerm] = useState('')
   const [skillFilter, setSkillFilter] = useState('')
   const [siaBadgeFilter, setSiaBadgeFilter] = useState('all')
+  
+  // Get all unique skills across all staff
+  const getAllAvailableSkills = () => {
+    const allSkills = new Set<string>()
+    staff.forEach(member => {
+      member.skills.forEach(skill => {
+        allSkills.add(skill.skill_name)
+      })
+    })
+    return Array.from(allSkills).sort()
+  }
+  
+  // Get skills that the selected staff member doesn't have yet
+  const getAvailableSkillsForStaff = (staffMember: StaffMember) => {
+    const allSkills = getAllAvailableSkills()
+    const staffSkills = staffMember.skills.map(skill => skill.skill_name)
+    return allSkills.filter(skill => !staffSkills.includes(skill))
+  }
   const [newSkillName, setNewSkillName] = useState('')
   const [newCertificationDate, setNewCertificationDate] = useState('')
   const [newExpiryDate, setNewExpiryDate] = useState('')
@@ -452,6 +470,23 @@ export default function StaffSkillsMatrix({
         <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
           Showing {filteredStaff.length} of {staff.length} staff members
         </div>
+        
+        {/* Available Skills Overview */}
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+            All Available Skills ({getAllAvailableSkills().length})
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {getAllAvailableSkills().map((skill) => (
+              <span
+                key={skill}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Skills Matrix Grid */}
@@ -746,15 +781,25 @@ export default function StaffSkillsMatrix({
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Skill Name *
+                    Select Skill to Add *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={newSkillName}
                     onChange={(e) => setNewSkillName(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Enter skill name"
-                  />
+                  >
+                    <option value="">Choose a skill...</option>
+                    {getAvailableSkillsForStaff(selectedStaff).map((skill) => (
+                      <option key={skill} value={skill}>
+                        {skill}
+                      </option>
+                    ))}
+                  </select>
+                  {getAvailableSkillsForStaff(selectedStaff).length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {selectedStaff.full_name} already has all available skills.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
