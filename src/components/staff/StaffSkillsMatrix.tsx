@@ -384,13 +384,23 @@ export default function StaffSkillsMatrix({
             >
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {selectedStaff.full_name}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedStaff.callsign || selectedStaff.email}
-                    </p>
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {selectedStaff.full_name}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedStaff.callsign || selectedStaff.email}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {selectedStaff.skills.length}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Total Skills
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => setSelectedStaff(null)}
@@ -404,21 +414,20 @@ export default function StaffSkillsMatrix({
               </div>
               
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Skills & Certifications
-                      </h4>
-                      <button
-                        onClick={() => setShowAddSkillModal(true)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"
-                      >
-                        <PlusIcon className="h-4 w-4" />
-                        Add Skill
-                      </button>
-                    </div>
-                    <div className="space-y-3">
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Skills & Certifications
+                    </h4>
+                    <button
+                      onClick={() => setShowAddSkillModal(true)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      Add Skill
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedStaff.skills.map((skill) => {
                         const status = getSkillStatus(skill)
                         return (
@@ -475,23 +484,6 @@ export default function StaffSkillsMatrix({
                           </div>
                         )
                       })}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      Summary
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {selectedStaff.skills.length}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Total Skills
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
