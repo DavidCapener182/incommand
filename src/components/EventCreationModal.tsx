@@ -185,8 +185,9 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
     setFormData(updatedFormData);
 
-    // If we're updating venue_name or artist_name, debounce the description generation
-    if (name === 'venue_name' || name === 'artist_name') {
+    // If we're updating fields that affect security brief generation, debounce the description generation
+    const fieldsThatTriggerBrief = ['venue_name', 'artist_name', 'home_team', 'away_team', 'parade_route', 'festival_theme'];
+    if (fieldsThatTriggerBrief.includes(name)) {
       if (descriptionTimeoutRef.current) {
         clearTimeout(descriptionTimeoutRef.current);
       }
@@ -577,8 +578,9 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     onChange={handleInputChange}
                     className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     required
+                    style={{ colorScheme: 'light' }}
                   />
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Event name will be auto-generated as "Home Team v Away Team - Date"</p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Event name will be auto-generated as "Home Team v Away Team - DD/MM/YYYY"</p>
                 </div>
               )}
 
@@ -713,6 +715,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                       onChange={handleInputChange}
                       className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       required
+                      style={{ colorScheme: 'light' }}
                     />
                   </div>
                 </div>

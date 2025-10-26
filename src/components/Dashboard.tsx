@@ -1857,8 +1857,8 @@ export default function Dashboard() {
         {/* Log Review Reminder for Silver Commanders */}
         <LogReviewReminder />
 
-        {/* Mobile FAB - New Incident (only show if there's an active event) */}
-        {hasCurrentEvent && (
+        {/* Mobile FAB - New Incident (only show if there's an active event and no modals are open) */}
+        {hasCurrentEvent && !isEventModalOpen && !isIncidentModalOpen && (
           <div className="md:hidden fixed bottom-6 right-6 z-50" data-fab>
             <button
               onClick={() => setIsIncidentModalOpen(true)}
