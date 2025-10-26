@@ -321,7 +321,7 @@ export default function StaffSkillsMatrix({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={() => setSelectedStaff(null)}
           >
             <motion.div
@@ -372,7 +372,10 @@ export default function StaffSkillsMatrix({
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => setEditingSkill(skill)}
+                                  onClick={() => {
+                                    setEditingSkill(skill)
+                                    setShowEditSkillModal(true)
+                                  }}
                                   className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                 >
                                   <PencilIcon className="h-4 w-4" />
@@ -443,6 +446,53 @@ export default function StaffSkillsMatrix({
                     </div>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Skill Modal */}
+      <AnimatePresence>
+        {showEditSkillModal && editingSkill && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setShowEditSkillModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Edit Skill
+                </h3>
+              </div>
+              
+              <div className="p-6">
+                <div className="text-center">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Edit functionality coming soon!
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                    This will allow you to modify skill details, expiry dates, and certification information.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowEditSkillModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
           </motion.div>
