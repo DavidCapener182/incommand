@@ -190,6 +190,16 @@ export default function StaffSkillsMatrix({
     return daysUntilExpiry <= 30 && daysUntilExpiry >= 0
   }
 
+  const hasSIASkills = (member: StaffMember) => {
+    return member.skills.some(skill => 
+      skill.skill_name.toLowerCase().includes('sia')
+    )
+  }
+
+  const needsSIABadgeInfo = (member: StaffMember) => {
+    return hasSIASkills(member) && (!member.sia_badge_number || !member.expiry_date)
+  }
+
   const exportSkillsMatrix = async () => {
     try {
       const response = await fetch('/api/v1/staff/skills-matrix/export', {
@@ -345,18 +355,28 @@ export default function StaffSkillsMatrix({
                       })}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
                     <div className="text-sm text-gray-900 dark:text-white">
                       {member.sia_badge_number || '—'}
                     </div>
+                    {needsSIABadgeInfo(member) && (
+                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        ⚠️ SIA Badge Required
+                      </div>
+                    )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${needsSIABadgeInfo(member) ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}>
                     <div className="text-sm text-gray-900 dark:text-white">
                       {member.expiry_date ? new Date(member.expiry_date).toLocaleDateString() : '—'}
                     </div>
                     {member.expiry_date && isExpiringSoon(member.expiry_date) && (
                       <div className="text-xs text-red-600 dark:text-red-400 font-medium">
                         ⚠️ Expires Soon
+                      </div>
+                    )}
+                    {needsSIABadgeInfo(member) && !member.expiry_date && (
+                      <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        ⚠️ Expiry Date Required
                       </div>
                     )}
                   </td>
