@@ -4,6 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide FAB when chat is open */
+body.chat-open [data-fab] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.8) !important;
+  transition: all 0.3s ease !important;
+  visibility: hidden !important;
+  display: none !important;
+}
+
+/* Alternative approach - hide FAB with higher specificity */
+body.chat-open .fixed.bottom-6.right-6.z-50 {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  display: none !important;
+}
+
 /* Custom animations for landing pages */
 @keyframes pulse-slow {
   0%, 100% { opacity: 0.7; }

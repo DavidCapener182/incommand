@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Navigation from './Navigation'
 import BottomNav from './BottomNav'
 import HelpCenterPanel from './HelpCenterModal'
+import ChatPanel from './ChatPanel'
 import { usePathname, useRouter } from 'next/navigation'
 import IncidentCreationModal from './IncidentCreationModal'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
@@ -49,6 +50,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -63,6 +66,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         .eq('is_current', true)
         .single();
       setHasCurrentEvent(!!data);
+      if (data) {
+        setCurrentEventId(data.id);
+      } else {
+        setCurrentEventId(null);
+      }
     };
     fetchCurrentEvent();
   }, [pathname]);
@@ -142,6 +150,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   setIsHelpCenterOpen(true);
                 } catch {}
               }}
+              onOpenChat={() => {
+                try {
+                  setIsChatOpen(true);
+                } catch {}
+              }}
             />
           )}
           {showNav && <FloatingActionButton />}
@@ -165,6 +178,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 <HelpCenterPanel isOpen={true} onClose={() => setIsHelpCenterOpen(false)} initialTab="messages" initialMessagesCategory="ai" />
               </div>
             </>
+          )}
+          
+          {/* Chat Panel */}
+          {isChatOpen && user && hasCurrentEvent && currentEventId && (
+            <ChatPanel
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              eventId={currentEventId}
+              companyId={user.user_metadata?.company_id || 'default-company'}
+            />
           )}
           
           {/* FABs removed; sticky BottomNav will provide actions */}

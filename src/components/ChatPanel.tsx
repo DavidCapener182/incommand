@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import TeamChat from './chat/TeamChat'
 import AIChat from './chat/AIChat'
+import ChatTabs from './chat/ChatTabs'
 
 interface ChatPanelProps {
   isOpen: boolean
@@ -28,6 +29,8 @@ export default function ChatPanel({
   const { resolvedTheme } = useTheme()
   const isDarkMode = resolvedTheme === 'dark'
   const [isMobile, setIsMobile] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const previousActiveElement = useRef<HTMLElement | null>(null)
 
   // Check if mobile
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function ChatPanel({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Handle escape key and body scroll
+  // Handle escape key, focus trap, and body scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -48,15 +51,60 @@ export default function ChatPanel({
       }
     }
 
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (!isOpen || e.key !== 'Tab') return
+      
+      const focusableElements = panelRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      
+      if (!focusableElements || focusableElements.length === 0) return
+      
+      const firstElement = focusableElements[0] as HTMLElement
+      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+      
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          e.preventDefault()
+          lastElement.focus()
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          e.preventDefault()
+          firstElement.focus()
+        }
+      }
+    }
+
     if (isOpen) {
+      // Store the previously focused element
+      previousActiveElement.current = document.activeElement as HTMLElement
+      
+      // Prevent body scroll when chat is open
+      const originalStyle = window.getComputedStyle(document.body).overflow
+      document.body.style.overflow = 'hidden'
+      
       document.addEventListener('keydown', handleEscape)
-      // Add class to body to indicate chat is open
+      document.addEventListener('keydown', handleTabKey)
       document.body.classList.add('chat-open')
-      console.log('Chat opened - added chat-open class to body')
+      
+      // Focus the panel for accessibility
+      setTimeout(() => {
+        panelRef.current?.focus()
+      }, 100)
+      
       return () => {
         document.removeEventListener('keydown', handleEscape)
+        document.removeEventListener('keydown', handleTabKey)
         document.body.classList.remove('chat-open')
-        console.log('Chat closed - removed chat-open class from body')
+        
+        // Restore body scroll
+        document.body.style.overflow = originalStyle
+        
+        // Restore focus to the previously focused element
+        if (previousActiveElement.current) {
+          previousActiveElement.current.focus()
+        }
       }
     }
   }, [isOpen, onClose])
@@ -67,11 +115,20 @@ export default function ChatPanel({
     hidden: { x: '100%', opacity: 0 },
     visible: { 
       x: 0, 
-      opacity: 1
+      opacity: 1,
+      transition: {
+        type: "spring" as const,
+        stiffness: 300,
+        damping: 30
+      }
     },
     exit: { 
       x: '100%', 
-      opacity: 0
+      opacity: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut" as const
+      }
     }
   }
 
@@ -79,11 +136,39 @@ export default function ChatPanel({
     hidden: { y: '100%', opacity: 0 },
     visible: { 
       y: 0, 
-      opacity: 1
+      opacity: 1,
+      transition: {
+        type: "spring" as const,
+        stiffness: 300,
+        damping: 30
+      }
     },
     exit: { 
       y: '100%', 
-      opacity: 0
+      opacity: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut" as const
+      }
+    }
+  }
+
+  const contentVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.2,
+        delay: 0.1
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: -10,
+      transition: {
+        duration: 0.15
+      }
     }
   }
 
@@ -96,85 +181,107 @@ export default function ChatPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-x-0 top-16 bottom-16 bg-black bg-opacity-30 z-[50]"
+            className="fixed inset-x-0 top-16 bottom-16 bg-black/30 backdrop-blur-sm z-[50]"
             onClick={onClose}
           />
 
           {/* Chat Panel */}
           <motion.div
+            ref={panelRef}
             variants={isMobile ? mobileVariants : panelVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             data-chat-panel
+            role="dialog"
+            aria-label="Chat panel"
+            tabIndex={-1}
             className={`
-              fixed z-[60] bg-white dark:bg-gray-800 shadow-2xl flex flex-col
+              fixed z-[60] flex flex-col
               ${isMobile 
-                ? 'inset-x-0 bottom-0 top-16 rounded-t-2xl' 
-                : 'right-0 top-16 bottom-16 w-96 max-w-[400px]'
+                ? 'inset-x-0 bottom-0 top-0 w-full h-screen bg-white dark:bg-gray-900' 
+                : 'right-0 top-16 bottom-16 w-[420px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-2xl rounded-l-2xl'
               }
             `}
+            style={{
+              paddingLeft: isMobile ? 'max(env(safe-area-inset-left), 0px)' : '0',
+              paddingRight: isMobile ? 'max(env(safe-area-inset-right), 0px)' : '0',
+              paddingBottom: isMobile ? 'max(env(safe-area-inset-bottom), 0px)' : '0',
+            }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <ChatBubbleLeftRightIcon className="h-6 w-6 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Chat
-                </h2>
+            {/* Mobile Header */}
+            {isMobile && (
+              <div className="flex items-center justify-between p-4 bg-[#2A3990] text-white">
+                <div className="flex items-center gap-2">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6" />
+                  <h2 className="text-lg font-semibold">
+                    Chat
+                  </h2>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-white/20 transition-colors touch-target"
+                  aria-label="Close chat"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
+            )}
+
+            {/* Desktop Header */}
+            {!isMobile && (
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-[#2A3990]" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Chat
+                  </h2>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close chat"
+                >
+                  <XMarkIcon className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+            )}
 
             {/* Tab Navigation */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setActiveMode('team')}
-                className={`
-                  flex-1 px-4 py-3 text-sm font-medium transition-colors
-                  ${activeMode === 'team'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                  }
-                `}
-              >
-                Team Chat
-              </button>
-              <button
-                onClick={() => setActiveMode('ai')}
-                className={`
-                  flex-1 px-4 py-3 text-sm font-medium transition-colors
-                  ${activeMode === 'ai'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                  }
-                `}
-              >
-                AI Assistant
-              </button>
+            <div className={`${isMobile ? 'p-4' : 'p-4 border-b border-gray-200 dark:border-gray-700'}`}>
+              <ChatTabs 
+                activeMode={activeMode} 
+                onModeChange={setActiveMode} 
+              />
             </div>
 
             {/* Chat Content */}
             <div className="flex-1 min-h-0 overflow-hidden">
-              {activeMode === 'team' ? (
-                <TeamChat
-                  eventId={eventId}
-                  companyId={companyId}
-                  userId={user.id}
-                  userCallsign={user.user_metadata?.callsign || user.email?.split('@')[0] || 'User'}
-                />
-              ) : (
-                <AIChat
-                  eventId={eventId}
-                  companyId={companyId}
-                  userId={user.id}
-                />
-              )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeMode}
+                  variants={contentVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="h-full"
+                >
+                  {activeMode === 'team' ? (
+                    <TeamChat
+                      eventId={eventId}
+                      companyId={companyId}
+                      userId={user.id}
+                      userCallsign={user.user_metadata?.callsign || user.email?.split('@')[0] || 'User'}
+                    />
+                  ) : (
+                    <AIChat
+                      eventId={eventId}
+                      companyId={companyId}
+                      userId={user.id}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         </>

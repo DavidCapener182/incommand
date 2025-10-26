@@ -25,6 +25,7 @@ import {
   QuestionMarkCircleIcon,
   PlusIcon,
   AcademicCapIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
@@ -1857,7 +1858,7 @@ export default function Dashboard() {
         <LogReviewReminder />
 
         {/* Mobile FAB - New Incident */}
-        <div className="md:hidden fixed bottom-6 right-6 z-50">
+        <div className="md:hidden fixed bottom-6 right-6 z-50" data-fab>
           <button
             onClick={() => setIsIncidentModalOpen(true)}
             className="w-12 h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center touch-target"
@@ -1878,6 +1879,7 @@ export default function Dashboard() {
             </svg>
           </button>
         </div>
+
     </PageWrapper>
   )
 }

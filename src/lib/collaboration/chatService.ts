@@ -28,6 +28,12 @@ export interface ChatMessage {
   editedAt?: string
   createdAt: string
   readBy: string[]
+  // New fields for dual-mode chat
+  channelType?: 'team' | 'ai-archive' | 'direct'
+  channelName?: string
+  threadId?: string
+  companyId?: string
+  eventId?: string
 }
 
 export interface ChatChannel {
@@ -230,25 +236,6 @@ export class ChatService {
     }
   }
 
-  /**
-   * React to message
-   */
-  async addReaction(
-    messageId: string,
-    userId: string,
-    emoji: string
-  ): Promise<void> {
-    try {
-      // TODO: Implement add_message_reaction RPC function
-      // await supabase.rpc('add_message_reaction', {
-      //   message_id: messageId,
-      //   user_id: userId,
-      //   emoji_code: emoji
-      // })
-    } catch (error) {
-      console.error('Error adding reaction:', error)
-    }
-  }
 
   /**
    * Get channel history
@@ -334,6 +321,304 @@ export class ChatService {
     } catch (error) {
       console.error('Error searching messages:', error)
       return []
+    }
+  }
+
+  /**
+   * Subscribe to team channel (Event+Company scoped)
+   */
+  async subscribeToTeamChannel(
+    eventId: string,
+    companyId: string,
+    channelName: string,
+    callbacks: {
+      onMessage: (message: ChatMessage) => void
+      onTyping?: (indicator: TypingIndicator) => void
+      onPresence?: (users: any[]) => void
+    }
+  ): Promise<RealtimeChannel> {
+    const channelId = `${eventId}_${companyId}_${channelName}`
+    return this.subscribeToChannel(channelId, callbacks.onMessage, callbacks.onTyping, callbacks.onPresence)
+  }
+
+  /**
+   * Send team message (Event+Company scoped)
+   */
+  async sendTeamMessage(
+    eventId: string,
+    companyId: string,
+    channelName: string,
+    userId: string,
+    userCallsign: string,
+    message: string,
+    metadata?: ChatMessage['metadata']
+  ): Promise<ChatMessage | null> {
+    try {
+      // Try to insert with new schema first
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          channel_id: crypto.randomUUID(),
+          user_id: userId,
+          user_callsign: userCallsign,
+          message,
+          message_type: metadata?.fileUrl ? 'file' : metadata?.latitude ? 'location' : 'text',
+          metadata,
+          channel_type: 'team',
+          channel_name: channelName,
+          company_id: companyId,
+          event_id: eventId,
+          created_at: new Date().toISOString(),
+          read_by: [userId]
+        })
+        .select()
+        .single()
+
+      if (error) {
+        // If schema error, try with basic columns only
+        if (error.code === 'PGRST204' || error.message?.includes('channel_name')) {
+          console.log('Database schema not updated, using basic chat_messages structure')
+          const { data: basicData, error: basicError } = await supabase
+            .from('chat_messages')
+            .insert({
+              channel_id: crypto.randomUUID(),
+              user_id: userId,
+              user_callsign: userCallsign,
+              message,
+              message_type: metadata?.fileUrl ? 'file' : metadata?.latitude ? 'location' : 'text',
+              metadata
+            })
+            .select()
+            .single()
+
+          if (basicError) throw basicError
+          return basicData as unknown as ChatMessage
+        }
+        throw error
+      }
+
+      return data as unknown as ChatMessage
+    } catch (error) {
+      console.error('Error sending team message:', error)
+      return null
+    }
+  }
+
+  /**
+   * Add reaction to message
+   */
+  async addReaction(
+    messageId: string,
+    userId: string,
+    emoji: string
+  ): Promise<void> {
+    try {
+      // TODO: Implement when chat_message_reactions table is created
+      console.log('Adding reaction:', { messageId, userId, emoji })
+      // const { error } = await supabase
+      //   .from('chat_message_reactions')
+      //   .upsert({
+      //     message_id: messageId,
+      //     user_id: userId,
+      //     emoji,
+      //     created_at: new Date().toISOString()
+      //   })
+
+      // if (error) throw error
+    } catch (error) {
+      console.error('Error adding reaction:', error)
+    }
+  }
+
+  /**
+   * Create thread from parent message
+   */
+  async createThread(parentMessageId: string): Promise<string | null> {
+    try {
+      // Get parent message to create thread context
+      const { data: parentMessage, error: fetchError } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('id', parentMessageId)
+        .single()
+
+      if (fetchError || !parentMessage) throw fetchError
+
+      // Create thread message
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          channel_id: parentMessage.channel_id,
+          user_id: parentMessage.user_id,
+          user_callsign: parentMessage.user_callsign,
+          message: 'Thread started',
+          message_type: 'system',
+          channel_type: parentMessage.channel_type,
+          channel_name: parentMessage.channel_name,
+          company_id: parentMessage.company_id,
+          event_id: parentMessage.event_id,
+          thread_id: parentMessageId,
+          created_at: new Date().toISOString(),
+          read_by: [parentMessage.user_id]
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return data.id
+    } catch (error) {
+      console.error('Error creating thread:', error)
+      return null
+    }
+  }
+
+  /**
+   * Get channel history (Event+Company scoped)
+   */
+  async getChannelHistory(
+    eventId: string,
+    companyId: string,
+    channelName: string,
+    limit: number = 50,
+    before?: string
+  ): Promise<ChatMessage[]> {
+    try {
+      // Try with new schema first
+      let query = supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('company_id', companyId)
+        .eq('channel_name', channelName)
+        .eq('channel_type', 'team')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (before) {
+        query = query.lt('created_at', before)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        // If schema error, return empty array (no mock data)
+        if (error.code === '42703' || error.message?.includes('column') || error.message?.includes('does not exist')) {
+          console.log('Database schema not updated, returning empty channel')
+          return []
+        }
+        throw error
+      }
+
+      return (data as unknown as ChatMessage[]).reverse()
+    } catch (error) {
+      console.error('Error fetching channel history:', error)
+      return []
+    }
+  }
+
+  /**
+   * Search messages in Event+Company scope
+   */
+  async searchMessages(
+    eventId: string,
+    companyId: string,
+    query: string
+  ): Promise<ChatMessage[]> {
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('company_id', companyId)
+        .eq('channel_type', 'team')
+        .textSearch('message', query)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) throw error
+
+      return data as unknown as ChatMessage[]
+    } catch (error) {
+      console.error('Error searching messages:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get available channels for Event+Company
+   */
+  async getChannels(eventId: string, companyId: string): Promise<ChatChannel[]> {
+    try {
+      // TODO: Implement when chat_channels table is created
+      console.log('Fetching channels:', { eventId, companyId })
+      return [
+        { id: '1', name: 'general', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
+        { id: '2', name: 'SMT', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
+        { id: '3', name: 'Supervisors', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
+        { id: '4', name: 'Issues', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true }
+      ]
+      // const { data, error } = await supabase
+      //   .from('chat_channels')
+      //   .select('*')
+      //   .eq('event_id', eventId)
+      //   .eq('company_id', companyId)
+      //   .order('created_at', { ascending: true })
+
+      // if (error) throw error
+
+      // return data as unknown as ChatChannel[]
+    } catch (error) {
+      console.error('Error fetching channels:', error)
+      return []
+    }
+  }
+
+  /**
+   * Create custom channel
+   */
+  async createChannel(
+    eventId: string,
+    companyId: string,
+    name: string,
+    description: string,
+    createdBy: string,
+    isPrivate: boolean = false
+  ): Promise<ChatChannel | null> {
+    try {
+      // TODO: Implement when chat_channels table is created
+      console.log('Creating channel:', { eventId, companyId, name, description, createdBy, isPrivate })
+      const newChannel: ChatChannel = {
+        id: Date.now().toString(),
+        name,
+        type: 'team',
+        participants: [],
+        unreadCount: 0,
+        createdAt: new Date().toISOString(),
+        isActive: true
+      }
+      return newChannel
+      
+      // const { data, error } = await supabase
+      //   .from('chat_channels')
+      //   .insert({
+      //     name,
+      //     description,
+      //     event_id: eventId,
+      //     company_id: companyId,
+      //     created_by: createdBy,
+      //     is_private: isPrivate,
+      //     created_at: new Date().toISOString()
+      //   })
+      //   .select()
+      //   .single()
+
+      // if (error) throw error
+
+      // return data as unknown as ChatChannel
+    } catch (error) {
+      console.error('Error creating channel:', error)
+      return null
     }
   }
 

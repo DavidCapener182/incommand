@@ -19,12 +19,13 @@ interface Incident {
 
 interface BottomNavProps {
   onOpenHelpCenter?: () => void;
+  onOpenChat?: () => void;
   helpCenterId?: string;
   isHelpCenterOpen?: boolean;
   incidentSummary?: string;
 }
 
-export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenterOpen, incidentSummary }: BottomNavProps) {
+export default function BottomNav({ onOpenHelpCenter, onOpenChat, helpCenterId, isHelpCenterOpen, incidentSummary }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname() || '';
   const [currentIncidentSummary, setCurrentIncidentSummary] = React.useState<string>('');
@@ -225,21 +226,17 @@ export default function BottomNav({ onOpenHelpCenter, helpCenterId, isHelpCenter
             <motion.button
               type="button"
               role="button"
-              aria-label="Open Help Center"
-              aria-haspopup="dialog"
-              aria-controls={helpCenterId}
-              aria-expanded={isHelpCenterOpen}
+              aria-label="Open Chat"
               disabled={chatDisabled}
               aria-disabled={chatDisabled}
-              title={chatDisabled ? 'Chat unavailable' : 'Open Help Center'}
-              onClick={() => { if (onOpenHelpCenter) onOpenHelpCenter(); }}
-              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isHelpCenterOpen ? 'text-blue-600 bg-white/80 shadow-[0_4px_16px_rgba(59,130,246,0.25)] dark:bg-white/10 dark:text-blue-300 dark:shadow-[0_4px_18px_rgba(0,0,0,0.45)]' : 'text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent`}
+              title={chatDisabled ? 'Chat unavailable' : 'Open Chat'}
+              onClick={() => { if (onOpenChat) onOpenChat(); }}
+              className={`touch-target flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent`}
               whileHover={!chatDisabled ? { scale: 1.02 } : {}}
               whileTap={!chatDisabled ? { scale: 0.98 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <motion.div
-                animate={isHelpCenterOpen ? { scale: 1.1 } : { scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
                 <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.5]" strokeWidth={1.5} />
