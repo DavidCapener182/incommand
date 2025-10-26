@@ -100,29 +100,45 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       }
     };
 
-    if (!hasRequiredFields()) return;
+    if (!hasRequiredFields()) {
+      console.log('Security brief: Missing required fields', updatedFormData);
+      return;
+    }
     
+    console.log('Security brief: Generating for', updatedFormData.event_type, updatedFormData);
     setDescriptionLoading(true);
     try {
+      const requestBody = {
+        eventType: updatedFormData.event_type,
+        venueName: updatedFormData.venue_name,
+        artistName: updatedFormData.artist_name,
+        homeTeam: updatedFormData.home_team,
+        awayTeam: updatedFormData.away_team,
+        paradeRoute: updatedFormData.parade_route,
+        festivalTheme: updatedFormData.festival_theme
+      };
+      
+      console.log('Security brief: Sending request', requestBody);
+      
       const response = await fetch('/api/generate-description', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: updatedFormData.event_type,
-          venueName: updatedFormData.venue_name,
-          artistName: updatedFormData.artist_name,
-          homeTeam: updatedFormData.home_team,
-          awayTeam: updatedFormData.away_team,
-          paradeRoute: updatedFormData.parade_route,
-          festivalTheme: updatedFormData.festival_theme
-        })
+        body: JSON.stringify(requestBody)
       });
+      
+      console.log('Security brief: Response status', response.status);
+      
       const data = await response.json();
+      console.log('Security brief: Response data', data);
+      
       if (data.description) {
         setFormData(prev => ({ ...prev, description: data.description }));
+        console.log('Security brief: Generated successfully');
+      } else {
+        console.log('Security brief: No description in response');
       }
     } catch (err) {
-      console.error('Failed to generate description:', err);
+      console.error('Security brief: Failed to generate description:', err);
     } finally {
       setDescriptionLoading(false);
     }
@@ -153,6 +169,12 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
   const generateFootballEventName = (homeTeam: string, awayTeam: string, eventDate: string) => {
     if (!homeTeam || !awayTeam || !eventDate) return '';
     
+    // Handle DD/MM/YYYY format
+    if (eventDate.includes('/')) {
+      return `${homeTeam} v ${awayTeam} - ${eventDate}`;
+    }
+    
+    // Fallback for other formats
     const date = new Date(eventDate);
     const formattedDate = date.toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -277,6 +299,11 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       }
     };
   }, []);
+
+  // Dispatch event modal state changes
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('eventModalChange', { detail: { isOpen } }))
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -581,26 +608,19 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Match Date <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="event_date"
-                      id="event_date"
-                      value={formData.event_date}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      required
-                      style={{ colorScheme: 'light' }}
-                    />
-                    {formData.event_date && (
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {formatDateForDisplay(formData.event_date)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Event name will be auto-generated as "Home Team v Away Team - DD/MM/YYYY"</p>
+                  <input
+                    type="text"
+                    name="event_date"
+                    id="event_date"
+                    value={formData.event_date}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="DD/MM/YYYY"
+                    required
+                    pattern="\d{2}/\d{2}/\d{4}"
+                    title="Please enter date in DD/MM/YYYY format"
+                  />
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter date in DD/MM/YYYY format (e.g., 26/10/2025)</p>
                 </div>
               )}
 

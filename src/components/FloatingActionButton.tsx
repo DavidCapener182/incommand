@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import IncidentCreationModal from './IncidentCreationModal'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface FloatingActionButtonProps {
   className?: string
@@ -11,6 +12,41 @@ interface FloatingActionButtonProps {
 
 export default function FloatingActionButton({ className = '' }: FloatingActionButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
+  const [showEventModal, setShowEventModal] = useState(false)
+  const supabase = createClientComponentClient()
+
+  // Check for active event
+  useEffect(() => {
+    const checkCurrentEvent = async () => {
+      try {
+        const { data: event } = await supabase
+          .from('events')
+          .select('id')
+          .eq('is_current', true)
+          .single()
+        
+        setHasCurrentEvent(!!event)
+      } catch (error) {
+        console.error('Error checking current event:', error)
+        setHasCurrentEvent(false)
+      }
+    }
+
+    checkCurrentEvent()
+  }, [supabase])
+
+  // Listen for event modal state changes
+  useEffect(() => {
+    const handleEventModalChange = (event: CustomEvent) => {
+      setShowEventModal(event.detail.isOpen)
+    }
+
+    window.addEventListener('eventModalChange', handleEventModalChange as EventListener)
+    return () => {
+      window.removeEventListener('eventModalChange', handleEventModalChange as EventListener)
+    }
+  }, [])
 
   const handleCreateIncident = () => {
     setIsModalOpen(true)
@@ -19,6 +55,17 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
   const handleIncidentCreated = async () => {
     setIsModalOpen(false)
     // Could add success notification here
+  }
+
+  // Don't show FAB if no active event or if event modal is open
+  if (!hasCurrentEvent || showEventModal) {
+    return (
+      <IncidentCreationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onIncidentCreated={handleIncidentCreated}
+      />
+    )
   }
 
   return (
