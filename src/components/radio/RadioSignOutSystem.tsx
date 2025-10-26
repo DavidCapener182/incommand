@@ -420,6 +420,8 @@ export default function RadioSignOutSystem({
               <button
                 onClick={() => {
                   setSelectedSignOut(signOut)
+                  // Reset equipment checkboxes to unchecked - user must actively check what's being returned
+                  setSignInEquipment({ pitCans: false, earpiece: false, spareBattery: false })
                   setShowSignInModal(true)
                 }}
                 className="w-full px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium"
