@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
       .from('chat_channels')
       .insert({
         name,
-        description,
         event_id: eventId,
         company_id: companyId,
         created_by: createdBy,

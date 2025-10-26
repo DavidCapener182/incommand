@@ -383,35 +383,26 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     return date.toLocaleDateString();
   };
 
-  // Function to format message content with proper bold text
+  // Function to format message content with proper HTML formatting
   const formatMessageContent = (content: string) => {
-    // Split content by bold markers and create React elements
-    const parts = content.split(/(\*\*.*?\*\*)/);
+    // If content already contains HTML, return it as-is
+    if (content.includes('<div') || content.includes('<strong>') || content.includes('<em>')) {
+      return <span dangerouslySetInnerHTML={{ __html: content }} />;
+    }
     
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        // This is bold text - remove ** and make it bold
-        const boldText = part.slice(2, -2);
-        return <strong key={index} className="font-semibold">{boldText}</strong>;
-      } else {
-        // Process regular text for other formatting
-        const processedText = part
-          .replace(/^#{1,6}\s*/gm, '') // Remove markdown headers
-          .replace(/^[-*+]\s+/gm, '• ') // Convert markdown bullets to simple bullets
-          .replace(/^\d+\.\s+/gm, '') // Remove numbered list formatting
-          .replace(/`([^`]+)`/g, '$1') // Remove backticks but keep content
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links but keep text
-          .replace(/_{2,}/g, '') // Remove multiple underscores
-          .replace(/_([^_]+)_/g, '$1') // Remove italic underscores but keep content
-          .replace(/~~([^~]+)~~/g, '$1') // Remove strikethrough but keep content
-          .replace(/^\s*>\s+/gm, '') // Remove blockquotes
-          .replace(/^\s*\|\s*/gm, '') // Remove table formatting
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
-        
-        return processedText;
-      }
-    });
+    // Otherwise convert markdown to HTML
+    const htmlContent = content
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+      .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 12px 0 6px 0;">$1</h3>') // Convert headers
+      .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 16px; font-weight: 700; margin: 16px 0 8px 0;">$1</h2>') // Convert main headers
+      .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h1>') // Convert main titles
+      .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong>$1</strong></div>') // Convert numbered lists
+      .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+      .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+      .replace(/\n/g, '<br>'); // Convert single line breaks
+    
+    return <span dangerouslySetInnerHTML={{ __html: htmlContent }} />;
   };
 
   const getPriorityColor = (priority: string) => {

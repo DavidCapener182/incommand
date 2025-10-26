@@ -1268,15 +1268,25 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Executive Summary</h3>
           </div>
           <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-            <div className="space-y-3 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-              {aiInsights
-                .split('\n')
-                .map(line => line.trim())
-                .filter(Boolean)
-                .map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
-            </div>
+            <div 
+              className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+              dangerouslySetInnerHTML={{ 
+                __html: aiInsights
+                  // If the AI already returned HTML, use it as-is
+                  .includes('<div') ? aiInsights :
+                  // Otherwise convert markdown to HTML
+                  aiInsights
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+                    .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
+                    .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
+                    .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
+                    .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
+                    .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+                    .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+                    .replace(/\n/g, '<br>') // Convert single line breaks
+              }}
+            />
           </div>
         </Card>
       )}

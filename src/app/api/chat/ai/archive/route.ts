@@ -120,10 +120,10 @@ export async function GET(request: NextRequest) {
         const messages = JSON.parse(row.message)
         conversations.push({
           id: row.id,
-          conversationId: row.metadata?.conversationId,
+          conversationId: (row.metadata as any)?.conversationId,
           messages,
-          archivedAt: row.metadata?.archivedAt,
-          messageCount: row.metadata?.messageCount,
+          archivedAt: (row.metadata as any)?.archivedAt,
+          messageCount: (row.metadata as any)?.messageCount,
           metadata: row.metadata
         })
       } catch (parseError) {

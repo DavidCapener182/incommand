@@ -292,7 +292,25 @@ function AIMessageBubble({ message, isOwn }: { message: AIMessage; isOwn: boolea
           ? "bg-gradient-to-r from-[#2A3990] to-[#4057C0] text-white ml-auto"
           : "bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-100 dark:border-gray-700"
       )}>
-        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        <div 
+          className="break-words"
+          dangerouslySetInnerHTML={{ 
+            __html: message.content
+              // If content already contains HTML, use it as-is
+              .includes('<div') ? message.content :
+              // Otherwise convert markdown to HTML
+              message.content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+                .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 12px 0 6px 0;">$1</h3>') // Convert headers
+                .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 16px; font-weight: 700; margin: 16px 0 8px 0;">$1</h2>') // Convert main headers
+                .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h1>') // Convert main titles
+                .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong>$1</strong></div>') // Convert numbered lists
+                .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+                .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+                .replace(/\n/g, '<br>') // Convert single line breaks
+          }}
+        />
         
         {/* Green Guide Citations */}
         {hasCitations && (

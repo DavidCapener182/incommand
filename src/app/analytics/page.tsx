@@ -1074,38 +1074,25 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Operational Summary</h2>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-              <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 space-y-3">
-                {aiSummary.split('\n').map((line, index) => {
-                  if (line.trim() === '') return null;
-                  
-                  // Clean up markdown formatting
-                  const cleanLine = line
-                    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-                    .replace(/\*(.*?)\*/g, '$1') // Remove italic
-                    .replace(/^[-*]\s+/, '• ') // Convert list items to bullets
-                    .trim();
-                  
-                  if (cleanLine.startsWith('•')) {
-                    return (
-                      <div key={index} className="ml-4">
-                        {cleanLine}
-                      </div>
-                    );
-                  } else if (cleanLine.includes(':')) {
-                    return (
-                      <div key={index} className="font-semibold text-gray-900 dark:text-white">
-                        {cleanLine}
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div key={index}>
-                        {cleanLine}
-                      </div>
-                    );
-                  }
-                })}
-              </div>
+              <div 
+                className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                dangerouslySetInnerHTML={{ 
+                  __html: aiSummary
+                    // If the AI already returned HTML, use it as-is
+                    .includes('<div') ? aiSummary :
+                    // Otherwise convert markdown to HTML
+                    aiSummary
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+                      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+                      .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
+                      .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
+                      .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
+                      .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
+                      .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+                      .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+                      .replace(/\n/g, '<br>') // Convert single line breaks
+                }}
+              />
             </div>
             {incidentData.length > 0 && (
               <div className="mt-3 flex gap-2 text-xs">

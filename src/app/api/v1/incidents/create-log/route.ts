@@ -95,6 +95,14 @@ export async function POST(request: NextRequest) {
 
       const logNumber = `${eventPrefix}-${eventDate}-${String((count || 0) + 1).padStart(3, '0')}`
 
+      // Determine if this should be logged as operational log vs incident
+      const operationalLogTypes = [
+        'Artist On Stage', 'Artist Off Stage', 'Artist on Stage', 'Artist off Stage',
+        'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Staffing',
+        'Accreditation', 'Accessibility', 'Accsessablity' // Include typo variant
+      ];
+      const shouldBeLogged = operationalLogTypes.includes(body.incident_type) || body.priority === 'low';
+
       // Prepare log data
       const logData = {
         log_number: logNumber,
@@ -112,8 +120,8 @@ export async function POST(request: NextRequest) {
         priority: body.priority || 'medium',
         photo_url: body.photo_url,
         event_id: body.event_id,
-        status: body.status || 'open',
-        is_closed: false,
+        status: shouldBeLogged ? 'logged' : (body.status || 'open'),
+        is_closed: shouldBeLogged,
         location: body.location_name || '' // Map location_name to database location field
       }
 

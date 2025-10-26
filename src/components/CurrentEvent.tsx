@@ -119,7 +119,11 @@ export default function CurrentEvent({
       setAiLoading(true)
       setAiError(null)
       
-      const response = await fetch('/api/notifications/ai-summary')
+      if (!currentEvent?.id) {
+        throw new Error('No current event selected')
+      }
+      
+      const response = await fetch(`/api/notifications/ai-summary?eventId=${currentEvent.id}`)
       if (!response.ok) throw new Error('Failed to fetch AI insights')
       
       const data = await response.json()

@@ -546,13 +546,25 @@ export default function ReportsPage() {
           {loadingSummary ? (
             <div className="text-gray-500">Loading summary...</div>
           ) : aiSummary ? (
-            aiSummary
-              .replace(/\*\*/g, '') // Remove markdown bold
-              .split(/\n\n|(?<=\.)\n/) // Split into paragraphs
-              .filter(Boolean)
-              .map((para, idx) => (
-                <p key={idx} className="mb-3 whitespace-pre-line text-gray-900 dark:text-gray-100">{para.trim()}</p>
-              ))
+            <div 
+              className="mb-3 text-gray-900 dark:text-gray-100"
+              dangerouslySetInnerHTML={{ 
+                __html: aiSummary
+                  // If the AI already returned HTML, use it as-is
+                  .includes('<div') ? aiSummary :
+                  // Otherwise convert markdown to HTML
+                  aiSummary
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+                    .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
+                    .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
+                    .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
+                    .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
+                    .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+                    .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+                    .replace(/\n/g, '<br>') // Convert single line breaks
+              }}
+            />
           ) : (
             <div className="text-gray-500">No summary generated.</div>
           )}

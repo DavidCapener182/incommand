@@ -3739,9 +3739,13 @@ export default function IncidentCreationModal({
         `${userProfile?.first_name?.[0]}${userProfile?.last_name?.[0]}`.toUpperCase() ||
         'Unknown'
 
-      // Determine status based on priority - low priority incidents should be "logged" not "open"
-      const lowPriorityTypes = ['Artist On Stage', 'Artist Off Stage', 'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Showdown'];
-      const shouldBeLogged = lowPriorityTypes.includes(resolvedType) || formData.priority === 'low';
+      // Determine status based on type - operational logs should be "logged" not "open"
+      const operationalLogTypes = [
+        'Artist On Stage', 'Artist Off Stage', 'Artist on Stage', 'Artist off Stage',
+        'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Staffing',
+        'Accreditation', 'Accessibility', 'Accsessablity' // Include typo variant
+      ];
+      const shouldBeLogged = operationalLogTypes.includes(resolvedType) || formData.priority === 'low';
       
       // Prepare the incident data
       

@@ -141,6 +141,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine if this should be logged as operational log vs incident
+    const operationalLogTypes = [
+      'Artist On Stage', 'Artist Off Stage', 'Artist on Stage', 'Artist off Stage',
+      'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Staffing',
+      'Accreditation', 'Accessibility', 'Accsessablity' // Include typo variant
+    ];
+    const shouldBeLogged = operationalLogTypes.includes(body.incident_type) || body.priority === 'low';
+
     // Create incident
     const { data, error } = await supabase
       .from('incident_logs')
@@ -154,7 +162,8 @@ export async function POST(request: NextRequest) {
         callsign_from: body.callsign_from || 'API',
         callsign_to: body.callsign_to || 'Control',
         timestamp: body.timestamp || new Date().toISOString(),
-        is_closed: body.is_closed || false,
+        is_closed: shouldBeLogged || body.is_closed || false,
+        status: shouldBeLogged ? 'logged' : (body.status || 'open'),
         entry_type: body.entry_type || 'contemporaneous',
         time_of_occurrence: body.time_of_occurrence || new Date().toISOString(),
         time_logged: new Date().toISOString(),

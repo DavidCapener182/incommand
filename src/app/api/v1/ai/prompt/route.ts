@@ -64,7 +64,19 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are an AI assistant that provides concise, professional operational summaries for event security and incident management. Keep responses brief and focused on key insights.'
+            content: `You are an AI assistant that provides concise, professional operational summaries for event security and incident management. Keep responses brief and focused on key insights.
+
+FORMATTING INSTRUCTIONS:
+- Use HTML formatting instead of markdown
+- Use <strong>bold</strong> for emphasis instead of **bold**
+- Use <em>italics</em> for emphasis instead of *italics*
+- Use <h3> for section headers instead of ###
+- Use <h2> for main headers instead of ##
+- Use <h1> for titles instead of #
+- Use <div> with inline styles for proper spacing and colors
+- Use numbered lists with <div style="margin-left: 16px; margin-bottom: 8px;"><strong>1. Item</strong></div>
+- Use bullet lists with <div style="margin-left: 16px; margin-bottom: 4px;">• Item</div>
+- Never use markdown syntax like #, **, or *`
           },
           {
             role: 'user',
