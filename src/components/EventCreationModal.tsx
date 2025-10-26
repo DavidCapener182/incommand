@@ -36,6 +36,11 @@ interface EventFormData {
   event_control_name: string;
   support_acts: SupportAct[];
   event_brief?: string;
+  // Event type specific fields
+  home_team?: string;
+  away_team?: string;
+  parade_route?: string;
+  festival_theme?: string;
   [key: string]: any; // Add index signature for dynamic access
 }
 
@@ -79,7 +84,23 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
   const [showBrief, setShowBrief] = useState(false)
 
   const generateDescription = async (updatedFormData: EventFormData) => {
-    if (!updatedFormData.venue_name || !updatedFormData.artist_name) return;
+    // Check if we have the required fields for the specific event type
+    const hasRequiredFields = () => {
+      switch (updatedFormData.event_type) {
+        case 'Concert':
+          return updatedFormData.venue_name && updatedFormData.artist_name;
+        case 'Football':
+          return updatedFormData.venue_name && updatedFormData.home_team && updatedFormData.away_team;
+        case 'Parade':
+          return updatedFormData.venue_name && updatedFormData.parade_route;
+        case 'Festival':
+          return updatedFormData.venue_name && updatedFormData.festival_theme;
+        default:
+          return updatedFormData.venue_name;
+      }
+    };
+
+    if (!hasRequiredFields()) return;
     
     setDescriptionLoading(true);
     try {
@@ -87,8 +108,13 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          eventType: updatedFormData.event_type,
           venueName: updatedFormData.venue_name,
-          artistName: updatedFormData.artist_name
+          artistName: updatedFormData.artist_name,
+          homeTeam: updatedFormData.home_team,
+          awayTeam: updatedFormData.away_team,
+          paradeRoute: updatedFormData.parade_route,
+          festivalTheme: updatedFormData.festival_theme
         })
       });
       const data = await response.json();
@@ -371,285 +397,427 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     switch (step) {
       case 1:
         return (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Event Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="event_type"
-                id="event_type"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.event_type}
-                onChange={handleInputChange}
-              >
-                <option value="">Select an event type</option>
-                <option value="Concert">Concert</option>
-                <option value="Parade">Parade</option>
-                <option value="Festival">Festival</option>
-                <option value="Football">Football</option>
-              </select>
+          <div className="card-modal space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Type Selection</h3>
+              <div>
+                <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Event Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="event_type"
+                  id="event_type"
+                  required
+                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.event_type}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select an event type</option>
+                  <option value="Concert">Concert</option>
+                  <option value="Parade">Parade</option>
+                  <option value="Festival">Festival</option>
+                  <option value="Football">Football</option>
+                </select>
+              </div>
             </div>
           </div>
         )
       case 2:
         return (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Event Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="event_name"
-                id="event_name"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.event_name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Venue Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="venue_name"
-                id="venue_name"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.venue_name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="artist_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Artist/Band Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="artist_name"
-                id="artist_name"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.artist_name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Security Brief</label>
-                <button
-                  type="button"
-                  className="md:hidden text-xs text-blue-600 underline focus:outline-none"
-                  onClick={() => setShowBrief((prev) => !prev)}
-                >
-                  {showBrief ? 'Hide' : 'Show'}
-                </button>
-              </div>
-              <div className={`${showBrief ? '' : 'hidden'} md:block mt-1 relative`}>
-                <textarea
-                  name="description"
-                  value={formData.description || ''}
+          <div className="card-modal space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Details</h3>
+              
+              {/* Event Name */}
+              <div>
+                <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Event Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="event_name"
+                  id="event_name"
+                  required
+                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.event_name}
                   onChange={handleInputChange}
-                  rows={6}
-                  placeholder={descriptionLoading ? "Generating security brief..." : "Security brief will be automatically generated when venue and artist names are filled"}
-                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  disabled={descriptionLoading}
                 />
-                {descriptionLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 bg-opacity-50 dark:bg-opacity-50 rounded-lg">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+
+              {/* Event Type Specific Fields */}
+              {formData.event_type === 'Concert' && (
+                <div>
+                  <label htmlFor="artist_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Artist/Headliner Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="artist_name"
+                    id="artist_name"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.artist_name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              )}
+
+              {formData.event_type === 'Football' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="home_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Home Team <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="home_team"
+                      id="home_team"
+                      required
+                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      value={formData.home_team || ''}
+                      onChange={handleInputChange}
+                    />
                   </div>
-                )}
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Brief is automatically generated based on historical data and risk assessment</p>
+                  <div>
+                    <label htmlFor="away_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Away Team <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="away_team"
+                      id="away_team"
+                      required
+                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      value={formData.away_team || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.event_type === 'Parade' && (
+                <div>
+                  <label htmlFor="parade_route" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Parade Route <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="parade_route"
+                    id="parade_route"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.parade_route || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Main Street to City Hall"
+                  />
+                </div>
+              )}
+
+              {formData.event_type === 'Festival' && (
+                <div>
+                  <label htmlFor="festival_theme" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Festival Theme/Genre <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="festival_theme"
+                    id="festival_theme"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.festival_theme || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Music Festival, Food Festival, Cultural Festival"
+                  />
+                </div>
+              )}
+
+              {/* Venue Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="venue_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Venue Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="venue_name"
+                    id="venue_name"
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.venue_name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="expected_attendance" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Expected Attendance
+                  </label>
+                  <input
+                    type="text"
+                    name="expected_attendance"
+                    id="expected_attendance"
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={formData.expected_attendance}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 10,000"
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Event Brief (from client)</label>
-              </div>
-              <div className="mt-1 relative">
-                <textarea
-                  name="event_brief"
-                  value={formData.event_brief || ''}
+
+              <div>
+                <label htmlFor="venue_address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Venue Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="venue_address"
+                  id="venue_address"
+                  required
+                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  value={formData.venue_address}
                   onChange={handleInputChange}
-                  rows={6}
-                  placeholder="Paste or type the event brief provided by the client here."
-                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-sm text-gray-500">This field is for the client&apos;s event brief and can contain large pasted text.</p>
+              </div>
+              {/* Security Brief */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Security Brief</label>
+                  <button
+                    type="button"
+                    className="md:hidden text-xs text-blue-600 underline focus:outline-none"
+                    onClick={() => setShowBrief((prev) => !prev)}
+                  >
+                    {showBrief ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <div className={`${showBrief ? '' : 'hidden'} md:block mt-1 relative`}>
+                  <textarea
+                    name="description"
+                    value={formData.description || ''}
+                    onChange={handleInputChange}
+                    rows={6}
+                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Football' ? 'team' : 'event'} details are filled`}
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    disabled={descriptionLoading}
+                  />
+                  {descriptionLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 bg-opacity-50 dark:bg-opacity-50 rounded-lg">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Brief is automatically generated based on historical data and risk assessment</p>
+                </div>
               </div>
             </div>
           </div>
         )
       case 3:
         return (
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="venue_address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Venue Address <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="venue_address"
-                id="venue_address"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.venue_address}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="expected_attendance" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Expected Attendance <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="expected_attendance"
-                id="expected_attendance"
-                required
-                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={formData.expected_attendance || ''}
-                onChange={handleInputChange}
-              />
+          <div className="card-modal space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Brief</h3>
+              <div>
+                <label htmlFor="event_brief" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Event Brief (from client)
+                </label>
+                <textarea
+                  name="event_brief"
+                  id="event_brief"
+                  value={formData.event_brief || ''}
+                  onChange={handleInputChange}
+                  rows={6}
+                  placeholder="Paste or type the event brief provided by the client here."
+                  className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">This field is for the client's event brief and can contain large pasted text.</p>
+              </div>
             </div>
           </div>
         )
       case 4:
         return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Event Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="event_date"
-                  value={formData.event_date}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
-              {renderTimeInput('show_stop_meeting_time', 'Show Stop Meeting Time (24h)', true)}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderTimeInput('doors_open_time', 'Doors Opening Time (24h)', true)}
-              {renderTimeInput('main_act_start_time', `${formData.artist_name || 'Main Act'} Start Time (24h)`, true)}
-            </div>
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Support Acts</h3>
-              {formData.support_acts.map((act, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="card-modal space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
+              
+              {/* Event Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Event Date <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="text"
-                    value={act.act_name}
-                    onChange={(e) => {
-                      const newActs = [...formData.support_acts];
-                      newActs[index].act_name = e.target.value;
-                      setFormData(prev => ({ ...prev, support_acts: newActs }));
-                    }}
-                    placeholder="Act Name"
-                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    value={act.start_time}
-                    onChange={(e) => {
-                      const newActs = [...formData.support_acts];
-                      // Use the same time validation/formatting as other time fields
-                      const numericValue = e.target.value.replace(/\D/g, '');
-                      let formattedTime = '';
-                      if (numericValue.length >= 2) {
-                        formattedTime = numericValue.slice(0, 2) + ':' + numericValue.slice(2, 4);
-                      } else {
-                        formattedTime = numericValue;
-                      }
-                      if (formattedTime.includes(':') && formattedTime.length === 5) {
-                        const [hours, minutes] = formattedTime.split(':');
-                        const hoursNum = parseInt(hours, 10);
-                        const minutesNum = parseInt(minutes, 10);
-                        if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
-                          newActs[index].start_time = formattedTime;
-                        } else {
-                          newActs[index].start_time = formattedTime;
-                        }
-                      } else {
-                        newActs[index].start_time = formattedTime;
-                      }
-                      setFormData(prev => ({ ...prev, support_acts: newActs }));
-                    }}
-                    placeholder="HH:mm"
-                    maxLength={5}
-                    inputMode="numeric"
-                    pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-                    className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    type="date"
+                    name="event_date"
+                    value={formData.event_date}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required
                   />
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    support_acts: [...prev.support_acts, { act_name: '', start_time: '' }]
-                  }));
-                }}
-                className="mt-2 inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                + Add Support Act
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderTimeInput('show_down_time', 'Show Down Time (24h)', true)}
-              {renderTimeInput('curfew_time', 'Curfew Time (24h)')}
+              </div>
+
+              {/* Event Type Specific Timing Fields */}
+              {formData.event_type === 'Concert' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
+                    {renderTimeInput('show_stop_meeting_time', 'Show Stop Meeting Time (24h)', true)}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('doors_open_time', 'Doors Opening Time (24h)', true)}
+                    {renderTimeInput('main_act_start_time', `${formData.artist_name || 'Main Act'} Start Time (24h)`, true)}
+                  </div>
+                </>
+              )}
+
+              {formData.event_type === 'Football' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
+                    {renderTimeInput('doors_open_time', 'Gates Opening Time (24h)', true)}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('main_act_start_time', 'Kick-off Time (24h)', true)}
+                    {renderTimeInput('show_down_time', 'Match End Time (24h)', true)}
+                  </div>
+                </>
+              )}
+
+              {formData.event_type === 'Parade' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
+                    {renderTimeInput('doors_open_time', 'Parade Start Time (24h)', true)}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('main_act_start_time', 'Parade End Time (24h)', true)}
+                    {renderTimeInput('show_down_time', 'Clean-up Complete Time (24h)', true)}
+                  </div>
+                </>
+              )}
+
+              {formData.event_type === 'Festival' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
+                    {renderTimeInput('doors_open_time', 'Gates Opening Time (24h)', true)}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderTimeInput('main_act_start_time', 'Festival Start Time (24h)', true)}
+                    {renderTimeInput('show_down_time', 'Festival End Time (24h)', true)}
+                  </div>
+                </>
+              )}
+
+              {/* Support Acts - Only for Concerts */}
+              {formData.event_type === 'Concert' && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Support Acts</h3>
+                  {formData.support_acts.map((act, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <input
+                        type="text"
+                        value={act.act_name}
+                        onChange={(e) => {
+                          const newActs = [...formData.support_acts];
+                          newActs[index].act_name = e.target.value;
+                          setFormData(prev => ({ ...prev, support_acts: newActs }));
+                        }}
+                        placeholder="Act Name"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                      <input
+                        type="text"
+                        value={act.start_time}
+                        onChange={(e) => {
+                          const newActs = [...formData.support_acts];
+                          // Use the same time validation/formatting as other time fields
+                          const numericValue = e.target.value.replace(/\D/g, '');
+                          let formattedTime = '';
+                          if (numericValue.length >= 2) {
+                            formattedTime = numericValue.slice(0, 2) + ':' + numericValue.slice(2, 4);
+                          } else {
+                            formattedTime = numericValue;
+                          }
+                          if (formattedTime.includes(':') && formattedTime.length === 5) {
+                            const [hours, minutes] = formattedTime.split(':');
+                            const hoursNum = parseInt(hours, 10);
+                            const minutesNum = parseInt(minutes, 10);
+                            if (hoursNum >= 0 && hoursNum < 24 && minutesNum >= 0 && minutesNum < 60) {
+                              newActs[index].start_time = formattedTime;
+                            } else {
+                              newActs[index].start_time = formattedTime;
+                            }
+                          } else {
+                            newActs[index].start_time = formattedTime;
+                          }
+                          setFormData(prev => ({ ...prev, support_acts: newActs }));
+                        }}
+                        placeholder="HH:mm"
+                        maxLength={5}
+                        inputMode="numeric"
+                        pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        support_acts: [...prev.support_acts, { act_name: '', start_time: '' }]
+                      }));
+                    }}
+                    className="mt-2 inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    + Add Support Act
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )
       case 5:
         return (
-          <div className="space-y-6">
-            {[
-              {
-                title: 'Duty Manager',
-                field: 'duty_manager_name'
-              },
-              {
-                title: 'Production Manager',
-                field: 'production_manager_name'
-              },
-              {
-                title: 'Head of Security',
-                field: 'head_of_security_name'
-              },
-              {
-                title: 'Assistant Head of Security',
-                field: 'assistant_head_of_security_name'
-              },
-              {
-                title: 'Event Control',
-                field: 'event_control_name'
-              }
-            ].map((manager) => (
-              <div key={manager.field}>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{manager.title} *</label>
-                <input
-                  type="text"
-                  name={manager.field}
-                  value={formData[manager.field]}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            ))}
+          <div className="card-modal space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Key Personnel</h3>
+              {[
+                {
+                  title: 'Duty Manager',
+                  field: 'duty_manager_name'
+                },
+                {
+                  title: 'Production Manager',
+                  field: 'production_manager_name'
+                },
+                {
+                  title: 'Head of Security',
+                  field: 'head_of_security_name'
+                },
+                {
+                  title: 'Assistant Head of Security',
+                  field: 'assistant_head_of_security_name'
+                },
+                {
+                  title: 'Event Control',
+                  field: 'event_control_name'
+                }
+              ].map((manager) => (
+                <div key={manager.field}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{manager.title} *</label>
+                  <input
+                    type="text"
+                    name={manager.field}
+                    value={formData[manager.field]}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )
       default:
