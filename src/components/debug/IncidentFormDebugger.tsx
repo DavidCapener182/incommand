@@ -63,12 +63,12 @@ export default function IncidentFormDebugger({ formData, eventId, isVisible = fa
       value: formData.priority || 'Empty',
       required: true
     },
-        {
+    {
           name: 'Location',
           isValid: !!formData.location?.trim(),
           value: formData.location || 'Empty',
-          required: false
-        },
+      required: false
+    },
     {
       name: 'Entry Type',
       isValid: !!formData.entry_type,

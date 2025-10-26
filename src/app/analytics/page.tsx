@@ -1069,18 +1069,9 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               </button>
             </div>
             <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-blue-600" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Operational Summary</h2>
-              </div>
-              <button
-                onClick={generateAISummary}
-                disabled={isGeneratingSummary}
-                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-              >
-                {isGeneratingSummary ? 'Generating...' : 'Refresh'}
-              </button>
+            <div className="flex items-center gap-3 mb-4">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Operational Summary</h2>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
               <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 space-y-3">

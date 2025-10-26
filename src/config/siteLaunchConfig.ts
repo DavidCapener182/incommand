@@ -1,9 +1,9 @@
 const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6
 
 const computeDefaultLaunchDate = () => {
-  const now = new Date()
-  const launch = new Date(now)
-  launch.setMonth(launch.getMonth() + 6)
+  // Set a fixed launch date instead of always calculating 6 months from now
+  // This ensures the countdown is consistent and actually counts down
+  const launch = new Date('2026-04-26T00:00:00.000Z')
   return launch.toISOString()
 }
 

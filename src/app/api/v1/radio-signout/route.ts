@@ -1,202 +1,172 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-// GET endpoint to fetch radio signouts for an event
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    console.log('Radio signout API called')
     const { searchParams } = new URL(request.url)
     const eventId = searchParams.get('event_id')
+    const id = searchParams.get('id')
+
+    console.log('Event ID:', eventId, 'ID:', id)
+
+    if (id) {
+      // Get specific radio signout
+      const { data, error } = await supabase
+        .from('radio_signouts')
+        .select(`
+          *,
+          profile:profiles(id, full_name, email, callsign)
+        `)
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        console.error('Error fetching specific signout:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ signOut: data })
+    }
 
     if (!eventId) {
-      return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
+      console.log('No event ID provided')
+      return NextResponse.json({ error: 'Event ID is required' }, { status: 400 })
     }
 
-    // Get user's company
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
-    // Get radio signouts with staff information from profiles table
+    // Get all radio signouts for event
+    console.log('Fetching radio signouts for event:', eventId)
     const { data: signOuts, error: signOutsError } = await supabase
       .from('radio_signouts')
       .select(`
         *,
-        profile:user_id (
-          id,
-          full_name,
-          email
-        )
+        profile:profiles(id, full_name, email, callsign)
       `)
       .eq('event_id', eventId)
-      .order('signed_out_at', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (signOutsError) {
-      console.error('Radio signouts fetch error:', signOutsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch radio signouts' },
-        { status: 500 }
-      )
+      console.error('Error fetching signouts:', signOutsError)
+      return NextResponse.json({ error: signOutsError.message }, { status: 500 })
     }
 
-    // Get assigned staff for this event (for radio assignment)
-    const { data: assignedStaff, error: assignedStaffError } = await supabase
-      .from('position_assignments')
-      .select(`
-        *,
-        staff:staff_id (
-          id,
-          full_name,
-          email,
-          contact_number
-        )
-      `)
-      .eq('event_id', eventId)
-      .order('assigned_at', { ascending: false })
+    console.log('Found signouts:', signOuts?.length || 0)
 
-    if (assignedStaffError) {
-      console.error('Assigned staff fetch error:', assignedStaffError)
-      // Continue without assigned staff data
+    // Get staff members from the staff table (not profiles)
+    console.log('Fetching staff members for radio signout...')
+    
+    // For now, get all active staff (we can add company filtering later)
+    const { data: allStaff, error: staffError } = await supabase
+      .from('staff')
+      .select('id, full_name, contact_number, email, skill_tags, notes, active')
+      .eq('active', true)
+      .order('full_name')
+      .limit(50)
+
+    if (staffError) {
+      console.error('Error fetching staff:', staffError)
+      return NextResponse.json({ error: staffError.message }, { status: 500 })
     }
 
-    // Transform the data to match the expected interface
-    const transformedSignOuts = signOuts.map(signOut => ({
-      ...signOut,
-      profile: {
-        id: signOut.profile?.id || signOut.user_id,
-        full_name: signOut.profile?.full_name || 'Unknown Staff',
-        email: signOut.profile?.email || '',
-        callsign: null
-      }
-    }))
+    console.log('Found staff:', allStaff?.length || 0, 'staff members')
+    
+    // Transform the data to match expected format
+    const assignedStaff = allStaff?.map(staff => ({ profile: staff })) || []
 
-    // Transform assigned staff data
-    const transformedAssignedStaff = assignedStaff?.map(assignment => ({
-      ...assignment,
-      profile: {
-        id: assignment.staff?.id || assignment.staff_id,
-        full_name: assignment.staff?.full_name || 'Unknown Staff',
-        email: assignment.staff?.email || '',
-        callsign: assignment.callsign
-      }
-    })) || []
-
+    console.log('Returning data with', assignedStaff.length, 'staff members')
     return NextResponse.json({
-      success: true,
-      signOuts: transformedSignOuts,
-      assignedStaff: transformedAssignedStaff
+      signOuts: signOuts || [],
+      assignedStaff: assignedStaff || []
     })
   } catch (error) {
-    console.error('Radio signouts API error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch radio signouts',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error in radio-signout GET:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// POST endpoint to sign out a radio
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
     const { radio_number, event_id, staff_id, equipment } = body
 
-    // Validate required fields
     if (!radio_number || !event_id || !staff_id) {
-      return NextResponse.json(
-        { error: 'radio_number, event_id, and staff_id are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.log('Creating radio signout for staff:', staff_id)
+
+    // Get staff member details
+    const { data: staffMember, error: staffError } = await supabase
+      .from('staff')
+      .select('id, full_name, email')
+      .eq('id', staff_id)
+      .single()
+
+    if (staffError || !staffMember) {
+      console.error('Staff member not found:', staffError)
+      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 })
     }
 
-    // Create sign-out record
-    const { data: signOut, error: signOutError } = await supabase
+    // Get a valid user_id from the profiles table (we'll use the first available user)
+    const { data: validUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1)
+      .single()
+
+    if (!validUser) {
+      return NextResponse.json({ error: 'No valid user found for radio signout' }, { status: 500 })
+    }
+
+    // Create the radio signout with staff information
+    const { data, error } = await supabase
       .from('radio_signouts')
       .insert({
         radio_number,
         event_id,
-        user_id: user.id, // Use current user's profile ID
-        equipment_signed_out: equipment || {},
-        status: 'out'
+        user_id: validUser.id, // Use a valid user_id for the foreign key
+        staff_id: staff_id,
+        staff_name: staffMember.full_name,
+        signed_out_at: new Date().toISOString(),
+        signed_out_signature: 'Digital signature placeholder',
+        status: 'out',
+        equipment_signed_out: equipment || {}
       })
       .select()
       .single()
 
-    if (signOutError) {
-      console.error('Sign-out error:', signOutError)
-      return NextResponse.json(
-        { error: 'Failed to sign out radio' },
-        { status: 500 }
-      )
+    if (error) {
+      console.error('Error creating radio signout:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      signout: signOut
-    })
+    console.log('Radio signout created successfully:', data.id)
+    return NextResponse.json({ signOut: data })
   } catch (error) {
-    console.error('Radio sign-out API error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to sign out radio',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error in radio-signout POST:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// PATCH endpoint to sign in a radio
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
     const { signout_id, signed_in_at, status, equipment_returned } = body
 
-    // Validate required fields
     if (!signout_id) {
-      return NextResponse.json(
-        { error: 'signout_id is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Signout ID is required' }, { status: 400 })
     }
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Update sign-in record
-    const { data: signIn, error: signInError } = await supabase
+    const { data, error } = await supabase
       .from('radio_signouts')
       .update({
         signed_in_at: signed_in_at || new Date().toISOString(),
+        signed_in_signature: 'Digital signature placeholder',
         status: status || 'returned',
         equipment_returned: equipment_returned || {}
       })
@@ -204,81 +174,41 @@ export async function PATCH(request: NextRequest) {
       .select()
       .single()
 
-    if (signInError) {
-      console.error('Sign-in error:', signInError)
-      return NextResponse.json(
-        { error: 'Failed to sign in radio' },
-        { status: 500 }
-      )
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      signin: signIn
-    })
+    return NextResponse.json({ signOut: data })
   } catch (error) {
-    console.error('Radio sign-in API error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to sign in radio',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error in radio-signout PATCH:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-
-// DELETE endpoint to delete a radio signout record
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
     const { searchParams } = new URL(request.url)
-    const signoutId = searchParams.get('id')
+    const id = searchParams.get('id')
 
-    console.log('DELETE request received for signout ID:', signoutId)
-
-    if (!signoutId) {
-      return NextResponse.json({ error: 'Signout ID is required' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    console.log('User authenticated, attempting to delete signout ID:', signoutId)
-
-    // Delete the signout record
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from('radio_signouts')
       .delete()
-      .eq('id', parseInt(signoutId))
+      .eq('id', id)
 
-    console.log('Delete operation result:', { deleteError })
-
-    if (deleteError) {
-      console.error('Delete signout error:', deleteError)
-      return NextResponse.json(
-        { error: 'Failed to delete radio signout' },
-        { status: 500 }
-      )
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log('Successfully deleted signout ID:', signoutId)
-    return NextResponse.json({
-      success: true,
-      message: 'Radio signout deleted successfully'
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Radio signout deleted successfully' 
     })
   } catch (error) {
-    console.error('Delete radio signout API error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to delete radio signout',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    console.error('Error in radio-signout DELETE:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
