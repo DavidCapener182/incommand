@@ -236,6 +236,8 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const signoutId = searchParams.get('id')
 
+    console.log('DELETE request received for signout ID:', signoutId)
+
     if (!signoutId) {
       return NextResponse.json({ error: 'Signout ID is required' }, { status: 400 })
     }
@@ -246,11 +248,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('User authenticated, attempting to delete signout ID:', signoutId)
+
     // Delete the signout record
     const { error: deleteError } = await supabase
       .from('radio_signouts')
       .delete()
-      .eq('id', signoutId)
+      .eq('id', parseInt(signoutId))
+
+    console.log('Delete operation result:', { deleteError })
 
     if (deleteError) {
       console.error('Delete signout error:', deleteError)
@@ -260,6 +266,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    console.log('Successfully deleted signout ID:', signoutId)
     return NextResponse.json({
       success: true,
       message: 'Radio signout deleted successfully'
