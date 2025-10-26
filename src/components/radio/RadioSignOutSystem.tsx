@@ -555,10 +555,7 @@ export default function RadioSignOutSystem({
               <div className="p-6">
                 <div className="text-center">
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Are you sure you want to sign in Radio #{selectedSignOut.radio_number}?
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
-                    This will mark the radio as returned.
+                    Return {selectedSignOut.profile.full_name} radio?
                   </p>
                 </div>
               </div>
@@ -574,7 +571,7 @@ export default function RadioSignOutSystem({
                   onClick={handleSignIn}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Sign In
+                  Confirm
                 </button>
               </div>
             </motion.div>
