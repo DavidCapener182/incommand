@@ -519,8 +519,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               </div>
             </div>
           </div>
-        )
-        break
+        );
       case 2:
         return (
           <div className="card-modal space-y-6">
@@ -569,58 +568,60 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {formData.event_type === 'Football' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="home_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Home Team <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="home_team"
+                        id="home_team"
+                        required
+                        className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        value={formData.home_team || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="away_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Away Team <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="away_team"
+                        id="away_team"
+                        required
+                        className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        value={formData.away_team || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Competition Field */}
                   <div>
-                    <label htmlFor="home_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Home Team <span className="text-red-500">*</span>
+                    <label htmlFor="competition" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Competition <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      name="home_team"
-                      id="home_team"
+                    <select
+                      name="competition"
+                      id="competition"
                       required
                       className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      value={formData.home_team || ''}
+                      value={formData.competition || ''}
                       onChange={handleInputChange}
-                    />
+                    >
+                      <option value="">Select Competition</option>
+                      {COMPETITIONS.map((competition) => (
+                        <option key={competition} value={competition}>
+                          {competition}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div>
-                    <label htmlFor="away_team" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Away Team <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="away_team"
-                      id="away_team"
-                      required
-                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                      value={formData.away_team || ''}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-                
-                {/* Competition Field */}
-                <div>
-                  <label htmlFor="competition" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Competition <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="competition"
-                    id="competition"
-                    required
-                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    value={formData.competition || ''}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Competition</option>
-                    {COMPETITIONS.map((competition) => (
-                      <option key={competition} value={competition}>
-                        {competition}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                </>
               )}
 
               {formData.event_type === 'Parade' && (
