@@ -520,6 +520,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
             </div>
           </div>
         )
+        break
       case 2:
         return (
           <div className="card-modal space-y-6">
