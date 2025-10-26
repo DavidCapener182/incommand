@@ -672,8 +672,8 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
-            
-            {error && (
+          
+          {error && (
               <div className="mt-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -687,9 +687,9 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   </div>
                 </div>
               </div>
-            )}
+          )}
 
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Progress Bar */}
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
@@ -744,7 +744,6 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   </div>
                 </div>
               </form>
-            </div>
           </div>
         </div>
       </div>
