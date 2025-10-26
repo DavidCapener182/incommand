@@ -8,7 +8,6 @@ import {
   ExclamationTriangleIcon,
   PencilIcon,
   ArrowDownTrayIcon,
-  ArrowPathIcon,
   TrashIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
@@ -190,6 +189,29 @@ export default function RadioSignOutSystem({
       return
     }
 
+    // Check for missing equipment returns
+    const missingEquipment = []
+    const originalEquipment = selectedSignOut.equipment_signed_out || {}
+    
+    if (originalEquipment.pitCans && !signInEquipment.pitCans) {
+      missingEquipment.push('Pit Cans')
+    }
+    if (originalEquipment.earpiece && !signInEquipment.earpiece) {
+      missingEquipment.push('Earpiece')
+    }
+    if (originalEquipment.spareBattery && !signInEquipment.spareBattery) {
+      missingEquipment.push('Spare Battery')
+    }
+
+    if (missingEquipment.length > 0) {
+      const missingList = missingEquipment.join(', ')
+      const confirmMessage = `Warning: The following equipment was signed out but not marked as returned: ${missingList}\n\nAre you sure you want to continue?`
+      
+      if (!confirm(confirmMessage)) {
+        return
+      }
+    }
+
     try {
       const response = await fetch('/api/v1/radio-signout', {
         method: 'PATCH',
@@ -310,13 +332,6 @@ export default function RadioSignOutSystem({
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               Export CSV
-            </button>
-            <button
-              onClick={fetchSignOuts}
-              className="px-3 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all flex items-center gap-2 text-sm font-medium"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-              Refresh
             </button>
             <button
               onClick={() => setShowSignOutModal(true)}
@@ -646,6 +661,9 @@ export default function RadioSignOutSystem({
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Equipment Being Returned
                   </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Check all equipment that was originally signed out with this radio
+                  </p>
                   <div className="space-y-3">
                     {selectedSignOut.equipment_signed_out?.pitCans && (
                       <label className="flex items-center">
@@ -655,7 +673,9 @@ export default function RadioSignOutSystem({
                           onChange={() => handleSignInEquipmentChange('pitCans')}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Pit Cans</span>
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          Pit Cans <span className="text-xs text-blue-600">(signed out)</span>
+                        </span>
                       </label>
                     )}
                     {selectedSignOut.equipment_signed_out?.earpiece && (
@@ -666,7 +686,9 @@ export default function RadioSignOutSystem({
                           onChange={() => handleSignInEquipmentChange('earpiece')}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Earpiece</span>
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          Earpiece <span className="text-xs text-blue-600">(signed out)</span>
+                        </span>
                       </label>
                     )}
                     {selectedSignOut.equipment_signed_out?.spareBattery && (
@@ -677,7 +699,9 @@ export default function RadioSignOutSystem({
                           onChange={() => handleSignInEquipmentChange('spareBattery')}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Spare Battery</span>
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          Spare Battery <span className="text-xs text-blue-600">(signed out)</span>
+                        </span>
                       </label>
                     )}
                     {(!selectedSignOut.equipment_signed_out?.pitCans && 
