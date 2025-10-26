@@ -79,12 +79,13 @@ export async function GET(
 
     console.log('User company_id:', userProfile.company_id)
 
-    // Get all staff in the company
+    // Get all staff in the company (from profiles table)
     console.log('Fetching staff for company:', userProfile.company_id)
     const { data: staff, error: staffError } = await supabase
-      .from('staff')
-      .select('id, full_name, email, contact_number, skill_tags, active')
+      .from('profiles')
+      .select('id, full_name, email, phone_number, skill_tags, is_staff')
       .eq('company_id', userProfile.company_id)
+      .eq('is_staff', true)
 
     if (staffError) {
       console.error('Staff fetch error:', staffError)
@@ -151,7 +152,7 @@ export async function GET(
       }
       
       // Calculate overall score based on real data
-      const activeMultiplier = member.active ? 1.1 : 0.9
+      const activeMultiplier = member.is_staff ? 1.1 : 0.9
       const responseTimeScore = avgResponseTime > 0 ? Math.max(0, 15 - avgResponseTime) * 2 : 0
       const overallScore = Math.floor(
         (incidentsCount * 10 * activeMultiplier) + 
@@ -169,7 +170,7 @@ export async function GET(
         log_quality_score: logQualityScore,
         overall_score: Math.min(100, Math.max(0, overallScore)),
         experience_level: 'intermediate',
-        active_assignments: member.active ? 1 : 0
+        active_assignments: member.is_staff ? 1 : 0
       })
     }
 
