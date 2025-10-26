@@ -437,7 +437,7 @@ export default function RadioSignOutSystem({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
             style={{ backdropFilter: 'blur(8px)' }}
             onClick={() => setShowSignOutModal(false)}
           >
@@ -548,7 +548,7 @@ export default function RadioSignOutSystem({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
             style={{ backdropFilter: 'blur(8px)' }}
             onClick={() => setShowSignInModal(false)}
           >
