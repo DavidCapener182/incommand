@@ -33,7 +33,7 @@ interface StaffMember {
   callsign: string | null
   skills: StaffSkill[]
   certifications_expiring_30_days: number
-  sa_badge_number?: string
+  sia_badge_number?: string
   expiry_date?: string
 }
 
@@ -275,13 +275,6 @@ export default function StaffSkillsMatrix({
               <ArrowDownTrayIcon className="h-4 w-4" />
               Export CSV
             </button>
-            <button
-              onClick={() => setShowAddSkillModal(true)}
-              className="px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 text-sm font-medium"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Add Skill
-            </button>
           </div>
         </div>
       </div>
@@ -299,13 +292,16 @@ export default function StaffSkillsMatrix({
                   Skills
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  SA Badge Number
+                  SIA Badge Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Expiry Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Add Skill
                 </th>
               </tr>
             </thead>
@@ -351,7 +347,7 @@ export default function StaffSkillsMatrix({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white">
-                      {member.sa_badge_number || '—'}
+                      {member.sia_badge_number || '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -370,6 +366,18 @@ export default function StaffSkillsMatrix({
                       className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       View Details
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => {
+                        setSelectedStaff(member)
+                        setShowAddSkillModal(true)
+                      }}
+                      className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      Add Skill
                     </button>
                   </td>
                 </motion.tr>
