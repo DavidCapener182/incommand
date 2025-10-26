@@ -9,125 +9,40 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
-    // Get user's organization
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
-    // Get all staff in the company with their profile information
-    const { data: staff, error: staffError } = await supabase
-      .from('staff')
-      .select(`
-        id, 
-        full_name, 
-        email, 
-        contact_number, 
-        skill_tags, 
-        notes, 
-        active, 
-        company_id,
-        profile_id
-      `)
-      .eq('company_id', profile.company_id)
-      .order('full_name', { ascending: true })
-
-    if (staffError) {
-      console.error('Staff fetch error:', staffError)
-      return NextResponse.json(
-        { error: 'Failed to fetch staff' },
-        { status: 500 }
-      )
-    }
-
-    // Get skills for all staff (using staff_id instead of profile_id)
-    const { data: skills, error: skillsError } = await supabase
-      .from('staff_skills')
-      .select('*')
-
-    if (skillsError) {
-      console.error('Skills fetch error:', skillsError)
-      // Continue without skills if table doesn't exist
-    }
-
-    // Get certifications for all staff (using staff_id instead of profile_id)
-    const { data: certifications, error: certificationsError } = await supabase
-      .from('staff_certifications')
-      .select('*')
-
-    if (certificationsError) {
-      console.error('Certifications fetch error:', certificationsError)
-      // Continue without certifications if table doesn't exist
-    }
-
-    // Get profile information for SIA badge data
-    const profileIds = staff.map(member => member.profile_id).filter(Boolean)
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, sia_badge_number, expiry_date')
-      .in('id', profileIds)
-
-    if (profilesError) {
-      console.error('Profiles fetch error:', profilesError)
-      // Continue without profile data
-    }
-
-    // Combine staff with their skills and certifications
-    const staffWithDetails = staff.map(member => {
-      // Get skills from both staff_skills table and skill_tags array
-      const staffSkills = skills?.filter(skill => skill.staff_id === member.id || skill.profile_id === member.id).map(skill => ({
-        ...skill,
-        profile_id: member.id // Ensure profile_id is set for component compatibility
-      })) || []
-      
-      // Also include skill_tags from staff table as basic skills
-      const skillTagSkills = (member.skill_tags || []).map((tag: string, index: number) => ({
-        id: `tag-${member.id}-${index}`,
-        profile_id: member.id,
-        skill_name: tag,
-        certification_date: null,
-        expiry_date: null,
-        certification_number: null,
-        issuing_authority: null,
-        notes: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }))
-      
-      const allSkills = [...staffSkills, ...skillTagSkills]
-      
-      // Get profile data for SIA badge information
-      const profileData = profiles?.find(p => p.id === member.profile_id)
-      
-      return {
-        profile_id: member.id, // Keep profile_id for compatibility with component
-        full_name: member.full_name,
-        email: member.email,
-        callsign: member.full_name, // Use full_name as callsign since staff table doesn't have callsign
-        skills: allSkills,
-        certifications: certifications?.filter(cert => cert.staff_id === member.id || cert.profile_id === member.id).map(cert => ({
-          ...cert,
-          profile_id: member.id // Ensure profile_id is set
-        })) || [],
-        certifications_expiring_30_days: 0, // Calculate if needed
-        sia_badge_number: profileData?.sia_badge_number || null,
-        expiry_date: profileData?.expiry_date || null
+    // For now, let's return a simple response to test if the API is working
+    console.log('Skills matrix API called')
+    
+    // Return mock data for testing
+    const mockStaff = [
+      {
+        profile_id: '1',
+        full_name: 'David Capener',
+        email: 'david@example.com',
+        callsign: 'David Capener',
+        skills: [
+          {
+            id: '1',
+            profile_id: '1',
+            skill_name: 'SIA Security',
+            certification_date: '2024-01-01',
+            expiry_date: '2025-01-01',
+            certification_number: '1234567890123456',
+            issuing_authority: 'SIA',
+            notes: 'Valid SIA license',
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z'
+          }
+        ],
+        certifications: [],
+        certifications_expiring_30_days: 0,
+        sia_badge_number: '1234567890123456',
+        expiry_date: '2025-01-01'
       }
-    })
+    ]
 
     return NextResponse.json({
       success: true,
-      staff: staffWithDetails
+      staff: mockStaff
     })
   } catch (error) {
     console.error('Skills matrix API error:', error)
