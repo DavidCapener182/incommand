@@ -388,8 +388,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <option value="Concert">Concert</option>
                 <option value="Parade">Parade</option>
                 <option value="Festival">Festival</option>
-                <option value="Corporate">Corporate</option>
-                <option value="Other">Other</option>
+                <option value="Football">Football</option>
               </select>
             </div>
           </div>
