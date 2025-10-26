@@ -13,7 +13,7 @@ export async function PATCH(
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    const { verified, skill_name, certification_date, expiry_date, certification_number, issuing_authority, notes } = body
+    const { skill_name, certification_date, expiry_date, certification_number, issuing_authority, notes } = body
     const skillId = parseInt(params.id)
 
     if (isNaN(skillId)) {
@@ -61,16 +61,6 @@ export async function PATCH(
       updated_at: new Date().toISOString()
     }
 
-    if (verified !== undefined) {
-      updateData.verified = verified
-      if (verified) {
-        updateData.verified_by = user.id
-        updateData.verified_at = new Date().toISOString()
-      } else {
-        updateData.verified_by = null
-        updateData.verified_at = null
-      }
-    }
 
     if (skill_name !== undefined) updateData.skill_name = skill_name
     if (certification_date !== undefined) updateData.certification_date = certification_date

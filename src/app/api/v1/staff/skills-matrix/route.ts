@@ -75,9 +75,6 @@ export async function GET(request: NextRequest) {
         skill_name: tag,
         certification_date: null,
         expiry_date: null,
-        verified: false,
-        verified_by: null,
-        verified_at: null,
         certification_number: null,
         issuing_authority: null,
         notes: null,
@@ -97,9 +94,7 @@ export async function GET(request: NextRequest) {
           ...cert,
           profile_id: member.id // Ensure profile_id is set
         })) || [],
-        certifications_expiring_30_days: 0, // Calculate if needed
-        verified_skills_count: allSkills.filter(skill => skill.verified).length,
-        total_skills_count: allSkills.length
+        certifications_expiring_30_days: 0 // Calculate if needed
       }
     })
 

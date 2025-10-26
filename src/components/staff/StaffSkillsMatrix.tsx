@@ -19,9 +19,6 @@ interface StaffSkill {
   skill_name: string
   certification_date: string | null
   expiry_date: string | null
-  verified: boolean
-  verified_by: string | null
-  verified_at: string | null
   certification_number: string | null
   issuing_authority: string | null
   notes: string | null
@@ -36,8 +33,6 @@ interface StaffMember {
   callsign: string | null
   skills: StaffSkill[]
   certifications_expiring_30_days: number
-  verified_skills_count: number
-  total_skills_count: number
 }
 
 interface StaffSkillsMatrixProps {
@@ -148,24 +143,6 @@ export default function StaffSkillsMatrix({
     }
   }
 
-  const toggleSkillVerification = async (skillId: number, verified: boolean) => {
-    try {
-      const response = await fetch(`/api/v1/staff/skills/${skillId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to update skill verification')
-      }
-      
-      // Refresh the skills matrix
-      fetchStaffSkills()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed')
-    }
-  }
 
   if (loading) {
     return (
@@ -250,9 +227,6 @@ export default function StaffSkillsMatrix({
                   Skills
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Verified
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Expiring Soon
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -306,16 +280,6 @@ export default function StaffSkillsMatrix({
                           +{member.skills.length - 3} more
                         </span>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      {member.verified_skills_count}/{member.total_skills_count}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {member.total_skills_count > 0 
-                        ? Math.round((member.verified_skills_count / member.total_skills_count) * 100) 
-                        : 0}% verified
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -405,9 +369,6 @@ export default function StaffSkillsMatrix({
                                   {getSkillStatusIcon(status)}
                                   {skill.skill_name}
                                 </span>
-                                {skill.verified && (
-                                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                                )}
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
