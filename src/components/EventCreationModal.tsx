@@ -821,7 +821,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
               
               {/* Event Date - Only show for non-football events */}
-              {formData.event_type !== 'Football' && (
+              {formData.event_type !== 'Other' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">

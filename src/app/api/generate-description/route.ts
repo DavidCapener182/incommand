@@ -20,7 +20,6 @@ export async function POST(request: Request) {
       artistName, 
       homeTeam, 
       awayTeam, 
-      competition,
       paradeRoute, 
       festivalTheme 
     } = await request.json();
@@ -38,7 +37,7 @@ export async function POST(request: Request) {
       case 'Concert':
         hasRequiredFields = !!artistName;
         break;
-      case 'Football':
+      case 'Other':
         hasRequiredFields = !!homeTeam && !!awayTeam;
         break;
       case 'Parade':
@@ -80,14 +79,14 @@ export async function POST(request: Request) {
 \t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-energy rock concert with mosh pits likely", "family-friendly daytime festival", etc).
 \t•\tMention any special considerations for security planning based on past events.`;
         break;
-      case 'Football':
-        eventDescription = `${competition || 'football'} match between ${homeTeam} and ${awayTeam}`;
+      case 'Other':
+        eventDescription = `football match between ${homeTeam} and ${awayTeam}`;
         prompt = `Provide a concise security brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
-\t•\tSummarise any previous incidents or issues related to these teams, the competition (${competition || 'football'}), or the venue, based on credible online sources or news reports.
-\t•\tHighlight crowd dynamics typically associated with this fixture and competition level (e.g., fan demographics, expected behaviour, potential flashpoints, rivalry factors, competition intensity).
+\t•\tSummarise any previous incidents or issues related to these teams or the venue, based on credible online sources or news reports.
+\t•\tHighlight crowd dynamics typically associated with this fixture (e.g., fan demographics, expected behaviour, potential flashpoints, rivalry factors).
 \t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees, fan base characteristics).
-\t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-intensity ${competition || 'football'} derby match with passionate fan bases", "family-friendly match", etc).
-\t•\tMention any special considerations for security planning based on past events, including any known trouble spots or fan behavior patterns specific to this competition level.`;
+\t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "high-intensity derby match with passionate fan bases", "family-friendly match", etc).
+\t•\tMention any special considerations for security planning based on past events, including any known trouble spots or fan behavior patterns.`;
         break;
       case 'Parade':
         eventDescription = `parade along ${paradeRoute}`;
