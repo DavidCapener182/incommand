@@ -199,21 +199,35 @@ export default function RadioSignOutSystem({
 
     try {
       console.log('Deleting radio log with ID:', logId)
+      console.log('Delete URL:', `/api/v1/radio-signout?id=${logId}`)
+      
       const response = await fetch(`/api/v1/radio-signout?id=${logId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       })
 
       console.log('Delete response status:', response.status)
-      const responseData = await response.json()
-      console.log('Delete response data:', responseData)
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete radio log: ${responseData.error || 'Unknown error'}`)
+      console.log('Delete response headers:', response.headers)
+      
+      let responseData
+      try {
+        responseData = await response.json()
+        console.log('Delete response data:', responseData)
+      } catch (jsonError) {
+        console.error('Failed to parse response as JSON:', jsonError)
+        const textResponse = await response.text()
+        console.log('Delete response text:', textResponse)
+        throw new Error('Invalid response format')
       }
 
+      if (!response.ok) {
+        throw new Error(`Failed to delete radio log: ${responseData?.error || 'Unknown error'}`)
+      }
+
+      console.log('Delete successful, refreshing list...')
       // Refresh the list
-      fetchSignOuts()
+      await fetchSignOuts()
+      console.log('List refreshed after delete')
     } catch (err) {
       console.error('Delete error:', err)
       setError(err instanceof Error ? err.message : 'Delete failed')
