@@ -29,11 +29,18 @@ interface EventFormData {
   artist_name?: string;
   expected_attendance?: string;
   description?: string;
-  duty_manager_name: string;
-  production_manager_name: string;
-  head_of_security_name: string;
-  assistant_head_of_security_name: string;
-  event_control_name: string;
+  // Personnel fields - all optional since they vary by event type
+  duty_manager_name?: string;
+  production_manager_name?: string;
+  head_of_security_name?: string;
+  assistant_head_of_security_name?: string;
+  event_control_name?: string;
+  safety_officer_name?: string;
+  deputy_safety_officer_name?: string;
+  security_manager_name?: string;
+  parade_manager_name?: string;
+  traffic_control_manager_name?: string;
+  festival_director_name?: string;
   support_acts: SupportAct[];
   event_brief?: string;
   // Event type specific fields
@@ -946,40 +953,118 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
           <div className="card-modal space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Key Personnel</h3>
-              {[
-                {
-                  title: 'Duty Manager',
-                  field: 'duty_manager_name'
-                },
-                {
-                  title: 'Production Manager',
-                  field: 'production_manager_name'
-                },
-                {
-                  title: 'Head of Security',
-                  field: 'head_of_security_name'
-                },
-                {
-                  title: 'Assistant Head of Security',
-                  field: 'assistant_head_of_security_name'
-                },
-                {
-                  title: 'Event Control',
-                  field: 'event_control_name'
+              {(() => {
+                // Define personnel based on event type
+                let personnel = [];
+                
+                switch (formData.event_type) {
+                  case 'Football':
+                    personnel = [
+                      {
+                        title: 'Safety Officer',
+                        field: 'safety_officer_name'
+                      },
+                      {
+                        title: 'Deputy Safety Officer',
+                        field: 'deputy_safety_officer_name'
+                      },
+                      {
+                        title: 'Security Manager',
+                        field: 'security_manager_name'
+                      }
+                    ];
+                    break;
+                  case 'Concert':
+                    personnel = [
+                      {
+                        title: 'Production Manager',
+                        field: 'production_manager_name'
+                      },
+                      {
+                        title: 'Head of Security',
+                        field: 'head_of_security_name'
+                      },
+                      {
+                        title: 'Assistant Head of Security',
+                        field: 'assistant_head_of_security_name'
+                      },
+                      {
+                        title: 'Event Control',
+                        field: 'event_control_name'
+                      }
+                    ];
+                    break;
+                  case 'Parade':
+                    personnel = [
+                      {
+                        title: 'Parade Manager',
+                        field: 'parade_manager_name'
+                      },
+                      {
+                        title: 'Head of Security',
+                        field: 'head_of_security_name'
+                      },
+                      {
+                        title: 'Traffic Control Manager',
+                        field: 'traffic_control_manager_name'
+                      },
+                      {
+                        title: 'Event Control',
+                        field: 'event_control_name'
+                      }
+                    ];
+                    break;
+                  case 'Festival':
+                    personnel = [
+                      {
+                        title: 'Festival Director',
+                        field: 'festival_director_name'
+                      },
+                      {
+                        title: 'Head of Security',
+                        field: 'head_of_security_name'
+                      },
+                      {
+                        title: 'Assistant Head of Security',
+                        field: 'assistant_head_of_security_name'
+                      },
+                      {
+                        title: 'Event Control',
+                        field: 'event_control_name'
+                      }
+                    ];
+                    break;
+                  default:
+                    personnel = [
+                      {
+                        title: 'Duty Manager',
+                        field: 'duty_manager_name'
+                      },
+                      {
+                        title: 'Head of Security',
+                        field: 'head_of_security_name'
+                      },
+                      {
+                        title: 'Event Control',
+                        field: 'event_control_name'
+                      }
+                    ];
                 }
-              ].map((manager) => (
-                <div key={manager.field}>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{manager.title} *</label>
-                  <input
-                    type="text"
-                    name={manager.field}
-                    value={formData[manager.field]}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
+                
+                return personnel.map((manager) => (
+                  <div key={manager.field}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{manager.title} *</label>
+                    <input
+                      type="text"
+                      name={manager.field}
+                      value={formData[manager.field] || ''}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         )
