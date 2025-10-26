@@ -438,15 +438,6 @@ export default function StaffSkillsMatrix({
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => {
-                                    setEditingSkill(skill)
-                                    setShowEditSkillModal(true)
-                                  }}
-                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                >
-                                  <PencilIcon className="h-4 w-4" />
-                                </button>
-                                <button
                                   onClick={() => handleRemoveSkill(skill.id)}
                                   className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                                 >
@@ -455,29 +446,33 @@ export default function StaffSkillsMatrix({
                               </div>
                             </div>
                             
-                            {skill.certification_date && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Certified: {new Date(skill.certification_date).toLocaleDateString()}
-                              </div>
-                            )}
-                            
-                            {skill.expiry_date && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Expires: {new Date(skill.expiry_date).toLocaleDateString()}
-                              </div>
-                            )}
-                            
-                            {skill.issuing_authority && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                Issued by: {skill.issuing_authority}
-                              </div>
-                            )}
-                            
-                            {skill.notes && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                Notes: {skill.notes}
-                              </div>
-                            )}
+                            <div className="mt-2 space-y-1">
+                              {skill.certification_date && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">Certified:</span> {new Date(skill.certification_date).toLocaleDateString()}
+                                </div>
+                              )}
+                              {skill.expiry_date && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">Expires:</span> {new Date(skill.expiry_date).toLocaleDateString()}
+                                </div>
+                              )}
+                              {skill.certification_number && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">License #:</span> {skill.certification_number}
+                                </div>
+                              )}
+                              {skill.issuing_authority && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">Issued by:</span> {skill.issuing_authority}
+                                </div>
+                              )}
+                              {skill.notes && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  <span className="font-medium">Notes:</span> {skill.notes}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
