@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .single()
+        .maybeSingle()
 
       if (error) {
         logger.error('Failed to load system settings', error, { component: 'AuthContext', action: 'loadSystemSettings' });
@@ -120,17 +120,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setSystemSettings({
-        id: 'current',
-        maintenance_mode: (data as any)?.maintenance_mode || false,
-        maintenance_message: (data as any)?.maintenance_message || DEFAULT_SYSTEM_SETTINGS.maintenance_message,
-        feature_flags: (data as any)?.feature_flags || DEFAULT_SYSTEM_SETTINGS.feature_flags,
-        default_user_role: (data as any)?.default_user_role || DEFAULT_SYSTEM_SETTINGS.default_user_role,
-        notification_settings: (data as any)?.notification_settings || DEFAULT_SYSTEM_SETTINGS.notification_settings,
-        platform_config: (data as any)?.platform_config || DEFAULT_SYSTEM_SETTINGS.platform_config,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      if (!data) {
+        // No row yet; initialize defaults in memory
+        setSystemSettings({
+          id: 'default',
+          ...DEFAULT_SYSTEM_SETTINGS,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      } else {
+        setSystemSettings({
+          id: 'current',
+          maintenance_mode: (data as any)?.maintenance_mode || false,
+          maintenance_message: (data as any)?.maintenance_message || DEFAULT_SYSTEM_SETTINGS.maintenance_message,
+          feature_flags: (data as any)?.feature_flags || DEFAULT_SYSTEM_SETTINGS.feature_flags,
+          default_user_role: (data as any)?.default_user_role || DEFAULT_SYSTEM_SETTINGS.default_user_role,
+          notification_settings: (data as any)?.notification_settings || DEFAULT_SYSTEM_SETTINGS.notification_settings,
+          platform_config: (data as any)?.platform_config || DEFAULT_SYSTEM_SETTINGS.platform_config,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+      }
     } catch (error) {
       logger.error('Error loading system settings', error, { component: 'AuthContext', action: 'loadSystemSettings' });
       // Use default settings as fallback

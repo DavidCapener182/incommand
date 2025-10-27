@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <rect width="40" height="40" fill="none" />
+  <path d="M40 0H0" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+  <path d="M0 0V40" stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+  <path d="M20 0V40" stroke="rgba(0,0,0,0.06)" strokeWidth="1"/>
+  <path d="M0 20H40" stroke="rgba(0,0,0,0.06)" strokeWidth="1"/>
+</svg>
+

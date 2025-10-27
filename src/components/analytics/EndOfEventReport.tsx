@@ -969,7 +969,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       `}</style>
       {/* Compact brand bar */}
       <div className="hidden print:block rounded-t-xl bg-[#2A3990] px-3 py-2 mb-3 print:bg-[#2A3990]">
-        <img src="/inCommand.png" alt="inCommand Logo" className="h-5 w-auto" />
+        <Image src="/inCommand.png" alt="inCommand Logo" width={80} height={32} className="h-5 w-auto" />
       </div>
 
       {/* Header */}

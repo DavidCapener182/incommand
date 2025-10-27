@@ -82,13 +82,14 @@ export const useUpdateSystemSettings = () => {
       const { error } = await supabase
         .from('system_settings')
         .upsert({
+          id: 'singleton',
           maintenance_mode: updates.maintenance_mode ?? systemSettings.maintenance_mode,
           maintenance_message: updates.maintenance_message ?? systemSettings.maintenance_message,
           feature_flags: updates.feature_flags ?? systemSettings.feature_flags,
           notification_settings: updates.notification_settings ?? systemSettings.notification_settings,
           platform_config: updates.platform_config ?? systemSettings.platform_config,
           updated_at: new Date().toISOString(),
-        } as any)
+        } as any, { onConflict: 'id' })
       
       if (error) {
         throw new Error(`Failed to update system settings: ${error.message}`)
