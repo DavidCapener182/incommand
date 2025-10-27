@@ -80,7 +80,7 @@ export default function AuditLogsPage() {
     setIsLoading(true);
     try {
       let query = supabase
-        .from('settings_audit_logs')
+        .from('audit_logs')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
