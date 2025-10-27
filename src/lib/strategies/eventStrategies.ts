@@ -21,28 +21,28 @@ export const eventStrategies = {
   football: {
     name: 'Football Match',
     dashboardCards: [
+      'StandCapacityCard',
+      'MatchScoreCard',
       'StadiumSecurityCard',
-      'CapacityCard',
       'MedicalResponseCard',
-      'WeatherCard',
-      'What3WordsSearchCard'
+      'TurnstileStatusCard'
     ],
     aiFocus: 'crowd control, supporter safety, steward coordination, and pitch security',
     incidentCategories: ['Pitch Invasion', 'Fan Disorder', 'Medical', 'Security', 'Ejection'],
-    priorityMetrics: ['ejections', 'stadium_capacity', 'medical_response', 'security_alerts']
+    priorityMetrics: ['stand_capacity', 'security_alerts', 'medical_response', 'turnstile_flow']
   },
   festival: {
     name: 'Festival',
     dashboardCards: [
-      'MultiStageCard',
+      'MultiStageOverviewCard',
       'CrowdFlowCard',
-      'IncidentDashboardCard',
-      'WeatherCard',
-      'What3WordsSearchCard'
+      'WelfareCard',
+      'ScheduleAdherenceCard',
+      'IncidentSummaryCard'
     ],
     aiFocus: 'multi-stage crowd management, welfare monitoring, and performance coordination',
     incidentCategories: ['Medical', 'Crowd Control', 'Stage Incident', 'Lost Property', 'Welfare'],
-    priorityMetrics: ['stage_occupancy', 'crowd_flow', 'incident_volume', 'schedule_adherence']
+    priorityMetrics: ['stage_occupancy', 'crowd_flow_alerts', 'welfare_cases', 'schedule_adherence']
   },
   parade: {
     name: 'Parade / Procession',
@@ -50,12 +50,36 @@ export const eventStrategies = {
       'RouteStatusCard',
       'PublicSafetyCard',
       'CrowdFlowCard',
-      'WeatherCard',
-      'What3WordsSearchCard'
+      'VehicleTrackerCard',
+      'DispersalMonitorCard'
     ],
     aiFocus: 'route safety, dispersal management, and public order',
     incidentCategories: ['Route Blockage', 'Medical', 'Lost Child', 'Crowd Pressure', 'Public Safety'],
-    priorityMetrics: ['route_progress', 'public_safety', 'crowd_flow', 'dispersal_time']
+    priorityMetrics: ['route_progress', 'public_safety_alerts', 'vehicle_status', 'dispersal_progress']
+  },
+  marathon: {
+    name: 'Marathon',
+    dashboardCards: [
+      'RunnerProgressCard',
+      'AidStationStatusCard',
+      'CourseWeatherCard',
+      'MedicalZoneMapCard'
+    ],
+    aiFocus: 'Support participant safety, hydration logistics, and medical readiness along the course',
+    incidentCategories: ['Medical', 'Hydration', 'Logistics', 'Route Issue', 'Weather'],
+    priorityMetrics: ['lead_runner_gap', 'aid_station_status', 'course_weather_alerts', 'medical_incidents']
+  },
+  airshow: {
+    name: 'Airshow',
+    dashboardCards: [
+      'FlightScheduleCard',
+      'AirfieldCapacityCard',
+      'CrowdSafetyCard',
+      'WeatherAviationCard'
+    ],
+    aiFocus: 'Monitor flight operations, exclusion zones, and emergency readiness for aviation displays',
+    incidentCategories: ['Flight Delay', 'Crowd Safety', 'Medical', 'Security', 'Airfield Operations'],
+    priorityMetrics: ['flight_schedule_adherence', 'airfield_capacity', 'crowd_safety_alerts', 'aviation_weather']
   }
 } as const;
 

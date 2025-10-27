@@ -17,7 +17,9 @@ interface RouteStatusCardProps {
 }
 
 export default function RouteStatusCard({ className }: RouteStatusCardProps) {
-  const data = mockEventData.parade
+  const parade = mockEventData.parade
+  const routeStatus = parade?.routeStatus
+  const segments = parade?.routeSegments ?? []
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -40,6 +42,8 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
         return 'text-amber-500'
       case 'pending':
         return 'text-gray-400'
+      case 'moderate':
+        return 'text-blue-500'
       default:
         return 'text-gray-500'
     }
@@ -51,6 +55,8 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
         return 'bg-green-50 dark:bg-green-900/20'
       case 'congested':
         return 'bg-amber-50 dark:bg-amber-900/20'
+      case 'moderate':
+        return 'bg-blue-50 dark:bg-blue-900/20'
       case 'pending':
         return 'bg-gray-50 dark:bg-gray-800'
       default:
@@ -63,6 +69,8 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
       case 'clear':
         return 'default' as const
       case 'congested':
+        return 'secondary' as const
+      case 'moderate':
         return 'secondary' as const
       case 'pending':
         return 'outline' as const
@@ -93,16 +101,16 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
             <span className="text-sm font-medium text-blue-600">Route Progress</span>
           </div>
           <div className="text-2xl font-bold text-blue-600">
-            {data.routeStatus.completedDistance} / {data.routeStatus.totalDistance}
+            {routeStatus?.completedDistance ?? '—'} / {routeStatus?.totalDistance ?? '—'}
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            Next: {data.routeStatus.nextCheckpoint}
+            Next: {routeStatus?.nextCheckpoint ?? '—'}
           </div>
         </div>
 
         {/* Route segments */}
         <div className="space-y-3">
-          {data.routeSegments.map((segment, index) => (
+          {segments.map((segment, index) => (
             <div
               key={index}
               className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getStatusBgColor(segment.status)}`}
@@ -145,11 +153,11 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Est. Travel Time</span>
             <Badge variant="outline" className="text-xs">
-              {data.estimatedTravelTime}
+              {routeStatus?.estimatedTime ?? 'On schedule'}
             </Badge>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Avg Speed: {data.routeStatus.averageSpeed}
+            Avg Speed: {routeStatus?.averageSpeed ?? '—'}
           </div>
         </div>
       </CardContent>

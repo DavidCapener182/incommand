@@ -46,6 +46,10 @@ export async function POST(request: Request) {
       case 'Festival':
         hasRequiredFields = !!festivalTheme;
         break;
+      case 'Marathon':
+      case 'Airshow':
+        hasRequiredFields = true;
+        break;
       default:
         hasRequiredFields = true;
     }
@@ -105,6 +109,22 @@ export async function POST(request: Request) {
 \t•\tInclude an estimated demographic breakdown (e.g., expected male/female split, typical age range of attendees).
 \t•\tProvide a very brief overview of the type of event and what security should expect (e.g., "multi-day music festival with camping", "family-friendly cultural festival", etc).
 \t•\tMention any special considerations for security planning based on past events, including crowd management and safety protocols.`;
+        break;
+      case 'Marathon':
+        eventDescription = `city marathon`;
+        prompt = `Provide a concise operations brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to this race or course, based on credible online sources or news reports.
+\t•\tHighlight participant dynamics (elite vs mass runners), hydration demands, and typical crowd behaviour along the route.
+\t•\tInclude key risks such as medical surges, weather sensitivities, and pinch points for spectators.
+\t•\tOutline coordination needs for aid stations, medical teams, and route management.`;
+        break;
+      case 'Airshow':
+        eventDescription = `airshow event`;
+        prompt = `Provide a concise operations brief for an upcoming ${eventDescription} at ${venueName}. The brief should:
+\t•\tSummarise any previous incidents or issues related to this airshow or venue, based on credible online sources or news reports.
+\t•\tHighlight aviation-specific considerations including flight schedules, restricted zones, and emergency procedures.
+\t•\tDiscuss crowd dynamics for viewing areas and typical safety concerns (e.g., heat, flight line pressure).
+\t•\tMention coordination requirements with airfield operations, emergency services, and weather monitoring.`;
         break;
       default:
         eventDescription = `event`;

@@ -63,6 +63,7 @@ import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
 import AnalyticsKPICards from './analytics/AnalyticsKPICards'
+import DynamicDashboardCards from './dashboard/DynamicDashboardCards'
 import MiniTrendChart from './MiniTrendChart'
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
@@ -1751,15 +1752,17 @@ export default function Dashboard() {
       <div>
 
         {/* Desktop Grid - Event-Specific Dashboard */}
-        <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
-          {loadingCurrentEvent ? (
-            Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
-          ) : eventType === 'concert' ? (
-            /* 
+        {loadingCurrentEvent ? (
+          <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
+            {Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)}
+          </div>
+        ) : eventType === 'concert' ? (
+          <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
+            {/*
               ⚠️  CONCERT DASHBOARD - PERMANENTLY LOCKED ⚠️
               This is the original concert dashboard layout that must remain unchanged.
               Concert events will ALWAYS use these exact 4 cards in this exact order.
-            */
+            */}
             <>
               {/* Card 1: VenueOccupancy - Clickable, opens modal */}
               <motion.div
@@ -1838,405 +1841,14 @@ export default function Dashboard() {
                 />
               </motion.div>
             </>
-          ) : (
-            /* Other Event Types - Dynamic Cards */
-            <>
-              {/* Football Event Cards */}
-              {eventType === 'football' && (
-                <>
-                          {/* Card 1: Stadium Security - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Security Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Live stadium security
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 2: Stadium Capacity - Like VenueOccupancy style */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
-                    onClick={() => setIsOccupancyModalOpen(true)}
-                  >
-                    <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                      <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                        <div className="text-center w-full">
-                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                            0/65,000
-                          </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
-                            <div
-                              className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                              style={{ width: '0%' }}
-                            ></div>
-                          </div>
-                          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Stadium Capacity
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            0% Full
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                          {/* Card 3: Medical Response - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.4 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Medical Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Active medical cases
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 4: Weather - Reuse exact same WeatherCard from concerts */}
-                  {currentEvent?.venue_address && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <WeatherCard
-                        lat={coordinates?.lat}
-                        lon={coordinates?.lon}
-                        locationName={currentEvent.venue_address}
-                        eventDate={currentEvent.event_date ?? ''}
-                        startTime={currentEvent.main_act_start_time ?? ''}
-                        curfewTime={currentEvent.curfew_time ?? ''}
-                      />
-                    </motion.div>
-                  )}
-                </>
-              )}
-
-              {/* Festival Event Cards */}
-              {eventType === 'festival' && (
-                <>
-                          {/* Card 1: Multi-Stage - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Active Stages
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Multi-stage monitoring
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                          {/* Card 2: Crowd Flow - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Crowd Alerts
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Flow monitoring
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                          {/* Card 3: Incidents - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.4 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    {incidentCounts.open}
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Open Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Active incidents
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 4: Weather - Reuse exact same WeatherCard from concerts */}
-                  {currentEvent?.venue_address && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <WeatherCard
-                        lat={coordinates?.lat}
-                        lon={coordinates?.lon}
-                        locationName={currentEvent.venue_address}
-                        eventDate={currentEvent.event_date ?? ''}
-                        startTime={currentEvent.main_act_start_time ?? ''}
-                        curfewTime={currentEvent.curfew_time ?? ''}
-                      />
-                    </motion.div>
-                  )}
-                </>
-              )}
-
-              {/* Parade Event Cards */}
-              {eventType === 'parade' && (
-                <>
-                          {/* Card 1: Route Status - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0%
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Route Progress
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Parade route status
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                          {/* Card 2: Public Safety - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Safety Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Public safety monitoring
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                          {/* Card 3: Crowd Flow - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.4 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Crowd Alerts
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Flow monitoring
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 4: Weather - Reuse exact same WeatherCard from concerts */}
-                  {currentEvent?.venue_address && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <WeatherCard
-                        lat={coordinates?.lat}
-                        lon={coordinates?.lon}
-                        locationName={currentEvent.venue_address}
-                        eventDate={currentEvent.event_date ?? ''}
-                        startTime={currentEvent.main_act_start_time ?? ''}
-                        curfewTime={currentEvent.curfew_time ?? ''}
-                      />
-                    </motion.div>
-                  )}
-                </>
-              )}
-
-              {/* Default/Unknown Event Type - Show Concert Cards */}
-              {!['concert', 'football', 'festival', 'parade'].includes(eventType || '') && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
-                    onClick={() => setIsOccupancyModalOpen(true)}
-                  >
-                    <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                      <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                        <VenueOccupancy currentEventId={currentEventId} />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  {currentEvent?.venue_address && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.3 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <WeatherCard
-                        lat={coordinates?.lat}
-                        lon={coordinates?.lon}
-                        locationName={currentEvent.venue_address}
-                        eventDate={currentEvent.event_date ?? ''}
-                        startTime={currentEvent.main_act_start_time ?? ''}
-                        curfewTime={currentEvent.curfew_time ?? ''}
-                      />
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
-                  >
-                    <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                      <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                        <What3WordsSearchCard
-                          lat={coordinates.lat}
-                          lon={coordinates.lon}
-                          venueAddress={currentEvent?.venue_address || ''}
-                          singleCard
-                          largeLogo={false}
-                        />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                  >
-                    <TopIncidentTypesCard
-                      incidents={incidents}
-                      onTypeClick={(type: string) => {
-                        setFilters(prev => ({ ...prev, types: type ? [type] : [] }));
-                      }}
-                      selectedType={safeFilters.types[0] || null}
-                    />
-                  </motion.div>
-                </>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          <DynamicDashboardCards
+            currentEventId={currentEventId}
+            currentEvent={currentEvent}
+            coordinates={coordinates}
+          />
+        )}
       </div>
     </section>
   </div>
@@ -2313,5 +1925,5 @@ export default function Dashboard() {
         )}
 
     </PageWrapper>
-  )
+  );
 }

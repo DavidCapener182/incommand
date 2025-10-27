@@ -3,11 +3,10 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ShieldCheckIcon, 
-  ExclamationTriangleIcon, 
+import {
+  ShieldCheckIcon,
+  ExclamationTriangleIcon,
   UserGroupIcon,
-  ClockIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline'
 import { mockEventData } from '@/data/mockEventData'
@@ -17,52 +16,18 @@ interface PublicSafetyCardProps {
 }
 
 export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
-  const data = mockEventData.parade
+  const parade = mockEventData.parade
+  const safety = parade?.publicSafety
+  const crowdZones = parade?.crowdZones ?? []
 
-  const safetyMetrics = [
-    {
-      label: 'Public Safety Incidents',
-      value: data.publicSafetyIncidents,
-      icon: ShieldCheckIcon,
-      color: data.publicSafetyIncidents > 3 ? 'text-red-500' : data.publicSafetyIncidents > 1 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.publicSafetyIncidents > 3 ? 'bg-red-50 dark:bg-red-900/20' : data.publicSafetyIncidents > 1 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
-    },
-    {
-      label: 'Missing Persons Logged',
-      value: data.missingPersonsLogged,
-      icon: UserGroupIcon,
-      color: data.missingPersonsLogged > 0 ? 'text-red-500' : 'text-green-500',
-      bgColor: data.missingPersonsLogged > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
-    },
-    {
-      label: 'Missing Persons Resolved',
-      value: data.missingPersonsResolved,
-      icon: CheckCircleIcon,
-      color: data.missingPersonsResolved > 0 ? 'text-green-500' : 'text-gray-500',
-      bgColor: data.missingPersonsResolved > 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'
-    }
-  ]
-
-  const getCrowdDensityColor = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'text-red-500'
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'text-amber-500'
-    return 'text-green-500'
-  }
-
-  const getCrowdDensityBgColor = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'bg-red-50 dark:bg-red-900/20'
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'bg-amber-50 dark:bg-amber-900/20'
-    return 'bg-green-50 dark:bg-green-900/20'
-  }
-
-  const getCrowdDensityBadgeVariant = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'destructive' as const
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'secondary' as const
-    return 'default' as const
-  }
+  const crowdIncidents = safety?.crowdIncidents ?? 0
+  const missingActive = safety?.missingPersons?.active ?? 0
+  const missingResolved = safety?.missingPersons?.resolved ?? 0
+  const firstAid = safety?.firstAidResponses ?? 0
+  const pressureNotes = safety?.crowdPressureNotes ?? []
 
   return (
-    <Card className={`card-depth ${className}`}>
+    <Card className={`card-depth ${className ?? ''}`}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <ShieldCheckIcon className="h-5 w-5 text-blue-600" />
@@ -70,65 +35,61 @@ export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Safety metrics */}
         <div className="grid grid-cols-3 gap-2">
-          {safetyMetrics.map((metric, index) => {
-            const IconComponent = metric.icon
-            return (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center ${metric.bgColor}`}
-              >
-                <IconComponent className={`h-5 w-5 mx-auto mb-1 ${metric.color}`} />
-                <div className={`text-lg font-bold ${metric.color}`}>
-                  {metric.value}
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {metric.label}
-                </p>
-              </div>
-            )
-          })}
+          <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center bg-blue-50 dark:bg-blue-900/20">
+            <ShieldCheckIcon className="mx-auto h-5 w-5 text-blue-600" />
+            <div className="text-lg font-bold text-blue-700 dark:text-blue-300">{crowdIncidents}</div>
+            <p className="text-xs text-muted-foreground">Crowd incidents</p>
+          </div>
+          <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center bg-amber-50 dark:bg-amber-900/20">
+            <UserGroupIcon className="mx-auto h-5 w-5 text-amber-600" />
+            <div className="text-lg font-bold text-amber-600">{missingActive}</div>
+            <p className="text-xs text-muted-foreground">Missing persons</p>
+          </div>
+          <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center bg-emerald-50 dark:bg-emerald-900/20">
+            <CheckCircleIcon className="mx-auto h-5 w-5 text-emerald-600" />
+            <div className="text-lg font-bold text-emerald-600">{missingResolved}</div>
+            <p className="text-xs text-muted-foreground">Resolved cases</p>
+          </div>
         </div>
 
-        {/* Crowd density */}
-        <div className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getCrowdDensityBgColor()}`}>
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <UserGroupIcon className="h-4 w-4 text-gray-600" />
-              <span className="font-medium text-sm">Crowd Density</span>
-            </div>
-            <Badge 
-              variant={getCrowdDensityBadgeVariant()}
-              className="text-xs"
-            >
-              {data.safetyMetrics.crowdDensity}
+            <span className="text-sm font-medium text-foreground">First aid responses</span>
+            <Badge variant={firstAid > 3 ? 'destructive' : 'secondary'} className="text-xs">
+              {firstAid}
             </Badge>
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            {data.safetyMetrics.lostChildren} lost children, {data.safetyMetrics.medicalIncidents} medical incidents
-          </div>
+          <div className="text-xs text-muted-foreground">Latest attention: {pressureNotes[0] ?? 'All clear'}</div>
         </div>
 
-        {/* Dispersal time */}
-        <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <ClockIcon className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-600">Est. Dispersal Time</span>
-          </div>
-          <div className="text-2xl font-bold text-blue-600">
-            {data.safetyMetrics.dispersalTime}
-          </div>
-        </div>
-
-        {/* Pressure points */}
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Crowd Pressure Points</div>
-          <div className="space-y-1">
-            {data.crowdPressurePoints.map((point, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">High attention zones</div>
+          {pressureNotes.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No pressure alerts.</p>
+          ) : (
+            pressureNotes.map(note => (
+              <div key={note} className="flex items-center gap-2 text-xs">
                 <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
-                <span className="text-gray-600 dark:text-gray-400">{point}</span>
+                <span className="text-muted-foreground">{note}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Zone density snapshot</div>
+          <div className="grid grid-cols-3 gap-2">
+            {crowdZones.map(zone => (
+              <div key={zone.zone} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-center">
+                <span className="text-xs font-semibold text-foreground">{zone.zone}</span>
+                <div className="text-lg font-bold text-foreground">{zone.density}%</div>
+                <Badge
+                  variant={zone.status === 'congested' ? 'destructive' : zone.status === 'moderate' ? 'secondary' : 'outline'}
+                  className="text-[10px] uppercase tracking-wide"
+                >
+                  {zone.status}
+                </Badge>
               </div>
             ))}
           </div>
@@ -138,5 +99,4 @@ export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
   )
 }
 
-// Export supported event types for conditional rendering
-export const supportedEventTypes = ['parade'];
+export const supportedEventTypes = ['parade']

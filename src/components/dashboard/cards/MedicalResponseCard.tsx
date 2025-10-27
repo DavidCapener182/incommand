@@ -16,44 +16,59 @@ interface MedicalResponseCardProps {
 }
 
 export default function MedicalResponseCard({ className }: MedicalResponseCardProps) {
-  const data = mockEventData.football
+  const medical = mockEventData.football?.medical
+
+  const active = medical?.active ?? 0
+  const critical = medical?.critical ?? 0
+  const nonCritical = medical?.nonCritical ?? Math.max(active - critical, 0)
+  const avgResponseTime = medical?.avgResponseTime ?? '—'
 
   const medicalMetrics = [
     {
       label: 'Active Incidents',
-      value: data.activeMedicalIncidents,
+      value: active,
       icon: HeartIcon,
-      color: data.activeMedicalIncidents > 3 ? 'text-red-500' : data.activeMedicalIncidents > 1 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.activeMedicalIncidents > 3 ? 'bg-red-50 dark:bg-red-900/20' : data.activeMedicalIncidents > 1 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: active > 4 ? 'text-red-500' : active > 2 ? 'text-amber-500' : 'text-emerald-500',
+      bgColor:
+        active > 4
+          ? 'bg-red-50 dark:bg-red-900/20'
+          : active > 2
+            ? 'bg-amber-50 dark:bg-amber-900/20'
+            : 'bg-emerald-50 dark:bg-emerald-900/20'
     },
     {
       label: 'Critical',
-      value: data.criticalIncidents,
+      value: critical,
       icon: ExclamationTriangleIcon,
-      color: data.criticalIncidents > 0 ? 'text-red-500' : 'text-green-500',
-      bgColor: data.criticalIncidents > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: critical > 0 ? 'text-red-500' : 'text-emerald-500',
+      bgColor: critical > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'
     },
     {
       label: 'Non-Critical',
-      value: data.nonCriticalIncidents,
+      value: nonCritical,
       icon: CheckCircleIcon,
-      color: data.nonCriticalIncidents > 5 ? 'text-amber-500' : 'text-blue-500',
-      bgColor: data.nonCriticalIncidents > 5 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
+      color: nonCritical > 5 ? 'text-amber-500' : 'text-blue-500',
+      bgColor: nonCritical > 5 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
     }
   ]
 
-  const getResponseTimeColor = () => {
-    const timeInMinutes = parseInt(data.avgMedicalResponseTime.split('m')[0])
-    if (timeInMinutes > 5) return 'text-red-500'
-    if (timeInMinutes > 3) return 'text-amber-500'
-    return 'text-green-500'
+  const parseMinutes = () => {
+    const numeric = parseFloat(avgResponseTime)
+    if (!Number.isNaN(numeric)) {
+      return numeric
+    }
+    const match = avgResponseTime.match(/^(\d+)(?:m|\s*m)/i)
+    if (match) {
+      return parseInt(match[1], 10)
+    }
+    return 0
   }
 
-  const getResponseTimeBgColor = () => {
-    const timeInMinutes = parseInt(data.avgMedicalResponseTime.split('m')[0])
-    if (timeInMinutes > 5) return 'bg-red-50 dark:bg-red-900/20'
-    if (timeInMinutes > 3) return 'bg-amber-50 dark:bg-amber-900/20'
-    return 'bg-green-50 dark:bg-green-900/20'
+  const getResponseTimeColor = () => {
+    const minutes = parseMinutes()
+    if (minutes > 5) return 'text-red-500'
+    if (minutes > 3) return 'text-amber-500'
+    return 'text-emerald-500'
   }
 
   return (
@@ -72,7 +87,7 @@ export default function MedicalResponseCard({ className }: MedicalResponseCardPr
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response Time</span>
           </div>
           <div className={`text-2xl font-bold ${getResponseTimeColor()}`}>
-            {data.avgMedicalResponseTime}
+            {avgResponseTime}
           </div>
         </div>
 
@@ -101,11 +116,11 @@ export default function MedicalResponseCard({ className }: MedicalResponseCardPr
         <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Medical Status</span>
-            <Badge 
-              variant={data.criticalIncidents > 0 ? 'destructive' : data.activeMedicalIncidents > 3 ? 'secondary' : 'default'}
+            <Badge
+              variant={critical > 0 ? 'destructive' : active > 3 ? 'secondary' : 'default'}
               className="text-xs"
             >
-              {data.criticalIncidents > 0 ? 'Critical Alert' : data.activeMedicalIncidents > 3 ? 'High Activity' : 'Normal'}
+              {critical > 0 ? 'Critical Alert' : active > 3 ? 'High Activity' : 'Normal'}
             </Badge>
           </div>
         </div>
