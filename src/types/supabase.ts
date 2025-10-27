@@ -171,42 +171,30 @@ export type Database = {
         created_at: string | null // format: timestamp with time zone
         date: string // format: date
         description: string | null // format: text
-        endpoint: string | null // format: text
-        event_id: string | null // format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        model: string | null // format: text
         service: string | null // format: character varying
         tokens_used: number | null // format: integer
         usage_type: string | null // format: character varying
-        user_id: string | null // format: uuid
         }
         Insert: {
         cost: number // format: numeric
         created_at?: string | null // format: timestamp with time zone
         date: string // format: date
         description?: string | null // format: text
-        endpoint?: string | null // format: text
-        event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        model?: string | null // format: text
         service?: string | null // format: character varying
         tokens_used?: number | null // format: integer
         usage_type?: string | null // format: character varying
-        user_id?: string | null // format: uuid
         }
         Update: {
         cost?: number // format: numeric
         created_at?: string | null // format: timestamp with time zone
         date?: string // format: date
         description?: string | null // format: text
-        endpoint?: string | null // format: text
-        event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        model?: string | null // format: text
         service?: string | null // format: character varying
         tokens_used?: number | null // format: integer
         usage_type?: string | null // format: character varying
-        user_id?: string | null // format: uuid
         }
         Relationships: []
       }
@@ -218,7 +206,6 @@ export type Database = {
         event_id: string | null // format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
         model: string // format: text
-        operation: string | null // format: text
         tokens_used: number | null // format: integer
         user_id: string | null // format: uuid
         }
@@ -229,7 +216,6 @@ export type Database = {
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         model: string // format: text
-        operation?: string | null // format: text
         tokens_used?: number | null // format: integer
         user_id?: string | null // format: uuid
         }
@@ -240,57 +226,8 @@ export type Database = {
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         model?: string // format: text
-        operation?: string | null // format: text
         tokens_used?: number | null // format: integer
         user_id?: string | null // format: uuid
-        }
-        Relationships: []
-      }
-      assets: {
-        Row: {
-        asset_tag: string | null // format: text
-        asset_type: string // format: text
-        commissioned_at: string | null // format: timestamp with time zone
-        created_at: string | null // format: timestamp with time zone
-        description: string | null // format: text
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location: string | null // format: text
-        name: string // format: text
-        purchase_date: string | null // format: date
-        service_life_months: number | null // format: integer
-        status: string | null // format: text
-        updated_at: string | null // format: timestamp with time zone
-        warranty_expiry: string | null // format: date
-        }
-        Insert: {
-        asset_tag?: string | null // format: text
-        asset_type: string // format: text
-        commissioned_at?: string | null // format: timestamp with time zone
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location?: string | null // format: text
-        name: string // format: text
-        purchase_date?: string | null // format: date
-        service_life_months?: number | null // format: integer
-        status?: string | null // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        warranty_expiry?: string | null // format: date
-        }
-        Update: {
-        asset_tag?: string | null // format: text
-        asset_type?: string // format: text
-        commissioned_at?: string | null // format: timestamp with time zone
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location?: string | null // format: text
-        name?: string // format: text
-        purchase_date?: string | null // format: date
-        service_life_months?: number | null // format: integer
-        status?: string | null // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        warranty_expiry?: string | null // format: date
         }
         Relationships: []
       }
@@ -318,54 +255,6 @@ export type Database = {
         id?: number // Note: This is a Primary Key.<pk/> | format: integer
         timestamp?: string // format: timestamp with time zone
         updated_at?: string // format: timestamp with time zone
-        }
-        Relationships: []
-      }
-      audit_log: {
-        Row: {
-        action: string // format: text
-        action_type: string // format: text
-        created_at: string | null // format: timestamp with time zone
-        details: Json | null // format: jsonb
-        event_id: string | null // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        performed_by: string | null // format: uuid
-        profile_id: string | null // format: uuid
-        record_id: string // format: text
-        resource_type: string | null // format: text
-        table_name: string // format: text
-        updated_at: string | null // format: timestamp with time zone
-        user_id: string | null // format: uuid
-        }
-        Insert: {
-        action: string // format: text
-        action_type: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        details?: Json | null // format: jsonb
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        performed_by?: string | null // format: uuid
-        profile_id?: string | null // format: uuid
-        record_id: string // format: text
-        resource_type?: string | null // format: text
-        table_name: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        user_id?: string | null // format: uuid
-        }
-        Update: {
-        action?: string // format: text
-        action_type?: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        details?: Json | null // format: jsonb
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        performed_by?: string | null // format: uuid
-        profile_id?: string | null // format: uuid
-        record_id?: string // format: text
-        resource_type?: string | null // format: text
-        table_name?: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        user_id?: string | null // format: uuid
         }
         Relationships: []
       }
@@ -708,84 +597,6 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_channels: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        event_id: string | null // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        name: string // format: text
-        participants: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count: number | null // format: integer
-        updated_at: string | null // format: timestamp with time zone
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        name: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count?: number | null // format: integer
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        name?: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type?: string // format: text
-        unread_count?: number | null // format: integer
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Relationships: []
-      }
-      chat_messages: {
-        Row: {
-        channel_id: string // format: uuid
-        created_at: string | null // format: timestamp with time zone
-        edited_at: string | null // format: timestamp with time zone
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_deleted: boolean | null // format: boolean
-        message: string // format: text
-        message_type: string | null // format: text
-        metadata: Json | null // format: jsonb
-        reply_to_id: string | null // Note: This is a Foreign Key to `chat_messages.id`.<fk table='chat_messages' column='id'/> | format: uuid
-        updated_at: string | null // format: timestamp with time zone
-        user_callsign: string | null // format: text
-        user_id: string // format: uuid
-        }
-        Insert: {
-        channel_id: string // format: uuid
-        created_at?: string | null // format: timestamp with time zone
-        edited_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_deleted?: boolean | null // format: boolean
-        message: string // format: text
-        message_type?: string | null // format: text
-        metadata?: Json | null // format: jsonb
-        reply_to_id?: string | null // Note: This is a Foreign Key to `chat_messages.id`.<fk table='chat_messages' column='id'/> | format: uuid
-        updated_at?: string | null // format: timestamp with time zone
-        user_callsign?: string | null // format: text
-        user_id: string // format: uuid
-        }
-        Update: {
-        channel_id?: string // format: uuid
-        created_at?: string | null // format: timestamp with time zone
-        edited_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_deleted?: boolean | null // format: boolean
-        message?: string // format: text
-        message_type?: string | null // format: text
-        metadata?: Json | null // format: jsonb
-        reply_to_id?: string | null // Note: This is a Foreign Key to `chat_messages.id`.<fk table='chat_messages' column='id'/> | format: uuid
-        updated_at?: string | null // format: timestamp with time zone
-        user_callsign?: string | null // format: text
-        user_id?: string // format: uuid
-        }
-        Relationships: []
-      }
       companies: {
         Row: {
         created_at: string | null // format: timestamp with time zone
@@ -948,36 +759,6 @@ export type Database = {
         }
         Relationships: []
       }
-      crowd_predictions: {
-        Row: {
-        confidence_score: number | null // format: numeric
-        created_at: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        factors: Json | null // format: jsonb
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        predicted_attendance: number // format: integer
-        prediction_time: string // format: timestamp with time zone
-        }
-        Insert: {
-        confidence_score?: number | null // format: numeric
-        created_at?: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        factors?: Json | null // format: jsonb
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        predicted_attendance: number // format: integer
-        prediction_time: string // format: timestamp with time zone
-        }
-        Update: {
-        confidence_score?: number | null // format: numeric
-        created_at?: string | null // format: timestamp with time zone
-        event_id?: string // format: uuid
-        factors?: Json | null // format: jsonb
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        predicted_attendance?: number // format: integer
-        prediction_time?: string // format: timestamp with time zone
-        }
-        Relationships: []
-      }
       debriefs: {
         Row: {
         ai_summary: string | null // format: text
@@ -1122,78 +903,6 @@ export type Database = {
         }
         Relationships: []
       }
-      emergency_contacts: {
-        Row: {
-        contact_name: string // format: text
-        contact_number: string // format: text
-        created_at: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active: boolean | null // format: boolean
-        priority: number | null // format: integer
-        role: string // format: text
-        }
-        Insert: {
-        contact_name: string // format: text
-        contact_number: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        priority?: number | null // format: integer
-        role: string // format: text
-        }
-        Update: {
-        contact_name?: string // format: text
-        contact_number?: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        event_id?: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        priority?: number | null // format: integer
-        role?: string // format: text
-        }
-        Relationships: []
-      }
-      emergency_logs: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        description: string | null // format: text
-        emergency_type: string // format: text
-        event_id: string // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location: string | null // format: text
-        reported_by: string // format: uuid
-        resolved_at: string | null // format: timestamp with time zone
-        severity_level: number // format: integer
-        status: string | null // format: text
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        emergency_type: string // format: text
-        event_id: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location?: string | null // format: text
-        reported_by: string // format: uuid
-        resolved_at?: string | null // format: timestamp with time zone
-        severity_level: number // format: integer
-        status?: string | null // format: text
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        emergency_type?: string // format: text
-        event_id?: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        location?: string | null // format: text
-        reported_by?: string // format: uuid
-        resolved_at?: string | null // format: timestamp with time zone
-        severity_level?: number // format: integer
-        status?: string | null // format: text
-        }
-        Relationships: []
-      }
       error_logs: {
         Row: {
         action: string | null // format: text
@@ -1277,72 +986,6 @@ export type Database = {
         incident_type?: string // format: character varying
         priority_level?: string // format: character varying
         supervisor_roles?: string[] | null // format: text[]
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Relationships: []
-      }
-      escalation_timers: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        escalated_at: string // format: timestamp with time zone
-        escalated_by: string | null // format: uuid
-        escalation_level: number // format: integer
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id: number // format: integer
-        notes: string | null // format: text
-        resolution_time: number | null // format: integer
-        supervisor_notified: boolean | null // format: boolean
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        escalated_at: string // format: timestamp with time zone
-        escalated_by?: string | null // format: uuid
-        escalation_level: number // format: integer
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id: number // format: integer
-        notes?: string | null // format: text
-        resolution_time?: number | null // format: integer
-        supervisor_notified?: boolean | null // format: boolean
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        escalated_at?: string // format: timestamp with time zone
-        escalated_by?: string | null // format: uuid
-        escalation_level?: number // format: integer
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id?: number // format: integer
-        notes?: string | null // format: text
-        resolution_time?: number | null // format: integer
-        supervisor_notified?: boolean | null // format: boolean
-        }
-        Relationships: []
-      }
-      event_callsigns: {
-        Row: {
-        assigned_to: string | null // format: uuid
-        callsign: string // format: text
-        created_at: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        role: string | null // format: text
-        updated_at: string | null // format: timestamp with time zone
-        }
-        Insert: {
-        assigned_to?: string | null // format: uuid
-        callsign: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        event_id: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        role?: string | null // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Update: {
-        assigned_to?: string | null // format: uuid
-        callsign?: string // format: text
-        created_at?: string | null // format: timestamp with time zone
-        event_id?: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        role?: string | null // format: text
         updated_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
@@ -1593,8 +1236,6 @@ export type Database = {
         created_at: string | null // format: text
         created_by: string | null // format: uuid
         curfew_time: string | null // format: text
-        current_attendance: number | null // format: integer
-        date: string | null // format: date
         description: string | null // format: text
         doors_open_time: string | null // format: text
         duty_manager: string | null // format: text
@@ -1606,7 +1247,6 @@ export type Database = {
         event_end_time: string | null // format: text
         event_manager_name: string | null // format: text
         event_name: string // format: text
-        event_time: string | null // format: time without time zone
         event_type: "Concert" | "Parade" | "Festival" | "Corporate" | "Other" // format: public.event_type
         expected_attendance: number | null // format: integer
         head_of_security: string | null // format: text
@@ -1614,8 +1254,6 @@ export type Database = {
         is_current: boolean | null // format: boolean
         main_act_start_time: string | null // format: text
         main_act_times: string | null // format: text
-        max_capacity: number | null // format: integer
-        name: string | null // format: text
         normalised_artist_name: string | null // format: text
         production_manager: string | null // format: text
         security_call_time: string | null // format: text
@@ -1640,8 +1278,6 @@ export type Database = {
         created_at?: string | null // format: text
         created_by?: string | null // format: uuid
         curfew_time?: string | null // format: text
-        current_attendance?: number | null // format: integer
-        date?: string | null // format: date
         description?: string | null // format: text
         doors_open_time?: string | null // format: text
         duty_manager?: string | null // format: text
@@ -1653,7 +1289,6 @@ export type Database = {
         event_end_time?: string | null // format: text
         event_manager_name?: string | null // format: text
         event_name: string // format: text
-        event_time?: string | null // format: time without time zone
         event_type: "Concert" | "Parade" | "Festival" | "Corporate" | "Other" // format: public.event_type
         expected_attendance?: number | null // format: integer
         head_of_security?: string | null // format: text
@@ -1661,8 +1296,6 @@ export type Database = {
         is_current?: boolean | null // format: boolean
         main_act_start_time?: string | null // format: text
         main_act_times?: string | null // format: text
-        max_capacity?: number | null // format: integer
-        name?: string | null // format: text
         normalised_artist_name?: string | null // format: text
         production_manager?: string | null // format: text
         security_call_time?: string | null // format: text
@@ -1687,8 +1320,6 @@ export type Database = {
         created_at?: string | null // format: text
         created_by?: string | null // format: uuid
         curfew_time?: string | null // format: text
-        current_attendance?: number | null // format: integer
-        date?: string | null // format: date
         description?: string | null // format: text
         doors_open_time?: string | null // format: text
         duty_manager?: string | null // format: text
@@ -1700,7 +1331,6 @@ export type Database = {
         event_end_time?: string | null // format: text
         event_manager_name?: string | null // format: text
         event_name?: string // format: text
-        event_time?: string | null // format: time without time zone
         event_type?: "Concert" | "Parade" | "Festival" | "Corporate" | "Other" // format: public.event_type
         expected_attendance?: number | null // format: integer
         head_of_security?: string | null // format: text
@@ -1708,8 +1338,6 @@ export type Database = {
         is_current?: boolean | null // format: boolean
         main_act_start_time?: string | null // format: text
         main_act_times?: string | null // format: text
-        max_capacity?: number | null // format: integer
-        name?: string | null // format: text
         normalised_artist_name?: string | null // format: text
         production_manager?: string | null // format: text
         security_call_time?: string | null // format: text
@@ -2247,8 +1875,6 @@ export type Database = {
         auto_assigned: boolean | null // Whether staff were auto-assigned | format: boolean
         callsign_from: string // format: text
         callsign_to: string // format: text
-        closed_at: string | null // format: timestamp with time zone
-        closed_by: string | null // format: uuid
         created_at: string // format: timestamp with time zone
         dependencies: number[] | null // Array of incident IDs this incident depends on | format: integer[]
         entry_type: string // format: character varying
@@ -2257,9 +1883,7 @@ export type Database = {
         escalation_level: number | null // Current escalation level (0 = normal, 1+ = escalated) | format: integer
         escalation_notes: string | null // format: text
         event_id: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
-        facts_observed: string | null // format: text
         gps_accuracy: number | null // GPS accuracy in meters | format: numeric
-        headline: string | null // format: text
         id: number // Note: This is a Primary Key.<pk/> | format: integer
         incident_type: string // format: text
         is_amended: boolean | null // format: boolean
@@ -2274,13 +1898,10 @@ export type Database = {
         occurrence: string // format: text
         original_entry_id: number | null // Note: This is a Foreign Key to `incident_logs.id`.<fk table='incident_logs' column='id'/> | format: integer
         photo_url: string | null // format: text
-        photos: Json | null // format: jsonb
         priority: string // format: text
-        resolution_notes: string | null // format: text
         resolved_at: string | null // format: timestamp with time zone
         responded_at: string | null // format: timestamp with time zone
         retrospective_justification: string | null // format: text
-        source: string | null // format: text
         status: string | null // format: text
         time_logged: string // format: timestamp with time zone
         time_of_occurrence: string // format: timestamp with time zone
@@ -2297,8 +1918,6 @@ export type Database = {
         auto_assigned?: boolean | null // Whether staff were auto-assigned | format: boolean
         callsign_from: string // format: text
         callsign_to: string // format: text
-        closed_at?: string | null // format: timestamp with time zone
-        closed_by?: string | null // format: uuid
         created_at?: string // format: timestamp with time zone
         dependencies?: number[] | null // Array of incident IDs this incident depends on | format: integer[]
         entry_type?: string // format: character varying
@@ -2307,9 +1926,7 @@ export type Database = {
         escalation_level?: number | null // Current escalation level (0 = normal, 1+ = escalated) | format: integer
         escalation_notes?: string | null // format: text
         event_id: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
-        facts_observed?: string | null // format: text
         gps_accuracy?: number | null // GPS accuracy in meters | format: numeric
-        headline?: string | null // format: text
         id?: number // Note: This is a Primary Key.<pk/> | format: integer
         incident_type: string // format: text
         is_amended?: boolean | null // format: boolean
@@ -2324,13 +1941,10 @@ export type Database = {
         occurrence: string // format: text
         original_entry_id?: number | null // Note: This is a Foreign Key to `incident_logs.id`.<fk table='incident_logs' column='id'/> | format: integer
         photo_url?: string | null // format: text
-        photos?: Json | null // format: jsonb
         priority?: string // format: text
-        resolution_notes?: string | null // format: text
         resolved_at?: string | null // format: timestamp with time zone
         responded_at?: string | null // format: timestamp with time zone
         retrospective_justification?: string | null // format: text
-        source?: string | null // format: text
         status?: string | null // format: text
         time_logged: string // format: timestamp with time zone
         time_of_occurrence: string // format: timestamp with time zone
@@ -2347,8 +1961,6 @@ export type Database = {
         auto_assigned?: boolean | null // Whether staff were auto-assigned | format: boolean
         callsign_from?: string // format: text
         callsign_to?: string // format: text
-        closed_at?: string | null // format: timestamp with time zone
-        closed_by?: string | null // format: uuid
         created_at?: string // format: timestamp with time zone
         dependencies?: number[] | null // Array of incident IDs this incident depends on | format: integer[]
         entry_type?: string // format: character varying
@@ -2357,9 +1969,7 @@ export type Database = {
         escalation_level?: number | null // Current escalation level (0 = normal, 1+ = escalated) | format: integer
         escalation_notes?: string | null // format: text
         event_id?: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
-        facts_observed?: string | null // format: text
         gps_accuracy?: number | null // GPS accuracy in meters | format: numeric
-        headline?: string | null // format: text
         id?: number // Note: This is a Primary Key.<pk/> | format: integer
         incident_type?: string // format: text
         is_amended?: boolean | null // format: boolean
@@ -2374,13 +1984,10 @@ export type Database = {
         occurrence?: string // format: text
         original_entry_id?: number | null // Note: This is a Foreign Key to `incident_logs.id`.<fk table='incident_logs' column='id'/> | format: integer
         photo_url?: string | null // format: text
-        photos?: Json | null // format: jsonb
         priority?: string // format: text
-        resolution_notes?: string | null // format: text
         resolved_at?: string | null // format: timestamp with time zone
         responded_at?: string | null // format: timestamp with time zone
         retrospective_justification?: string | null // format: text
-        source?: string | null // format: text
         status?: string | null // format: text
         time_logged?: string // format: timestamp with time zone
         time_of_occurrence?: string // format: timestamp with time zone
@@ -2388,39 +1995,6 @@ export type Database = {
         title?: string | null // format: text
         updated_at?: string // format: timestamp with time zone
         what3words?: string | null // format: text
-        }
-        Relationships: []
-      }
-      incident_patterns: {
-        Row: {
-        conditions: Json // format: jsonb
-        created_at: string | null // format: timestamp with time zone
-        description: string | null // format: text
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active: boolean | null // format: boolean
-        pattern_name: string // format: text
-        severity_level: number // format: integer
-        updated_at: string | null // format: timestamp with time zone
-        }
-        Insert: {
-        conditions: Json // format: jsonb
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        pattern_name: string // format: text
-        severity_level: number // format: integer
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Update: {
-        conditions?: Json // format: jsonb
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        pattern_name?: string // format: text
-        severity_level?: number // format: integer
-        updated_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
       }
@@ -3924,45 +3498,16 @@ export type Database = {
         }
         Relationships: []
       }
-      maintenance_event_hooks: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        event_type: string // format: text
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active: boolean | null // format: boolean
-        target_url: string // format: text
-        updated_at: string | null // format: timestamp with time zone
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        event_type: string // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        target_url: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        event_type?: string // format: text
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_active?: boolean | null // format: boolean
-        target_url?: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Relationships: []
-      }
       maintenance_schedules: {
         Row: {
         asset_id: string | null // Note: This is a Foreign Key to `maintenance_assets.id`.<fk table='maintenance_assets' column='id'/> | format: uuid
         created_at: string // format: timestamp with time zone
         created_by: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
         description: string | null // format: text
-        enabled: boolean | null // format: boolean
         frequency_days: number // format: integer
         frequency_type: string // format: text
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
         is_active: boolean | null // format: boolean
-        last_completed_at: string | null // format: timestamp with time zone
         next_due_date: string | null // format: timestamp with time zone
         schedule_name: string // format: text
         schedule_type: string // format: text
@@ -3974,12 +3519,10 @@ export type Database = {
         created_at?: string // format: timestamp with time zone
         created_by?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
         description?: string | null // format: text
-        enabled?: boolean | null // format: boolean
         frequency_days: number // format: integer
         frequency_type?: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         is_active?: boolean | null // format: boolean
-        last_completed_at?: string | null // format: timestamp with time zone
         next_due_date?: string | null // format: timestamp with time zone
         schedule_name: string // format: text
         schedule_type?: string // format: text
@@ -3991,12 +3534,10 @@ export type Database = {
         created_at?: string // format: timestamp with time zone
         created_by?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
         description?: string | null // format: text
-        enabled?: boolean | null // format: boolean
         frequency_days?: number // format: integer
         frequency_type?: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         is_active?: boolean | null // format: boolean
-        last_completed_at?: string | null // format: timestamp with time zone
         next_due_date?: string | null // format: timestamp with time zone
         schedule_name?: string // format: text
         schedule_type?: string // format: text
@@ -4224,92 +3765,44 @@ export type Database = {
       notification_logs: {
         Row: {
         body: string | null // format: text
-        created_at: string | null // format: timestamp with time zone
         data: Json | null // format: jsonb
         delivered_at: string | null // format: timestamp with time zone
         error_message: string | null // format: text
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id: number | null // format: integer
         max_retries: number | null // format: integer
-        recipients: number | null // format: integer
         retry_count: number | null // format: integer
         sent_at: string | null // format: timestamp with time zone
         status: string // format: character varying
         subscription_id: string | null // Note: This is a Foreign Key to `push_subscriptions.id`.<fk table='push_subscriptions' column='id'/> | format: uuid
         title: string // format: text
-        type: string | null // format: text
         user_id: string // format: uuid
         }
         Insert: {
         body?: string | null // format: text
-        created_at?: string | null // format: timestamp with time zone
         data?: Json | null // format: jsonb
         delivered_at?: string | null // format: timestamp with time zone
         error_message?: string | null // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id?: number | null // format: integer
         max_retries?: number | null // format: integer
-        recipients?: number | null // format: integer
         retry_count?: number | null // format: integer
         sent_at?: string | null // format: timestamp with time zone
         status?: string // format: character varying
         subscription_id?: string | null // Note: This is a Foreign Key to `push_subscriptions.id`.<fk table='push_subscriptions' column='id'/> | format: uuid
         title: string // format: text
-        type?: string | null // format: text
         user_id: string // format: uuid
         }
         Update: {
         body?: string | null // format: text
-        created_at?: string | null // format: timestamp with time zone
         data?: Json | null // format: jsonb
         delivered_at?: string | null // format: timestamp with time zone
         error_message?: string | null // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        incident_id?: number | null // format: integer
         max_retries?: number | null // format: integer
-        recipients?: number | null // format: integer
         retry_count?: number | null // format: integer
         sent_at?: string | null // format: timestamp with time zone
         status?: string // format: character varying
         subscription_id?: string | null // Note: This is a Foreign Key to `push_subscriptions.id`.<fk table='push_subscriptions' column='id'/> | format: uuid
         title?: string // format: text
-        type?: string | null // format: text
-        user_id?: string // format: uuid
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_read: boolean | null // format: boolean
-        message: string // format: text
-        metadata: Json | null // format: jsonb
-        read_at: string | null // format: timestamp with time zone
-        title: string // format: text
-        type: string // format: text
-        user_id: string // format: uuid
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_read?: boolean | null // format: boolean
-        message: string // format: text
-        metadata?: Json | null // format: jsonb
-        read_at?: string | null // format: timestamp with time zone
-        title: string // format: text
-        type: string // format: text
-        user_id: string // format: uuid
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_read?: boolean | null // format: boolean
-        message?: string // format: text
-        metadata?: Json | null // format: jsonb
-        read_at?: string | null // format: timestamp with time zone
-        title?: string // format: text
-        type?: string // format: text
         user_id?: string // format: uuid
         }
         Relationships: []
@@ -4640,23 +4133,13 @@ export type Database = {
         company: string // format: text
         company_id: string | null // format: uuid
         created_at: string | null // format: timestamp with time zone
-        display_name: string | null // format: text
         email: string | null // format: text
-        event_id: string | null // format: uuid
         experience_level: string | null // format: text
-        first_name: string | null // format: text
         full_name: string | null // format: text
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_staff: boolean | null // format: boolean
-        last_name: string | null // format: text
-        max_assignments: number | null // format: integer
-        phone_number: string | null // format: text
-        preferred_contact_method: string | null // format: text
         previous_events: string[] | null // format: text[]
         role: string | null // format: text
         skill_tags: string[] | null // format: text[]
-        skills: string[] | null // format: text[]
-        staff_id: string | null // format: uuid
         staff_role: string | null // format: text
         }
         Insert: {
@@ -4666,23 +4149,13 @@ export type Database = {
         company: string // format: text
         company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
-        display_name?: string | null // format: text
         email?: string | null // format: text
-        event_id?: string | null // format: uuid
         experience_level?: string | null // format: text
-        first_name?: string | null // format: text
         full_name?: string | null // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_staff?: boolean | null // format: boolean
-        last_name?: string | null // format: text
-        max_assignments?: number | null // format: integer
-        phone_number?: string | null // format: text
-        preferred_contact_method?: string | null // format: text
         previous_events?: string[] | null // format: text[]
         role?: string | null // format: text
         skill_tags?: string[] | null // format: text[]
-        skills?: string[] | null // format: text[]
-        staff_id?: string | null // format: uuid
         staff_role?: string | null // format: text
         }
         Update: {
@@ -4692,23 +4165,13 @@ export type Database = {
         company?: string // format: text
         company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
-        display_name?: string | null // format: text
         email?: string | null // format: text
-        event_id?: string | null // format: uuid
         experience_level?: string | null // format: text
-        first_name?: string | null // format: text
         full_name?: string | null // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_staff?: boolean | null // format: boolean
-        last_name?: string | null // format: text
-        max_assignments?: number | null // format: integer
-        phone_number?: string | null // format: text
-        preferred_contact_method?: string | null // format: text
         previous_events?: string[] | null // format: text[]
         role?: string | null // format: text
         skill_tags?: string[] | null // format: text[]
-        skills?: string[] | null // format: text[]
-        staff_id?: string | null // format: uuid
         staff_role?: string | null // format: text
         }
         Relationships: []
@@ -4938,81 +4401,6 @@ export type Database = {
         }
         Relationships: []
       }
-      settings_audit_logs: {
-        Row: {
-        changed_at: string | null // format: timestamp with time zone
-        changed_by: string // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        new_value: string | null // format: text
-        old_value: string | null // format: text
-        reason: string | null // format: text
-        setting_name: string // format: text
-        }
-        Insert: {
-        changed_at?: string | null // format: timestamp with time zone
-        changed_by: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        new_value?: string | null // format: text
-        old_value?: string | null // format: text
-        reason?: string | null // format: text
-        setting_name: string // format: text
-        }
-        Update: {
-        changed_at?: string | null // format: timestamp with time zone
-        changed_by?: string // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        new_value?: string | null // format: text
-        old_value?: string | null // format: text
-        reason?: string | null // format: text
-        setting_name?: string // format: text
-        }
-        Relationships: []
-      }
-      shared_files: {
-        Row: {
-        created_at: string | null // format: timestamp with time zone
-        download_count: number | null // format: integer
-        event_id: string | null // format: uuid
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_public: boolean | null // format: boolean
-        name: string // format: text
-        shared_with: string[] | null // format: uuid[]
-        size: number // format: integer
-        type: string // format: text
-        updated_at: string | null // format: timestamp with time zone
-        uploaded_by: string // format: uuid
-        url: string // format: text
-        }
-        Insert: {
-        created_at?: string | null // format: timestamp with time zone
-        download_count?: number | null // format: integer
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_public?: boolean | null // format: boolean
-        name: string // format: text
-        shared_with?: string[] | null // format: uuid[]
-        size: number // format: integer
-        type: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        uploaded_by: string // format: uuid
-        url: string // format: text
-        }
-        Update: {
-        created_at?: string | null // format: timestamp with time zone
-        download_count?: number | null // format: integer
-        event_id?: string | null // format: uuid
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        is_public?: boolean | null // format: boolean
-        name?: string // format: text
-        shared_with?: string[] | null // format: uuid[]
-        size?: number // format: integer
-        type?: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        uploaded_by?: string // format: uuid
-        url?: string // format: text
-        }
-        Relationships: []
-      }
       smart_collections: {
         Row: {
         auto_update: boolean | null // format: boolean
@@ -5113,9 +4501,7 @@ export type Database = {
         Row: {
         active: boolean | null // format: boolean
         availability_status: string | null // format: character varying
-        callsign: string | null // format: text
         company_id: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        contact_methods: Json | null // format: jsonb
         contact_number: string | null // format: text
         created_at: string | null // format: timestamp with time zone
         current_location: Json | null // format: jsonb
@@ -5124,18 +4510,14 @@ export type Database = {
         full_name: string // format: text
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
         max_assignments: number | null // format: integer
-        name: string | null // format: text
         notes: string | null // format: text
         profile_photo_url: string | null // format: text
-        role: string | null // format: text
         skill_tags: string[] | null // format: text[]
         }
         Insert: {
         active?: boolean | null // format: boolean
         availability_status?: string | null // format: character varying
-        callsign?: string | null // format: text
         company_id: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        contact_methods?: Json | null // format: jsonb
         contact_number?: string | null // format: text
         created_at?: string | null // format: timestamp with time zone
         current_location?: Json | null // format: jsonb
@@ -5144,18 +4526,14 @@ export type Database = {
         full_name: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         max_assignments?: number | null // format: integer
-        name?: string | null // format: text
         notes?: string | null // format: text
         profile_photo_url?: string | null // format: text
-        role?: string | null // format: text
         skill_tags?: string[] | null // format: text[]
         }
         Update: {
         active?: boolean | null // format: boolean
         availability_status?: string | null // format: character varying
-        callsign?: string | null // format: text
         company_id?: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        contact_methods?: Json | null // format: jsonb
         contact_number?: string | null // format: text
         created_at?: string | null // format: timestamp with time zone
         current_location?: Json | null // format: jsonb
@@ -5164,10 +4542,8 @@ export type Database = {
         full_name?: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         max_assignments?: number | null // format: integer
-        name?: string | null // format: text
         notes?: string | null // format: text
         profile_photo_url?: string | null // format: text
-        role?: string | null // format: text
         skill_tags?: string[] | null // format: text[]
         }
         Relationships: []
@@ -6153,48 +5529,6 @@ export type Database = {
         polygon?: Json // format: jsonb
         venue_id?: string | null // Note: This is a Foreign Key to `venue_3d_models.id`.<fk table='venue_3d_models' column='id'/> | format: uuid
         zone_type?: string // format: text
-        }
-        Relationships: []
-      }
-      work_orders: {
-        Row: {
-        asset_id: string | null // Note: This is a Foreign Key to `assets.id`.<fk table='assets' column='id'/> | format: uuid
-        assigned_to: string | null // format: uuid
-        completed_at: string | null // format: timestamp with time zone
-        created_at: string | null // format: timestamp with time zone
-        description: string | null // format: text
-        due_date: string | null // format: timestamp with time zone
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority: string | null // format: text
-        status: string | null // format: text
-        title: string // format: text
-        updated_at: string | null // format: timestamp with time zone
-        }
-        Insert: {
-        asset_id?: string | null // Note: This is a Foreign Key to `assets.id`.<fk table='assets' column='id'/> | format: uuid
-        assigned_to?: string | null // format: uuid
-        completed_at?: string | null // format: timestamp with time zone
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        due_date?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority?: string | null // format: text
-        status?: string | null // format: text
-        title: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        }
-        Update: {
-        asset_id?: string | null // Note: This is a Foreign Key to `assets.id`.<fk table='assets' column='id'/> | format: uuid
-        assigned_to?: string | null // format: uuid
-        completed_at?: string | null // format: timestamp with time zone
-        created_at?: string | null // format: timestamp with time zone
-        description?: string | null // format: text
-        due_date?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority?: string | null // format: text
-        status?: string | null // format: text
-        title?: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
       }
