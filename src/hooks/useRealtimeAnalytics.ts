@@ -257,8 +257,8 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       })
     }
 
-    // Quality score alert
-    if (newData.averageQualityScore < alertThresholds.qualityScore!) {
+    // Quality score alert - only show if there are actual incidents
+    if (newData.totalIncidents > 0 && newData.averageQualityScore < alertThresholds.qualityScore!) {
       newAlerts.push({
         id: `quality_score_${Date.now()}`,
         type: 'quality',
@@ -271,8 +271,8 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       })
     }
 
-    // Compliance rate alert
-    if (newData.complianceScore < alertThresholds.complianceRate!) {
+    // Compliance rate alert - only show if there are actual incidents
+    if (newData.totalIncidents > 0 && newData.complianceScore < alertThresholds.complianceRate!) {
       newAlerts.push({
         id: `compliance_rate_${Date.now()}`,
         type: 'threshold',
@@ -296,6 +296,14 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       
       setData(newData)
       previousDataRef.current = newData
+      
+      // Clear existing compliance and quality alerts if there are no incidents
+      if (newData.totalIncidents === 0) {
+        setAlerts(prev => prev.filter(alert => 
+          alert.title !== 'Compliance Rate Low' && 
+          alert.title !== 'Quality Score Low'
+        ))
+      }
       
       if (newAlerts.length > 0) {
         setAlerts(prev => [...prev, ...newAlerts])
@@ -383,6 +391,16 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
     setAlerts([])
   }, [])
 
+  // Clear compliance alerts when there are no incidents
+  const clearComplianceAlerts = useCallback(() => {
+    setAlerts(prev => prev.filter(alert => alert.title !== 'Compliance Rate Low'))
+  }, [])
+
+  // Clear quality alerts when there are no incidents
+  const clearQualityAlerts = useCallback(() => {
+    setAlerts(prev => prev.filter(alert => alert.title !== 'Quality Score Low'))
+  }, [])
+
   // Manual refresh
   const refresh = useCallback(() => {
     updateData()
@@ -395,6 +413,8 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
     error,
     dismissAlert,
     clearAlerts,
+    clearComplianceAlerts,
+    clearQualityAlerts,
     refresh
   }
 }

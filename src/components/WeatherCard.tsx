@@ -233,4 +233,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
       </CardContent>
     </Card>
   );
-} 
+}
+
+// Export supported event types for conditional rendering
+export const supportedEventTypes = ['concert', 'football', 'festival', 'parade']; 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
+import { EventProvider } from '../contexts/EventContext'
 import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import { NightModeProvider } from '../contexts/NightModeContext'
@@ -75,15 +76,17 @@ export default function RootLayout({
         <ThemeProvider>
           <NightModeProvider>
             <AuthProvider>
-              <NotificationDrawerProvider>
-                <ToastProvider>
+              <EventProvider>
+                <NotificationDrawerProvider>
+                  <ToastProvider>
               <MaintenanceBanner />
               <OfflineIndicator />
               {/* <PrintInitializer /> */}
               <LayoutWrapper>{children}</LayoutWrapper>
-              </ToastProvider>
-            </NotificationDrawerProvider>
-          </AuthProvider>
+                  </ToastProvider>
+                </NotificationDrawerProvider>
+              </EventProvider>
+            </AuthProvider>
         </NightModeProvider>
         </ThemeProvider>
         <Analytics />

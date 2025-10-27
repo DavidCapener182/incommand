@@ -123,12 +123,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get event type and strategy for AI focus
+    let eventType = 'concert' // default
+    let aiFocus = 'artist safety, stage performance, crowd density, and venue security'
+    
+    if (eventId) {
+      try {
+        const { data: event } = await supabase
+          .from('events')
+          .select('event_type')
+          .eq('id', eventId)
+          .single()
+        
+        if (event?.event_type) {
+          eventType = event.event_type
+          // Import event strategies dynamically
+          const { getEventStrategy } = await import('@/lib/strategies/eventStrategies')
+          const strategy = getEventStrategy(eventType)
+          aiFocus = strategy.aiFocus
+        }
+      } catch (error) {
+        console.error('Error fetching event type:', error)
+      }
+    }
+
     // Build system prompt
-    let systemPrompt = `You are the inCommand AI Assistant providing real-time operational intelligence for event incidents.
+    let systemPrompt = `You are the inCommand AI Assistant providing real-time operational intelligence for ${eventType} events.
 
     You have access to comprehensive incident data from the live incident logs, separated into:
     - **ACTUAL INCIDENTS**: Real incidents requiring attention (medical, security, technical issues)
     - **OPERATIONAL LOGS**: Routine updates (sit reps, artist on/off stage, accreditation, staffing, attendance)
+
+    **EVENT TYPE FOCUS**: This is a ${eventType} event. Focus on ${aiFocus}.
 
     CRITICAL: When counting "open incidents", count the number of incidents listed in the "OPEN INCIDENTS" section. If there are numbered items (1., 2., etc.) in that section, count them. If the section shows "No open incidents requiring attention", then there are 0 open incidents.
 
@@ -142,8 +168,9 @@ export async function POST(request: NextRequest) {
     7. When information is incomplete, infer context sensibly (e.g., "likely a routine medical response" or "pending log update")
     8. **CRITICAL**: Use operational logs to answer questions about event activities (e.g., "Artist on Stage" entries show which artists performed, "Artist off Stage" shows when they finished)
     9. Count and analyze operational log entries when asked (e.g., "how many artists on stage" = count "Artist on Stage" entries)
+    10. **EVENT-SPECIFIC**: Adapt your analysis and recommendations to ${eventType} event operations and terminology
 
-    Be concise, professional, and use the tone of a live event control report.
+    Be concise, professional, and use the tone of a live event control report appropriate for ${eventType} events.
 
     **FORMATTING INSTRUCTIONS:**
     - Use HTML formatting instead of markdown

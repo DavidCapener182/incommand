@@ -655,3 +655,6 @@ export default function What3WordsSearchCard({
     </div>
   );
 }
+
+// Export supported event types for conditional rendering
+export const supportedEventTypes = ['concert', 'football', 'festival', 'parade'];

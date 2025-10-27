@@ -28,6 +28,8 @@
     "build:prod": "NODE_ENV=production next build",
     "build:clean": "rm -rf .next && npm run build",
     "dev:fast": "next dev --turbo",
+    "dev:clean": "rm -rf .next && rm -rf node_modules/.cache && npm run dev",
+    "clear:cache": "node scripts/clear-browser-cache.js",
     "dev:debug": "NODE_OPTIONS=\"--inspect\" next dev",
     "deps:security": "npm audit --audit-level moderate",
     "build:size": "npm run build && npx @next/bundle-analyzer .next/static/chunks/*.js",

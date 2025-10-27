@@ -4,6 +4,22 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   
+  // Disable service workers in development
+  ...(process.env.NODE_ENV === 'development' && {
+    async rewrites() {
+      return [
+        {
+          source: '/sw.js',
+          destination: '/api/disable-sw'
+        },
+        {
+          source: '/sw-enhanced.js',
+          destination: '/api/disable-sw'
+        }
+      ]
+    }
+  }),
+  
   // Performance optimization
   experimental: {
     optimizeCss: true,

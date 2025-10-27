@@ -132,6 +132,9 @@ export default function IncidentTable({
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
   logger.debug('IncidentTable component rendered', { component: 'IncidentTable', action: 'render', componentId: componentId.current, onToastAvailable: !!onToast });
 
+  // Safety check for filters prop
+  const safeFilters = filters || { types: [], statuses: [], priorities: [], query: '' };
+
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -748,7 +751,7 @@ export default function IncidentTable({
   }
 
   // Filter incidents based on the filter prop and search query
-  const filteredIncidents: Incident[] = filterIncidents<Incident>(incidents, { ...filters, query: searchQuery });
+  const filteredIncidents: Incident[] = filterIncidents<Incident>(incidents, { ...safeFilters, query: searchQuery });
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
@@ -801,8 +804,8 @@ export default function IncidentTable({
   }, [filteredIncidents]);
 
   const normalizedSelectedPriorities = useMemo(
-    () => filters.priorities.map((priority) => normalizePriority(priority as Priority)),
-    [filters.priorities]
+    () => safeFilters.priorities.map((priority) => normalizePriority(priority as Priority)),
+    [safeFilters.priorities]
   );
 
   const handlePriorityToggle = useCallback(
@@ -811,20 +814,20 @@ export default function IncidentTable({
 
       const shouldRemove = normalizedSelectedPriorities.includes(target);
       const updatedPriorities = shouldRemove
-        ? filters.priorities.filter(
+        ? safeFilters.priorities.filter(
             (priority) => normalizePriority(priority as Priority) !== target
           )
-        : [...filters.priorities, target];
+        : [...safeFilters.priorities, target];
 
-      onFiltersChange({ ...filters, priorities: updatedPriorities });
+      onFiltersChange({ ...safeFilters, priorities: updatedPriorities });
     },
-    [filters, normalizedSelectedPriorities, onFiltersChange]
+    [safeFilters, normalizedSelectedPriorities, onFiltersChange]
   );
 
   const handleClearPriorityFilters = useCallback(() => {
     if (!onFiltersChange) return;
-    onFiltersChange({ ...filters, priorities: [] });
-  }, [filters, onFiltersChange]);
+    onFiltersChange({ ...safeFilters, priorities: [] });
+  }, [safeFilters, onFiltersChange]);
 
   // Performance monitoring - measure render time (mount/unmount only)
   useEffect(() => {
@@ -969,7 +972,7 @@ export default function IncidentTable({
                 </button>
               );
             })}
-            {filters.priorities.length > 0 && (
+            {safeFilters.priorities.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearPriorityFilters}
@@ -988,7 +991,7 @@ export default function IncidentTable({
             <span className="font-medium text-blue-700 dark:text-blue-200">
               {filteredIncidents.length} incident{filteredIncidents.length !== 1 ? 's' : ''} found
             </span>
-            {(filters && (filters.types.length + filters.statuses.length + filters.priorities.length) > 0) && (
+            {((safeFilters.types?.length || 0) + (safeFilters.statuses?.length || 0) + (safeFilters.priorities?.length || 0)) > 0 && (
               <span className="text-blue-600 dark:text-blue-300"> (filters active)</span>
             )}
           </div>
@@ -1500,7 +1503,7 @@ export default function IncidentTable({
                 incidents={incidents}
                 loading={loading}
                 error={error}
-                filters={filters}
+                filters={safeFilters}
                 updateIncident={async (id, updates) => {
                   // Find the incident and update it
                   const incident = incidents.find(inc => inc.id.toString() === id);
@@ -1562,4 +1565,7 @@ export default function IncidentTable({
     )}
     </div>
   )
-} 
+}
+
+// Export supported event types for conditional rendering
+export const supportedEventTypes = ['concert', 'festival']; 

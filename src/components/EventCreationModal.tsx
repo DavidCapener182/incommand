@@ -243,12 +243,12 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
     const updatedFormData = { ...formData, [name]: value };
 
     // Auto-fill artist_name with event_name if event_name is being changed (for concerts)
-    if (name === 'event_name' && formData.event_type === 'Concert') {
+    if (name === 'event_name' && formData.event_type === 'concert') {
       updatedFormData.artist_name = value;
     }
 
     // Auto-generate event name for football events
-    if (formData.event_type === 'Football') {
+    if (formData.event_type === 'football') {
       if (name === 'home_team' || name === 'away_team' || name === 'event_date') {
         const homeTeam = name === 'home_team' ? value : formData.home_team || '';
         const awayTeam = name === 'away_team' ? value : formData.away_team || '';
@@ -545,10 +545,10 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   onChange={handleInputChange}
                 >
                   <option value="">Select an event type</option>
-                  <option value="Concert">Concert</option>
-                  <option value="Parade">Parade</option>
-                  <option value="Festival">Festival</option>
-                  <option value="Football">Football</option>
+                  <option value="concert">Concert / Gig</option>
+                  <option value="football">Football Match</option>
+                  <option value="festival">Festival</option>
+                  <option value="parade">Parade / Procession</option>
                 </select>
               </div>
             </div>
@@ -565,7 +565,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Name <span className="text-red-500">*</span>
                 </label>
-                {formData.event_type === 'Football' ? (
+                {formData.event_type === 'football' ? (
                   <div className="mt-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                     <span className="text-sm font-medium">Auto-generated: </span>
                     <span className="text-sm">{formData.event_name || 'Will be generated when teams and date are entered'}</span>
@@ -584,7 +584,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               </div>
 
               {/* Event Type Specific Fields */}
-              {formData.event_type === 'Concert' && (
+              {formData.event_type === 'concert' && (
                 <div>
                   <label htmlFor="artist_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Artist/Headliner Name <span className="text-red-500">*</span>
@@ -601,7 +601,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </div>
               )}
 
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'football' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -658,7 +658,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Parade' && (
+              {formData.event_type === 'parade' && (
                 <div>
                   <label htmlFor="parade_route" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Parade Route <span className="text-red-500">*</span>
@@ -676,7 +676,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </div>
               )}
 
-              {formData.event_type === 'Festival' && (
+              {formData.event_type === 'festival' && (
                 <div>
                   <label htmlFor="festival_theme" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Festival Theme/Genre <span className="text-red-500">*</span>
@@ -695,7 +695,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {/* Event Date - Show early for football events */}
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'football' && (
                 <div>
                   <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Match Date <span className="text-red-500">*</span>
@@ -789,7 +789,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                     value={formData.description || ''}
                     onChange={handleInputChange}
                     rows={6}
-                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'Concert' ? 'artist' : formData.event_type === 'Football' ? 'team' : 'event'} details are filled`}
+                    placeholder={descriptionLoading ? "Generating security brief..." : `Security brief will be automatically generated when venue and ${formData.event_type === 'concert' ? 'artist' : formData.event_type === 'football' ? 'team' : 'event'} details are filled`}
                     className="block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     disabled={descriptionLoading}
                   />
@@ -822,7 +822,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                   placeholder="Paste or type the event brief provided by the client here."
                   className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">This field is for the client's event brief and can contain large pasted text.</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">This field is for the client&apos;s event brief and can contain large pasted text.</p>
               </div>
             </div>
           </div>
@@ -854,7 +854,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {/* Event Type Specific Timing Fields */}
-              {formData.event_type === 'Concert' && (
+              {formData.event_type === 'concert' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -867,7 +867,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Football' && (
+              {formData.event_type === 'football' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -880,7 +880,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Parade' && (
+              {formData.event_type === 'parade' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -893,7 +893,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
                 </>
               )}
 
-              {formData.event_type === 'Festival' && (
+              {formData.event_type === 'festival' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
@@ -907,7 +907,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               )}
 
               {/* Support Acts - Only for Concerts */}
-              {formData.event_type === 'Concert' && (
+              {formData.event_type === 'concert' && (
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Support Acts</h3>
                   {formData.support_acts.map((act, index) => (

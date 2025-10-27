@@ -327,4 +327,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       </div>
     </div>
   )
-} 
+}
+
+// Export supported event types for conditional rendering
+export const supportedEventTypes = ['concert']; 
