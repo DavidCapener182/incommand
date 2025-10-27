@@ -3,11 +3,12 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  ShieldCheckIcon, 
-  ExclamationTriangleIcon, 
+import {
+  ShieldCheckIcon,
+  ExclamationTriangleIcon,
   UserGroupIcon,
-  EyeIcon
+  EyeIcon,
+  NoSymbolIcon
 } from '@heroicons/react/24/outline'
 import { mockEventData } from '@/data/mockEventData'
 
@@ -16,37 +17,71 @@ interface StadiumSecurityCardProps {
 }
 
 export default function StadiumSecurityCard({ className }: StadiumSecurityCardProps) {
-  const data = mockEventData.football
+  const security = mockEventData.football?.security
+
+  const ejections = security?.ejections ?? 0
+  const arrests = security?.arrests ?? 0
+  const stewardInterventions = security?.stewardInterventions ?? 0
+  const pitchInvasionAlerts = security?.pitchInvasionAlerts ?? 0
+  const disorderIncidents = security?.disorderIncidents ?? 0
+
+  const totalAlerts = ejections + arrests + pitchInvasionAlerts + disorderIncidents
 
   const securityMetrics = [
     {
       label: 'Fan Ejections',
-      value: data.ejections,
+      value: ejections,
       icon: UserGroupIcon,
-      color: data.ejections > 5 ? 'text-red-500' : data.ejections > 2 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.ejections > 5 ? 'bg-red-50 dark:bg-red-900/20' : data.ejections > 2 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: ejections > 5 ? 'text-red-500' : ejections > 2 ? 'text-amber-500' : 'text-emerald-500',
+      bgColor:
+        ejections > 5
+          ? 'bg-red-50 dark:bg-red-900/20'
+          : ejections > 2
+            ? 'bg-amber-50 dark:bg-amber-900/20'
+            : 'bg-emerald-50 dark:bg-emerald-900/20',
     },
     {
       label: 'Arrests',
-      value: data.arrests,
+      value: arrests,
       icon: ShieldCheckIcon,
-      color: data.arrests > 2 ? 'text-red-500' : data.arrests > 0 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.arrests > 2 ? 'bg-red-50 dark:bg-red-900/20' : data.arrests > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: arrests > 2 ? 'text-red-500' : arrests > 0 ? 'text-amber-500' : 'text-emerald-500',
+      bgColor:
+        arrests > 2
+          ? 'bg-red-50 dark:bg-red-900/20'
+          : arrests > 0
+            ? 'bg-amber-50 dark:bg-amber-900/20'
+            : 'bg-emerald-50 dark:bg-emerald-900/20',
     },
     {
       label: 'Steward Interventions',
-      value: data.stewardInterventions,
+      value: stewardInterventions,
       icon: EyeIcon,
-      color: data.stewardInterventions > 15 ? 'text-amber-500' : 'text-blue-500',
-      bgColor: data.stewardInterventions > 15 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
+      color: stewardInterventions > 18 ? 'text-amber-500' : 'text-blue-500',
+      bgColor:
+        stewardInterventions > 18
+          ? 'bg-amber-50 dark:bg-amber-900/20'
+          : 'bg-blue-50 dark:bg-blue-900/20',
     },
     {
-      label: 'Pitch Invasions',
-      value: data.pitchInvasionAlerts,
+      label: 'Pitch Alerts',
+      value: pitchInvasionAlerts,
       icon: ExclamationTriangleIcon,
-      color: data.pitchInvasionAlerts > 0 ? 'text-red-500' : 'text-green-500',
-      bgColor: data.pitchInvasionAlerts > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
-    }
+      color: pitchInvasionAlerts > 0 ? 'text-red-500' : 'text-emerald-500',
+      bgColor:
+        pitchInvasionAlerts > 0
+          ? 'bg-red-50 dark:bg-red-900/20'
+          : 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    {
+      label: 'Disorder',
+      value: disorderIncidents,
+      icon: NoSymbolIcon,
+      color: disorderIncidents > 0 ? 'text-amber-500' : 'text-emerald-500',
+      bgColor:
+        disorderIncidents > 0
+          ? 'bg-amber-50 dark:bg-amber-900/20'
+          : 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
   ]
 
   return (
@@ -86,13 +121,16 @@ export default function StadiumSecurityCard({ className }: StadiumSecurityCardPr
         <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Security Status</span>
-            <Badge 
-              variant={data.ejections > 5 || data.arrests > 2 ? 'destructive' : data.ejections > 2 || data.arrests > 0 ? 'secondary' : 'default'}
+            <Badge
+              variant={totalAlerts > 7 ? 'destructive' : totalAlerts > 3 ? 'secondary' : 'default'}
               className="text-xs"
             >
-              {data.ejections > 5 || data.arrests > 2 ? 'High Alert' : data.ejections > 2 || data.arrests > 0 ? 'Moderate' : 'Normal'}
+              {totalAlerts > 7 ? 'High Alert' : totalAlerts > 3 ? 'Active Monitoring' : 'Stable'}
             </Badge>
           </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {stewardInterventions} steward interventions recorded this hour.
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -100,4 +138,4 @@ export default function StadiumSecurityCard({ className }: StadiumSecurityCardPr
 }
 
 // Export supported event types for conditional rendering
-export const supportedEventTypes = ['football'];
+export const supportedEventTypes = ['football']

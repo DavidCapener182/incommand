@@ -13,12 +13,27 @@ import IncidentTable from '@/components/IncidentTable'
 
 // Import new event-specific cards
 import StadiumSecurityCard from '@/components/dashboard/cards/StadiumSecurityCard'
-import CapacityCard from '@/components/dashboard/cards/CapacityCard'
+import StandCapacityCard from '@/components/dashboard/cards/StandCapacityCard'
+import MatchScoreCard from '@/components/dashboard/cards/MatchScoreCard'
 import MedicalResponseCard from '@/components/dashboard/cards/MedicalResponseCard'
-import MultiStageCard from '@/components/dashboard/cards/MultiStageCard'
+import TurnstileStatusCard from '@/components/dashboard/cards/TurnstileStatusCard'
+import MultiStageOverviewCard from '@/components/dashboard/cards/MultiStageOverviewCard'
 import CrowdFlowCard from '@/components/dashboard/cards/CrowdFlowCard'
+import WelfareCard from '@/components/dashboard/cards/WelfareCard'
+import ScheduleAdherenceCard from '@/components/dashboard/cards/ScheduleAdherenceCard'
+import IncidentSummaryCard from '@/components/dashboard/cards/IncidentSummaryCard'
 import RouteStatusCard from '@/components/dashboard/cards/RouteStatusCard'
 import PublicSafetyCard from '@/components/dashboard/cards/PublicSafetyCard'
+import VehicleTrackerCard from '@/components/dashboard/cards/VehicleTrackerCard'
+import DispersalMonitorCard from '@/components/dashboard/cards/DispersalMonitorCard'
+import RunnerProgressCard from '@/components/dashboard/cards/RunnerProgressCard'
+import AidStationStatusCard from '@/components/dashboard/cards/AidStationStatusCard'
+import CourseWeatherCard from '@/components/dashboard/cards/CourseWeatherCard'
+import MedicalZoneMapCard from '@/components/dashboard/cards/MedicalZoneMapCard'
+import FlightScheduleCard from '@/components/dashboard/cards/FlightScheduleCard'
+import AirfieldCapacityCard from '@/components/dashboard/cards/AirfieldCapacityCard'
+import CrowdSafetyCard from '@/components/dashboard/cards/CrowdSafetyCard'
+import WeatherAviationCard from '@/components/dashboard/cards/WeatherAviationCard'
 import PerformanceChart from '@/components/dashboard/cards/PerformanceChart'
 import CrowdDensityCard from '@/components/dashboard/cards/CrowdDensityCard'
 
@@ -34,16 +49,35 @@ const cardComponents = {
   
   // Football cards
   'StadiumSecurityCard': StadiumSecurityCard,
-  'CapacityCard': CapacityCard,
+  'StandCapacityCard': StandCapacityCard,
+  'MatchScoreCard': MatchScoreCard,
   'MedicalResponseCard': MedicalResponseCard,
-  
+  'TurnstileStatusCard': TurnstileStatusCard,
+
   // Festival cards
-  'MultiStageCard': MultiStageCard,
+  'MultiStageOverviewCard': MultiStageOverviewCard,
   'CrowdFlowCard': CrowdFlowCard,
-  
+  'WelfareCard': WelfareCard,
+  'ScheduleAdherenceCard': ScheduleAdherenceCard,
+  'IncidentSummaryCard': IncidentSummaryCard,
+
   // Parade cards
   'RouteStatusCard': RouteStatusCard,
   'PublicSafetyCard': PublicSafetyCard,
+  'VehicleTrackerCard': VehicleTrackerCard,
+  'DispersalMonitorCard': DispersalMonitorCard,
+
+  // Marathon cards
+  'RunnerProgressCard': RunnerProgressCard,
+  'AidStationStatusCard': AidStationStatusCard,
+  'CourseWeatherCard': CourseWeatherCard,
+  'MedicalZoneMapCard': MedicalZoneMapCard,
+
+  // Airshow cards
+  'FlightScheduleCard': FlightScheduleCard,
+  'AirfieldCapacityCard': AirfieldCapacityCard,
+  'CrowdSafetyCard': CrowdSafetyCard,
+  'WeatherAviationCard': WeatherAviationCard,
 }
 
 interface DynamicDashboardCardsProps {
