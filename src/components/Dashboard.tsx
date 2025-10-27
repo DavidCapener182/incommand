@@ -572,7 +572,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { updateCounts } = useIncidentSummary()
+  const { counts: incidentCounts, updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
   
   // ⚠️  CONCERT DASHBOARD IS PERMANENTLY LOCKED ⚠️
