@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is assigned to this event
     const { data: eventAccess, error: eventError } = await supabase
-      .from('event_staff')
+      .from('event_members')
       .select('event_id')
       .eq('user_id', userId)
       .eq('event_id', eventId)
