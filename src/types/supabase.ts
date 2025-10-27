@@ -710,33 +710,36 @@ export type Database = {
       }
       chat_channels: {
         Row: {
+        company_id: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
         created_at: string | null // format: timestamp with time zone
-        event_id: string | null // format: uuid
+        created_by: string // Note: This is a Foreign Key to `auth.users.id`.<fk table='auth.users' column='id'/> | format: uuid
+        description: string | null // format: text
+        event_id: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private: boolean | null // format: boolean
         name: string // format: text
-        participants: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count: number | null // format: integer
         updated_at: string | null // format: timestamp with time zone
         }
         Insert: {
+        company_id: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
         created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
+        created_by: string // Note: This is a Foreign Key to `auth.users.id`.<fk table='auth.users' column='id'/> | format: uuid
+        description?: string | null // format: text
+        event_id: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private?: boolean | null // format: boolean
         name: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count?: number | null // format: integer
         updated_at?: string | null // format: timestamp with time zone
         }
         Update: {
+        company_id?: string // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
         created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
+        created_by?: string // Note: This is a Foreign Key to `auth.users.id`.<fk table='auth.users' column='id'/> | format: uuid
+        description?: string | null // format: text
+        event_id?: string // Note: This is a Foreign Key to `events.id`.<fk table='events' column='id'/> | format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private?: boolean | null // format: boolean
         name?: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type?: string // format: text
-        unread_count?: number | null // format: integer
         updated_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
