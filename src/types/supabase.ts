@@ -710,36 +710,58 @@ export type Database = {
       }
       chat_channels: {
         Row: {
+        company_id: string // format: uuid
         created_at: string | null // format: timestamp with time zone
-        event_id: string | null // format: uuid
+        created_by: string // format: uuid
+        description: string | null // format: text
+        event_id: string // format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private: boolean | null // format: boolean
         name: string // format: text
-        participants: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count: number | null // format: integer
         updated_at: string | null // format: timestamp with time zone
         }
         Insert: {
+        company_id: string // format: uuid
         created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
+        created_by: string // format: uuid
+        description?: string | null // format: text
+        event_id: string // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private?: boolean | null // format: boolean
         name: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type: string // format: text
-        unread_count?: number | null // format: integer
         updated_at?: string | null // format: timestamp with time zone
         }
         Update: {
+        company_id?: string // format: uuid
         created_at?: string | null // format: timestamp with time zone
-        event_id?: string | null // format: uuid
+        created_by?: string // format: uuid
+        description?: string | null // format: text
+        event_id?: string // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        is_private?: boolean | null // format: boolean
         name?: string // format: text
-        participants?: string[] | null // format: uuid[]
-        type?: string // format: text
-        unread_count?: number | null // format: integer
         updated_at?: string | null // format: timestamp with time zone
         }
-        Relationships: []
+        Relationships: [
+        {
+          foreignKeyName: "chat_channels_company_id_fkey"
+          columns: ["company_id"]
+          referencedRelation: "companies"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "chat_channels_created_by_fkey"
+          columns: ["created_by"]
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "chat_channels_event_id_fkey"
+          columns: ["event_id"]
+          referencedRelation: "events"
+          referencedColumns: ["id"]
+        }
+        ]
       }
       chat_messages: {
         Row: {
