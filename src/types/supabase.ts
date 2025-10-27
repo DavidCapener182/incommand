@@ -710,6 +710,7 @@ export type Database = {
       }
       chat_channels: {
         Row: {
+        company_id: string | null // format: uuid
         created_at: string | null // format: timestamp with time zone
         event_id: string | null // format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
@@ -720,6 +721,7 @@ export type Database = {
         updated_at: string | null // format: timestamp with time zone
         }
         Insert: {
+        company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
@@ -730,6 +732,7 @@ export type Database = {
         updated_at?: string | null // format: timestamp with time zone
         }
         Update: {
+        company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid

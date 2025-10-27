@@ -85,16 +85,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create channel
+    // Create channel (align with schema: no created_by or is_private columns)
     const { data, error } = await supabase
       .from('chat_channels')
       .insert({
         name,
         event_id: eventId,
         company_id: companyId,
-        created_by: createdBy,
-        is_private: isPrivate,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single()

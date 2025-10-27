@@ -43,8 +43,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is assigned to this event
+    // Align with existing tables: use event_members for access check
     const { data: eventAccess, error: eventError } = await supabase
-      .from('event_staff')
+      .from('event_members')
       .select('event_id')
       .eq('user_id', userId)
       .eq('event_id', eventId)
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Insert message
+    // Insert message (align fields to chat_messages schema)
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -67,12 +68,7 @@ export async function POST(request: NextRequest) {
         message,
         message_type: metadata?.fileUrl ? 'file' : metadata?.latitude ? 'location' : 'text',
         metadata,
-        channel_type: 'team',
-        channel_name: channelName,
-        company_id: companyId,
-        event_id: eventId,
         created_at: new Date().toISOString(),
-        read_by: [userId]
       })
       .select()
       .single()
@@ -119,10 +115,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('chat_messages')
       .select('*')
-      .eq('event_id', eventId)
-      .eq('company_id', companyId)
-      .eq('channel_name', channel)
-      .eq('channel_type', 'team')
+      .eq('channel_id', `${eventId}_${companyId}_${channel}`)
       .order('created_at', { ascending: false })
       .limit(limit)
 
