@@ -39,14 +39,19 @@ export interface ChatMessage {
 export interface ChatChannel {
   id: string
   name: string
-  type: 'general' | 'incident' | 'team' | 'private'
-  eventId?: string
-  incidentId?: string
-  participants: string[]
-  lastMessage?: ChatMessage
-  unreadCount: number
+  description?: string | null
+  eventId: string
+  companyId: string
+  createdBy: string
+  isPrivate: boolean
   createdAt: string
-  isActive: boolean
+  updatedAt?: string
+  type?: 'general' | 'incident' | 'team' | 'private'
+  incidentId?: string
+  participants?: string[]
+  lastMessage?: ChatMessage
+  unreadCount?: number
+  isActive?: boolean
 }
 
 export interface TypingIndicator {
@@ -276,27 +281,12 @@ export class ChatService {
     incidentType: string,
     eventId: string
   ): Promise<ChatChannel | null> {
-    try {
-      const { data, error } = await supabase
-        .from('chat_channels')
-        .insert({
-          name: `Incident Thread: ${incidentType}`,
-          type: 'incident',
-          event_id: eventId,
-          incident_id: incidentId,
-          is_active: true,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      return data as unknown as ChatChannel
-    } catch (error) {
-      console.error('Error creating incident thread:', error)
-      return null
-    }
+    console.warn('createIncidentThread is not implemented for the current chat channel schema', {
+      incidentId,
+      incidentType,
+      eventId
+    })
+    return null
   }
 
   /**
@@ -552,11 +542,56 @@ export class ChatService {
     try {
       // TODO: Implement when chat_channels table is created
       console.log('Fetching channels:', { eventId, companyId })
+      const timestamp = new Date().toISOString()
       return [
-        { id: '1', name: 'general', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
-        { id: '2', name: 'SMT', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
-        { id: '3', name: 'Supervisors', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true },
-        { id: '4', name: 'Issues', type: 'team', participants: [], unreadCount: 0, createdAt: new Date().toISOString(), isActive: true }
+        {
+          id: 'general',
+          name: 'general',
+          description: 'General discussion',
+          eventId,
+          companyId,
+          createdBy: 'system',
+          isPrivate: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          type: 'team'
+        },
+        {
+          id: 'smt',
+          name: 'SMT',
+          description: 'Senior Management Team',
+          eventId,
+          companyId,
+          createdBy: 'system',
+          isPrivate: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          type: 'team'
+        },
+        {
+          id: 'supervisors',
+          name: 'Supervisors',
+          description: 'Supervisor communications',
+          eventId,
+          companyId,
+          createdBy: 'system',
+          isPrivate: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          type: 'team'
+        },
+        {
+          id: 'issues',
+          name: 'Issues',
+          description: 'Report issues and incidents',
+          eventId,
+          companyId,
+          createdBy: 'system',
+          isPrivate: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          type: 'team'
+        }
       ]
       // const { data, error } = await supabase
       //   .from('chat_channels')
@@ -588,14 +623,18 @@ export class ChatService {
     try {
       // TODO: Implement when chat_channels table is created
       console.log('Creating channel:', { eventId, companyId, name, description, createdBy, isPrivate })
+      const now = new Date().toISOString()
       const newChannel: ChatChannel = {
         id: Date.now().toString(),
         name,
-        type: 'team',
-        participants: [],
-        unreadCount: 0,
-        createdAt: new Date().toISOString(),
-        isActive: true
+        description,
+        eventId,
+        companyId,
+        createdBy,
+        isPrivate: isPrivate ?? false,
+        createdAt: now,
+        updatedAt: now,
+        type: 'team'
       }
       return newChannel
       
