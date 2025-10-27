@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
-import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase client
 const supabase = getServiceSupabaseClient()
@@ -44,10 +43,11 @@ export async function POST(request: NextRequest) {
 
     // Check if user is assigned to this event
     const { data: eventAccess, error: eventError } = await supabase
-      .from('event_staff')
+      .from('event_members')
       .select('event_id')
       .eq('user_id', userId)
       .eq('event_id', eventId)
+      .eq('status', 'active')
       .single()
 
     if (eventError || !eventAccess) {
