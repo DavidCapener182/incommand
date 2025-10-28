@@ -176,12 +176,15 @@ export default function ChatPanel({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop - positioned between top and bottom nav bars */}
+          {/* Backdrop - fills viewport on mobile and respects nav spacing on desktop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-x-0 top-16 bottom-16 bg-black/30 backdrop-blur-sm z-[50]"
+            className={`
+              fixed inset-x-0 bg-black/30 backdrop-blur-sm z-[50]
+              ${isMobile ? 'top-0 bottom-0' : 'top-16 bottom-16'}
+            `}
             onClick={onClose}
           />
 
@@ -197,13 +200,14 @@ export default function ChatPanel({
             aria-label="Chat panel"
             tabIndex={-1}
             className={`
-              fixed z-[60] flex flex-col
-              ${isMobile 
-                ? 'inset-x-0 bottom-0 top-0 w-full h-screen bg-white dark:bg-gray-900' 
+              fixed z-[60] flex flex-col overflow-hidden
+              ${isMobile
+                ? 'inset-x-0 bottom-0 top-0 w-full h-[100dvh] max-h-[100dvh] bg-white dark:bg-gray-900'
                 : 'right-0 top-16 bottom-16 w-[420px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-2xl rounded-l-2xl'
               }
             `}
             style={{
+              paddingTop: isMobile ? 'max(env(safe-area-inset-top), 0px)' : '0',
               paddingLeft: isMobile ? 'max(env(safe-area-inset-left), 0px)' : '0',
               paddingRight: isMobile ? 'max(env(safe-area-inset-right), 0px)' : '0',
               paddingBottom: isMobile ? 'max(env(safe-area-inset-bottom), 0px)' : '0',
