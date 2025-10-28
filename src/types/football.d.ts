@@ -107,4 +107,76 @@ export interface FootballUpdateManualResponse {
   data: FootballData;
 }
 
+// New types for Support Tool Modals
+
+export interface StandConfig {
+  id: string;
+  name: string;
+  capacity: number;
+  order: number;
+}
+
+export interface StandsSetup {
+  stands: StandConfig[];
+  totalCapacity: number;
+}
+
+export interface StaffingRole {
+  id: string;
+  name: string;
+  planned: number;
+  actual: number;
+  icon?: string;
+  color?: string;
+}
+
+export interface StaffingData {
+  roles: StaffingRole[];
+}
+
+export interface FixtureTask {
+  id: string;
+  minute: number;
+  description: string;
+  assignedRole?: string;
+  completed: boolean;
+  completedAt?: string;
+  completedBy?: string;
+}
+
+export interface FixtureChecklist {
+  fixture: string;
+  tasks: FixtureTask[];
+}
+
+export interface GateConfig {
+  id: string;
+  name: string;
+  status: 'active' | 'delayed' | 'closed';
+  entryRate: number;
+  threshold: number;
+  sensorId?: string;
+}
+
+export interface GatesSetup {
+  gates: GateConfig[];
+}
+
+export interface TransportConfig {
+  location: string;
+  postcode?: string;
+  coordinates?: { lat: number; lng: number };
+  providers: string[];
+  radius: number;
+  issues?: TransportIssue[];
+}
+
+export interface TransportIssue {
+  id: string;
+  type: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  timestamp: string;
+}
+
 

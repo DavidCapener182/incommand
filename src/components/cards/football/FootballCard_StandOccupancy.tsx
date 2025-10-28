@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData, StandOccupancyMap } from '@/types/football'
+import { Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 function getColor(percent: number) {
   if (percent > 95) return 'bg-red-500'
@@ -10,7 +12,12 @@ function getColor(percent: number) {
   return 'bg-green-500'
 }
 
-export default function FootballCard_StandOccupancy({ className }: { className?: string }) {
+interface FootballCard_StandOccupancyProps {
+  className?: string
+  onOpenModal?: () => void
+}
+
+export default function FootballCard_StandOccupancy({ className, onOpenModal }: FootballCard_StandOccupancyProps) {
   const [data, setData] = useState<FootballData | null>(null)
 
   useEffect(() => {
@@ -36,8 +43,19 @@ export default function FootballCard_StandOccupancy({ className }: { className?:
   }, [data])
 
   return (
-    <div className={`h-full card-depth flex flex-col justify-between ${className || ''}`}>
-      <h3 className="text-gray-800 font-semibold text-lg mb-3">Stand Occupancy</h3>
+    <div className={`h-full card-depth flex flex-col justify-between relative ${className || ''}`}>
+      {onOpenModal && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 opacity-60 hover:opacity-100 transition-opacity"
+          onClick={onOpenModal}
+          title="Manage / Edit Details"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
+      <h3 className="text-gray-800 font-semibold text-lg mb-3 pr-10">Stand Occupancy</h3>
       <div className="space-y-3">
         {!data ? (
           <div className="text-xs text-gray-500">Loading…</div>

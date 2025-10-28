@@ -3,8 +3,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData, FootballPhase } from '@/types/football'
+import { Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
-export default function FootballCard_LiveScore({ className }: { className?: string }) {
+interface FootballCard_LiveScoreProps {
+  className?: string
+  onOpenModal?: () => void
+}
+
+export default function FootballCard_LiveScore({ className, onOpenModal }: FootballCard_LiveScoreProps) {
   const [data, setData] = useState<FootballData | null>(null)
   const matchDuration = 90
   const minutesFromTime = useMemo(() => {
@@ -33,6 +40,17 @@ export default function FootballCard_LiveScore({ className }: { className?: stri
 
   return (
     <div className={`relative w-full h-full overflow-hidden card-depth bg-gradient-to-br from-green-700/90 to-green-900/90 text-white flex items-center justify-center ${className || ''}`}>
+      {onOpenModal && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 opacity-60 hover:opacity-100 transition-opacity z-20"
+          onClick={onOpenModal}
+          title="Manage / Edit Details"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
       {/* Perfectly centred pitch SVG */}
       <svg viewBox="0 0 120 72" className="absolute opacity-25" style={{ 
         top: '50%', 

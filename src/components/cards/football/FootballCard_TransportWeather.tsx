@@ -3,8 +3,15 @@
 import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData } from '@/types/football'
+import { Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
-export default function FootballCard_Transport({ className = '' }: { className?: string }) {
+interface FootballCard_TransportProps {
+  className?: string
+  onOpenModal?: () => void
+}
+
+export default function FootballCard_Transport({ className = '', onOpenModal }: FootballCard_TransportProps) {
   const [data, setData] = useState<FootballData | null>(null)
 
   useEffect(() => {
@@ -22,8 +29,19 @@ export default function FootballCard_Transport({ className = '' }: { className?:
 
 
   return (
-    <div className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between ${className || ''}`}>
-        <h3 className="text-gray-800 font-semibold text-lg mb-3">Transport Status</h3>
+    <div className={`h-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col justify-between relative ${className || ''}`}>
+      {onOpenModal && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 opacity-60 hover:opacity-100 transition-opacity"
+          onClick={onOpenModal}
+          title="Manage / Edit Details"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
+      <h3 className="text-gray-800 font-semibold text-lg mb-3 pr-10">Transport Status</h3>
         <div className="text-sm text-gray-700 space-y-1">
           {!data ? (
             <div className="text-xs text-gray-500">Loading…</div>
