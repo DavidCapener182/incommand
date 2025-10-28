@@ -1,4 +1,284 @@
--- Admin backend schema extensions
+
+-- Ensure the core multi-tenant tables exist so the admin backend objects
+-- can reference them even in environments that have not previously run the
+-- multi_tenant_migration. These guards intentionally use dynamic SQL so they
+-- only create objects when missing and stay idempotent when the tables are
+-- already provisioned.
+
+CREATE OR REPLACE FUNCTION update_organizations_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE organizations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        parent_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+        tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free','professional','enterprise')),
+        settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+        branding JSONB,
+        subscription_status TEXT NOT NULL DEFAULT 'active' CHECK (subscription_status IN ('active','suspended','cancelled')),
+        subscription_starts_at TIMESTAMPTZ,
+        subscription_ends_at TIMESTAMPTZ,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_organizations_parent_id ON organizations(parent_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_tier ON organizations(tier);
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'organizations'
+      AND policyname = 'Users can view their organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE POLICY "Users can view their organizations"
+        ON organizations FOR SELECT TO authenticated
+        USING (
+          id IN (
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND is_active = TRUE
+          )
+        );
+    $$;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'organizations'
+      AND policyname = 'Organization owners can update their organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE POLICY "Organization owners can update their organizations"
+        ON organizations FOR UPDATE TO authenticated
+        USING (
+          id IN (
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND is_owner = TRUE
+          )
+        );
+    $$;
+  END IF;
+END$$;
+
+DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations;
+CREATE TRIGGER update_organizations_updated_at
+  BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE PROCEDURE update_organizations_updated_at();
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'roles'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        permissions TEXT[] NOT NULL DEFAULT '{}',
+        is_system_role BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(organization_id, name)
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_roles_organization_id ON roles(organization_id);
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'roles'
+      AND policyname = 'Users can view roles in their organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE POLICY "Users can view roles in their organizations"
+        ON roles FOR SELECT TO authenticated
+        USING (
+          organization_id IN (
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND is_active = TRUE
+          ) OR is_system_role = TRUE
+        );
+    $$;
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'organization_members'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE organization_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        custom_permissions TEXT[] DEFAULT '{}',
+        is_owner BOOLEAN NOT NULL DEFAULT FALSE,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_active_at TIMESTAMPTZ,
+        UNIQUE(organization_id, user_id)
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_organization_members_organization_id ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_members_user_id ON organization_members(user_id);
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'organization_members'
+      AND policyname = 'Users can view members in their organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE POLICY "Users can view members in their organizations"
+        ON organization_members FOR SELECT TO authenticated
+        USING (
+          organization_id IN (
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND is_active = TRUE
+          )
+        );
+    $$;
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'user_roles'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE user_roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        assigned_by UUID REFERENCES auth.users(id),
+        assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ,
+        UNIQUE(user_id, role_id, organization_id)
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_organization_id ON user_roles(organization_id);
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'subscription_usage'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE subscription_usage (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        period_start TIMESTAMPTZ NOT NULL,
+        period_end TIMESTAMPTZ NOT NULL,
+        events_count INTEGER DEFAULT 0,
+        users_count INTEGER DEFAULT 0,
+        storage_gb DECIMAL(10,2) DEFAULT 0,
+        api_calls INTEGER DEFAULT 0,
+        emails_sent INTEGER DEFAULT 0,
+        sms_sent INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(organization_id, period_start)
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_subscription_usage_organization_id ON subscription_usage(organization_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_usage_period ON subscription_usage(period_start, period_end);
+ALTER TABLE subscription_usage ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'audit_log'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE audit_log (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+        action TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT,
+        changes JSONB,
+        ip_address INET,
+        user_agent TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    $$;
+  END IF;
+END$$;
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_organization_id ON audit_log(organization_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'audit_log'
+      AND policyname = 'Users can view audit logs for their organizations'
+  ) THEN
+    EXECUTE $$
+      CREATE POLICY "Users can view audit logs for their organizations"
+        ON audit_log FOR SELECT TO authenticated
+        USING (
+          organization_id IN (
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND is_active = TRUE
+          )
+        );
+    $$;
+  END IF;
+END$$;
 
 -- Helper function for maintaining updated_at timestamps
 CREATE OR REPLACE FUNCTION set_updated_at()
