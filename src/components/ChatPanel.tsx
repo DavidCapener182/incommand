@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,20 +29,33 @@ export default function ChatPanel({
   const { user } = useAuth()
   const { resolvedTheme } = useTheme()
   const isDarkMode = resolvedTheme === 'dark'
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+  const [isMounted, setIsMounted] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const previousActiveElement = useRef<HTMLElement | null>(null)
 
   // Check if mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+      setIsMobile(window.matchMedia('(max-width: 767px)').matches)
     }
-    
+
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (isMobile && activeMode !== 'ai') {
+      setActiveMode('ai')
+    }
+  }, [isMobile, activeMode])
 
   // Handle escape key, focus trap, and body scroll
   useEffect(() => {
@@ -109,7 +123,7 @@ export default function ChatPanel({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen || !user) return null
+  if (!isOpen || !user || !isMounted) return null
 
   const panelVariants = {
     hidden: { x: '100%', opacity: 0 },
@@ -172,7 +186,7 @@ export default function ChatPanel({
     }
   }
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -181,7 +195,10 @@ export default function ChatPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-x-0 top-16 bottom-16 bg-black/30 backdrop-blur-sm z-[50]"
+            className={`
+              fixed z-[70] bg-black/35 backdrop-blur-sm
+              ${isMobile ? 'inset-0' : 'inset-x-0 top-16 bottom-16'}
+            `}
             onClick={onClose}
           />
 
@@ -197,9 +214,9 @@ export default function ChatPanel({
             aria-label="Chat panel"
             tabIndex={-1}
             className={`
-              fixed z-[60] flex flex-col
-              ${isMobile 
-                ? 'inset-x-0 bottom-0 top-0 w-full h-screen bg-white dark:bg-gray-900' 
+              fixed z-[80] flex flex-col
+              ${isMobile
+                ? 'inset-0 w-full h-full bg-white dark:bg-gray-900'
                 : 'right-0 top-16 bottom-16 w-[420px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-2xl rounded-l-2xl'
               }
             `}
@@ -207,6 +224,7 @@ export default function ChatPanel({
               paddingLeft: isMobile ? 'max(env(safe-area-inset-left), 0px)' : '0',
               paddingRight: isMobile ? 'max(env(safe-area-inset-right), 0px)' : '0',
               paddingBottom: isMobile ? 'max(env(safe-area-inset-bottom), 0px)' : '0',
+              paddingTop: isMobile ? 'max(env(safe-area-inset-top), 0px)' : '0',
             }}
           >
             {/* Mobile Header */}
@@ -286,6 +304,7 @@ export default function ChatPanel({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

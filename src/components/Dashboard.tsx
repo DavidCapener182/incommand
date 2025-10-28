@@ -38,6 +38,7 @@ import {
 import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import SupportToolsFootball from '@/components/cards/football/SupportToolsFootball'
+import FootballCard_LiveScore from '@/components/cards/football/FootballCard_LiveScore'
 
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -1562,10 +1563,14 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="card-depth flex h-[130px] w-full cursor-pointer flex-col items-center justify-center"
-            onClick={() => setIsOccupancyModalOpen(true)}
+            className={`card-depth flex w-full flex-col items-center justify-center ${eventType === 'football' ? 'h-[200px] cursor-default' : 'h-[130px] cursor-pointer'}`}
+            onClick={eventType === 'football' ? undefined : () => setIsOccupancyModalOpen(true)}
           >
-            <VenueOccupancy currentEventId={currentEventId} />
+            {eventType === 'football' ? (
+              <FootballCard_LiveScore className="h-full w-full" />
+            ) : (
+              <VenueOccupancy currentEventId={currentEventId} />
+            )}
           </motion.div>
         )}
       </div>
