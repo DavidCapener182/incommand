@@ -109,7 +109,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-sm font-mono">
-                  <span>{Math.floor(minutesFromTime)}'</span>
+                  <span>{Math.floor(minutesFromTime)}&apos;</span>
                 </div>
               </div>
             </div>

@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       .from('chat_channels')
       .insert({
         name,
+        type: 'team',
         event_id: eventId,
         company_id: companyId,
         created_at: new Date().toISOString(),

@@ -321,8 +321,8 @@ export function TransportSetup({ onSave }: TransportModalProps) {
               value={transportConfig.coordinates?.lat || ''}
               onChange={(e) => updateConfig({ 
                 coordinates: { 
-                  ...transportConfig.coordinates, 
-                  lat: parseFloat(e.target.value) || 0 
+                  lat: parseFloat(e.target.value) || 0,
+                  lng: transportConfig.coordinates?.lng || 0
                 } 
               })}
               className="mt-1"
@@ -337,7 +337,7 @@ export function TransportSetup({ onSave }: TransportModalProps) {
               value={transportConfig.coordinates?.lng || ''}
               onChange={(e) => updateConfig({ 
                 coordinates: { 
-                  ...transportConfig.coordinates, 
+                  lat: transportConfig.coordinates?.lat || 0,
                   lng: parseFloat(e.target.value) || 0 
                 } 
               })}

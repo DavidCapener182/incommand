@@ -18,6 +18,18 @@ interface RouteStatusCardProps {
 
 export default function RouteStatusCard({ className }: RouteStatusCardProps) {
   const data = mockEventData.parade
+  
+  // Provide defaults for missing properties
+  const routeStatus = data.routeStatus || {
+    completedDistance: '2.5km',
+    totalDistance: '5.0km',
+    nextCheckpoint: 'City Hall'
+  }
+  const routeSegments = data.routeSegments || [
+    { name: 'Start', status: 'clear' },
+    { name: 'Main Street', status: 'congested' },
+    { name: 'City Hall', status: 'pending' }
+  ]
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -93,16 +105,16 @@ export default function RouteStatusCard({ className }: RouteStatusCardProps) {
             <span className="text-sm font-medium text-blue-600">Route Progress</span>
           </div>
           <div className="text-2xl font-bold text-blue-600">
-            {data.routeStatus.completedDistance} / {data.routeStatus.totalDistance}
+            {routeStatus.completedDistance} / {routeStatus.totalDistance}
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            Next: {data.routeStatus.nextCheckpoint}
+            Next: {routeStatus.nextCheckpoint}
           </div>
         </div>
 
         {/* Route segments */}
         <div className="space-y-3">
-          {data.routeSegments.map((segment, index) => (
+          {routeSegments.map((segment, index) => (
             <div
               key={index}
               className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getStatusBgColor(segment.status)}`}

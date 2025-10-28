@@ -114,6 +114,7 @@ export interface StandConfig {
   name: string;
   capacity: number;
   order: number;
+  current?: number;
 }
 
 export interface StandsSetup {

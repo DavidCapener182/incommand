@@ -17,6 +17,7 @@ interface Event {
   event_description?: string
   support_acts?: any[]
   event_brief?: string
+  event_date?: string
 }
 
 interface EventTiming {

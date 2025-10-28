@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { 
   DocumentTextIcon,
   SparklesIcon,

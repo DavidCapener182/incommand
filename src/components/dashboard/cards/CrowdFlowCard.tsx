@@ -20,6 +20,14 @@ interface CrowdFlowCardProps {
 export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
   const { eventType } = useEventContext()
   const data = eventType === 'festival' ? mockEventData.festival : mockEventData.parade
+  
+  // Provide defaults for missing properties
+  const flowRate = data.flowRate || 'High'
+  const crowdDensityZones = data.crowdDensityZones || [
+    { name: 'Main Entrance', density: 75, status: 'normal' },
+    { name: 'Food Court', density: 60, status: 'normal' },
+    { name: 'Exit Gates', density: 85, status: 'congested' }
+  ]
 
   const getDensityColor = (density: number) => {
     if (density >= 90) return 'text-red-500'
@@ -89,13 +97,13 @@ export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
               <span className="text-sm font-medium text-blue-600">Overall Flow</span>
             </div>
             <div className="text-2xl font-bold text-blue-600">
-              {data.flowRate}
+              {flowRate}
             </div>
           </div>
 
           {/* Zone details */}
           <div className="space-y-3">
-            {data.crowdDensityZones.map((zone, index) => (
+            {crowdDensityZones.map((zone, index) => (
               <div
                 key={index}
                 className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getDensityBgColor(zone.density)}`}
@@ -103,7 +111,7 @@ export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     {getStatusIcon(zone.status)}
-                    <span className="font-medium text-sm">{zone.zone}</span>
+                    <span className="font-medium text-sm">{zone.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-bold ${getDensityColor(zone.density)}`}>
@@ -142,13 +150,13 @@ export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
               <div className="text-center">
                 <div className="font-medium">Food → Main</div>
                 <Badge variant="default" className="text-xs mt-1">
-                  {data.crowdFlow.foodCourtToMain}
+                  {data.crowdFlow?.mainToSecondary || 'N/A'}
                 </Badge>
               </div>
               <div className="text-center">
                 <div className="font-medium">Exit Flow</div>
                 <Badge variant="outline" className="text-xs mt-1">
-                  {data.crowdFlow.exitFlow}
+                  {data.crowdFlow?.tentToExit || 'N/A'}
                 </Badge>
               </div>
             </div>
@@ -174,7 +182,7 @@ export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
           {data.crowdPressurePoints.map((point, index) => (
             <div key={index} className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
               <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
-              <span className="text-sm">{point}</span>
+              <span className="text-sm">{point.name} - {point.pressure}</span>
             </div>
           ))}
         </div>

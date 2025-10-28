@@ -93,21 +93,21 @@ export function FixtureCurrent({ onSave }: FixtureModalProps) {
         </div>
         <div className="flex gap-2">
           <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
+            variant={filter === 'all' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('all')}
           >
             All ({totalCount})
           </Button>
           <Button
-            variant={filter === 'pending' ? 'default' : 'outline'}
+            variant={filter === 'pending' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('pending')}
           >
             Pending ({totalCount - completedCount})
           </Button>
           <Button
-            variant={filter === 'completed' ? 'default' : 'outline'}
+            variant={filter === 'completed' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('completed')}
           >
@@ -160,7 +160,7 @@ export function FixtureCurrent({ onSave }: FixtureModalProps) {
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">{task.minute}'</span>
+                  <span className="text-sm font-medium">{task.minute}&apos;</span>
                   <Badge variant="outline" className="text-xs">
                     {task.assignedRole || 'Unassigned'}
                   </Badge>
@@ -250,7 +250,7 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
 
     const task: FixtureTask = {
       id: `task-${Date.now()}`,
-      minute: newTask.minute,
+      minute: newTask.minute || 0,
       description: newTask.description,
       assignedRole: newTask.assignedRole,
       completed: false,

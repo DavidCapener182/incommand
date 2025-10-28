@@ -1929,7 +1929,7 @@ export default function Dashboard() {
                               <CardContent className="flex h-full flex-col items-center justify-center p-4">
                                 <div className="text-center w-full">
                                   <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    {incidentCounts.open}
+                                    {incidentStats.open}
                                   </div>
                                   <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
                                     Open Incidents

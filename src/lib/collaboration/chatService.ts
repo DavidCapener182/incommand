@@ -453,13 +453,8 @@ export class ChatService {
           user_callsign: parentMessage.user_callsign,
           message: 'Thread started',
           message_type: 'system',
-          channel_type: parentMessage.channel_type,
-          channel_name: parentMessage.channel_name,
-          company_id: parentMessage.company_id,
-          event_id: parentMessage.event_id,
-          thread_id: parentMessageId,
-          created_at: new Date().toISOString(),
-          read_by: [parentMessage.user_id]
+          reply_to_id: parentMessageId,
+          created_at: new Date().toISOString()
         })
         .select()
         .single()
@@ -520,7 +515,7 @@ export class ChatService {
   /**
    * Search messages in Event+Company scope
    */
-  async searchMessages(
+  async searchMessagesByEvent(
     eventId: string,
     companyId: string,
     query: string

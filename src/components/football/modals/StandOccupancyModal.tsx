@@ -81,7 +81,7 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     const stand: StandConfig = {
       id: `stand-${Date.now()}`,
       name: newStand.name,
-      capacity: newStand.capacity,
+      capacity: newStand.capacity || 0,
       order: standsSetup.stands.length + 1,
     }
 
@@ -323,7 +323,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
     const stand: StandConfig = {
       id: `stand-${Date.now()}`,
       name: newStand.name,
-      capacity: newStand.capacity,
+      capacity: newStand.capacity || 0,
       order: standsSetup.stands.length + 1,
     }
 

@@ -45,11 +45,15 @@ export const mockEventData = {
     stewardInterventions: 15,
     pitchInvasionAlerts: 1,
     currentCapacityPercentage: 85,
+    currentOccupancy: 42500,
+    totalCapacity: 50000,
     entryExitRate: 300,
     turnstileFlow: 2500,
     activeMedicalIncidents: 7,
     averageMedicalResponseTime: '3m 22s',
     criticalMedicalIncidents: 2,
+    arrests: 2,
+    securityAlerts: 1,
   },
   festival: {
     ejections: 2,
@@ -71,6 +75,30 @@ export const mockEventData = {
     scheduleAdherence: 'Minor Delays',
     crowdDensityHeatmap: 'High',
     zoneCongestionAlerts: 5,
+    flowRate: 'High',
+    crowdDensityZones: [
+      { name: 'Main Stage', density: 95, status: 'congested' },
+      { name: 'Food Court', density: 60, status: 'normal' },
+      { name: 'Exit Gates', density: 85, status: 'congested' }
+    ],
+    crowdFlow: {
+      mainToSecondary: 'High',
+      secondaryToTent: 'Medium',
+      tentToExit: 'Low'
+    },
+    crowdPressurePoints: [
+      { name: 'Main Stage Entrance', pressure: 'High' },
+      { name: 'Food Court', pressure: 'Medium' },
+      { name: 'Exit Gates', pressure: 'High' }
+    ],
+    safetyMetrics: {
+      dispersalTime: '20m'
+    },
+    stageDetails: [
+      { name: 'Main Stage', status: 'active', artist: 'Headliner', nextAct: 'Encore', timeRemaining: '15m' },
+      { name: 'Side Stage', status: 'active', artist: 'Support Act', nextAct: 'Break', timeRemaining: '5m' },
+      { name: 'Tent Stage', status: 'inactive', artist: 'TBC', nextAct: 'TBC', timeRemaining: 'TBC' }
+    ],
   },
   parade: {
     ejections: 0,
@@ -96,6 +124,39 @@ export const mockEventData = {
       resolved: 0,
     },
     crowdDensityKeyPoints: 'High',
+    flowRate: 'Medium',
+    crowdDensityZones: [
+      { name: 'Start Point', density: 40, status: 'normal' },
+      { name: 'Main Route', density: 60, status: 'normal' },
+      { name: 'Finish Point', density: 80, status: 'congested' }
+    ],
+    crowdFlow: {
+      mainToSecondary: 'Medium',
+      secondaryToTent: 'Low',
+      tentToExit: 'High'
+    },
+    crowdPressurePoints: [
+      { name: 'Start Point', pressure: 'Low' },
+      { name: 'Main Route', pressure: 'Medium' },
+      { name: 'Finish Point', pressure: 'High' }
+    ],
+    safetyMetrics: {
+      crowdDensity: 'Medium',
+      lostChildren: 0,
+      medicalIncidents: 2,
+      dispersalTime: '15m'
+    },
+    routeStatus: {
+      completedDistance: '2.5km',
+      totalDistance: '5.0km',
+      nextCheckpoint: 'City Hall',
+      averageSpeed: '2.5 km/h'
+    },
+    routeSegments: [
+      { name: 'Start', status: 'clear', completion: 100, estimatedTime: '0m' },
+      { name: 'Main Street', status: 'congested', completion: 75, estimatedTime: '15m' },
+      { name: 'City Hall', status: 'pending', completion: 0, estimatedTime: '30m' }
+    ],
   },
 };
 

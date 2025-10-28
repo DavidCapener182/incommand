@@ -17,6 +17,14 @@ interface MultiStageCardProps {
 
 export default function MultiStageCard({ className }: MultiStageCardProps) {
   const data = mockEventData.festival
+  
+  // Provide defaults for missing properties
+  const stageDetails = data.stageDetails || [
+    { name: 'Main Stage', status: 'active', artist: 'Headliner' },
+    { name: 'Side Stage', status: 'active', artist: 'Support Act' },
+    { name: 'Tent Stage', status: 'inactive', artist: 'TBC' }
+  ]
+  const stageOccupancy = data.stageOccupancy ? [data.stageOccupancy.mainStage || 80, data.stageOccupancy.sideStage || 60, data.stageOccupancy.tentStage || 40] : [80, 60, 40]
 
   const getOccupancyColor = (occupancy: number) => {
     if (occupancy >= 90) return 'text-red-500'
@@ -58,10 +66,10 @@ export default function MultiStageCard({ className }: MultiStageCardProps) {
 
         {/* Stage details */}
         <div className="space-y-3">
-          {data.stageDetails.map((stage, index) => (
+          {stageDetails.map((stage, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getOccupancyBgColor(data.stageOccupancy[index])}`}
+              className={`p-3 rounded-lg border border-gray-200 dark:border-gray-700 ${getOccupancyBgColor(stageOccupancy[index])}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -69,10 +77,10 @@ export default function MultiStageCard({ className }: MultiStageCardProps) {
                   <span className="font-medium text-sm">{stage.name}</span>
                 </div>
                 <Badge 
-                  variant={data.stageOccupancy[index] >= 90 ? 'destructive' : data.stageOccupancy[index] >= 70 ? 'secondary' : 'default'}
+                  variant={stageOccupancy[index] >= 90 ? 'destructive' : stageOccupancy[index] >= 70 ? 'secondary' : 'default'}
                   className="text-xs"
                 >
-                  {data.stageOccupancy[index]}%
+                  {stageOccupancy[index]}%
                 </Badge>
               </div>
               
@@ -84,8 +92,8 @@ export default function MultiStageCard({ className }: MultiStageCardProps) {
               {/* Occupancy progress bar */}
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(data.stageOccupancy[index])}`}
-                  style={{ width: `${data.stageOccupancy[index]}%` }}
+                  className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(stageOccupancy[index])}`}
+                  style={{ width: `${stageOccupancy[index]}%` }}
                 />
               </div>
             </div>
@@ -97,14 +105,14 @@ export default function MultiStageCard({ className }: MultiStageCardProps) {
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Crowd Flow</span>
             <Badge 
-              variant={data.overlappingCrowdDensity === 'High' ? 'destructive' : data.overlappingCrowdDensity === 'Moderate' ? 'secondary' : 'default'}
+              variant={data.overlappingCrowdDensity >= 80 ? 'destructive' : data.overlappingCrowdDensity >= 60 ? 'secondary' : 'default'}
               className="text-xs"
             >
               {data.overlappingCrowdDensity}
             </Badge>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {data.stagesActive} stages active
+            {stageDetails.filter(stage => stage.status === 'active').length} stages active
           </div>
         </div>
       </CardContent>

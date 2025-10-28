@@ -18,46 +18,57 @@ interface PublicSafetyCardProps {
 
 export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
   const data = mockEventData.parade
+  
+  // Provide defaults for missing properties
+  const publicSafetyIncidents = data.publicSafetyIncidents || 0
+  const missingPersonsLogged = data.missingPersons?.logged || 0
+  const missingPersonsResolved = data.missingPersons?.resolved || 0
+  const safetyData = data.safetyMetrics || {
+    crowdDensity: data.crowdDensityKeyPoints || 'Medium',
+    lostChildren: 0,
+    medicalIncidents: data.activeMedicalIncidents || 0,
+    dispersalTime: '15m'
+  }
 
   const safetyMetrics = [
     {
       label: 'Public Safety Incidents',
-      value: data.publicSafetyIncidents,
+      value: publicSafetyIncidents,
       icon: ShieldCheckIcon,
-      color: data.publicSafetyIncidents > 3 ? 'text-red-500' : data.publicSafetyIncidents > 1 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.publicSafetyIncidents > 3 ? 'bg-red-50 dark:bg-red-900/20' : data.publicSafetyIncidents > 1 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: publicSafetyIncidents > 3 ? 'text-red-500' : publicSafetyIncidents > 1 ? 'text-amber-500' : 'text-green-500',
+      bgColor: publicSafetyIncidents > 3 ? 'bg-red-50 dark:bg-red-900/20' : publicSafetyIncidents > 1 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
     },
     {
       label: 'Missing Persons Logged',
-      value: data.missingPersonsLogged,
+      value: missingPersonsLogged,
       icon: UserGroupIcon,
-      color: data.missingPersonsLogged > 0 ? 'text-red-500' : 'text-green-500',
-      bgColor: data.missingPersonsLogged > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: missingPersonsLogged > 0 ? 'text-red-500' : 'text-green-500',
+      bgColor: missingPersonsLogged > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
     },
     {
       label: 'Missing Persons Resolved',
-      value: data.missingPersonsResolved,
+      value: missingPersonsResolved,
       icon: CheckCircleIcon,
-      color: data.missingPersonsResolved > 0 ? 'text-green-500' : 'text-gray-500',
-      bgColor: data.missingPersonsResolved > 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'
+      color: missingPersonsResolved > 0 ? 'text-green-500' : 'text-gray-500',
+      bgColor: missingPersonsResolved > 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'
     }
   ]
 
   const getCrowdDensityColor = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'text-red-500'
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'text-amber-500'
+    if (safetyData.crowdDensity === 'High') return 'text-red-500'
+    if (safetyData.crowdDensity === 'Moderate') return 'text-amber-500'
     return 'text-green-500'
   }
 
   const getCrowdDensityBgColor = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'bg-red-50 dark:bg-red-900/20'
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'bg-amber-50 dark:bg-amber-900/20'
+    if (safetyData.crowdDensity === 'High') return 'bg-red-50 dark:bg-red-900/20'
+    if (safetyData.crowdDensity === 'Moderate') return 'bg-amber-50 dark:bg-amber-900/20'
     return 'bg-green-50 dark:bg-green-900/20'
   }
 
   const getCrowdDensityBadgeVariant = () => {
-    if (data.safetyMetrics.crowdDensity === 'High') return 'destructive' as const
-    if (data.safetyMetrics.crowdDensity === 'Moderate') return 'secondary' as const
+    if (safetyData.crowdDensity === 'High') return 'destructive' as const
+    if (safetyData.crowdDensity === 'Moderate') return 'secondary' as const
     return 'default' as const
   }
 
@@ -102,11 +113,11 @@ export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
               variant={getCrowdDensityBadgeVariant()}
               className="text-xs"
             >
-              {data.safetyMetrics.crowdDensity}
+              {safetyData.crowdDensity}
             </Badge>
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-400">
-            {data.safetyMetrics.lostChildren} lost children, {data.safetyMetrics.medicalIncidents} medical incidents
+            {safetyData.lostChildren} lost children, {safetyData.medicalIncidents} medical incidents
           </div>
         </div>
 
@@ -117,7 +128,7 @@ export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
             <span className="text-sm font-medium text-blue-600">Est. Dispersal Time</span>
           </div>
           <div className="text-2xl font-bold text-blue-600">
-            {data.safetyMetrics.dispersalTime}
+            {safetyData.dispersalTime}
           </div>
         </div>
 
@@ -128,7 +139,7 @@ export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
             {data.crowdPressurePoints.map((point, index) => (
               <div key={index} className="flex items-center gap-2 text-xs">
                 <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" />
-                <span className="text-gray-600 dark:text-gray-400">{point}</span>
+                <span className="text-gray-600 dark:text-gray-400">{point.name} - {point.pressure}</span>
               </div>
             ))}
           </div>

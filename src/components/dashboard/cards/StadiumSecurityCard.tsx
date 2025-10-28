@@ -17,6 +17,10 @@ interface StadiumSecurityCardProps {
 
 export default function StadiumSecurityCard({ className }: StadiumSecurityCardProps) {
   const data = mockEventData.football
+  
+  // Provide defaults for missing properties
+  const arrests = data.arrests || 0
+  const securityAlerts = data.securityAlerts || 0
 
   const securityMetrics = [
     {
@@ -28,10 +32,10 @@ export default function StadiumSecurityCard({ className }: StadiumSecurityCardPr
     },
     {
       label: 'Arrests',
-      value: data.arrests,
+      value: arrests,
       icon: ShieldCheckIcon,
-      color: data.arrests > 2 ? 'text-red-500' : data.arrests > 0 ? 'text-amber-500' : 'text-green-500',
-      bgColor: data.arrests > 2 ? 'bg-red-50 dark:bg-red-900/20' : data.arrests > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: arrests > 2 ? 'text-red-500' : arrests > 0 ? 'text-amber-500' : 'text-green-500',
+      bgColor: arrests > 2 ? 'bg-red-50 dark:bg-red-900/20' : arrests > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
     },
     {
       label: 'Steward Interventions',

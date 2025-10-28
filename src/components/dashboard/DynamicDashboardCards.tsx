@@ -4,6 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { useEventContext, useEventStrategy } from '@/contexts/EventContext'
+import { FilterState } from '@/utils/incidentFilters'
 
 // Import all dashboard cards
 import WeatherCard from '@/components/WeatherCard'
@@ -61,6 +62,14 @@ export default function DynamicDashboardCards({
 }: DynamicDashboardCardsProps) {
   const { eventType } = useEventContext()
   const strategy = useEventStrategy()
+  
+  // Default filters for components that require them
+  const defaultFilters: FilterState = {
+    types: [],
+    statuses: [],
+    priorities: [],
+    query: ''
+  }
 
   // Get cards that should be rendered for this event type
   const cardsToRender = strategy.dashboardCards
@@ -101,6 +110,11 @@ export default function DynamicDashboardCards({
                 eventDate={currentEvent.event_date ?? ''}
                 startTime={currentEvent.main_act_start_time ?? ''}
                 curfewTime={currentEvent.curfew_time ?? ''}
+                filters={defaultFilters}
+                currentEventId={currentEventId || ''}
+                venueAddress={currentEvent.venue_address || ''}
+                singleCard={false}
+                largeLogo={false}
               />
             </motion.div>
           )
@@ -125,6 +139,12 @@ export default function DynamicDashboardCards({
                     venueAddress={currentEvent?.venue_address || ''}
                     singleCard
                     largeLogo={false}
+                    filters={defaultFilters}
+                    locationName={currentEvent?.venue_address || ''}
+                    eventDate={currentEvent?.event_date || ''}
+                    startTime={currentEvent?.main_act_start_time || ''}
+                    curfewTime={currentEvent?.curfew_time || ''}
+                    currentEventId={currentEventId || ''}
                   />
                 </CardContent>
               </Card>
@@ -145,7 +165,19 @@ export default function DynamicDashboardCards({
             >
               <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
                 <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                  <Component currentEventId={currentEventId} />
+                  <Component 
+                    currentEventId={currentEventId || ''} 
+                    filters={defaultFilters}
+                    lat={coordinates?.lat || 0}
+                    lon={coordinates?.lon || 0}
+                    locationName={currentEvent?.venue_address || ''}
+                    eventDate={currentEvent?.event_date || ''}
+                    startTime={currentEvent?.main_act_start_time || ''}
+                    curfewTime={currentEvent?.curfew_time || ''}
+                    venueAddress={currentEvent?.venue_address || ''}
+                    singleCard={false}
+                    largeLogo={false}
+                  />
                 </CardContent>
               </Card>
             </motion.div>
@@ -163,7 +195,19 @@ export default function DynamicDashboardCards({
             whileTap={{ scale: 0.98 }}
             className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
           >
-            <Component />
+            <Component 
+              filters={defaultFilters}
+              lat={coordinates?.lat || 0}
+              lon={coordinates?.lon || 0}
+              locationName={currentEvent?.venue_address || ''}
+              eventDate={currentEvent?.event_date || ''}
+              startTime={currentEvent?.main_act_start_time || ''}
+              curfewTime={currentEvent?.curfew_time || ''}
+              currentEventId={currentEventId || ''}
+              venueAddress={currentEvent?.venue_address || ''}
+              singleCard={false}
+              largeLogo={false}
+            />
           </motion.div>
         )
       })}

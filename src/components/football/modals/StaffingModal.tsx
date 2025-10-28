@@ -91,7 +91,7 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
           <div key={role.id} className="border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                {getIconComponent(role.icon)}
+                {getIconComponent(role.icon || 'users')}
                 <h4 className="font-medium">{role.name}</h4>
                 <Badge variant={role.color === 'blue' ? 'info' : role.color === 'orange' ? 'warning' : 'destructive'}>
                   {role.color}
@@ -211,7 +211,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
     const role: StaffingRole = {
       id: `role-${Date.now()}`,
       name: newRole.name,
-      planned: newRole.planned,
+      planned: newRole.planned || 0,
       actual: newRole.actual || 0,
       icon: newRole.icon || 'users',
       color: newRole.color || 'blue',
@@ -314,7 +314,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
         {staffingData.roles.map((role) => (
           <div key={role.id} className="border rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
-              {getIconComponent(role.icon)}
+              {getIconComponent(role.icon || 'users')}
               <Badge variant={colorOptions.find(c => c.value === role.color)?.variant || 'default'}>
                 {role.color}
               </Badge>

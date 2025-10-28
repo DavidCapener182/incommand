@@ -17,6 +17,10 @@ interface MedicalResponseCardProps {
 
 export default function MedicalResponseCard({ className }: MedicalResponseCardProps) {
   const data = mockEventData.football
+  
+  // Provide defaults for missing properties
+  const criticalIncidents = data.criticalMedicalIncidents || 0
+  const nonCriticalIncidents = data.activeMedicalIncidents - criticalIncidents
 
   const medicalMetrics = [
     {
@@ -28,29 +32,29 @@ export default function MedicalResponseCard({ className }: MedicalResponseCardPr
     },
     {
       label: 'Critical',
-      value: data.criticalIncidents,
+      value: criticalIncidents,
       icon: ExclamationTriangleIcon,
-      color: data.criticalIncidents > 0 ? 'text-red-500' : 'text-green-500',
-      bgColor: data.criticalIncidents > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
+      color: criticalIncidents > 0 ? 'text-red-500' : 'text-green-500',
+      bgColor: criticalIncidents > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'
     },
     {
       label: 'Non-Critical',
-      value: data.nonCriticalIncidents,
+      value: nonCriticalIncidents,
       icon: CheckCircleIcon,
-      color: data.nonCriticalIncidents > 5 ? 'text-amber-500' : 'text-blue-500',
-      bgColor: data.nonCriticalIncidents > 5 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
+      color: nonCriticalIncidents > 5 ? 'text-amber-500' : 'text-blue-500',
+      bgColor: nonCriticalIncidents > 5 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
     }
   ]
 
   const getResponseTimeColor = () => {
-    const timeInMinutes = parseInt(data.avgMedicalResponseTime.split('m')[0])
+    const timeInMinutes = parseInt(data.averageMedicalResponseTime.split('m')[0])
     if (timeInMinutes > 5) return 'text-red-500'
     if (timeInMinutes > 3) return 'text-amber-500'
     return 'text-green-500'
   }
 
   const getResponseTimeBgColor = () => {
-    const timeInMinutes = parseInt(data.avgMedicalResponseTime.split('m')[0])
+    const timeInMinutes = parseInt(data.averageMedicalResponseTime.split('m')[0])
     if (timeInMinutes > 5) return 'bg-red-50 dark:bg-red-900/20'
     if (timeInMinutes > 3) return 'bg-amber-50 dark:bg-amber-900/20'
     return 'bg-green-50 dark:bg-green-900/20'
@@ -72,7 +76,7 @@ export default function MedicalResponseCard({ className }: MedicalResponseCardPr
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response Time</span>
           </div>
           <div className={`text-2xl font-bold ${getResponseTimeColor()}`}>
-            {data.avgMedicalResponseTime}
+            {data.averageMedicalResponseTime}
           </div>
         </div>
 
@@ -102,10 +106,10 @@ export default function MedicalResponseCard({ className }: MedicalResponseCardPr
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Medical Status</span>
             <Badge 
-              variant={data.criticalIncidents > 0 ? 'destructive' : data.activeMedicalIncidents > 3 ? 'secondary' : 'default'}
+              variant={criticalIncidents > 0 ? 'destructive' : data.activeMedicalIncidents > 3 ? 'secondary' : 'default'}
               className="text-xs"
             >
-              {data.criticalIncidents > 0 ? 'Critical Alert' : data.activeMedicalIncidents > 3 ? 'High Activity' : 'Normal'}
+              {criticalIncidents > 0 ? 'Critical Alert' : data.activeMedicalIncidents > 3 ? 'High Activity' : 'Normal'}
             </Badge>
           </div>
         </div>
