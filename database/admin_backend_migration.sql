@@ -13,7 +13,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -37,14 +37,15 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_parent_id ON organizations(parent_id);
 CREATE INDEX IF NOT EXISTS idx_organizations_tier ON organizations(tier);
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
@@ -79,14 +80,15 @@ BEGIN
         );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations;
 CREATE TRIGGER update_organizations_updated_at
   BEFORE UPDATE ON organizations
   FOR EACH ROW EXECUTE PROCEDURE update_organizations_updated_at();
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -106,12 +108,13 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_roles_organization_id ON roles(organization_id);
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
@@ -129,9 +132,10 @@ BEGIN
         );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -151,13 +155,14 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_organization_members_organization_id ON organization_members(organization_id);
 CREATE INDEX IF NOT EXISTS idx_organization_members_user_id ON organization_members(user_id);
 ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
@@ -175,9 +180,10 @@ BEGIN
         );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -196,13 +202,14 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_organization_id ON user_roles(organization_id);
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -226,13 +233,14 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_subscription_usage_organization_id ON subscription_usage(organization_id);
 CREATE INDEX IF NOT EXISTS idx_subscription_usage_period ON subscription_usage(period_start, period_end);
 ALTER TABLE subscription_usage ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -253,14 +261,15 @@ BEGIN
       );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_organization_id ON audit_log(organization_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
-DO $$
+DO $do$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
@@ -278,7 +287,8 @@ BEGIN
         );
     $$;
   END IF;
-END$$;
+END
+$do$;
 
 -- Helper function for maintaining updated_at timestamps
 CREATE OR REPLACE FUNCTION set_updated_at()
@@ -590,7 +600,7 @@ CREATE TRIGGER moderation_queues_updated_at
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
 
 -- Seed default admin organization and user
-DO $$
+DO $do$
 DECLARE
   hq_org UUID;
   admin_user UUID;
@@ -634,5 +644,5 @@ BEGIN
   INSERT INTO user_roles (user_id, role_id, organization_id, assigned_by)
   VALUES (admin_user, super_role, hq_org, admin_user)
   ON CONFLICT (user_id, role_id, organization_id) DO NOTHING;
-END;
-$$;
+END
+$do$;
