@@ -870,8 +870,8 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
               {formData.event_type === 'football' && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {renderTimeInput('security_call_time', 'Security Call Time (24h)', true)}
-                    {renderTimeInput('doors_open_time', 'Gates Opening Time (24h)', true)}
+                    {renderTimeInput('security_call_time', 'Stewarding Call Time (24h)', true)}
+                    {renderTimeInput('doors_open_time', 'Turnstiles Opening Time (24h)', true)}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderTimeInput('main_act_start_time', 'Kick-off Time (24h)', true)}

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import EventCreationModal from './EventCreationModal'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { useEventContext } from '@/contexts/EventContext'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -53,6 +54,7 @@ export default function CurrentEvent({
   const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState<string | null>(null)
   const [autoAdvance, setAutoAdvance] = useState(true)
+  const { eventType } = useEventContext()
 
   // Function to check if current time is between first and last event timing
   const isEventLive = () => {
@@ -271,8 +273,16 @@ export default function CurrentEvent({
       <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-300" />
       <div className="flex flex-col">
         <span className="text-base font-semibold text-gray-900 dark:text-white">
-          {currentEvent.event_name}
+          {eventType === 'football' 
+            ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
+            : currentEvent.event_name
+          }
         </span>
+        {eventType === 'football' && currentEvent?.event_date && (
+          <span className="text-sm font-normal text-gray-500 dark:text-gray-300">
+            {/* Ensure format as DD/MM/YYYY already generated when creating football events */}
+          </span>
+        )}
         {currentEvent.support_acts && (() => {
           let acts = currentEvent.support_acts
           if (typeof acts === 'string') {

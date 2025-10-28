@@ -37,6 +37,7 @@ import {
 } from '@heroicons/react/24/outline'
 import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
+import SupportToolsFootball from '@/components/cards/football/SupportToolsFootball'
 
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -1139,13 +1140,20 @@ export default function Dashboard() {
             supportActs = typeof event.support_acts === 'string' ? JSON.parse(event.support_acts) : event.support_acts;
           } catch (e) { console.error('Error parsing support acts:', e); supportActs = []; }
         }
+        const showDownLabel = (eventType === 'football') ? 'Full Time' : 'Show Down'
+        
+        // For football events, strip the date from the event name for the schedule
+        const eventNameForSchedule = eventType === 'football' 
+          ? event.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
+          : event.event_name;
+        
         const timings: EventTiming[] = [
-          { title: 'Security Call', time: event.security_call_time },
+          { title: eventType === 'football' ? 'Stewarding Call' : 'Security Call', time: event.security_call_time },
           { title: 'Show Stop Meeting', time: event.show_stop_meeting_time },
-          { title: 'Doors Open', time: event.doors_open_time },
+          { title: eventType === 'football' ? 'Turnstiles Open' : 'Doors Open', time: event.doors_open_time },
           ...supportActs.map((act: { act_name: string; start_time: string }) => ({ title: act.act_name, time: act.start_time })),
-          { title: event.event_name, time: event.main_act_start_time },
-          { title: 'Show Down', time: event.show_down_time },
+          { title: eventNameForSchedule, time: event.main_act_start_time },
+          { title: showDownLabel, time: event.show_down_time },
           { title: 'Curfew', time: event.curfew_time }
         ].filter(timing => timing.time);
         const timingsWithMinutes = timings.map(timing => {
@@ -1154,13 +1162,13 @@ export default function Dashboard() {
         });
         // Find current and next slot
         const sortedTimings = timingsWithMinutes.sort((a, b) => a.minutesSinceMidnight - b.minutesSinceMidnight);
-        // Find the minutesSinceMidnight for 'Show Down'
-        const showDownTiming = sortedTimings.find(t => t.title.toLowerCase().includes('show down'));
+        // Find the minutesSinceMidnight for end-of-event (Show Down or Full Time)
+        const showDownTiming = sortedTimings.find(t => t.title.toLowerCase().includes((showDownLabel || '').toLowerCase()));
         const showDownMinutes = showDownTiming ? showDownTiming.minutesSinceMidnight : null;
         // Filter out 'stand down', 'curfew', and 'show down' from timings for Happening Now
         const filteredTimings = sortedTimings.filter(t => {
           const title = t.title.toLowerCase();
-          return !title.includes('stand down') && !title.includes('curfew') && !title.includes('show down');
+          return !title.includes('stand down') && !title.includes('curfew') && !title.includes((showDownLabel || '').toLowerCase());
         });
         let current = null, next = null;
         for (let i = 0; i < filteredTimings.length; i++) {
@@ -1450,7 +1458,12 @@ export default function Dashboard() {
               <div className="flex justify-between items-center p-3">
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{currentEvent.event_name}</span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {eventType === 'football' 
+                      ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
+                      : currentEvent.event_name
+                    }
+                  </span>
                 </div>
                 <div className="text-right">
                   <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
@@ -1843,112 +1856,9 @@ export default function Dashboard() {
             <>
               {/* Football Event Cards */}
               {eventType === 'football' && (
-                <>
-                          {/* Card 1: Stadium Security - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Security Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Live stadium security
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 2: Stadium Capacity - Like VenueOccupancy style */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="col-span-1 h-[130px] cursor-pointer transition-all duration-300 hover:shadow-lg"
-                    onClick={() => setIsOccupancyModalOpen(true)}
-                  >
-                    <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                      <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                        <div className="text-center w-full">
-                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                            0/65,000
-                          </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
-                            <div
-                              className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                              style={{ width: '0%' }}
-                            ></div>
-                          </div>
-                          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Stadium Capacity
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            0% Full
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                          {/* Card 3: Medical Response - Match concert card style */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.4 }}
-                            whileHover={{ y: -4, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
-                          >
-                            <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-                              <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                                <div className="text-center w-full">
-                                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    0
-                                  </div>
-                                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    Medical Incidents
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Active medical cases
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </motion.div>
-
-                  {/* Card 4: Weather - Reuse exact same WeatherCard from concerts */}
-                  {currentEvent?.venue_address && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <WeatherCard
-                        lat={coordinates?.lat}
-                        lon={coordinates?.lon}
-                        locationName={currentEvent.venue_address}
-                        eventDate={currentEvent.event_date ?? ''}
-                        startTime={currentEvent.main_act_start_time ?? ''}
-                        curfewTime={currentEvent.curfew_time ?? ''}
-                      />
-                    </motion.div>
-                  )}
-                </>
+                <div className="col-span-full">
+                  <SupportToolsFootball />
+                </div>
               )}
 
               {/* Festival Event Cards */}
