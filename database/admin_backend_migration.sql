@@ -45,6 +45,60 @@ CREATE INDEX IF NOT EXISTS idx_organizations_parent_id ON organizations(parent_i
 CREATE INDEX IF NOT EXISTS idx_organizations_tier ON organizations(tier);
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations;
+CREATE TRIGGER update_organizations_updated_at
+  BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE PROCEDURE update_organizations_updated_at();
+
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'roles'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        permissions TEXT[] NOT NULL DEFAULT '{}',
+        is_system_role BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(organization_id, name)
+      );
+    $$;
+  END IF;
+END
+$do$;
+
+CREATE INDEX IF NOT EXISTS idx_roles_organization_id ON roles(organization_id);
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+
+DO $do$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'organization_members'
+  ) THEN
+    EXECUTE $$
+      CREATE TABLE organization_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        custom_permissions TEXT[] DEFAULT '{}',
+        is_owner BOOLEAN NOT NULL DEFAULT FALSE,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_active_at TIMESTAMPTZ,
+        UNIQUE(organization_id, user_id)
+      );
+    $$;
+  END IF;
+END
+$do$;
+
 DO $do$
 BEGIN
   IF NOT EXISTS (
@@ -83,37 +137,6 @@ BEGIN
 END
 $do$;
 
-DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations;
-CREATE TRIGGER update_organizations_updated_at
-  BEFORE UPDATE ON organizations
-  FOR EACH ROW EXECUTE PROCEDURE update_organizations_updated_at();
-
-DO $do$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'roles'
-  ) THEN
-    EXECUTE $$
-      CREATE TABLE roles (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        description TEXT,
-        permissions TEXT[] NOT NULL DEFAULT '{}',
-        is_system_role BOOLEAN NOT NULL DEFAULT FALSE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE(organization_id, name)
-      );
-    $$;
-  END IF;
-END
-$do$;
-
-CREATE INDEX IF NOT EXISTS idx_roles_organization_id ON roles(organization_id);
-ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-
 DO $do$
 BEGIN
   IF NOT EXISTS (
@@ -130,29 +153,6 @@ BEGIN
             WHERE user_id = auth.uid() AND is_active = TRUE
           ) OR is_system_role = TRUE
         );
-    $$;
-  END IF;
-END
-$do$;
-
-DO $do$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'organization_members'
-  ) THEN
-    EXECUTE $$
-      CREATE TABLE organization_members (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-        custom_permissions TEXT[] DEFAULT '{}',
-        is_owner BOOLEAN NOT NULL DEFAULT FALSE,
-        is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        last_active_at TIMESTAMPTZ,
-        UNIQUE(organization_id, user_id)
-      );
     $$;
   END IF;
 END
