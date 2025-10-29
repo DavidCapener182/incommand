@@ -1,3 +1,4 @@
+import type { Json } from '@/types/supabase';
 import { getServerClient } from '../supabase/server';
 
 const UUID_REGEX =
@@ -8,7 +9,7 @@ interface AuditPayload {
   entity: string;
   entityId?: string | number | null;
   organizationId?: string | number | null;
-  changes?: Record<string, unknown> | null;
+  changes?: Json | null;
   userEmail: string;
   actionType?: string;
   performedBy?: string | null;
@@ -28,7 +29,7 @@ export async function audit({
 }: AuditPayload) {
   const supabase = getServerClient();
 
-  const details: Record<string, unknown> = { userEmail };
+  const details: Record<string, Json> = { userEmail };
 
   if (typeof organizationId !== 'undefined') {
     details.organizationId = organizationId;
@@ -38,7 +39,7 @@ export async function audit({
     details.entityId = entityId;
   }
 
-  if (changes && Object.keys(changes).length > 0) {
+  if (typeof changes !== 'undefined' && changes !== null) {
     details.changes = changes;
   }
 
@@ -50,7 +51,7 @@ export async function audit({
       typeof entityId === 'string' && UUID_REGEX.test(entityId) ? entityId : null,
     performed_by: performedBy ?? null,
     profile_id: profileId ?? null,
-    details: Object.keys(details).length > 0 ? details : null,
+    details: Object.keys(details).length > 0 ? JSON.stringify(details) : null,
   };
 
   await supabase.from('audit_logs').insert(payload);
