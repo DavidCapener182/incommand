@@ -110,13 +110,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
                                eventName.includes('stadium') ||
                                eventName.includes('sport')
         
-        // Temporary override: force football type for testing (remove this when database is properly configured)
-        // Set FORCE_FOOTBALL_EVENT=true in .env.local to force football event type
-        // For now, always force football type since user reported football event showing concert tools
-        const forceFootballType = true // Change to false when database is properly configured
-        
-        const detectedEventType = forceFootballType ? 'football' : 
-                                 isFootballEvent ? 'football' : 
+        // Determine event type based on database event_type and event name analysis
+        const detectedEventType = isFootballEvent ? 'football' : 
                                  (eventTypeMapping[event.event_type] || 'concert')
         setEventType(detectedEventType)
         setEventData(event)

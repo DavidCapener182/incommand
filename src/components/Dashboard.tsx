@@ -577,6 +577,9 @@ export default function Dashboard() {
   const { updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
   
+  // Wait for EventContext to load before rendering event-specific content
+  const isEventContextReady = !eventLoading && eventType !== null
+  
   // ⚠️  CONCERT DASHBOARD IS PERMANENTLY LOCKED ⚠️
   // The concert dashboard section below must NEVER be modified.
   // It will always show the original 4 cards regardless of event type changes.
@@ -1390,8 +1393,8 @@ export default function Dashboard() {
 
         {/* Mobile view */}
         <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
-          {loadingCurrentEvent && <p className="p-3">Loading event...</p>}
-          {!loadingCurrentEvent && currentEvent && (
+          {(loadingCurrentEvent || !isEventContextReady) && <p className="p-3">Loading event...</p>}
+          {!loadingCurrentEvent && isEventContextReady && currentEvent && (
             <div>
               <div className="flex justify-between items-center p-3">
                 <div className="flex items-center">
@@ -1707,7 +1710,7 @@ export default function Dashboard() {
 
         {/* Desktop Grid - Event-Specific Dashboard */}
         <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
-          {loadingCurrentEvent ? (
+          {loadingCurrentEvent || !isEventContextReady ? (
             Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
           ) : eventType === 'concert' ? (
             /* 
