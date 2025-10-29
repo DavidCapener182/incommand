@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRlsServerClient } from './supabaseServer'
 import { logger } from './logger'
+import {
+  ensurePlatformSuperadminProfile,
+  logPlatformSuperadminRecognition,
+  resolveEffectiveRole,
+} from './security/roles'
 
 /**
  * Secure API route handler that enforces authentication and RLS
@@ -32,29 +37,55 @@ export async function secureApiHandler(
     }
     
     // Verify user still exists and is active
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, status')
       .eq('id', session.user.id)
-      .single()
-    
-    if (profileError || !profile) {
-      logger.error('Profile not found for user', { userId: session.user.id, error: profileError })
+      .maybeSingle()
+
+    if (profileError) {
+      logger.error('Profile fetch failed for user', { userId: session.user.id, error: profileError })
       return NextResponse.json(
-        { error: 'User profile not found' }, 
+        { error: 'User profile not found' },
         { status: 401 }
       )
     }
-    
+
+    let profile = profileData as any
+    const effectiveRole = resolveEffectiveRole(profile?.role, session.user)
+
+    if (effectiveRole === 'superadmin') {
+      await ensurePlatformSuperadminProfile(session.user)
+      logPlatformSuperadminRecognition(session.user, 'API Security')
+      profile = profile ?? { id: session.user.id, status: 'active' }
+      profile.role = 'superadmin'
+    }
+
+    if (!profile) {
+      logger.error('Profile not found for user', { userId: session.user.id })
+      return NextResponse.json(
+        { error: 'User profile not found' },
+        { status: 401 }
+      )
+    }
+
     if (profile && 'status' in profile && profile.status !== 'active') {
       return NextResponse.json(
-        { error: 'Account is not active' }, 
+        { error: 'Account is not active' },
         { status: 403 }
       )
     }
-    
+
     // Execute the handler with authenticated context
-    return await handler(supabase, { ...session.user, profile }, request)
+    const userWithProfile = {
+      ...session.user,
+      profile: {
+        ...profile,
+        role: effectiveRole ?? profile.role,
+      },
+    }
+
+    return await handler(supabase, userWithProfile, request)
     
   } catch (error) {
     logger.error('API security error', error)
@@ -74,9 +105,10 @@ export async function adminApiHandler(
 ) {
   return secureApiHandler(request, async (supabase, user, request) => {
     // Check if user has admin privileges
-    if (!['admin', 'superadmin'].includes(user.profile.role)) {
+    const resolvedRole = resolveEffectiveRole(user.profile.role, user) ?? user.profile.role ?? ''
+    if (!['admin', 'superadmin'].includes(resolvedRole)) {
       return NextResponse.json(
-        { error: 'Admin access required' }, 
+        { error: 'Admin access required' },
         { status: 403 }
       )
     }
