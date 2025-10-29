@@ -106,6 +106,14 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         
         // Use the actual database event_type only - no forcing or fallbacks
         const detectedEventType = eventTypeMapping[event.event_type] || 'concert'
+        
+        // Debug logging to track event type detection
+        console.log('🔍 EventContext: Setting event type', {
+          databaseEventType: event.event_type,
+          mappedEventType: detectedEventType,
+          eventName: event.event_name
+        })
+        
         setEventType(detectedEventType)
         setEventData(event)
         logger.debug('Current event loaded', { 

@@ -668,6 +668,16 @@ export default function Dashboard() {
   
   // Combined loading state - wait for both Dashboard and EventContext to be ready
   const isFullyReady = !loadingCurrentEvent && isEventContextReady
+  
+  // Debug logging to track event type in Dashboard
+  console.log('🔍 Dashboard: Event type state', {
+    eventType,
+    eventLoading,
+    loadingCurrentEvent,
+    isEventContextReady,
+    isFullyReady,
+    currentEvent: currentEvent?.event_name
+  })
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
