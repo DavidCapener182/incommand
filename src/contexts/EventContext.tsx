@@ -37,6 +37,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
       // Get user's company_id first for proper data isolation
       const { data: user } = await supabase.auth.getUser();
+      
       if (!user?.user?.id) {
         logger.error('No authenticated user found', null, { 
           component: 'EventContext', 

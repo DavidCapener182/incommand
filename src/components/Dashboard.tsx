@@ -902,15 +902,12 @@ export default function Dashboard() {
         return;
       }
 
-      console.log('Fetching current event with company_id filter:', companyId);
       const { data, error } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
         .eq('company_id', companyId)
         .single();
-      
-      console.log('Event fetch result (with company_id filter):', { data, error });
 
       if (data) {
         data.venue_name = data.venue_name
@@ -937,52 +934,9 @@ export default function Dashboard() {
           setCurrentEventId(null);
         }
       } else {
-        console.log('No event found with company_id filter, trying without company_id for superadmin...');
-        
-        // For superadmin users, try fetching without company_id filter
-        if (userRole === 'superadmin') {
-          try {
-            const { data: superadminData, error: superadminError } = await supabase
-              .from('events')
-              .select('*, event_name, venue_name, event_type, event_description, support_acts')
-              .eq('is_current', true)
-              .single();
-            
-            console.log('Superadmin event fetch result:', { superadminData, superadminError });
-            
-            if (superadminData) {
-              superadminData.venue_name = superadminData.venue_name
-                .split(' ')
-                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-              setCurrentEvent(superadminData);
-              setHasCurrentEvent(true);
-              setCurrentEventId(superadminData.id);
-              if (superadminData.venue_address) {
-                try {
-                  const coords = await geocodeAddress(superadminData.venue_address);
-                  setCoordinates(coords);
-                } catch (error) {
-                  logger.error('Error geocoding address', error, { 
-                    component: 'Dashboard', 
-                    action: 'geocodeAddress',
-                    venueAddress: superadminData.venue_address 
-                  });
-                }
-              }
-            } else {
-              setHasCurrentEvent(false);
-              setCurrentEventId(null);
-            }
-          } catch (superadminErr) {
-            console.error('Superadmin event fetch failed:', superadminErr);
-            setHasCurrentEvent(false);
-            setCurrentEventId(null);
-          }
-        } else {
-          setHasCurrentEvent(false);
-          setCurrentEventId(null);
-        }
+        console.log('No event found for company_id:', companyId);
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
       }
     } catch (err) {
       logger.error('Unexpected error in fetchCurrentEvent', err, { 
@@ -1228,8 +1182,10 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
-    fetchCurrentEvent();
-  }, [fetchCurrentEvent]);
+    if (companyId) {
+      fetchCurrentEvent();
+    }
+  }, [companyId, fetchCurrentEvent]);
 
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
