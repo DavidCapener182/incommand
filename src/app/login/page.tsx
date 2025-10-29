@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Image from 'next/image'
@@ -20,6 +20,15 @@ export default function LoginPage() {
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  const redirectAfterLogin = useCallback((email?: string | null) => {
+    const normalizedEmail = email?.toLowerCase()
+    if (normalizedEmail === 'david@incommand.uk') {
+      router.push('/admin')
+    } else {
+      router.push('/incidents')
+    }
+  }, [router])
 
   useEffect(() => {
     emailRef.current?.focus()
@@ -65,8 +74,8 @@ export default function LoginPage() {
             });
             
             if (sessionData.session) {
-              console.log('Login page - User authenticated via magic link, redirecting to incidents');
-              router.push('/incidents');
+              console.log('Login page - User authenticated via magic link, determining redirect route');
+              redirectAfterLogin(sessionData.session.user?.email);
               return;
             }
           }
@@ -85,8 +94,8 @@ export default function LoginPage() {
           });
           
           if (sessionData.session) {
-            console.log('Login page - User authenticated via magic link, redirecting to incidents');
-            router.push('/incidents');
+            console.log('Login page - User authenticated via magic link, determining redirect route');
+            redirectAfterLogin(sessionData.session.user?.email);
             return;
           }
         }
@@ -96,7 +105,7 @@ export default function LoginPage() {
     };
 
     handleMagicLink();
-  }, [router]);
+  }, [router, redirectAfterLogin]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,12 +116,13 @@ export default function LoginPage() {
     const passwordValue = passwordRef.current?.value || password
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: emailValue,
         password: passwordValue,
       })
       if (error) throw error
-      router.push('/incidents')
+      const signedInEmail = data.user?.email ?? emailValue
+      redirectAfterLogin(signedInEmail)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')

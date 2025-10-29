@@ -110,6 +110,7 @@ export default function Navigation() {
   const [eventChats, setEventChats] = useState<{id: string, name: string, type: string}[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [selectedEventChatId, setSelectedEventChatId] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   console.log("Navigation component mounted");
 
@@ -121,16 +122,57 @@ export default function Navigation() {
   }
 
   useEffect(() => {
+    let isMounted = true;
+
     async function checkCurrentEvent() {
-      const { data: event } = await supabase
-        .from('events')
-        .select('id')
-        .eq('is_current', true)
-        .single();
-      setHasCurrentEvent(!!event);
+      if (!user) {
+        if (isMounted) {
+          setHasCurrentEvent(null);
+        }
+        return;
+      }
+
+      if (role !== 'superadmin' && !companyId) {
+        if (isMounted) {
+          setHasCurrentEvent(false);
+        }
+        return;
+      }
+
+      try {
+        let query = supabase
+          .from('events')
+          .select('id')
+          .eq('is_current', true);
+
+        if (role !== 'superadmin' && companyId) {
+          query = query.eq('company_id', companyId);
+        }
+
+        const { data: event, error } = await query.maybeSingle();
+
+        if (!isMounted) return;
+
+        if (error && error.code && error.code !== 'PGRST116') {
+          console.error('Failed to check current event for navigation', error);
+          setHasCurrentEvent(false);
+          return;
+        }
+
+        setHasCurrentEvent(!!event);
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Unexpected error checking current event for navigation', err);
+        setHasCurrentEvent(false);
+      }
     }
+
     checkCurrentEvent();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    }
+  }, [user, role, companyId]);
 
   // Fetch profile info as soon as user is available
   useEffect(() => {
@@ -140,12 +182,12 @@ export default function Navigation() {
         console.log('Fetching profile for user:', user.id);
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, email, company, avatar_url')
+          .select('full_name, email, company, avatar_url, company_id')
           .eq('id', user.id)
           .single();
-        
+
         console.log('Profile fetch result:', { data, error });
-        
+
         if (error) {
           console.error('Profile fetch failed, using user metadata as fallback');
           // Fallback to user metadata if profile fetch fails
@@ -153,15 +195,19 @@ export default function Navigation() {
             full_name: user.user_metadata?.full_name || user.email,
             email: user.email,
             company: user.user_metadata?.company || 'Unknown',
-            avatar_url: user.user_metadata?.avatar_url
+            avatar_url: user.user_metadata?.avatar_url,
+            company_id: user.user_metadata?.company_id || null
           });
+          setCompanyId(user.user_metadata?.company_id || null);
         } else {
           setProfile(data);
+          setCompanyId(data?.company_id ?? null);
         }
         setProfileLoading(false);
       })();
     } else {
       setProfile(null);
+      setCompanyId(null);
     }
   }, [user]);
 
@@ -172,10 +218,10 @@ export default function Navigation() {
       (async () => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, email, company, avatar_url')
+          .select('full_name, email, company, avatar_url, company_id')
           .eq('id', user.id)
           .single();
-        
+
         if (error) {
           console.error('Profile fetch failed on dropdown open, using user metadata as fallback');
           // Fallback to user metadata if profile fetch fails
@@ -183,10 +229,13 @@ export default function Navigation() {
             full_name: user.user_metadata?.full_name || user.email,
             email: user.email,
             company: user.user_metadata?.company || 'Unknown',
-            avatar_url: user.user_metadata?.avatar_url
+            avatar_url: user.user_metadata?.avatar_url,
+            company_id: user.user_metadata?.company_id || null
           });
+          setCompanyId(user.user_metadata?.company_id || null);
         } else {
           setProfile(data);
+          setCompanyId(data?.company_id ?? null);
         }
         setProfileLoading(false);
       })();

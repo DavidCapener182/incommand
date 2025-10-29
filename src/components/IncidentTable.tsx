@@ -31,6 +31,7 @@ import EnhancedSearch from './EnhancedSearch'
 import { useBestPractice } from '@/hooks/useBestPractice'
 import { featureFlags } from '@/config/featureFlags'
 import { BestPracticePayload } from '@/types/bestPractice'
+import { useEventContext } from '../contexts/EventContext'
 import {
   Table,
   TableBody,
@@ -139,6 +140,7 @@ export default function IncidentTable({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const { eventId } = useEventContext()
   
   // Real-time revision tracking
   const { revisionCount } = useLogRevisions(currentEventId, (notification) => {
@@ -294,26 +296,13 @@ export default function IncidentTable({
   };
 
   useEffect(() => {
-    const checkCurrentEvent = async () => {
-      logger.debug('Checking for current event', { component: 'IncidentTable', action: 'checkCurrentEvent' });
-      try {
-        const { data: eventData } = await supabase
-          .from('events')
-          .select('id')
-          .eq('is_current', true)
-          .single();
-
-        const newEventId = eventData?.id || null;
-        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
-        setCurrentEventId(newEventId);
-      } catch (err) {
-        logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
-        setCurrentEventId(null);
-      }
-    };
-
-    checkCurrentEvent();
-  }, []);
+    logger.debug('Syncing incident table current event from context', {
+      component: 'IncidentTable',
+      action: 'syncEventId',
+      eventId,
+    })
+    setCurrentEventId(eventId ?? null)
+  }, [eventId])
 
   useEffect(() => {
     logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, eventIdType: typeof currentEventId });

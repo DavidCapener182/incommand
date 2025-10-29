@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import { useAuth } from './AuthContext'
 import { EventType, getEventStrategy } from '../lib/strategies/eventStrategies'
 
 interface EventContextType {
@@ -29,23 +30,135 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   const [eventData, setEventData] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [companyLoaded, setCompanyLoaded] = useState(false)
+  const { user, role, loading: authLoading } = useAuth()
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadCompany = async () => {
+      if (!user) {
+        if (isActive) {
+          setCompanyId(null)
+          setCompanyLoaded(true)
+        }
+        return
+      }
+
+      if (role === 'superadmin') {
+        if (isActive) {
+          setCompanyId(null)
+          setCompanyLoaded(true)
+        }
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!isActive) return
+
+        if (error) {
+          logger.error('Failed to load company for user in EventProvider', error, {
+            component: 'EventContext',
+            action: 'loadCompany',
+            userId: user.id,
+          })
+          setCompanyId(null)
+        } else {
+          setCompanyId(data?.company_id ?? null)
+        }
+      } catch (err) {
+        if (!isActive) return
+        logger.error('Unexpected error loading company for user in EventProvider', err, {
+          component: 'EventContext',
+          action: 'loadCompany',
+          userId: user.id,
+        })
+        setCompanyId(null)
+      } finally {
+        if (isActive) {
+          setCompanyLoaded(true)
+        }
+      }
+    }
+
+    if (!authLoading) {
+      loadCompany()
+    }
+
+    return () => {
+      isActive = false
+    }
+  }, [authLoading, role, user])
 
   const fetchCurrentEvent = useCallback(async () => {
+    if (authLoading) {
+      return
+    }
+
+    if (!user) {
+      setEventId(null)
+      setEventType(null)
+      setEventData(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
+    if (role !== 'superadmin' && !companyLoaded) {
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
 
       // Fetch current event
-      const { data: event, error: eventError } = await supabase
+      if (role !== 'superadmin' && !companyId) {
+        setEventId(null)
+        setEventType(null)
+        setEventData(null)
+        setError('No company assigned to your profile. Please contact your administrator.')
+        return
+      }
+
+      let query = supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
-        .single()
+
+      if (role !== 'superadmin' && companyId) {
+        query = query.eq('company_id', companyId)
+      }
+
+      const { data: event, error: eventError } = await query.maybeSingle()
 
       if (eventError) {
-        logger.error('Failed to fetch current event', eventError, { 
-          component: 'EventContext', 
-          action: 'fetchCurrentEvent' 
+        if (eventError.code && eventError.code === 'PGRST116') {
+          logger.info('No current event found for user scope', {
+            component: 'EventContext',
+            action: 'fetchCurrentEvent',
+            companyId,
+            role,
+          })
+          setEventId(null)
+          setEventType(null)
+          setEventData(null)
+          setError(null)
+          return
+        }
+
+        logger.error('Failed to fetch current event', eventError, {
+          component: 'EventContext',
+          action: 'fetchCurrentEvent',
+          companyId,
+          role,
         })
         setError('Failed to load current event')
         setEventId(null)
@@ -99,23 +212,27 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         setEventData(null)
       }
     } catch (err) {
-      logger.error('Unexpected error fetching current event', err, { 
-        component: 'EventContext', 
-        action: 'fetchCurrentEvent' 
+      logger.error('Unexpected error fetching current event', err, {
+        component: 'EventContext',
+        action: 'fetchCurrentEvent',
+        companyId,
+        role,
       })
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authLoading, companyId, companyLoaded, role, user])
 
   const refreshEvent = useCallback(async () => {
     await fetchCurrentEvent()
   }, [fetchCurrentEvent])
 
   useEffect(() => {
-    fetchCurrentEvent()
-  }, [fetchCurrentEvent])
+    if (!authLoading && (role === 'superadmin' || companyLoaded)) {
+      fetchCurrentEvent()
+    }
+  }, [authLoading, companyLoaded, fetchCurrentEvent, role])
 
   return (
     <EventContext.Provider value={{
