@@ -1,9 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/supabase'
+import type { TypedSupabaseClient } from './authorization'
 import { logger } from '../logger'
 import { sanitizeForLogging } from '../apiSecurity'
-
-export type TypedSupabaseClient = SupabaseClient<Database>
 
 interface AdminAuditLogOptions {
   adminId: string
