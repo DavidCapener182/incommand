@@ -299,7 +299,7 @@ export default function IncidentTable({
     logger.debug('Syncing incident table current event from context', {
       component: 'IncidentTable',
       action: 'syncEventId',
-      eventId,
+      eventId: eventId ?? undefined,
     })
     setCurrentEventId(eventId ?? null)
   }, [eventId])
