@@ -712,31 +712,49 @@ export type Database = {
         Row: {
         company_id: string | null // format: uuid
         created_at: string | null // format: timestamp with time zone
+        created_by: string | null // format: uuid
+        description: string | null // format: text
         event_id: string | null // format: uuid
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id: string | null // format: uuid
+        is_active: boolean | null // format: boolean
+        is_private: boolean | null // format: boolean
         name: string // format: text
+        organization_id: string | null // format: uuid
         participants: string[] | null // format: uuid[]
-        type: string // format: text
+        type: string | null // format: text
         unread_count: number | null // format: integer
         updated_at: string | null // format: timestamp with time zone
         }
         Insert: {
         company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
+        created_by?: string | null // format: uuid
+        description?: string | null // format: text
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id?: string | null // format: uuid
+        is_active?: boolean | null // format: boolean
+        is_private?: boolean | null // format: boolean
         name: string // format: text
+        organization_id?: string | null // format: uuid
         participants?: string[] | null // format: uuid[]
-        type: string // format: text
+        type?: string | null // format: text
         unread_count?: number | null // format: integer
         updated_at?: string | null // format: timestamp with time zone
         }
         Update: {
         company_id?: string | null // format: uuid
         created_at?: string | null // format: timestamp with time zone
+        created_by?: string | null // format: uuid
+        description?: string | null // format: text
         event_id?: string | null // format: uuid
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id?: string | null // format: uuid
+        is_active?: boolean | null // format: boolean
+        is_private?: boolean | null // format: boolean
         name?: string // format: text
+        organization_id?: string | null // format: uuid
         participants?: string[] | null // format: uuid[]
         type?: string // format: text
         unread_count?: number | null // format: integer
