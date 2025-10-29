@@ -134,7 +134,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Check if the route is an admin route
+  // Check if the route is a back office admin route (restricted to david@incommand.uk)
   if (pathname.startsWith('/admin')) {
     const maxRetries = 3
     let retryCount = 0
@@ -181,6 +181,15 @@ export async function middleware(req: NextRequest) {
           // No profile found, redirect to login
           const loginUrl = new URL('/login', req.url)
           loginUrl.searchParams.set('error', ERROR_MESSAGES.PROFILE_NOT_FOUND)
+          return NextResponse.redirect(loginUrl)
+        }
+
+        // Restrict back office access to specific email only (company admins use /settings)
+        const allowedBackOfficeEmail = 'david@incommand.uk'
+        if (session.user.email !== allowedBackOfficeEmail) {
+          console.log('Middleware - Back office access denied - unauthorized email:', session.user.email)
+          const loginUrl = new URL('/login', req.url)
+          loginUrl.searchParams.set('error', 'Access denied. Back office access is restricted to system administrators.')
           return NextResponse.redirect(loginUrl)
         }
 

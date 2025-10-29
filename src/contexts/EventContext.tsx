@@ -35,11 +35,44 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      // Fetch current event
+      // Get user's company_id first for proper data isolation
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user?.id) {
+        logger.error('No authenticated user found', null, { 
+          component: 'EventContext', 
+          action: 'fetchCurrentEvent' 
+        })
+        setError('No authenticated user found')
+        setEventId(null)
+        setEventType(null)
+        setEventData(null)
+        return
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.user.id)
+        .single()
+
+      if (profileError || !profile?.company_id) {
+        logger.error('Failed to fetch user profile or company_id', profileError, { 
+          component: 'EventContext', 
+          action: 'fetchCurrentEvent' 
+        })
+        setError('Failed to load user profile')
+        setEventId(null)
+        setEventType(null)
+        setEventData(null)
+        return
+      }
+
+      // Fetch current event with company_id filter for data isolation
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
+        .eq('company_id', profile.company_id)
         .single()
 
       if (eventError) {

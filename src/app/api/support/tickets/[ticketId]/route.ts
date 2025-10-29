@@ -33,10 +33,10 @@ export async function PATCH(
     }
 
     const { data, error } = await context.serviceClient
-      .from('support_tickets' as any)
+      .from('support_tickets')
       .update(updates)
       .eq('id', params.ticketId)
-      .select('organization_id')
+      .select('company_id')
       .single()
 
     if (error) {
@@ -44,7 +44,7 @@ export async function PATCH(
     }
 
     await recordAdminAudit(context.serviceClient, {
-      organizationId: data.organization_id,
+      organizationId: data?.company_id || '',
       actorId: context.user.id,
       action: 'update_support_ticket',
       resourceType: 'support_tickets',

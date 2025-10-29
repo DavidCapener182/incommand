@@ -17,7 +17,7 @@ interface MedicalResponseCardProps {
 
 export default function MedicalResponseCard({ className }: MedicalResponseCardProps) {
   const data = mockEventData.football
-  
+
   // Provide defaults for missing properties
   const criticalIncidents = data.criticalMedicalIncidents || 0
   const nonCriticalIncidents = data.activeMedicalIncidents - criticalIncidents

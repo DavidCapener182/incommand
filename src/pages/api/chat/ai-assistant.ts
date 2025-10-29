@@ -65,22 +65,42 @@ async function getEventContext(): Promise<EventContext | null> {
     console.log('🔍 Fetching current event...');
     let events = null;
     
-    // First try: events with is_current = true
+    // Get user's company_id for proper data isolation
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user?.id) {
+      console.error('❌ No authenticated user found');
+      return null;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      console.error('❌ Failed to fetch user profile or company_id:', profileError);
+      return null;
+    }
+
+    // First try: events with is_current = true and company_id filter
     const { data: currentEventData, error: currentEventError } = await supabase
       .from('events')
       .select('id, event_name, venue_name, start_datetime, description')
       .eq('is_current', true)
+      .eq('company_id', profile.company_id)
       .single();
 
     if (currentEventData) {
       events = currentEventData;
     } else {
       console.log('🔍 No current event with is_current=true, trying fallback...');
-      // Fallback: get the most recent event that's happening today or in the future
+      // Fallback: get the most recent event that's happening today or in the future for this company
       const today = new Date().toISOString().split('T')[0];
       const { data: recentEvent, error: recentError } = await supabase
         .from('events')
         .select('id, event_name, venue_name, start_datetime, description')
+        .eq('company_id', profile.company_id)
         .gte('start_datetime', today)
         .order('start_datetime', { ascending: true })
         .limit(1)
@@ -90,7 +110,7 @@ async function getEventContext(): Promise<EventContext | null> {
         events = recentEvent;
         console.log('✅ Found recent event as fallback:', recentEvent.event_name);
       } else {
-        console.error('❌ No current event found and no recent events available');
+        console.error('❌ No current event found and no recent events available for company');
         return null;
       }
     }

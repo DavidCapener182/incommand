@@ -17,7 +17,7 @@ interface StadiumSecurityCardProps {
 
 export default function StadiumSecurityCard({ className }: StadiumSecurityCardProps) {
   const data = mockEventData.football
-  
+
   // Provide defaults for missing properties
   const arrests = data.arrests || 0
   const securityAlerts = data.securityAlerts || 0

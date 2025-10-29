@@ -18,7 +18,7 @@ interface PublicSafetyCardProps {
 
 export default function PublicSafetyCard({ className }: PublicSafetyCardProps) {
   const data = mockEventData.parade
-  
+
   // Provide defaults for missing properties
   const publicSafetyIncidents = data.publicSafetyIncidents || 0
   const missingPersonsLogged = data.missingPersons?.logged || 0

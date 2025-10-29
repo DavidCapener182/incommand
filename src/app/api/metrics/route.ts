@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const [{ count: ticketCount }, { count: organizationCount }, { count: invoiceCount }, { count: incidentCount }] = await Promise.all([
       context.serviceClient.from('support_tickets' as any).select('id', { count: 'exact', head: true }),
       context.serviceClient.from('organizations' as any).select('id', { count: 'exact', head: true }),
-      context.serviceClient.from('invoices' as any).select('id', { count: 'exact', head: true }),
+      context.serviceClient.from('invoices').select('id', { count: 'exact', head: true }),
       context.serviceClient.from('incident_reviews' as any).select('id', { count: 'exact', head: true }),
     ])
 

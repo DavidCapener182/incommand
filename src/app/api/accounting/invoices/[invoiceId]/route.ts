@@ -31,7 +31,7 @@ export async function PATCH(
     if (parsed.data.dueDate) updates.due_date = parsed.data.dueDate
 
     const { data, error } = await context.serviceClient
-      .from('invoices' as any)
+      .from('invoices')
       .update(updates)
       .eq('id', params.invoiceId)
       .select('*')
@@ -42,7 +42,7 @@ export async function PATCH(
     }
 
     await recordAdminAudit(context.serviceClient, {
-      organizationId: data.organization_id,
+      organizationId: data.organization_id || '',
       actorId: context.user.id,
       action: 'update_invoice',
       resourceType: 'invoices',

@@ -33,6 +33,7 @@
   "exclude": [
     "node_modules",
     "scripts",
-    "src/components/__tests__/**/*"
+    "src/components/__tests__/**/*",
+    "supabase/functions/**/*"
   ]
 }

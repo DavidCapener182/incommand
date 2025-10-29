@@ -34,11 +34,47 @@ export default function EventsSettingsPage() {
       setLoading(true);
     }
     setError(null);
-    // Fetch all current events (should be 0 or 1, but handle >1)
+
+    // Get user's company_id for proper data isolation
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user?.id) {
+      setError('No authenticated user found');
+      setCurrentEvent(null);
+      setSelectedEvent(null);
+      setPastEvents([]);
+      if (background) {
+        setIsRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      setError('Failed to load user profile or company association');
+      setCurrentEvent(null);
+      setSelectedEvent(null);
+      setPastEvents([]);
+      if (background) {
+        setIsRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Fetch current events with company_id filter
     const { data: current, error: currentError } = await supabase
       .from('events')
       .select('*')
-      .eq('is_current', true);
+      .eq('is_current', true)
+      .eq('company_id', profile.company_id);
     if (currentError) {
       setError(currentError.message);
       setCurrentEvent(null);
@@ -54,11 +90,12 @@ export default function EventsSettingsPage() {
       setCurrentEvent(current[0]);
       setSelectedEvent(current[0]);
     }
-    // Fetch past events
+    // Fetch past events with company_id filter
     const { data: past, error: pastError } = await supabase
       .from('events')
       .select('*')
       .eq('is_current', false)
+      .eq('company_id', profile.company_id)
       .order('event_date', { ascending: false });
     setPastEvents(past || []);
     if (pastError) setError(pastError.message);

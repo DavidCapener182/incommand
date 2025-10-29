@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const format = (url.searchParams.get('format') ?? 'json').toLowerCase()
 
     let query = context.serviceClient
-      .from('invoices' as any)
+      .from('invoices')
       .select('id, organization_id, status, total_amount, currency, issued_date, due_date, payment_reference, line_items')
       .order('issued_date', { ascending: false })
 

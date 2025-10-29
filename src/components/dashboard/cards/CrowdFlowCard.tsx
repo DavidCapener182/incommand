@@ -20,7 +20,7 @@ interface CrowdFlowCardProps {
 export default function CrowdFlowCard({ className }: CrowdFlowCardProps) {
   const { eventType } = useEventContext()
   const data = eventType === 'festival' ? mockEventData.festival : mockEventData.parade
-  
+
   // Provide defaults for missing properties
   const flowRate = data.flowRate || 'High'
   const crowdDensityZones = data.crowdDensityZones || [

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     const debits = (entries ?? []).filter((entry: any) => entry.type === 'debit').reduce((sum: number, entry: any) => sum + Number(entry.amount), 0)
 
     const { data: outstandingInvoices } = await context.serviceClient
-      .from('invoices' as any)
+      .from('invoices')
       .select('total_amount')
       .eq('organization_id', resolvedOrg)
       .in('status', ['pending', 'overdue'])
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await context.serviceClient
-      .from('ledger_entries' as any)
+      .from('ledger_entries')
       .insert({
         organization_id: resolvedOrg,
         date: parsed.data.date,

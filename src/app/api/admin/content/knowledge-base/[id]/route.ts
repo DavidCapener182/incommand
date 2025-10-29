@@ -46,7 +46,7 @@ export async function PATCH(
     }
 
     const { data, error } = await context.serviceClient
-      .from('knowledge_base' as any)
+      .from('knowledge_base')
       .update(updates)
       .eq('id', params.id)
       .select('*')
@@ -75,7 +75,7 @@ export async function DELETE(
 ) {
   return withAdminAuth(request, 'content_editor', async (context) => {
     const { data, error } = await context.serviceClient
-      .from('knowledge_base' as any)
+      .from('knowledge_base')
       .update({ status: 'archived' })
       .eq('id', params.id)
       .select('organization_id')

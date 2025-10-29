@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await context.serviceClient
-      .from('organizations' as any)
+      .from('companies')
       .insert({
         name: parsed.data.name,
         slug: parsed.data.slug,
@@ -75,11 +75,11 @@ export async function POST(request: NextRequest) {
     }
 
     await recordAdminAudit(context.serviceClient, {
-      organizationId: data.id,
+      organizationId: data?.id || '',
       actorId: context.user.id,
       action: 'create_organization',
       resourceType: 'organizations',
-      resourceId: data.id,
+      resourceId: data?.id || '',
       changes: data,
     })
 

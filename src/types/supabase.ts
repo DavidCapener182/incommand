@@ -3507,6 +3507,132 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        subscription_id: string | null // format: uuid
+        issued_date: string // format: timestamp with time zone
+        due_date: string | null // format: timestamp with time zone
+        status: string // format: text
+        line_items: Json // format: jsonb
+        total_amount: number // format: numeric
+        currency: string // format: text
+        payment_reference: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        subscription_id?: string | null // format: uuid
+        issued_date?: string // format: timestamp with time zone
+        due_date?: string | null // format: timestamp with time zone
+        status?: string // format: text
+        line_items: Json // format: jsonb
+        total_amount: number // format: numeric
+        currency?: string // format: text
+        payment_reference?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id?: string // format: uuid
+        subscription_id?: string | null // format: uuid
+        issued_date?: string // format: timestamp with time zone
+        due_date?: string | null // format: timestamp with time zone
+        status?: string // format: text
+        line_items?: Json // format: jsonb
+        total_amount?: number // format: numeric
+        currency?: string // format: text
+        payment_reference?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      ledger_entries: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        date: string // format: date
+        type: string // format: text
+        account_code: string // format: text
+        description: string // format: text
+        amount: number // format: numeric
+        currency: string // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        date: string // format: date
+        type: string // format: text
+        account_code: string // format: text
+        description: string // format: text
+        amount: number // format: numeric
+        currency?: string // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id?: string // format: uuid
+        date?: string // format: date
+        type?: string // format: text
+        account_code?: string // format: text
+        description?: string // format: text
+        amount?: number // format: numeric
+        currency?: string // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      knowledge_base: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        title: string // format: text
+        body: string // format: text
+        status: string // format: text
+        author_id: string | null // format: uuid
+        tags: string[] // format: text[]
+        version: number // format: integer
+        published_at: string | null // format: timestamp with time zone
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string // format: uuid
+        title: string // format: text
+        body: string // format: text
+        status?: string // format: text
+        author_id?: string | null // format: uuid
+        tags?: string[] // format: text[]
+        version?: number // format: integer
+        published_at?: string | null // format: timestamp with time zone
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id?: string // format: uuid
+        title?: string // format: text
+        body?: string // format: text
+        status?: string // format: text
+        author_id?: string | null // format: uuid
+        tags?: string[] // format: text[]
+        version?: number // format: integer
+        published_at?: string | null // format: timestamp with time zone
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
       inquest_organizations: {
         Row: {
         address: string | null // format: text
@@ -5463,48 +5589,6 @@ export type Database = {
         }
         Relationships: []
       }
-      support_tickets: {
-        Row: {
-        assigned_to: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        category: string // format: text
-        company_id: string | null // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        created_at: string | null // format: timestamp with time zone
-        id: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority: string // format: text
-        resolved_at: string | null // format: timestamp with time zone
-        status: string // format: text
-        subject: string // format: text
-        updated_at: string | null // format: timestamp with time zone
-        user_id: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        }
-        Insert: {
-        assigned_to?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        category?: string // format: text
-        company_id?: string | null // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        created_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority?: string // format: text
-        resolved_at?: string | null // format: timestamp with time zone
-        status?: string // format: text
-        subject: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        user_id?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        }
-        Update: {
-        assigned_to?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        category?: string // format: text
-        company_id?: string | null // Note: This is a Foreign Key to `companies.id`.<fk table='companies' column='id'/> | format: uuid
-        created_at?: string | null // format: timestamp with time zone
-        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
-        priority?: string // format: text
-        resolved_at?: string | null // format: timestamp with time zone
-        status?: string // format: text
-        subject?: string // format: text
-        updated_at?: string | null // format: timestamp with time zone
-        user_id?: string | null // Note: This is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/> | format: uuid
-        }
-        Relationships: []
-      }
       system_health_snapshots: {
         Row: {
         active_connections: number | null // format: integer
@@ -6249,6 +6333,69 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id: string // format: uuid
+        role_id: string // format: uuid
+        organization_id: string // format: uuid
+        assigned_by: string | null // format: uuid
+        assigned_at: string // format: timestamp with time zone
+        expires_at: string | null // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id: string // format: uuid
+        role_id: string // format: uuid
+        organization_id: string // format: uuid
+        assigned_by?: string | null // format: uuid
+        assigned_at?: string // format: timestamp with time zone
+        expires_at?: string | null // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id?: string // format: uuid
+        role_id?: string // format: uuid
+        organization_id?: string // format: uuid
+        assigned_by?: string | null // format: uuid
+        assigned_at?: string // format: timestamp with time zone
+        expires_at?: string | null // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      roles: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id: string | null // format: uuid
+        name: string // format: text
+        description: string | null // format: text
+        permissions: string[] // format: text[]
+        is_system_role: boolean // format: boolean
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id?: string | null // format: uuid
+        name: string // format: text
+        description?: string | null // format: text
+        permissions: string[] // format: text[]
+        is_system_role?: boolean // format: boolean
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        organization_id?: string | null // format: uuid
+        name?: string // format: text
+        description?: string | null // format: text
+        permissions?: string[] // format: text[]
+        is_system_role?: boolean // format: boolean
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
       wristband_types: {
         Row: {
         available_quantity: number | null // format: integer
@@ -6279,6 +6426,51 @@ export type Database = {
         updated_at?: string // format: timestamp with time zone
         wristband_color?: string // format: text
         wristband_name?: string // format: text
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id: string | null // format: uuid
+        company_id: string | null // format: uuid
+        subject: string // format: text
+        status: string // format: text
+        priority: string // format: text
+        category: string // format: text
+        created_at: string | null // format: timestamp with time zone
+        updated_at: string | null // format: timestamp with time zone
+        resolved_at: string | null // format: timestamp with time zone
+        assigned_to: string | null // format: uuid
+        organization_id: string | null // format: uuid
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id?: string | null // format: uuid
+        company_id?: string | null // format: uuid
+        subject: string // format: text
+        status: string // format: text
+        priority: string // format: text
+        category: string // format: text
+        created_at?: string | null // format: timestamp with time zone
+        updated_at?: string | null // format: timestamp with time zone
+        resolved_at?: string | null // format: timestamp with time zone
+        assigned_to?: string | null // format: uuid
+        organization_id?: string | null // format: uuid
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        user_id?: string | null // format: uuid
+        company_id?: string | null // format: uuid
+        subject?: string // format: text
+        status?: string // format: text
+        priority?: string // format: text
+        category?: string // format: text
+        created_at?: string | null // format: timestamp with time zone
+        updated_at?: string | null // format: timestamp with time zone
+        resolved_at?: string | null // format: timestamp with time zone
+        assigned_to?: string | null // format: uuid
+        organization_id?: string | null // format: uuid
         }
         Relationships: []
       }

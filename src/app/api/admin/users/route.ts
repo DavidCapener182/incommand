@@ -42,7 +42,7 @@ async function getOrCreateOrganizationRole(
   const { data: existingRole, error: existingError } = await serviceClient
     .from('roles' as any)
     .select('id')
-    .eq('organization_id', organizationId)
+    .eq('company_id', organizationId)
     .eq('name', role)
     .maybeSingle()
 
@@ -57,7 +57,7 @@ async function getOrCreateOrganizationRole(
   const { data, error } = await serviceClient
     .from('roles' as any)
     .insert({
-      organization_id: organizationId,
+      company_id: organizationId,
       name: role,
       description: `${role.replace('_', ' ')} role`,
       permissions: ROLE_PERMISSIONS[role] ?? [],
@@ -75,14 +75,14 @@ async function getOrCreateOrganizationRole(
 
 async function ensureMembership(serviceClient: any, organizationId: string, userId: string) {
   const { error } = await serviceClient
-    .from('organization_members' as any)
+    .from('company_members' as any)
     .upsert(
       {
-        organization_id: organizationId,
+        company_id: organizationId,
         user_id: userId,
         is_active: true,
       },
-      { onConflict: 'organization_id,user_id' }
+      { onConflict: 'company_id,user_id' }
     )
 
   if (error) {
@@ -102,9 +102,9 @@ export async function GET(request: NextRequest) {
     const includeInactive = url.searchParams.get('includeInactive') === 'true'
 
     const { data: members, error } = await context.serviceClient
-      .from('organization_members' as any)
-      .select('id, organization_id, user_id, is_owner, is_active, joined_at, last_active_at, custom_permissions')
-      .eq('organization_id', resolvedOrg)
+      .from('company_members' as any)
+      .select('id, company_id, user_id, is_owner, is_active, joined_at, last_active_at, custom_permissions')
+      .eq('company_id', resolvedOrg)
       .order('joined_at', { ascending: false })
 
     if (error) {
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
       const { data: roles, error: rolesError } = await context.serviceClient
         .from('user_roles' as any)
         .select('user_id, roles:roles(name)')
-        .eq('organization_id', resolvedOrg)
+        .eq('company_id', resolvedOrg)
         .in('user_id', userIds)
 
       if (rolesError) {
@@ -198,14 +198,14 @@ export async function POST(request: NextRequest) {
 
           const payload = roleIds.map((roleId) => ({
             user_id: operation.userId,
-            organization_id: resolvedOrg,
+            company_id: resolvedOrg,
             role_id: roleId,
             assigned_by: context.user.id,
           }))
 
           const { error } = await context.serviceClient
             .from('user_roles' as any)
-            .upsert(payload, { onConflict: 'user_id,role_id,organization_id' })
+            .upsert(payload, { onConflict: 'user_id,role_id,company_id' })
 
           if (error) {
             throw error
@@ -223,9 +223,9 @@ export async function POST(request: NextRequest) {
           results.push({ type: operation.type, status: 'success' })
         } else if (operation.type === 'remove_member') {
           const { error: updateError } = await context.serviceClient
-            .from('organization_members')
+            .from('company_members' as any)
             .update({ is_active: false })
-            .eq('organization_id', resolvedOrg)
+            .eq('company_id', resolvedOrg)
             .eq('user_id', operation.userId)
 
           if (updateError) {
@@ -235,14 +235,14 @@ export async function POST(request: NextRequest) {
           await context.serviceClient
             .from('user_roles' as any)
             .delete()
-            .eq('organization_id', resolvedOrg)
+            .eq('company_id', resolvedOrg)
             .eq('user_id', operation.userId)
 
           await recordAdminAudit(context.serviceClient, {
             organizationId: resolvedOrg,
             actorId: context.user.id,
             action: 'remove_member',
-            resourceType: 'organization_members',
+            resourceType: 'company_members',
             resourceId: operation.userId,
             changes: { is_active: false },
           })
@@ -257,11 +257,11 @@ export async function POST(request: NextRequest) {
             .upsert(
               {
                 user_id: operation.userId,
-                organization_id: resolvedOrg,
+                company_id: resolvedOrg,
                 role_id: adminRoleId,
                 assigned_by: context.user.id,
               },
-              { onConflict: 'user_id,role_id,organization_id' }
+              { onConflict: 'user_id,role_id,company_id' }
             )
 
           if (delegateError) {
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
           const invitation = await context.serviceClient.auth.admin.inviteUserByEmail(operation.email, {
             data: {
               invited_by: context.user.id,
-              organization_id: resolvedOrg,
+              company_id: resolvedOrg,
             },
           })
 
@@ -300,13 +300,13 @@ export async function POST(request: NextRequest) {
 
             const payload = roleIds.map((roleId) => ({
               user_id: newUserId,
-              organization_id: resolvedOrg,
+              company_id: resolvedOrg,
               role_id: roleId,
               assigned_by: context.user.id,
             }))
 
             await context.serviceClient.from('user_roles' as any).upsert(payload, {
-              onConflict: 'user_id,role_id,organization_id',
+              onConflict: 'user_id,role_id,company_id',
             })
           }
 
@@ -314,7 +314,7 @@ export async function POST(request: NextRequest) {
             organizationId: resolvedOrg,
             actorId: context.user.id,
             action: 'invite_member',
-            resourceType: 'organization_members',
+            resourceType: 'company_members',
             resourceId: invitation.data?.user?.id ?? operation.email,
             changes: { roles: operation.roles, email: operation.email },
           })

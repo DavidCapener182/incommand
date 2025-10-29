@@ -17,7 +17,7 @@ interface MultiStageCardProps {
 
 export default function MultiStageCard({ className }: MultiStageCardProps) {
   const data = mockEventData.festival
-  
+
   // Provide defaults for missing properties
   const stageDetails = data.stageDetails || [
     { name: 'Main Stage', status: 'active', artist: 'Headliner' },

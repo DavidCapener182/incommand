@@ -30,7 +30,7 @@ function forbidden(message: string): AdminContextError {
 
 async function ensureSystemRoles(serviceClient: SupabaseClient<Database>) {
   const { data: existingRoles, error: existingRolesError } = await serviceClient
-    .from('roles' as any)
+    .from('roles')
     .select('name')
     .is('organization_id', null)
     .in('name', ADMIN_ROLES as unknown as string[])
@@ -82,8 +82,8 @@ async function loadAdminRoles(
   const organizationIds = activeMemberships.map((membership: any) => membership.organization_id).filter(Boolean)
 
   const { data: roleAssignments, error: roleAssignmentsError } = await serviceClient
-    .from('user_roles' as any)
-    .select('organization_id, roles:roles(name)')
+    .from('user_roles')
+    .select('organization_id, role_id')
     .eq('user_id', userId)
 
   if (roleAssignmentsError) {
@@ -94,10 +94,23 @@ async function loadAdminRoles(
   const resolvedRoles: AdminRole[] = []
 
   for (const assignment of roleAssignments ?? []) {
-    const roleName = assignment?.roles?.name
-    if (!roleName) {
+    if (!assignment.role_id) {
       continue
     }
+
+    // Get the role name by querying the roles table
+    const { data: role, error: roleError } = await serviceClient
+      .from('roles')
+      .select('name')
+      .eq('id', assignment.role_id)
+      .single()
+
+    if (roleError || !role) {
+      logger.warn('Failed to load role details', { roleId: assignment.role_id, error: roleError })
+      continue
+    }
+
+    const roleName = role.name
 
     try {
       resolvedRoles.push(normalizeRole(roleName))
@@ -116,12 +129,22 @@ async function createAdminContext(request: NextRequest): Promise<AdminContextRes
 
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
     if (sessionError || !sessionData.session) {
-      logger.warn('Admin auth: no active session', sessionError)
+      logger.warn('Admin auth: no active session', { error: sessionError, hasSession: !!sessionData.session })
       return { response: NextResponse.json({ error: 'Authentication required' }, { status: 401 }) }
     }
 
     const session = sessionData.session
     const user = session.user
+
+    // Restrict back office access to specific email only (company admins use /settings)
+    const allowedBackOfficeEmail = 'david@incommand.uk'
+    if (user.email !== allowedBackOfficeEmail) {
+      logger.warn('Back office access denied - unauthorized email', { 
+        attemptedEmail: user.email, 
+        allowedEmail: allowedBackOfficeEmail 
+      })
+      return { response: NextResponse.json({ error: 'Access denied. Back office access is restricted to system administrators.' }, { status: 403 }) }
+    }
 
     const sessionRevoked = user.user_metadata?.session_revoked === true
     if (sessionRevoked) {

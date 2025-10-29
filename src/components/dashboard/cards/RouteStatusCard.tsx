@@ -18,7 +18,7 @@ interface RouteStatusCardProps {
 
 export default function RouteStatusCard({ className }: RouteStatusCardProps) {
   const data = mockEventData.parade
-  
+
   // Provide defaults for missing properties
   const routeStatus = data.routeStatus || {
     completedDistance: '2.5km',

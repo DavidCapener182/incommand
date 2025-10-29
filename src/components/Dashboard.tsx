@@ -893,33 +893,24 @@ export default function Dashboard() {
     setCurrentEvent(null);
     
     try {
-      // First try to fetch without company_id filter (like Navigation component does)
-      console.log('Trying to fetch current event without company_id filter...');
-      let { data, error } = await supabase
+      // SECURITY: Always fetch with company_id filter for proper data isolation
+      if (!companyId) {
+        console.error('No company_id available - cannot fetch events');
+        setError('User not associated with any company');
+        setLoadingCurrentEvent(false);
+        setIsRefreshing(false);
+        return;
+      }
+
+      console.log('Fetching current event with company_id filter:', companyId);
+      const { data, error } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
+        .eq('company_id', companyId)
         .single();
       
-      console.log('Event fetch result (no company_id filter):', { data, error });
-      
-      // If that fails and we have a company_id, try with company_id filter
-      if ((error || !data) && companyId) {
-        console.log('Trying with company_id filter:', companyId);
-        const { data: companyData, error: companyError } = await supabase
-          .from('events')
-          .select('*, event_name, venue_name, event_type, event_description, support_acts')
-          .eq('is_current', true)
-          .eq('company_id', companyId)
-          .single();
-        
-        console.log('Event fetch result (with company_id filter):', { companyData, companyError });
-        
-        if (companyData) {
-          data = companyData;
-          error = null;
-        }
-      }
+      console.log('Event fetch result (with company_id filter):', { data, error });
 
       if (data) {
         data.venue_name = data.venue_name
@@ -1106,32 +1097,22 @@ export default function Dashboard() {
     const fetchEventTimings = async () => {
       setIsRefreshing(true);
       
-      // First try without company_id filter
-      let { data: event, error } = await supabase
+      // SECURITY: Always fetch with company_id filter for proper data isolation
+      if (!companyId) {
+        console.error('No company_id available - cannot fetch event timings');
+        setIsRefreshing(false);
+        return;
+      }
+
+      console.log('Fetching event timings with company_id filter:', companyId);
+      const { data: event, error } = await supabase
         .from('events')
         .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
         .eq('is_current', true)
+        .eq('company_id', companyId)
         .single();
       
-      console.log('Event timings fetch result (no company_id filter):', { event, error });
-      
-      // If that fails and we have a company_id, try with company_id filter
-      if ((error || !event) && companyId) {
-        console.log('Trying event timings with company_id filter:', companyId);
-        const { data: companyEvent, error: companyError } = await supabase
-          .from('events')
-          .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
-          .eq('is_current', true)
-          .eq('company_id', companyId)
-          .single();
-        
-        console.log('Event timings fetch result (with company_id filter):', { companyEvent, companyError });
-        
-        if (companyEvent) {
-          event = companyEvent;
-          error = null;
-        }
-      }
+      console.log('Event timings fetch result (with company_id filter):', { event, error });
       if (event) {
         const now = new Date();
         const currentTimeNumber = now.getHours() * 60 + now.getMinutes();

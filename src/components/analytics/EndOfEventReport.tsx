@@ -199,10 +199,27 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
     setError(null)
     setLoading(true)
     try {
+      // Get user's company_id for additional security validation
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user?.id) {
+        throw new Error('No authenticated user found');
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.user.id)
+        .single();
+
+      if (profileError || !profile?.company_id) {
+        throw new Error('Failed to fetch user profile or company association');
+      }
+
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select('*')
         .eq('id', eventId)
+        .eq('company_id', profile.company_id)
         .single()
 
       if (eventError) {

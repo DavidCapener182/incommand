@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const organizationId = url.searchParams.get('organizationId')
 
     let query = context.serviceClient
-      .from('knowledge_base' as any)
+      .from('knowledge_base')
       .select('*')
       .order('updated_at', { ascending: false })
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await context.serviceClient
-      .from('knowledge_base' as any)
+      .from('knowledge_base')
       .insert({
         organization_id: organizationId,
         title: parsed.data.title,

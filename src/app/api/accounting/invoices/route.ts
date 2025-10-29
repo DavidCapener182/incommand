@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status')
 
     let query = context.serviceClient
-      .from('invoices' as any)
+      .from('inquest_invoices')
       .select('*')
       .order('issued_date', { ascending: false })
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const totalAmount = parsed.data.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
 
     const { data, error } = await context.serviceClient
-      .from('invoices' as any)
+      .from('invoices')
       .insert({
         organization_id: resolvedOrg,
         subscription_id: parsed.data.subscriptionId ?? null,

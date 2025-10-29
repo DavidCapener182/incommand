@@ -66,15 +66,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await context.serviceClient
-      .from('support_tickets' as any)
+      .from('support_tickets')
       .insert({
         organization_id: resolvedOrg,
         subject: parsed.data.subject,
-        description: parsed.data.description,
         priority: parsed.data.priority,
         status: 'open',
-        requester_id: parsed.data.requesterId ?? context.user.id,
-        incident_id: parsed.data.incidentId ?? null,
+        category: 'general',
+        user_id: parsed.data.requesterId ?? context.user.id,
       })
       .select('*')
       .single()
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
       actorId: context.user.id,
       action: 'create_support_ticket',
       resourceType: 'support_tickets',
-      resourceId: data.id,
+      resourceId: data?.id || '',
       changes: data,
     })
 
