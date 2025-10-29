@@ -24,7 +24,7 @@ export default function LoginPage() {
   const redirectAfterLogin = useCallback((email?: string | null) => {
     const normalizedEmail = email?.toLowerCase()
     if (normalizedEmail === 'david@incommand.uk') {
-      router.push('/admin')
+      router.push('/dashboard')
     } else {
       router.push('/incidents')
     }
