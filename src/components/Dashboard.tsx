@@ -665,6 +665,9 @@ export default function Dashboard() {
   const searchParams = useSearchParams()
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  
+  // Combined loading state - wait for both Dashboard and EventContext to be ready
+  const isFullyReady = !loadingCurrentEvent && isEventContextReady
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
@@ -1400,8 +1403,8 @@ export default function Dashboard() {
 
         {/* Mobile view */}
         <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
-          {(loadingCurrentEvent || !isEventContextReady) && <p className="p-3">Loading event...</p>}
-          {!loadingCurrentEvent && isEventContextReady && currentEvent && (
+          {!isFullyReady && <p className="p-3">Loading event...</p>}
+          {isFullyReady && currentEvent && (
             <div>
               <div className="flex justify-between items-center p-3">
                 <div className="flex items-center">
@@ -1445,7 +1448,7 @@ export default function Dashboard() {
               )}
             </div>
           )}
-          {!loadingCurrentEvent && !currentEvent && (
+          {isFullyReady && !currentEvent && (
             <div className="text-center py-4">
                <h3 className="text-sm font-medium text-gray-900">
                 No Current Event
@@ -1503,7 +1506,7 @@ export default function Dashboard() {
     {/* Mobile-only Venue Occupancy */}
     <div className="block md:hidden">
       <div className="mb-4">
-        {loadingCurrentEvent ? (
+        {!isFullyReady ? (
           <CardSkeleton />
         ) : (
           <motion.div
@@ -1532,7 +1535,7 @@ export default function Dashboard() {
 
       {/* Stat Grid */}
       <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 pt-3 pb-4">
-        {loadingCurrentEvent ? (
+        {!isFullyReady ? (
           Array.from({ length: 8 }).map((_, index) => (
             <StatCardSkeleton key={index} />
           ))
@@ -1717,7 +1720,7 @@ export default function Dashboard() {
 
         {/* Desktop Grid - Event-Specific Dashboard */}
         <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
-          {loadingCurrentEvent || !isEventContextReady ? (
+          {!isFullyReady ? (
             Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
           ) : eventType === 'concert' ? (
             /* 
