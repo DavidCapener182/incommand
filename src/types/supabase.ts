@@ -5370,6 +5370,54 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_transactions: {
+        Row: {
+        amount: number | null // format: numeric
+        created_at: string | null // format: timestamp with time zone
+        currency: string | null // format: character varying
+        description: string | null // format: text
+        external_id: string | null // format: text
+        gateway: string | null // format: text
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id: string | null // format: uuid
+        metadata: Json | null // format: jsonb
+        organization_id: string | null // format: uuid
+        processed_at: string | null // format: timestamp with time zone
+        status: string | null // format: character varying
+        updated_at: string | null // format: timestamp with time zone
+        }
+        Insert: {
+        amount?: number | null // format: numeric
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: character varying
+        description?: string | null // format: text
+        external_id?: string | null // format: text
+        gateway?: string | null // format: text
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id?: string | null // format: uuid
+        metadata?: Json | null // format: jsonb
+        organization_id?: string | null // format: uuid
+        processed_at?: string | null // format: timestamp with time zone
+        status?: string | null // format: character varying
+        updated_at?: string | null // format: timestamp with time zone
+        }
+        Update: {
+        amount?: number | null // format: numeric
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: character varying
+        description?: string | null // format: text
+        external_id?: string | null // format: text
+        gateway?: string | null // format: text
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id?: string | null // format: uuid
+        metadata?: Json | null // format: jsonb
+        organization_id?: string | null // format: uuid
+        processed_at?: string | null // format: timestamp with time zone
+        status?: string | null // format: character varying
+        updated_at?: string | null // format: timestamp with time zone
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
         billing_period: string // format: text
