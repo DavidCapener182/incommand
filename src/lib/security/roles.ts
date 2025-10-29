@@ -3,6 +3,7 @@ import type { Database } from '@/types/supabase'
 import { getServiceSupabaseClient } from '../supabaseServer'
 
 const PLATFORM_SUPERADMIN_EMAILS = new Set(['david@incommand.uk'])
+const PLATFORM_SUPERADMIN_DEFAULT_COMPANY = 'InCommand Platform'
 
 export function normalizeEmail(email?: string | null): string | null {
   return email ? email.trim().toLowerCase() : null
@@ -42,7 +43,7 @@ export async function ensurePlatformSuperadminProfile(
 
   const { data: profile, error } = await serviceClient
     .from('profiles')
-    .select('id, role, full_name')
+    .select('id, role, full_name, company, company_id, display_name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -51,15 +52,27 @@ export async function ensurePlatformSuperadminProfile(
     return 'superadmin'
   }
 
-  const fullName = (user.user_metadata as Record<string, unknown> | null)?.full_name
-  const payload = {
-    id: user.id,
-    email: normalizedEmail,
-    role: 'superadmin' as const,
-    full_name: typeof fullName === 'string' ? fullName : profile?.full_name ?? null,
-  }
+  const userMetadata = (user.user_metadata ?? {}) as Record<string, unknown>
+  const metadataFullName =
+    typeof userMetadata.full_name === 'string' && userMetadata.full_name.trim().length > 0
+      ? userMetadata.full_name.trim()
+      : null
+  const metadataCompany =
+    typeof userMetadata.company === 'string' && userMetadata.company.trim().length > 0
+      ? userMetadata.company.trim()
+      : null
 
   if (!profile) {
+    const payload: Database['public']['Tables']['profiles']['Insert'] = {
+      id: user.id,
+      email: normalizedEmail,
+      role: 'superadmin',
+      full_name: metadataFullName ?? null,
+      company: metadataCompany ?? PLATFORM_SUPERADMIN_DEFAULT_COMPANY,
+      company_id: null,
+      display_name: metadataFullName ?? null,
+    }
+
     const { error: insertError } = await serviceClient.from('profiles').upsert(payload)
     if (insertError) {
       console.error('Platform superadmin profile upsert failed:', insertError)
