@@ -1,6 +1,11 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import {
+  ensurePlatformSuperadminProfile,
+  logPlatformSuperadminRecognition,
+  resolveEffectiveRole,
+} from '@/lib/security/roles'
 
 // Standardized error messages that don't expose sensitive information
 const ERROR_MESSAGES = {
@@ -158,11 +163,11 @@ export async function middleware(req: NextRequest) {
         }
 
         // Fetch user role from profiles table (no caching)
-        const { data: profile, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
 
         // Log minimal information for debugging without exposing sensitive data
         console.log('Middleware - User authentication check completed')
@@ -177,8 +182,14 @@ export async function middleware(req: NextRequest) {
           return NextResponse.redirect(loginUrl)
         }
 
-        if (!profile) {
-          // No profile found, redirect to login
+        const effectiveRole = resolveEffectiveRole(profileData?.role, session.user)
+
+        if (effectiveRole === 'superadmin') {
+          await ensurePlatformSuperadminProfile(session.user)
+          logPlatformSuperadminRecognition(session.user, 'Middleware')
+        }
+
+        if (!profileData && effectiveRole !== 'superadmin') {
           const loginUrl = new URL('/login', req.url)
           loginUrl.searchParams.set('error', ERROR_MESSAGES.PROFILE_NOT_FOUND)
           return NextResponse.redirect(loginUrl)
@@ -186,7 +197,7 @@ export async function middleware(req: NextRequest) {
 
         // Check if user has admin or superadmin role
         console.log('Middleware - Role verification completed')
-        if (profile.role !== 'admin' && profile.role !== 'superadmin') {
+        if (effectiveRole !== 'admin' && effectiveRole !== 'superadmin') {
           // User doesn't have admin privileges, redirect to login
           const loginUrl = new URL('/login', req.url)
           loginUrl.searchParams.set('error', ERROR_MESSAGES.ACCESS_DENIED)

@@ -572,7 +572,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, role: userRole, loading: authLoading } = useAuth();
   const { updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
   
@@ -660,7 +660,6 @@ export default function Dashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loadingCurrentEvent, setLoadingCurrentEvent] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
@@ -886,38 +885,42 @@ export default function Dashboard() {
   }, [])
 
   const fetchCurrentEvent = useCallback(async () => {
+    if (authLoading) {
+      return;
+    }
     console.log('Fetching current event...');
     setIsRefreshing(true);
     setLoadingCurrentEvent(true);
     setCurrentEvent(null);
-    
+
     try {
-      // First try to fetch without company_id filter (like Navigation component does)
-      console.log('Trying to fetch current event without company_id filter...');
-      let { data, error } = await supabase
+      if (userRole !== 'superadmin' && !companyId) {
+        console.warn('No company assigned to user - skipping current event fetch');
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
+        setCurrentEvent(null);
+        setLoadingCurrentEvent(false);
+        setIsRefreshing(false);
+        return;
+      }
+
+      let query = supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
-        .eq('is_current', true)
-        .single();
-      
-      console.log('Event fetch result (no company_id filter):', { data, error });
-      
-      // If that fails and we have a company_id, try with company_id filter
-      if ((error || !data) && companyId) {
-        console.log('Trying with company_id filter:', companyId);
-        const { data: companyData, error: companyError } = await supabase
-          .from('events')
-          .select('*, event_name, venue_name, event_type, event_description, support_acts')
-          .eq('is_current', true)
-          .eq('company_id', companyId)
-          .single();
-        
-        console.log('Event fetch result (with company_id filter):', { companyData, companyError });
-        
-        if (companyData) {
-          data = companyData;
-          error = null;
-        }
+        .eq('is_current', true);
+
+      if (userRole !== 'superadmin' && companyId) {
+        query = query.eq('company_id', companyId);
+      }
+
+      const { data, error } = await query.maybeSingle();
+
+      if (error && error.code && error.code !== 'PGRST116') {
+        console.error('Error fetching current event', error);
+        setError('Failed to load current event');
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
+        return;
       }
 
       if (data) {
@@ -933,10 +936,10 @@ export default function Dashboard() {
             const coords = await geocodeAddress(data.venue_address);
             setCoordinates(coords);
           } catch (error) {
-            logger.error('Error geocoding address', error, { 
-              component: 'Dashboard', 
+            logger.error('Error geocoding address', error, {
+              component: 'Dashboard',
               action: 'geocodeAddress',
-              venueAddress: data.venue_address 
+              venueAddress: data.venue_address
             });
             // Don't set error state for geocoding failures, just log them
           }
@@ -945,65 +948,21 @@ export default function Dashboard() {
           setCurrentEventId(null);
         }
       } else {
-        console.log('No event found with company_id filter, trying without company_id for superadmin...');
-        
-        // For superadmin users, try fetching without company_id filter
-        if (userRole === 'superadmin') {
-          try {
-            const { data: superadminData, error: superadminError } = await supabase
-              .from('events')
-              .select('*, event_name, venue_name, event_type, event_description, support_acts')
-              .eq('is_current', true)
-              .single();
-            
-            console.log('Superadmin event fetch result:', { superadminData, superadminError });
-            
-            if (superadminData) {
-              superadminData.venue_name = superadminData.venue_name
-                .split(' ')
-                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                .join(' ');
-              setCurrentEvent(superadminData);
-              setHasCurrentEvent(true);
-              setCurrentEventId(superadminData.id);
-              if (superadminData.venue_address) {
-                try {
-                  const coords = await geocodeAddress(superadminData.venue_address);
-                  setCoordinates(coords);
-                } catch (error) {
-                  logger.error('Error geocoding address', error, { 
-                    component: 'Dashboard', 
-                    action: 'geocodeAddress',
-                    venueAddress: superadminData.venue_address 
-                  });
-                }
-              }
-            } else {
-              setHasCurrentEvent(false);
-              setCurrentEventId(null);
-            }
-          } catch (superadminErr) {
-            console.error('Superadmin event fetch failed:', superadminErr);
-            setHasCurrentEvent(false);
-            setCurrentEventId(null);
-          }
-        } else {
-          setHasCurrentEvent(false);
-          setCurrentEventId(null);
-        }
+        setHasCurrentEvent(false);
+        setCurrentEventId(null);
       }
     } catch (err) {
-      logger.error('Unexpected error in fetchCurrentEvent', err, { 
-        component: 'Dashboard', 
+      logger.error('Unexpected error in fetchCurrentEvent', err, {
+        component: 'Dashboard',
         action: 'fetchCurrentEvent',
-        companyId 
+        companyId
       });
       setError('An unexpected error occurred');
     } finally {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
     }
-  }, [companyId, userRole]);
+  }, [authLoading, companyId, userRole]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1103,34 +1062,38 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchEventTimings = async () => {
+      if (authLoading) {
+        return;
+      }
+
+      if (userRole !== 'superadmin' && !companyId) {
+        setEventTimings([]);
+        setCurrentSlot(null);
+        setNextSlot(null);
+        setNextEvent(null);
+        setIsRefreshing(false);
+        return;
+      }
+
       setIsRefreshing(true);
-      
-      // First try without company_id filter
-      let { data: event, error } = await supabase
+
+      let query = supabase
         .from('events')
         .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
-        .eq('is_current', true)
-        .single();
-      
-      console.log('Event timings fetch result (no company_id filter):', { event, error });
-      
-      // If that fails and we have a company_id, try with company_id filter
-      if ((error || !event) && companyId) {
-        console.log('Trying event timings with company_id filter:', companyId);
-        const { data: companyEvent, error: companyError } = await supabase
-          .from('events')
-          .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
-          .eq('is_current', true)
-          .eq('company_id', companyId)
-          .single();
-        
-        console.log('Event timings fetch result (with company_id filter):', { companyEvent, companyError });
-        
-        if (companyEvent) {
-          event = companyEvent;
-          error = null;
-        }
+        .eq('is_current', true);
+
+      if (userRole !== 'superadmin' && companyId) {
+        query = query.eq('company_id', companyId);
       }
+
+      const { data: event, error } = await query.maybeSingle();
+
+      if (error && error.code && error.code !== 'PGRST116') {
+        console.error('Event timings fetch error', error);
+        setIsRefreshing(false);
+        return;
+      }
+
       if (event) {
         const now = new Date();
         const currentTimeNumber = now.getHours() * 60 + now.getMinutes();
@@ -1206,41 +1169,41 @@ export default function Dashboard() {
         const futureTimings = sortedTimings.filter(t => t.minutesSinceMidnight > currentTimeNumber);
         const nextFiveTimings = futureTimings.slice(0, 5).map((t, i) => ({ ...t, isNext: i === 0 }));
         setEventTimings(nextFiveTimings);
+      } else {
+        setEventTimings([]);
+        setCurrentSlot(null);
+        setNextSlot(null);
+        setNextEvent(null);
       }
       setIsRefreshing(false);
     };
     fetchEventTimings();
     const refreshTimer = setInterval(fetchEventTimings, 60000);
     return () => clearInterval(refreshTimer);
-  }, [companyId]);
+  }, [authLoading, companyId, userRole, eventType]);
 
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!user) return;
       console.log('Fetching company ID for user:', user.id);
-      
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .single();
-      
+
       console.log('Profile fetch result:', { profile, profileError });
-      
+
       if (profileError || !profile?.company_id) {
         console.error('Profile error or missing company_id:', { profileError, profile });
         setError('Could not determine your company. Please check your profile.');
+        setCompanyId(null);
         return;
       }
-      
+
       console.log('Setting company ID:', profile.company_id);
       setCompanyId(profile.company_id);
-      const { data: profileFull } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      setUserRole(profileFull?.role || null);
     };
     fetchCompanyId();
   }, [user]);

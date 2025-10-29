@@ -34,7 +34,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
     if (!loading && user && ['/login', '/signup'].includes(pathname)) {
-      router.push('/incidents');
+      const normalizedEmail = user.email?.toLowerCase();
+      if (normalizedEmail === 'david@incommand.uk') {
+        router.push('/dashboard');
+      } else {
+        router.push('/incidents');
+      }
     }
   }, [user, loading, pathname, router]);
 
