@@ -93,6 +93,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         // Map database event types to strategy event types
         const eventTypeMapping: Record<string, EventType> = {
           'Concert': 'concert',
+          'Football': 'football',
           'Parade': 'parade', 
           'Festival': 'festival',
           'Corporate': 'concert', // Map corporate events to concert strategy
