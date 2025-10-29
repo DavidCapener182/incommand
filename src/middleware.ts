@@ -106,11 +106,18 @@ export async function middleware(req: NextRequest) {
     // Get session for redirect logic
     const { data: { session } } = await supabase.auth.getSession()
     
-    // If user is logged in and visiting login or signup, redirect to incidents
+    // If user is logged in and visiting login or signup, redirect based on role
     // But allow them to stay on the landing page and other marketing pages
     if (session && ["/login", "/signup"].includes(pathname)) {
       const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = "/incidents"
+      
+      // Check if this is david@incommand.uk (superadmin) - redirect to admin
+      if (session.user.email === 'david@incommand.uk') {
+        redirectUrl.pathname = "/admin"
+      } else {
+        redirectUrl.pathname = "/incidents"
+      }
+      
       return NextResponse.redirect(redirectUrl)
     }
     
@@ -131,6 +138,13 @@ export async function middleware(req: NextRequest) {
     redirectUrl.pathname = "/login"
     redirectUrl.searchParams.set("redirectedFrom", pathname)
     redirectUrl.searchParams.set("message", "Please sign in to continue")
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // Special handling for david@incommand.uk - redirect to admin pages
+  if (session.user.email === 'david@incommand.uk' && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/'))) {
+    const redirectUrl = req.nextUrl.clone()
+    redirectUrl.pathname = "/admin"
     return NextResponse.redirect(redirectUrl)
   }
 
