@@ -1291,6 +1291,13 @@ export default function Dashboard() {
     }
   }, [isOccupancyModalOpen, currentEventId]);
 
+  // Special handling for david@incommand.uk - redirect to admin instead of showing event creation
+  if (!currentEvent && user?.email === 'david@incommand.uk') {
+    // Redirect to admin page for superadmin
+    window.location.href = '/admin';
+    return null;
+  }
+
   // Splash screen if no current event
   if (!currentEvent) {
     return (

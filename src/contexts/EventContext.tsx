@@ -103,16 +103,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
           'parade': 'parade'
         }
         
-        // Special handling: if event name contains football-related keywords, force football type
-        const eventName = event.event_name?.toLowerCase() || ''
-        const isFootballEvent = eventName.includes('football') || 
-                               eventName.includes('match') || 
-                               eventName.includes('stadium') ||
-                               eventName.includes('sport')
-        
-        // Determine event type based on database event_type and event name analysis
-        const detectedEventType = isFootballEvent ? 'football' : 
-                                 (eventTypeMapping[event.event_type] || 'concert')
+        // Use the actual database event_type only - no forcing or fallbacks
+        const detectedEventType = eventTypeMapping[event.event_type] || 'concert'
         setEventType(detectedEventType)
         setEventData(event)
         logger.debug('Current event loaded', { 
