@@ -86,3 +86,4 @@ export default function EditCompanyPage({ params }: { params: { id: string } }) 
 
 
 
+
