@@ -7,6 +7,8 @@ import { XMarkIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import TeamChat from './chat/TeamChat'
+import AdminSupportChat from './admin/support/AdminSupportChat'
+import { usePathname } from 'next/navigation'
 import AIChat from './chat/AIChat'
 import ChatTabs from './chat/ChatTabs'
 
@@ -186,6 +188,9 @@ export default function ChatPanel({
     }
   }
 
+  const pathname = usePathname() || ''
+  const isAdmin = pathname.startsWith('/admin')
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -284,19 +289,23 @@ export default function ChatPanel({
                   exit="exit"
                   className="h-full"
                 >
-                  {activeMode === 'team' ? (
-                    <TeamChat
-                      eventId={eventId}
-                      companyId={companyId}
-                      userId={user.id}
-                      userCallsign={user.user_metadata?.callsign || user.email?.split('@')[0] || 'User'}
-                    />
+                  {isAdmin ? (
+                    <AdminSupportChat />
                   ) : (
-                    <AIChat
-                      eventId={eventId}
-                      companyId={companyId}
-                      userId={user.id}
-                    />
+                    activeMode === 'team' ? (
+                      <TeamChat
+                        eventId={eventId}
+                        companyId={companyId}
+                        userId={user.id}
+                        userCallsign={user.user_metadata?.callsign || user.email?.split('@')[0] || 'User'}
+                      />
+                    ) : (
+                      <AIChat
+                        eventId={eventId}
+                        companyId={companyId}
+                        userId={user.id}
+                      />
+                    )
                   )}
                 </motion.div>
               </AnimatePresence>

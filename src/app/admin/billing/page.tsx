@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import { sa_billingOverview } from '@/hooks/useSuperAdmin';
+import GenerateInvoiceDialog from '@/components/admin/billing/GenerateInvoiceDialog'
+import CreatePlanDialog from '@/components/admin/billing/CreatePlanDialog'
+import SyncMarketingPlansButton from '@/components/admin/billing/SyncMarketingPlansButton'
+import { defaultMarketingPlans } from '@/data/marketingPlans'
 import { 
   CreditCardIcon, 
   CurrencyDollarIcon,
@@ -17,6 +21,26 @@ export default async function BillingPage() {
   if (role !== 'superadmin') redirect('/admin');
 
   const billing = await sa_billingOverview();
+  // Load plans from API (DB-backed if available)
+  let plans: any[] = []
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/billing/plans`, { cache: 'no-store' })
+    if (res.ok) {
+      const json = await res.json()
+      plans = json.plans ?? []
+    }
+  } catch {}
+  if (!plans || plans.length === 0) {
+    plans = defaultMarketingPlans.map(p => ({
+      id: p.code,
+      name: p.name,
+      code: p.code,
+      price_monthly: p.priceMonthly,
+      currency: 'GBP',
+      metadata: { features: p.features },
+      is_active: true,
+    }))
+  }
   
   // Use real data from billing overview
   const stats = billing.stats || {
@@ -119,9 +143,8 @@ export default async function BillingPage() {
         <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Invoices</h2>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-              Generate Invoice
-            </button>
+            {/* @ts-expect-error client component */}
+            <GenerateInvoiceDialog companies={(billing?.companies ?? []).map((c: any) => ({ id: c.id, name: c.name }))} />
           </div>
 
           {billing.invoices.length > 0 ? (
@@ -189,41 +212,30 @@ export default async function BillingPage() {
         <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Subscription Plans</h2>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-              Create Plan
-            </button>
+            {/* @ts-expect-error client component */}
+            <CreatePlanDialog />
           </div>
 
+          <div className="flex justify-end mb-4">
+            {/* @ts-expect-error client component */}
+            <SyncMarketingPlansButton />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="border border-gray-200 dark:border-[#2d437a] rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Trial</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Free</p>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <li>• 30-day trial period</li>
-                <li>• Basic features</li>
-                <li>• Email support</li>
-              </ul>
-            </div>
-
-            <div className="border border-gray-200 dark:border-[#2d437a] rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Basic</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">£29<span className="text-lg text-gray-500">/month</span></p>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <li>• All trial features</li>
-                <li>• Advanced analytics</li>
-                <li>• Priority support</li>
-              </ul>
-            </div>
-
-            <div className="border border-gray-200 dark:border-[#2d437a] rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Premium</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">£99<span className="text-lg text-gray-500">/month</span></p>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <li>• All basic features</li>
-                <li>• Custom integrations</li>
-                <li>• 24/7 support</li>
-              </ul>
-            </div>
+            {plans.length === 0 ? (
+              <div className="text-gray-500">No plans found.</div>
+            ) : (
+              plans.map((p: any) => (
+                <div key={p.id} className="border border-gray-200 dark:border-[#2d437a] rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{p.name}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">£{(p.price_monthly ?? 0).toString()}<span className="text-lg text-gray-500">/month</span></p>
+                  {p.metadata?.features && Array.isArray(p.metadata.features) ? (
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                      {p.metadata.features.map((f: string) => (<li key={f}>• {f}</li>))}
+                    </ul>
+                  ) : null}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

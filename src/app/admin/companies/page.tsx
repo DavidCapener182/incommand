@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import AddCompanyButton from '@/components/admin/companies/AddCompanyButton';
+import ViewCompanyButton from '@/components/admin/companies/ViewCompanyButton';
+import CompanyEditDialogButton from '@/components/admin/companies/CompanyEditDialogButton'
+import DeleteCompanyButton from '@/components/admin/companies/DeleteCompanyButton'
 import { sa_listCompanies } from '@/hooks/useSuperAdmin';
 
 export default async function CompaniesPage() {
@@ -51,9 +54,12 @@ export default async function CompaniesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       {company.created_at ? new Date(company.created_at).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <a href={`/admin/companies/${company.id}`} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">View</a>
-                      <a href={`/admin/companies/${company.id}/edit`} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">Edit</a>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                      <ViewCompanyButton companyId={company.id} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" />
+                      {/* @ts-expect-error Server/Client boundary */}
+                      <CompanyEditDialogButton id={company.id} name={company.name} plan={(company as any).subscription_plan} status={(company as any).account_status} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300" />
+                      {/* @ts-expect-error Server/Client boundary */}
+                      <DeleteCompanyButton id={company.id} className="text-red-600 hover:text-red-800" />
                     </td>
                   </tr>
                 )) : (

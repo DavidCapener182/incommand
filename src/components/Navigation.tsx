@@ -88,7 +88,7 @@ function useTheme() {
   return [theme, setTheme] as const;
 }
 
-export default function Navigation() {
+export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
   const { isTemporaryMember, canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
@@ -302,7 +302,10 @@ export default function Navigation() {
   }, [currentEvent]);
 
   // Prefer profile avatar; fall back to user metadata if profile lacks it
-  const effectiveAvatarUrl = (profile?.avatar_url || user?.user_metadata?.avatar_url || null) as string | null;
+  const rawAvatarUrl = (profile?.avatar_url || user?.user_metadata?.avatar_url || null) as string | null;
+  const avatarBuster = profile ? (profile as any).updated_at || Date.now() : Date.now();
+  const effectiveAvatarUrl = rawAvatarUrl ? `${rawAvatarUrl}${rawAvatarUrl.includes('?') ? '&' : '?'}t=${avatarBuster}` : null;
+  const [avatarError, setAvatarError] = React.useState(false);
   const displayName = (profile?.full_name || user?.user_metadata?.full_name || user?.email || '') as string;
 
   return (
@@ -324,6 +327,7 @@ export default function Navigation() {
                 />
               </Link>
               {/* Desktop Nav */}
+              {!minimal && (
               <div className="hidden xl:ml-16 xl:flex xl:items-center">
                 <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
                   <NavigationMenuList className="gap-8">
@@ -497,6 +501,7 @@ export default function Navigation() {
                   {theme === 'dark' ? SunIcon : MoonIcon}
                 </button>
               </div>
+              )}
             </div>
             {/* User Avatar/Profile Dropdown - always far right */}
             <div className="flex items-center ml-auto">
@@ -522,7 +527,7 @@ export default function Navigation() {
                     onClick={() => setShowProfileCard(true)}
                     aria-label="Open profile"
                   >
-                    {effectiveAvatarUrl ? (
+                    {effectiveAvatarUrl && !avatarError ? (
                       <Image
                         src={effectiveAvatarUrl}
                         alt="Profile"
@@ -530,10 +535,7 @@ export default function Navigation() {
                         height={36}
                         className="w-10 h-10 md:w-9 md:h-9 rounded-full object-cover border-2 border-blue-500"
                         unoptimized
-                        onError={(e) => {
-                          // If image fails to load, hide it so initials show
-                          (e.currentTarget as unknown as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={() => setAvatarError(true)}
                       />
                     ) : (
                       <div className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
@@ -562,7 +564,8 @@ export default function Navigation() {
                 </div>
               )}
             </div>
-            {/* Hamburger for mobile - Enhanced touch target (min 44px) */}
+            {/* Hamburger for mobile - hidden in minimal mode */}
+            {!minimal && (
             <div className="xl:hidden flex items-center ml-3">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -579,10 +582,12 @@ export default function Navigation() {
                 </svg>
               </button>
             </div>
+            )}
           </div>
         </div>
       </nav>
-      {/* Mobile Menu Dropdown - Enhanced for mobile */}
+      {/* Mobile Menu Dropdown - Enhanced for mobile (disabled in minimal mode) */}
+      {!minimal && (
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
@@ -797,6 +802,7 @@ export default function Navigation() {
           </>
         )}
       </AnimatePresence>
+      )}
 
       {/* No Event Selected Modal */}
       {showNoEventModal && (

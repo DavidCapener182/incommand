@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
+import { defaultMarketingPlans } from '@/data/marketingPlans'
 
 const createPlanSchema = z.object({
   name: z.string().min(2),
@@ -20,10 +21,34 @@ export async function GET(request: NextRequest) {
       .order('price_monthly', { ascending: true })
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to load plans' }, { status: 500 })
+      // Fallback to marketing defaults
+      return NextResponse.json({ plans: defaultMarketingPlans.map(p => ({
+        id: p.code,
+        name: p.name,
+        code: p.code,
+        price_monthly: p.priceMonthly,
+        price_annual: null,
+        currency: 'GBP',
+        metadata: { features: p.features },
+        is_active: true,
+      })) })
     }
 
-    return NextResponse.json({ plans: data ?? [] })
+    const rows = data ?? []
+    if (rows.length === 0) {
+      return NextResponse.json({ plans: defaultMarketingPlans.map(p => ({
+        id: p.code,
+        name: p.name,
+        code: p.code,
+        price_monthly: p.priceMonthly,
+        price_annual: null,
+        currency: 'GBP',
+        metadata: { features: p.features },
+        is_active: true,
+      })) })
+    }
+
+    return NextResponse.json({ plans: rows })
   })
 }
 
@@ -36,8 +61,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.message }, { status: 400 })
     }
 
-    // For now, return a mock response since the plans table doesn't exist
-    const mockPlan = {
+    // Insert if table exists; otherwise return mock
+    try {
+      const { data, error } = await context.serviceClient
+        .from('plans' as any)
+        .insert({
+          name: parsed.data.name,
+          code: parsed.data.code,
+          price_monthly: parsed.data.priceMonthly,
+          price_annual: parsed.data.priceAnnual ?? null,
+          currency: parsed.data.currency.toUpperCase(),
+          metadata: parsed.data.metadata ?? {},
+          is_active: true,
+        })
+        .select('*')
+        .single()
+
+      if (error) throw error
+
+      await recordAdminAudit(context.serviceClient, {
+        organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
+        actorId: context.user.id,
+        action: 'create_plan',
+        resourceType: 'plans',
+        resourceId: data.id,
+        changes: data,
+      })
+
+      return NextResponse.json({ plan: data })
+    } catch {
+      const mockPlan = {
       id: 'mock-plan-id',
       name: parsed.data.name,
       code: parsed.data.code,
@@ -48,15 +101,16 @@ export async function POST(request: NextRequest) {
       is_active: true,
     }
 
-    await recordAdminAudit(context.serviceClient, {
-      organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
-      actorId: context.user.id,
-      action: 'create_plan',
-      resourceType: 'plans',
-      resourceId: mockPlan.id,
-      changes: mockPlan,
-    })
+      await recordAdminAudit(context.serviceClient, {
+        organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
+        actorId: context.user.id,
+        action: 'create_plan',
+        resourceType: 'plans',
+        resourceId: mockPlan.id,
+        changes: mockPlan,
+      })
 
-    return NextResponse.json({ plan: mockPlan })
+      return NextResponse.json({ plan: mockPlan })
+    }
   })
 }

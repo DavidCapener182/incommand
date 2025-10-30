@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import { sa_supportTickets } from '@/hooks/useSuperAdmin';
+import NewTicketFab from '@/components/admin/support/NewTicketFab'
+import Link from 'next/link'
 import { 
   LifebuoyIcon, 
   ChatBubbleLeftRightIcon,
@@ -42,10 +44,8 @@ export default async function SupportPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Support Management</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Manage support tickets and customer service across all companies</p>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-            <PlusIcon className="h-5 w-5" />
-            New Ticket
-          </button>
+          {/* @ts-expect-error client component */}
+          <NewTicketFab companies={[]} />
         </div>
 
         {/* Support Stats */}
@@ -117,9 +117,7 @@ export default async function SupportPage() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Open Tickets</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-4">Tickets that need immediate attention</p>
             <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">{supportStats.openTickets}</div>
-            <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
-              View Open Tickets
-            </button>
+            <Link href="/admin/support?filter=open" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">View Open Tickets</Link>
           </div>
 
           <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
@@ -128,9 +126,7 @@ export default async function SupportPage() {
             <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
               {supportTickets.filter((t: any) => t.priority === 'high' || t.priority === 'urgent').length}
             </div>
-            <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm">
-              View High Priority
-            </button>
+            <Link href="/admin/support?priority=high" className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm">View High Priority</Link>
           </div>
 
           <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">

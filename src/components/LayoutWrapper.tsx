@@ -110,7 +110,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   
   // Only show the main application navigation for authenticated users on operational pages
   // Don't show nav on admin routes (they use SuperAdminLayout)
-  const showNav = user && !noNavRoutes.includes(pathname) && !isAdminRoute;
+  const showNav = user && !noNavRoutes.includes(pathname);
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
@@ -133,7 +133,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           {showNav && (
             <div className="bg-[#2A3990]" style={{ height: 'env(safe-area-inset-top)' }} />
           )}
-          {showNav && <Navigation />}
+          {showNav && <Navigation minimal={isAdminRoute} />}
           <div className="flex flex-col min-h-screen">
             <main 
               id="main"
@@ -169,7 +169,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
               }}
             />
           )}
-          {showNav && <FloatingActionButton />}
+          {showNav && !isAdminRoute && <FloatingActionButton />}
           {isHelpCenterOpen && (
             <>
               {/* Click-outside overlay (no dim) */}

@@ -65,3 +65,4 @@ FOR SELECT USING (
   id = auth.uid()
 );
 
+

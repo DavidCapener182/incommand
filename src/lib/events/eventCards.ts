@@ -17,3 +17,4 @@ export function getCardsForType(type?: string | null) {
 // Alternative naming for consistency
 export const cardForType = getCardsForType;
 
+

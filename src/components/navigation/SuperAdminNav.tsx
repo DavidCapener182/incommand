@@ -25,7 +25,7 @@ export default function SuperAdminNav() {
   const path = usePathname();
 
   return (
-    <nav className="w-64 shrink-0 border-r bg-background dark:bg-[#15192c] border-gray-200 dark:border-[#2d437a]">
+    <nav className="w-64 shrink-0 border-r bg-background dark:bg-[#15192c] border-gray-200 dark:border-[#2d437a] fixed top-0 left-0 h-screen z-30">
       <div className="p-4 border-b border-gray-200 dark:border-[#2d437a]">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Back Office</h2>
         <p className="text-sm text-gray-600 dark:text-gray-300">System Administration</p>
@@ -54,4 +54,5 @@ export default function SuperAdminNav() {
     </nav>
   );
 }
+
 

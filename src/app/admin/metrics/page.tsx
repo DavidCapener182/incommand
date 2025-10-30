@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import { sa_systemMetrics } from '@/hooks/useSuperAdmin';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { 
   ChartBarIcon, 
   ServerIcon,
@@ -32,6 +33,7 @@ export default async function MetricsPage() {
     throughput: 1200 // Would need actual throughput tracking
   };
 
+  // Example live-ish data: replace with real series when available
   const performanceData = [
     { time: '00:00', cpu: 45, memory: 67, requests: 1200 },
     { time: '04:00', cpu: 38, memory: 62, requests: 890 },
@@ -185,14 +187,18 @@ export default async function MetricsPage() {
         {/* Performance Chart */}
         <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Performance Over Time</h3>
-          <div className="h-64 flex items-center justify-center">
-            <div className="text-center">
-              <ChartBarIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Performance chart would be rendered here</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                Integration with charting library needed (e.g., Chart.js, Recharts)
-              </p>
-            </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={performanceData} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="time" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip />
+                <Line type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={2} dot={false} name="Requests/min" />
+                <Line type="monotone" dataKey="cpu" stroke="#ef4444" strokeWidth={2} dot={false} name="CPU %" />
+                <Line type="monotone" dataKey="memory" stroke="#10b981" strokeWidth={2} dot={false} name="Memory %" />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

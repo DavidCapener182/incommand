@@ -7,6 +7,10 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { sa_listCompanies, sa_listUsers, sa_listEvents, sa_billingOverview, sa_supportTickets, sa_systemMetrics } from '@/hooks/useSuperAdmin';
+import CompanyEditDialogButton from '@/components/admin/companies/CompanyEditDialogButton'
+import EventDetailsRow from '@/components/admin/events/EventDetailsRow'
+import NewTicketFab from '@/components/admin/support/NewTicketFab'
+import Link from 'next/link'
 
 export default async function SuperAdminDashboard() {
   // Fetch all data in parallel with error handling
@@ -123,9 +127,9 @@ export default async function SuperAdminDashboard() {
       <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Companies</h2>
-          <a href="/admin/companies" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+          <Link href="/admin/companies" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
             Manage Companies
-          </a>
+          </Link>
         </div>
         
         {companies.length > 0 ? (
@@ -164,8 +168,9 @@ export default async function SuperAdminDashboard() {
                       {company.created_at ? new Date(company.created_at).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <a href={`/admin/companies/${company.id}`} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">View</a>
-                      <a href={`/admin/companies/${company.id}/edit`} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">Edit</a>
+                      <Link href={`/admin/companies/${company.id}`} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">View</Link>
+                      {/* Client edit dialog */}
+                      <CompanyEditDialogButton id={company.id} name={company.name} plan={(company as any).subscription_plan} status={(company as any).account_status} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300" />
                     </td>
                   </tr>
                 ))}
@@ -188,17 +193,7 @@ export default async function SuperAdminDashboard() {
         {events.length > 0 ? (
           <div className="space-y-4">
             {events.slice(0, 5).map((event) => (
-              <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">{event.event_name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-300">
-                    {event.companies?.name} • {event.event_type}
-                  </p>
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-300">
-                  {event.created_at ? new Date(event.created_at).toLocaleDateString() : 'N/A'}
-                </div>
-              </div>
+              <EventDetailsRow key={event.id} event={event as any} />
             ))}
           </div>
         ) : (
@@ -236,6 +231,8 @@ export default async function SuperAdminDashboard() {
           </div>
         )}
       </div>
+      {/* Floating FAB for new ticket */}
+      <NewTicketFab companies={companies.map(c => ({ id: c.id, name: c.name }))} />
     </div>
   );
 }

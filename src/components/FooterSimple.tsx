@@ -1,6 +1,8 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Image from 'next/image'
+import React from 'react'
 
 interface FooterSimpleProps {
   companyName?: string
@@ -66,10 +68,9 @@ export function FooterSimple({
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               viewport={{ once: true }}
+              className="flex flex-col items-center text-center"
             >
-              <h3 className="text-foreground mb-4 text-2xl font-bold">
-                {companyName}
-              </h3>
+              <FooterBrandLogo companyName={companyName} />
               <p className="text-foreground/70 mb-6 max-w-md text-sm">
                 {description}
               </p>
@@ -239,5 +240,34 @@ export function FooterSimple({
         </motion.div>
       </div>
     </footer>
+  )
+}
+
+function FooterBrandLogo({ companyName }: { companyName: string }) {
+  const [error, setError] = React.useState(false)
+  const [secondaryTried, setSecondaryTried] = React.useState(false)
+  return (
+    <div className="mb-4">
+      {!error ? (
+        <Image
+          // Prefer the user-provided blue logo first
+          src={secondaryTried ? "/brand/logo-dark.png" : "/InCommandBlue.PNG"}
+          alt={companyName}
+          width={600}
+          height={133}
+          className="block h-10 md:h-12 w-auto"
+          priority
+          onError={() => {
+            if (!secondaryTried) {
+              setSecondaryTried(true)
+            } else {
+              setError(true)
+            }
+          }}
+        />
+      ) : (
+        <h3 className="text-foreground text-2xl font-bold">{companyName}</h3>
+      )}
+    </div>
   )
 }

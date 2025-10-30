@@ -9,6 +9,7 @@ import { SocialLinks } from '@/components/marketing/SocialLinks'
 import { FadeIn } from '@/components/marketing/Motion'
 import { HeroActions } from '@/components/marketing/interactives/HeroActions'
 import { PricingPlans, type PricingPlan } from '@/components/marketing/interactives/PricingPlans'
+import { defaultMarketingPlans } from '@/data/marketingPlans'
 import { pageMetadata } from '@/config/seo.config'
 
 export const metadata: Metadata = {
@@ -16,61 +17,36 @@ export const metadata: Metadata = {
   alternates: { canonical: '/pricing' },
 }
 
-const plans: PricingPlan[] = [
-  {
-    name: 'Starter',
-    price: '£25',
+async function loadPlans(): Promise<PricingPlan[]> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/billing/plans`, { cache: 'no-store' })
+    if (res.ok) {
+      const json = await res.json()
+      const apiPlans = (json.plans ?? []).map((p: any) => ({
+        name: p.name,
+        price: `£${p.price_monthly ?? 0}`,
+        period: 'per month',
+        description: '',
+        features: p.metadata?.features ?? [],
+        cta: 'Get Started',
+        ctaLink: '/signup',
+        highlighted: p.code === 'professional',
+      })) as PricingPlan[]
+      if (apiPlans.length > 0) return apiPlans
+    }
+  } catch {}
+  // Fallback to marketing defaults when no DB plans
+  return defaultMarketingPlans.map((p) => ({
+    name: p.name,
+    price: `£${p.priceMonthly}`,
     period: 'per month',
-    description: 'Ideal for smaller teams and first-time users.',
-    features: [
-      'Up to 50 incidents per month',
-      '5 staff members',
-      'Basic analytics',
-      'Email support',
-      'Mobile app access',
-      'Event dashboard',
-    ],
+    description: '',
+    features: p.features,
     cta: 'Get Started',
     ctaLink: '/signup',
-    highlighted: false,
-  },
-  {
-    name: 'Professional',
-    price: '£75',
-    period: 'per month',
-    description: 'For growing event teams running multiple venues.',
-    features: [
-      'Unlimited incidents',
-      '20 staff members',
-      'AI-powered insights',
-      'Advanced analytics',
-      'Priority support',
-      'Custom branding',
-      'API access',
-    ],
-    cta: 'Get Started',
-    ctaLink: '/signup',
-    highlighted: true,
-  },
-  {
-    name: 'Enterprise',
-    price: '£200',
-    period: 'per month',
-    description: 'For large-scale operations and integrated deployments.',
-    features: [
-      'Everything in Professional',
-      'Unlimited staff members',
-      'Dedicated account manager',
-      'Custom integrations',
-      'SLA guarantee (99.9%)',
-      'Advanced security suite',
-      'White-label options',
-    ],
-    cta: 'Talk to Sales',
-    ctaLink: 'mailto:sales@incommand.uk?subject=Enterprise%20Plan%20Inquiry',
-    highlighted: false,
-  },
-]
+    highlighted: p.code === 'professional',
+  }))
+}
 
 const faqs = [
   {
@@ -92,7 +68,8 @@ const faqs = [
   },
 ]
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const plans = await loadPlans()
   return (
     <div className="min-h-screen bg-[#F1F4F9] text-slate-900">
       <MarketingNavigation />

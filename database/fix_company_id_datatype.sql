@@ -34,3 +34,4 @@ FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
 -- 5. Create index for performance
 CREATE INDEX IF NOT EXISTS idx_events_company_id ON events(company_id);
 
+

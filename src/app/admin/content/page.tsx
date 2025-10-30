@@ -11,6 +11,8 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import CreateContentButton from './CreateContentButton';
+import NewContentDialog from '@/components/admin/content/NewContentDialog'
+import Link from 'next/link'
 import { sa_listBlogPosts, sa_getContentStats } from '@/hooks/useSuperAdmin';
 
 export default async function ContentPage() {
@@ -106,12 +108,9 @@ export default async function ContentPage() {
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-4">Create and manage blog posts for company updates and insights.</p>
             <div className="flex gap-2">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm">
-                View All
-              </button>
-              <button className="border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-[#1a2a57]">
-                New Post
-              </button>
+              <Link href="/admin/content?type=blog" className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
+              {/* @ts-expect-error client component */}
+              <NewContentDialog />
             </div>
           </div>
 
@@ -122,12 +121,9 @@ export default async function ContentPage() {
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-4">Manage knowledge base articles and user documentation.</p>
             <div className="flex gap-2">
-              <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">
-                View All
-              </button>
-              <button className="border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-[#1a2a57]">
-                New Article
-              </button>
+              <Link href="/admin/content?type=documentation" className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
+              {/* @ts-expect-error client component */}
+              <NewContentDialog />
             </div>
           </div>
 
@@ -138,12 +134,9 @@ export default async function ContentPage() {
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-4">Create system-wide announcements and important updates.</p>
             <div className="flex gap-2">
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm">
-                View All
-              </button>
-              <button className="border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-[#1a2a57]">
-                New Announcement
-              </button>
+              <Link href="/admin/content?type=announcement" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
+              {/* @ts-expect-error client component */}
+              <NewContentDialog />
             </div>
           </div>
         </div>

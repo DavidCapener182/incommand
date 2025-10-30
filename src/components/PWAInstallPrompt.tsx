@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline'
 
@@ -113,7 +114,9 @@ export default function PWAInstallPrompt() {
                   <DevicePhoneMobileIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Install InCommand</h3>
+                <div className="flex items-center gap-2">
+                  <Image src="/inCommand.png" alt="InCommand" width={120} height={28} className="h-7 w-auto" priority />
+                </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Add to Home Screen</p>
                 </div>
               </div>
@@ -181,7 +184,9 @@ export default function PWAInstallPrompt() {
               </div>
               
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-white mb-1">Install InCommand</h3>
+                <div className="mb-1">
+                  <Image src="/inCommand.png" alt="InCommand" width={128} height={30} className="h-7 w-auto" priority />
+                </div>
                 <p className="text-xs text-blue-100 mb-3">
                   Get faster access and work offline
                 </p>

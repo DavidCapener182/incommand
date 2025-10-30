@@ -317,14 +317,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       let session: Session | null = null;
       try {
-        // Get session with timeout protection
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutId = setTimeout(() => {
-          console.warn('Session fetch taking too long, proceeding with defaults')
-        }, 10000) // 10 second timeout warning
-        
-        const result = await sessionPromise
-        clearTimeout(timeoutId)
+        // Get session with hard timeout protection to avoid infinite loading
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<any>((resolve) =>
+            setTimeout(() => {
+              console.warn('Session fetch timed out, proceeding without session')
+              resolve({ data: { session: null } })
+            }, 10000)
+          )
+        ])
         session = result?.data?.session || null
         
         if (session?.user) {

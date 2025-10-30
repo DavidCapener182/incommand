@@ -50,3 +50,4 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
 }
 
 
+

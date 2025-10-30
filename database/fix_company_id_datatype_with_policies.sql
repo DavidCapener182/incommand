@@ -121,3 +121,4 @@ FROM events
 WHERE company_id IS NOT NULL
 LIMIT 3;
 
+

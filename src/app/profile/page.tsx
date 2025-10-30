@@ -75,8 +75,15 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    // Show instant local preview while uploading
+    let objectUrl: string | null = null;
+    try {
+      objectUrl = URL.createObjectURL(file);
+      setAvatarUrl(objectUrl);
+    } catch {}
     const fileExt = file.name.split('.').pop();
-    const filePath = `avatars/${user.id}.${fileExt}`;
+    // Store at the bucket root under the user's id; avoid duplicating the bucket name
+    const filePath = `${user.id}.${fileExt}`;
     const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
     if (uploadError) {
       setError(uploadError.message);
@@ -84,7 +91,8 @@ export default function ProfilePage() {
       return;
     }
     const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    setAvatarUrl(data.publicUrl);
+    // Bust cache locally so the fresh image shows immediately after upload
+    setAvatarUrl(`${data.publicUrl}?t=${Date.now()}`);
     // Update profile in DB
     await (supabase as any).from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
     // Re-fetch profile to update UI
@@ -96,9 +104,10 @@ export default function ProfilePage() {
     if (!fetchError) {
       setProfile(newProfile);
       setFullName((newProfile as any)?.full_name || "");
-      setAvatarUrl((newProfile as any)?.avatar_url || null);
+      setAvatarUrl((newProfile as any)?.avatar_url ? `${(newProfile as any).avatar_url}?t=${Date.now()}` : null);
     }
     setUploading(false);
+    try { if (objectUrl) URL.revokeObjectURL(objectUrl); } catch {}
   };
 
   if (!user) {

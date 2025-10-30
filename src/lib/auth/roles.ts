@@ -6,3 +6,4 @@ export type Role = 'superadmin' | 'company_admin' | 'member';
 export const deriveRole = (email?: string | null, explicitRole?: Role): Role =>
   isSuperadminEmail(email) ? 'superadmin' : (explicitRole ?? 'member');
 
+
