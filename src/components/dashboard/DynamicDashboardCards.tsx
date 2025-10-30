@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { useEventContext, useEventStrategy } from '@/contexts/EventContext'
 import { FilterState } from '@/utils/incidentFilters'
+import { getCardsForType } from '@/lib/events/eventCards'
 
 // Import all dashboard cards
 import WeatherCard from '@/components/WeatherCard'
@@ -63,6 +64,16 @@ export default function DynamicDashboardCards({
   const { eventType } = useEventContext()
   const strategy = useEventStrategy()
   
+  // DEBUG: Log event type detection
+  console.log('🎯 DynamicDashboardCards render:', {
+    eventType,
+    currentEventType: currentEvent?.event_type,
+    strategyName: strategy.name,
+    dashboardCards: strategy.dashboardCards,
+    currentEventId,
+    currentEventName: currentEvent?.event_name
+  })
+  
   // Default filters for components that require them
   const defaultFilters: FilterState = {
     types: [],
@@ -71,7 +82,24 @@ export default function DynamicDashboardCards({
     query: ''
   }
 
-  // Get cards that should be rendered for this event type
+  // Use the new event card mapping utility to get the correct cards
+  const CardsComponent = getCardsForType(currentEvent?.event_type || eventType)
+  
+  // If we have a specific card component for this event type, use it
+  if (CardsComponent) {
+    return (
+      <div className={`hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2 ${className}`}>
+        <CardsComponent 
+          currentEventId={currentEventId}
+          currentEvent={currentEvent}
+          coordinates={coordinates}
+          filters={defaultFilters}
+        />
+      </div>
+    )
+  }
+
+  // Fallback to the original strategy-based approach
   const cardsToRender = strategy.dashboardCards
 
   // Filter cards based on their supportedEventTypes

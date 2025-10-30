@@ -68,13 +68,15 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Fetch current event with company_id filter for data isolation
+      // Fetch most recent current event with company_id filter for data isolation
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
         .eq('company_id', profile.company_id)
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       if (eventError) {
         logger.error('Failed to fetch current event', eventError, { 
@@ -96,24 +98,19 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
           'Football': 'football',
           'Parade': 'parade', 
           'Festival': 'festival',
-          'Corporate': 'concert', // Map corporate events to concert strategy
-          'Other': 'concert', // Map other events to concert strategy
+          'Corporate': 'concert',
+          'Other': 'concert',
           'concert': 'concert',
           'football': 'football',
           'festival': 'festival',
           'parade': 'parade'
         }
-        
-        // Use the actual database event_type only - no forcing or fallbacks
         const detectedEventType = eventTypeMapping[event.event_type] || 'concert'
-        
-        // Debug logging to track event type detection
         console.log('🔍 EventContext: Setting event type', {
           databaseEventType: event.event_type,
           mappedEventType: detectedEventType,
           eventName: event.event_name
         })
-        
         setEventType(detectedEventType)
         setEventData(event)
         logger.debug('Current event loaded', { 

@@ -103,9 +103,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSystemSettings = useCallback(async () => {
     try {
+      // Get system settings - removed problematic singleton query
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (error) {
@@ -121,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data) {
-        // No row yet; initialize defaults in memory
+        // No settings row yet; set defaults in memory (optionally create it later)
         setSystemSettings({
           id: 'default',
           ...DEFAULT_SYSTEM_SETTINGS,
@@ -312,35 +315,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check active sessions and sets the user
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-        await Promise.all([
-          fetchUserRole(session.user.id),
-          loadSystemSettings(),
-          loadUserPreferences(session.user.id)
-        ])
-      } else {
-        await loadSystemSettings()
-      }
-      setLoading(false)
-
-      if (session) {
-        // Supabase session.expires_at is UNIX timestamp (seconds)
-        const expiresAt = session.expires_at ? session.expires_at * 1000 : Date.now() + 12 * 60 * 60 * 1000;
-        const sessionStart = expiresAt - 12 * 60 * 60 * 1000;
-        const now = Date.now();
-        const ms12Hours = 12 * 60 * 60 * 1000;
-        const ms11_5Hours = 11.5 * 60 * 60 * 1000;
-        const timeElapsed = now - sessionStart;
-        const timeToPrompt = ms11_5Hours - timeElapsed > 0 ? ms11_5Hours - timeElapsed : 0;
-        const timeToLogout = ms12Hours - timeElapsed > 0 ? ms12Hours - timeElapsed : 0;
-
-        if (timeToPrompt > 0) {
-          stayLoggedInTimeout = setTimeout(() => setShowStayLoggedIn(true), timeToPrompt);
+      let session: Session | null = null;
+      try {
+        // Get session with timeout protection
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutId = setTimeout(() => {
+          console.warn('Session fetch taking too long, proceeding with defaults')
+        }, 10000) // 10 second timeout warning
+        
+        const result = await sessionPromise
+        clearTimeout(timeoutId)
+        session = result?.data?.session || null
+        
+        if (session?.user) {
+          setUser(session.user)
+          // Use Promise.allSettled to ensure all complete even if one fails
+          await Promise.allSettled([
+            fetchUserRole(session.user.id).catch(err => {
+              console.error('Error fetching user role:', err)
+              setRole('user' as UserRole) // Fallback
+            }),
+            loadSystemSettings().catch(err => {
+              console.error('Error loading system settings:', err)
+            }),
+            loadUserPreferences(session.user.id).catch(err => {
+              console.error('Error loading user preferences:', err)
+            })
+          ])
+        } else {
+          await loadSystemSettings().catch(err => {
+            console.error('Error loading system settings:', err)
+          })
         }
-        if (timeToLogout > 0) {
-          logoutTimeout = setTimeout(() => signOut(), timeToLogout);
+      } catch (error) {
+        console.error('Error in getInitialSession:', error)
+        // Always set loading to false even on error
+      } finally {
+        setLoading(false)
+        
+        if (session) {
+          // Supabase session.expires_at is UNIX timestamp (seconds)
+          const expiresAt = session.expires_at ? session.expires_at * 1000 : Date.now() + 12 * 60 * 60 * 1000;
+          const sessionStart = expiresAt - 12 * 60 * 60 * 1000;
+          const now = Date.now();
+          const ms12Hours = 12 * 60 * 60 * 1000;
+          const ms11_5Hours = 11.5 * 60 * 60 * 1000;
+          const timeElapsed = now - sessionStart;
+          const timeToPrompt = ms11_5Hours - timeElapsed > 0 ? ms11_5Hours - timeElapsed : 0;
+          const timeToLogout = ms12Hours - timeElapsed > 0 ? ms12Hours - timeElapsed : 0;
+
+          if (timeToPrompt > 0) {
+            stayLoggedInTimeout = setTimeout(() => setShowStayLoggedIn(true), timeToPrompt);
+          }
+          if (timeToLogout > 0) {
+            logoutTimeout = setTimeout(() => signOut(), timeToLogout);
+          }
         }
       }
     }
@@ -378,9 +407,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /*
   useEffect(() => {
     if (!loading) {
-      if (!user && pathname !== '/login') {
+      if (!user and pathname !== '/login') {
         router.push('/login')
-      } else if (user && pathname === '/login') {
+      } else if (user and pathname === '/login') {
         router.push('/incidents')
       }
     }

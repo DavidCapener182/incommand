@@ -8,7 +8,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createRouteHandlerClient({ cookies })
-    await supabase.auth.exchangeCodeForSession(code)
+    const { data } = await supabase.auth.exchangeCodeForSession(code)
+    
+    // Check if this is the superadmin user
+    if (data.session?.user?.email === 'david@incommand.uk') {
+      return NextResponse.redirect(new URL('/admin', requestUrl.origin))
+    }
   }
 
   // URL to redirect to after sign in process completes

@@ -38,7 +38,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#15192c]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
   return <>{children}</>;
 }
 
@@ -95,10 +104,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Define routes that should never show the main application navigation
   // Marketing pages have their own navigation, so hide the main nav on all of them
   // Note: '/help' is intentionally excluded so Help pages show the top nav
+  // Admin routes use SuperAdminLayout which has its own navigation, so hide main nav
   const noNavRoutes = ['/', '/features', '/pricing', '/about', '/privacy', '/terms', '/login', '/signup'];
+  const isAdminRoute = pathname.startsWith('/admin');
   
   // Only show the main application navigation for authenticated users on operational pages
-  const showNav = user && !noNavRoutes.includes(pathname);
+  // Don't show nav on admin routes (they use SuperAdminLayout)
+  const showNav = user && !noNavRoutes.includes(pathname) && !isAdminRoute;
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);

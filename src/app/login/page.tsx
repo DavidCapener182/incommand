@@ -107,12 +107,18 @@ export default function LoginPage() {
     const passwordValue = passwordRef.current?.value || password
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: emailValue,
         password: passwordValue,
       })
       if (error) throw error
-      router.push('/incidents')
+      
+      // Check if this is the superadmin user
+      if (data.user?.email === 'david@incommand.uk') {
+        router.push('/admin')
+      } else {
+        router.push('/incidents')
+      }
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
