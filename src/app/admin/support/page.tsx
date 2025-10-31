@@ -44,7 +44,6 @@ export default async function SupportPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Support Management</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Manage support tickets and customer service across all companies</p>
           </div>
-          {/* @ts-expect-error client component */}
           <NewTicketFab companies={[]} />
         </div>
 

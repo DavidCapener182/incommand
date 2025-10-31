@@ -121,7 +121,6 @@ export default async function ContentPage() {
             <p className="text-gray-600 dark:text-gray-300 mb-4">Manage knowledge base articles and user documentation.</p>
             <div className="flex gap-2">
               <Link href="/admin/content?type=documentation" className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
-              {/* @ts-expect-error client component */}
               <NewContentDialog />
             </div>
           </div>
@@ -134,7 +133,6 @@ export default async function ContentPage() {
             <p className="text-gray-600 dark:text-gray-300 mb-4">Create system-wide announcements and important updates.</p>
             <div className="flex gap-2">
               <Link href="/admin/content?type=announcement" className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
-              {/* @ts-expect-error client component */}
               <NewContentDialog />
             </div>
           </div>
