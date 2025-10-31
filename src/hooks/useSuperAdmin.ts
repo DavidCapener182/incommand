@@ -252,12 +252,12 @@ export async function sa_createBlogPost(post: {
       throw new Error('Unauthorized');
     }
     
-    const { data, error } = await supabase
-      .from('blog_posts' as any)
+    const { data, error } = await (supabase as any)
+      .from('blog_posts')
       .insert({
         ...post,
         published_at: post.status === 'published' ? new Date().toISOString() : null
-      } as any)
+      })
       .select()
       .single();
     
