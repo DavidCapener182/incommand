@@ -15,7 +15,8 @@ export function getCardsForType(type?: string | null) {
     case 'festival':
     default:
       // Return a placeholder component for now
-      const PlaceholderComponent = () => React.createElement('div', null, 'Event cards not implemented yet');
+      const PlaceholderComponent = ({ currentEventId, currentEvent, coordinates, filters }: any) =>
+        React.createElement('div', { className: 'text-center text-gray-500 p-8' }, 'Event cards not implemented yet for this event type');
       PlaceholderComponent.displayName = 'EventCardsPlaceholder';
       return PlaceholderComponent;
   }
