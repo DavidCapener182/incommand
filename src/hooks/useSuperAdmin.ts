@@ -292,7 +292,7 @@ export async function sa_updateBlogPost(id: string, updates: {
       updateData.published_at = new Date().toISOString();
     }
     
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('blog_posts')
       .update(updateData)
       .eq('id', id)
