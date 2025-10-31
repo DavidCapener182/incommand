@@ -2,16 +2,26 @@ import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 
+type Company = {
+  id: string;
+  name: string;
+  subscription_plan: string | null;
+  account_status: string | null;
+  created_at: string | null;
+};
+
 export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
   const { user, role, supabase } = await getServerUser();
   if (!user) redirect('/login');
   if (role !== 'superadmin') redirect('/admin');
 
-  const { data: company } = await supabase
+  const result = await supabase
     .from('companies')
     .select('id, name, subscription_plan, account_status, created_at')
     .eq('id', params.id)
     .maybeSingle();
+
+  const company = result.data as Company | null;
 
   if (!company) {
     redirect('/admin/companies');
@@ -29,11 +39,11 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <dt className="text-sm text-gray-500 dark:text-gray-300">Subscription plan</dt>
-              <dd className="text-lg text-gray-900 dark:text-white capitalize">{(company as any).subscription_plan || 'trial'}</dd>
+              <dd className="text-lg text-gray-900 dark:text-white capitalize">{company.subscription_plan || 'trial'}</dd>
             </div>
             <div>
               <dt className="text-sm text-gray-500 dark:text-gray-300">Status</dt>
-              <dd className="text-lg text-gray-900 dark:text-white capitalize">{(company as any).account_status || 'active'}</dd>
+              <dd className="text-lg text-gray-900 dark:text-white capitalize">{company.account_status || 'active'}</dd>
             </div>
             <div>
               <dt className="text-sm text-gray-500 dark:text-gray-300">Created</dt>
