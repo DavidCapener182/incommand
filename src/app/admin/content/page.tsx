@@ -171,7 +171,7 @@ export default async function ContentPage() {
               </thead>
               <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-gray-700">
                 {recentPosts.length > 0 ? (
-                  recentPosts.map((post) => (
+                  recentPosts.map((post: any) => (
                     <tr key={post.id} className="hover:bg-gray-50 dark:hover:bg-[#1a2a57]">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
