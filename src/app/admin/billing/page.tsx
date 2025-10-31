@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
-import { sa_billingOverview } from '@/hooks/useSuperAdmin';
+import { sa_billingOverview, sa_listCompanies } from '@/hooks/useSuperAdmin';
 import GenerateInvoiceDialog from '@/components/admin/billing/GenerateInvoiceDialog'
 import CreatePlanDialog from '@/components/admin/billing/CreatePlanDialog'
 import SyncMarketingPlansButton from '@/components/admin/billing/SyncMarketingPlansButton'
@@ -21,6 +21,7 @@ export default async function BillingPage() {
   if (role !== 'superadmin') redirect('/admin');
 
   const billing = await sa_billingOverview();
+  const companies = await sa_listCompanies();
   // Load plans from API (DB-backed if available)
   let plans: any[] = []
   try {
@@ -143,7 +144,7 @@ export default async function BillingPage() {
         <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Invoices</h2>
-            <GenerateInvoiceDialog companies={(billing?.companies ?? []).map((c: any) => ({ id: c.id, name: c.name }))} />
+            <GenerateInvoiceDialog companies={(companies ?? []).map((c: any) => ({ id: c.id, name: c.name }))} />
           </div>
 
           {billing.invoices.length > 0 ? (
