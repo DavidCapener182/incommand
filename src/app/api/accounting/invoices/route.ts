@@ -90,12 +90,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 })
     }
 
+    if (!data || !('id' in data)) {
+      throw new Error('Failed to create invoice: invalid response')
+    }
+
+    const invoiceData = data as unknown as { id: string; [key: string]: unknown }
+
     await recordAdminAudit(context.serviceClient, {
       organizationId: resolvedOrg,
       actorId: context.user.id,
       action: 'create_invoice',
       resourceType: 'invoices',
-      resourceId: data.id,
+      resourceId: invoiceData.id,
       changes: data,
     })
 

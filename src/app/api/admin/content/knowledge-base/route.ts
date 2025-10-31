@@ -90,12 +90,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create content item' }, { status: 500 })
     }
 
+    if (!data || !('id' in data)) {
+      throw new Error('Failed to create content item: invalid response')
+    }
+
+    const contentData = data as unknown as { id: string; [key: string]: unknown }
+
     await recordAdminAudit(context.serviceClient, {
       organizationId,
       actorId: context.user.id,
       action: 'create_content',
       resourceType: 'knowledge_base',
-      resourceId: data.id,
+      resourceId: contentData.id,
       changes: data,
     })
 

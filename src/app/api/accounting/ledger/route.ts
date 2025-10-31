@@ -97,12 +97,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to record ledger entry' }, { status: 500 })
     }
 
+    if (!data || !('id' in data)) {
+      throw new Error('Failed to record ledger entry: invalid response')
+    }
+
+    const ledgerData = data as unknown as { id: string; [key: string]: unknown }
+
     await recordAdminAudit(context.serviceClient, {
       organizationId: resolvedOrg,
       actorId: context.user.id,
       action: 'create_ledger_entry',
       resourceType: 'ledger_entries',
-      resourceId: data.id,
+      resourceId: ledgerData.id,
       changes: data,
     })
 
