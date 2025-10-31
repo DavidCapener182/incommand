@@ -1,16 +1,21 @@
+import React from 'react';
 import SupportToolsFootball from '@/components/cards/football/SupportToolsFootball';
-import ConcertCards from '@/components/cards/ConcertCards';
-import ParadeCards from '@/components/cards/ParadeCards';
-import FestivalCards from '@/components/cards/FestivalCards';
+// TODO: Create missing card components for other event types
+// import ConcertCards from '@/components/cards/ConcertCards';
+// import ParadeCards from '@/components/cards/ParadeCards';
+// import FestivalCards from '@/components/cards/FestivalCards';
 
 export function getCardsForType(type?: string | null) {
   const t = (type ?? '').toLowerCase();
   switch (t) {
     case 'football': return SupportToolsFootball;
-    case 'concert': return ConcertCards;
-    case 'parade': return ParadeCards;
-    case 'festival': return FestivalCards;
-    default: return ConcertCards;
+    // TODO: Implement other event types
+    case 'concert':
+    case 'parade':
+    case 'festival':
+    default:
+      // Return a placeholder component for now
+      return () => React.createElement('div', null, 'Event cards not implemented yet');
   }
 }
 
