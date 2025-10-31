@@ -257,7 +257,7 @@ export async function sa_createBlogPost(post: {
       .insert({
         ...post,
         published_at: post.status === 'published' ? new Date().toISOString() : null
-      })
+      } as any)
       .select()
       .single();
     
