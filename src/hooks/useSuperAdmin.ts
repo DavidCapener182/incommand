@@ -350,9 +350,9 @@ export async function sa_getContentStats() {
     }
     
     const posts = data ?? [];
-    const publishedPosts = posts.filter(p => p.status === 'published').length;
-    const draftPosts = posts.filter(p => p.status === 'draft').length;
-    const totalViews = posts.reduce((sum, p) => sum + (p.views || 0), 0);
+    const publishedPosts = posts.filter((p: any) => p.status === 'published').length;
+    const draftPosts = posts.filter((p: any) => p.status === 'draft').length;
+    const totalViews = posts.reduce((sum: number, p: any) => sum + (p.views || 0), 0);
     
     return {
       totalPosts: posts.length,
