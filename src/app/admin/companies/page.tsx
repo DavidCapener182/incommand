@@ -56,9 +56,7 @@ export default async function CompaniesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                       <ViewCompanyButton companyId={company.id} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" />
-                      {/* @ts-expect-error Server/Client boundary */}
                       <CompanyEditDialogButton id={company.id} name={company.name} plan={(company as any).subscription_plan} status={(company as any).account_status} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300" />
-                      {/* @ts-expect-error Server/Client boundary */}
                       <DeleteCompanyButton id={company.id} className="text-red-600 hover:text-red-800" />
                     </td>
                   </tr>
