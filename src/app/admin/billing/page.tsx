@@ -143,7 +143,6 @@ export default async function BillingPage() {
         <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Invoices</h2>
-            {/* @ts-expect-error client component */}
             <GenerateInvoiceDialog companies={(billing?.companies ?? []).map((c: any) => ({ id: c.id, name: c.name }))} />
           </div>
 
