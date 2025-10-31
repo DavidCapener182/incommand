@@ -318,7 +318,7 @@ export async function sa_deleteBlogPost(id: string) {
     }
     
     const { error } = await supabase
-      .from('blog_posts')
+      .from('blog_posts' as any)
       .delete()
       .eq('id', id);
     
@@ -341,7 +341,7 @@ export async function sa_getContentStats() {
     }
     
     const { data, error } = await supabase
-      .from('blog_posts')
+      .from('blog_posts' as any)
       .select('status, views');
     
     if (error) {
