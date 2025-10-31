@@ -1,10 +1,12 @@
-import { redirect } from 'next/navigation';
-import { getServerUser } from '@/lib/auth/getServerUser';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
-import { sa_systemMetrics } from '@/hooks/useSuperAdmin';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { 
-  ChartBarIcon, 
+import {
+  ChartBarIcon,
   ServerIcon,
   CpuChipIcon,
   CloudIcon,
@@ -13,12 +15,77 @@ import {
   ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline';
 
-export default async function MetricsPage() {
-  const { user, role } = await getServerUser();
-  if (!user) redirect('/login');
-  if (role !== 'superadmin') redirect('/admin');
+interface SystemMetrics {
+  totalCompanies: number;
+  totalUsers: number;
+  totalEvents: number;
+  systemHealth: string;
+}
 
-  const metrics = await sa_systemMetrics();
+export default function MetricsPage() {
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { user, role } = useAuth();
+
+  useEffect(() => {
+    if (user === null) {
+      // Still loading auth state
+      return;
+    }
+
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
+    if (role !== 'superadmin') {
+      router.replace('/admin');
+      return;
+    }
+
+    async function loadData() {
+      try {
+        const response = await fetch('/api/admin/metrics');
+        if (!response.ok) {
+          throw new Error('Failed to fetch metrics');
+        }
+        const metricsData = await response.json();
+        setMetrics(metricsData);
+      } catch (error) {
+        console.error('Failed to load metrics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [user, role, router]);
+
+  if (loading) {
+    return (
+      <SuperAdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">Loading system metrics...</p>
+          </div>
+        </div>
+      </SuperAdminLayout>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <SuperAdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-300">Failed to load metrics data</p>
+          </div>
+        </div>
+      </SuperAdminLayout>
+    );
+  }
 
   // Use real metrics data
   const systemMetrics = {
