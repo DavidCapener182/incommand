@@ -13,9 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get current event
     const { data, error } = await supabase
       .from('events')
-      .select('id, event_name, event_type')
+      .select('id, event_name, event_type, venue_name, venue_address')
       .eq('is_current', true)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     
     if (error) {
       logger.error('Failed to fetch current event', error, { endpoint: '/api/get-current-event' });
@@ -33,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       endpoint: '/api/get-current-event' 
     });
     
-    return res.status(200).json(data);
+    return res.status(200).json({ event: data });
   } catch (error) {
     logger.error('Unexpected error in get-current-event', error, { endpoint: '/api/get-current-event' });
     return res.status(500).json({ error: 'Internal server error' });

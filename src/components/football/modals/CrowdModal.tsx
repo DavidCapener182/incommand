@@ -15,10 +15,41 @@ interface CrowdModalProps {
 export function CrowdCurrent({ onSave }: CrowdModalProps) {
   const [gatesSetup, setGatesSetup] = useState<GatesSetup | null>(null)
   const [loading, setLoading] = useState(true)
+  const [alertSettings, setAlertSettings] = useState({
+    queue_alert_threshold: 75,
+    entry_rate_alert_threshold: 90,
+    high_activity_threshold: 85
+  })
 
   useEffect(() => {
     loadData()
+    loadAlertSettings()
   }, [])
+
+  const loadAlertSettings = async () => {
+    try {
+      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=crowd')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.settings_json) {
+          setAlertSettings({
+            queue_alert_threshold: data.settings_json.queue_alert_threshold || 75,
+            entry_rate_alert_threshold: data.settings_json.entry_rate_alert_threshold || 90,
+            high_activity_threshold: data.settings_json.high_activity_threshold || 85
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load alert settings:', error)
+    }
+  }
+
+  const getCongestionLevel = (entryRate: number, threshold: number) => {
+    const percentage = (entryRate / threshold) * 100
+    if (percentage >= alertSettings.entry_rate_alert_threshold) return { level: 'High', color: 'text-red-600' }
+    if (percentage >= alertSettings.high_activity_threshold) return { level: 'Medium', color: 'text-amber-600' }
+    return { level: 'Low', color: 'text-green-600' }
+  }
 
   const loadData = async () => {
     try {
@@ -102,15 +133,8 @@ export function CrowdCurrent({ onSave }: CrowdModalProps) {
     }
   }
 
-  const getCongestionLevel = (entryRate: number, threshold: number) => {
-    const percentage = (entryRate / threshold) * 100
-    if (percentage >= 90) return { level: 'High', color: 'text-red-600' }
-    if (percentage >= 75) return { level: 'Medium', color: 'text-amber-600' }
-    return { level: 'Low', color: 'text-green-600' }
-  }
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
       <div className="text-sm text-muted-foreground mb-4">
         Monitor live gate status and crowd flow. Changes are saved automatically.
       </div>
@@ -223,10 +247,29 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
     threshold: 10000,
     sensorId: ''
   })
+  const [alertSettings, setAlertSettings] = useState({
+    queue_alert_threshold: 75, // Percentage of threshold that triggers queue alert
+    entry_rate_alert_threshold: 90, // Percentage of threshold that triggers entry rate alert
+    high_activity_threshold: 85 // Percentage for "high activity" status
+  })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const loadAlertSettings = async () => {
+    try {
+      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=crowd')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.settings_json) {
+          setAlertSettings({
+            queue_alert_threshold: data.settings_json.queue_alert_threshold || 75,
+            entry_rate_alert_threshold: data.settings_json.entry_rate_alert_threshold || 90,
+            high_activity_threshold: data.settings_json.high_activity_threshold || 85
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load alert settings:', error)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -239,6 +282,28 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
       console.error('Failed to load crowd data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadAlertSettings()
+  }, [])
+
+  const saveAlertSettings = async () => {
+    try {
+      await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool_type: 'crowd',
+          settings_json: alertSettings
+        })
+      })
+      alert('Alert settings saved successfully')
+    } catch (error) {
+      console.error('Failed to save alert settings:', error)
+      alert('Failed to save alert settings')
     }
   }
 
@@ -303,50 +368,122 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure gate names, sensors, and thresholds. Changes require explicit save.
-      </div>
-      
-      {/* Add new gate */}
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="font-medium mb-3">Add New Gate</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            placeholder="Gate name (e.g., Gate A)"
-            value={newGate.name || ''}
-            onChange={(e) => setNewGate({ ...newGate, name: e.target.value })}
-          />
-          <Input
-            placeholder="Sensor ID (optional)"
-            value={newGate.sensorId || ''}
-            onChange={(e) => setNewGate({ ...newGate, sensorId: e.target.value })}
-          />
-          <Input
-            type="number"
-            placeholder="Entry rate (per hour)"
-            value={newGate.entryRate || ''}
-            onChange={(e) => setNewGate({ ...newGate, entryRate: parseInt(e.target.value) || 0 })}
-            min="0"
-          />
-          <Input
-            type="number"
-            placeholder="Threshold (per hour)"
-            value={newGate.threshold || ''}
-            onChange={(e) => setNewGate({ ...newGate, threshold: parseInt(e.target.value) || 10000 })}
-            min="1"
-          />
-          <Button onClick={addGate} disabled={!newGate.name || newGate.entryRate === 0} className="col-span-2">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Gate
+    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
+      {/* Alert Threshold Configuration Section */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <div>
+          <h4 className="font-medium mb-1">Alert Thresholds</h4>
+          <p className="text-xs text-muted-foreground">
+            Configure when alerts are triggered for queue length and entry rate based on percentage of gate threshold.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Queue Alert Threshold (%)</label>
+            <Input
+              type="number"
+              value={alertSettings.queue_alert_threshold}
+              onChange={(e) => setAlertSettings({
+                ...alertSettings,
+                queue_alert_threshold: parseInt(e.target.value) || 75
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              At or above this %: Queue Alert
+            </p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Entry Rate Alert (%)</label>
+            <Input
+              type="number"
+              value={alertSettings.entry_rate_alert_threshold}
+              onChange={(e) => setAlertSettings({
+                ...alertSettings,
+                entry_rate_alert_threshold: parseInt(e.target.value) || 90
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              At or above this %: Entry Rate Alert
+            </p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">High Activity Threshold (%)</label>
+            <Input
+              type="number"
+              value={alertSettings.high_activity_threshold}
+              onChange={(e) => setAlertSettings({
+                ...alertSettings,
+                high_activity_threshold: parseInt(e.target.value) || 85
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              At or above this %: High Activity Status
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={saveAlertSettings} size="sm">
+            Save Alert Settings
           </Button>
         </div>
       </div>
-      
-      {/* Gates list */}
-      <div className="space-y-2">
-        {gatesSetup.gates.map((gate) => (
-          <div key={gate.id} className="border rounded-lg p-4">
+
+      {/* Gate Configuration Section */}
+      <div className="border rounded-lg p-4">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure gate names, sensors, and thresholds. Changes require explicit save.
+        </div>
+        
+        {/* Add new gate */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <h4 className="font-medium mb-3">Add New Gate</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="Gate name (e.g., Gate A)"
+              value={newGate.name || ''}
+              onChange={(e) => setNewGate({ ...newGate, name: e.target.value })}
+            />
+            <Input
+              placeholder="Sensor ID (optional)"
+              value={newGate.sensorId || ''}
+              onChange={(e) => setNewGate({ ...newGate, sensorId: e.target.value })}
+            />
+            <Input
+              type="number"
+              placeholder="Entry rate (per hour)"
+              value={newGate.entryRate || ''}
+              onChange={(e) => setNewGate({ ...newGate, entryRate: parseInt(e.target.value) || 0 })}
+              min="0"
+            />
+            <Input
+              type="number"
+              placeholder="Threshold (per hour)"
+              value={newGate.threshold || ''}
+              onChange={(e) => setNewGate({ ...newGate, threshold: parseInt(e.target.value) || 10000 })}
+              min="1"
+            />
+            <Button onClick={addGate} disabled={!newGate.name || newGate.entryRate === 0} className="col-span-2">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Gate
+            </Button>
+          </div>
+        </div>
+        
+        {/* Gates list */}
+        <div className="space-y-2">
+          {gatesSetup.gates.map((gate) => (
+            <div key={gate.id} className="border rounded-lg p-4">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-muted-foreground">Gate Name</label>
@@ -398,12 +535,13 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
               </Button>
             </div>
           </div>
-        ))}
-      </div>
-      
-      <div className="border-t pt-4">
-        <div className="text-sm font-medium">
-          Total Gates: {gatesSetup.gates.length}
+          ))}
+        </div>
+        
+        <div className="border-t pt-4">
+          <div className="text-sm font-medium">
+            Total Gates: {gatesSetup.gates.length}
+          </div>
         </div>
       </div>
     </div>

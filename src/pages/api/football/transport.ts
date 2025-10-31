@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getTransportConfig, upsertTransportConfig, getTransportIssues, createTransportIssue, updateTransportIssue, deleteTransportIssue, getTransportIssuesSummary } from '@/lib/database/transport';
+import { fetchTransportStatus, getArrivalPlanningSummary } from '@/lib/transport/apis';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Extract company_id and event_id from headers or query params
@@ -16,6 +17,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const config = await getTransportConfig(companyId, eventId);
       const issues = await getTransportIssues(companyId, eventId);
       const summary = await getTransportIssuesSummary(companyId, eventId);
+      
+      // Fetch real-time transport status from free APIs
+      let realTimeStatus: any[] = []
+      let arrivalPlanning: any = null
+      
+      if (config?.location || config?.postcode || config?.latitude) {
+        try {
+          realTimeStatus = await fetchTransportStatus(
+            config.location,
+            config.postcode,
+            config.latitude && config.longitude ? { lat: config.latitude, lng: config.longitude } : undefined
+          )
+          
+          // Get arrival planning summary
+          arrivalPlanning = await getArrivalPlanningSummary(
+            config.location,
+            config.postcode,
+            config.latitude && config.longitude ? { lat: config.latitude, lng: config.longitude } : undefined
+          )
+        } catch (error) {
+          console.error('Failed to fetch real-time transport status:', error)
+        }
+      }
       
       res.status(200).json({
         location: config?.location || '',
@@ -36,6 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           resolved: issue.resolved,
           resolvedAt: issue.resolved_at
         })),
+        realTimeStatus,
+        arrivalPlanning,
         summary
       });
     } else if (req.method === 'POST') {

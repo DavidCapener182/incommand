@@ -41,9 +41,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(200).json({ success: true });
     } else if (req.method === 'PUT') {
       // Update checklist configuration
-      const { action, data } = req.body;
+      const { action, data, tasks } = req.body;
       
-      if (action === 'create') {
+      // If tasks array is provided directly, update all tasks
+      if (tasks && Array.isArray(tasks)) {
+        // Delete all existing tasks for this event
+        const existingTasks = await getFixtureTasks(companyId, eventId);
+        for (const task of existingTasks) {
+          await deleteFixtureTask(companyId, eventId, task.id);
+        }
+        
+        // Create new tasks
+        for (const task of tasks) {
+          await createFixtureTask(companyId, eventId, {
+            minute: task.minute,
+            description: task.description,
+            assigned_role: task.assignedRole
+          });
+        }
+        
+        res.status(200).json({ success: true });
+      } else if (action === 'create') {
         const newTask = await createFixtureTask(companyId, eventId, {
           minute: data.minute,
           description: data.description,
@@ -61,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await deleteFixtureTask(companyId, eventId, data.id);
         res.status(200).json({ success: true });
       } else {
-        res.status(400).json({ error: 'Invalid action. Use create, update, or delete' });
+        res.status(400).json({ error: 'Invalid action. Use create, update, or delete, or provide tasks array' });
       }
     } else {
       res.setHeader('Allow', ['GET', 'POST', 'PUT']);

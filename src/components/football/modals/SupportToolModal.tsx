@@ -36,6 +36,10 @@ export default function SupportToolModal({
 }: SupportToolModalProps) {
   const [isSaving, setIsSaving] = React.useState(false)
 
+  React.useEffect(() => {
+    console.log(`SupportToolModal "${title}" isOpen:`, isOpen)
+  }, [isOpen, title])
+
   const handleSave = async () => {
     if (onSave) {
       setIsSaving(true)
@@ -49,7 +53,11 @@ export default function SupportToolModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose()
+      }
+    }}>
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl">{title}</DialogTitle>

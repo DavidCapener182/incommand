@@ -86,7 +86,7 @@ export function FixtureCurrent({ onSave }: FixtureModalProps) {
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           Live matchday operational checklist. Click to mark tasks complete.
@@ -160,7 +160,13 @@ export function FixtureCurrent({ onSave }: FixtureModalProps) {
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">{task.minute}&apos;</span>
+                  <span className="text-sm font-medium">
+                    {task.minute < 0 
+                      ? `Pre-match: ${Math.abs(task.minute)}min` 
+                      : task.minute === 0 
+                        ? 'Kick-off' 
+                        : `${task.minute}'`}
+                  </span>
                   <Badge variant="outline" className="text-xs">
                     {task.assignedRole || 'Unassigned'}
                   </Badge>
@@ -208,10 +214,23 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
     assignedRole: '', 
     completed: false 
   })
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; tasks: FixtureTask[] }>>([])
+  const [templateName, setTemplateName] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=fixture')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.settings_json?.templates) {
+          setTemplates(data.settings_json.templates || [])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -224,6 +243,119 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
       console.error('Failed to load fixture data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadTemplates()
+  }, [])
+
+  const saveTemplates = async (updatedTemplates: typeof templates) => {
+    try {
+      await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool_type: 'fixture',
+          settings_json: { templates: updatedTemplates }
+        })
+      })
+      setTemplates(updatedTemplates)
+      alert('Templates saved successfully')
+    } catch (error) {
+      console.error('Failed to save templates:', error)
+      alert('Failed to save templates')
+    }
+  }
+
+  const saveAsTemplate = () => {
+    if (!fixtureChecklist || !templateName.trim()) {
+      alert('Please enter a template name')
+      return
+    }
+
+    const newTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName.trim(),
+      tasks: fixtureChecklist.tasks.map(t => ({
+        ...t,
+        completed: false // Reset completion status when saving as template
+      }))
+    }
+
+    const updatedTemplates = [...templates, newTemplate]
+    saveTemplates(updatedTemplates)
+    setTemplateName('')
+  }
+
+  const loadTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId)
+    if (template && fixtureChecklist) {
+      setFixtureChecklist({
+        ...fixtureChecklist,
+        tasks: template.tasks.map(t => ({
+          ...t,
+          completed: false // Reset completion when loading template
+        }))
+      })
+      setSelectedTemplate(templateId)
+    }
+  }
+
+  const deleteTemplate = (templateId: string) => {
+    if (confirm('Are you sure you want to delete this template?')) {
+      const updatedTemplates = templates.filter(t => t.id !== templateId)
+      saveTemplates(updatedTemplates)
+      if (selectedTemplate === templateId) {
+        setSelectedTemplate(null)
+      }
+    }
+  }
+
+  const seedDefaultTasks = async () => {
+    if (!fixtureChecklist) return
+    
+    const defaultTasks: FixtureTask[] = [
+      // Pre-match tasks
+      { id: `task-${Date.now()}-1`, minute: -180, description: 'Final security briefing and deployment check', assignedRole: 'Safety Officer', completed: false },
+      { id: `task-${Date.now()}-2`, minute: -120, description: 'Check all turnstiles operational', assignedRole: 'Stewards', completed: false },
+      { id: `task-${Date.now()}-3`, minute: -90, description: 'Verify medical teams deployed and ready', assignedRole: 'Medical', completed: false },
+      { id: `task-${Date.now()}-4`, minute: -60, description: 'Final pitch inspection and floodlight check', assignedRole: 'Technical Staff', completed: false },
+      { id: `task-${Date.now()}-5`, minute: -45, description: 'Open gates for early arrivals', assignedRole: 'Stewards', completed: false },
+      { id: `task-${Date.now()}-6`, minute: -30, description: 'Monitor crowd flow and entry rates', assignedRole: 'Control Room', completed: false },
+      { id: `task-${Date.now()}-7`, minute: -15, description: 'Check all stands and concourses clear', assignedRole: 'Stewards', completed: false },
+      { id: `task-${Date.now()}-8`, minute: -5, description: 'Final pre-match safety check', assignedRole: 'Safety Officer', completed: false },
+      // During match tasks
+      { id: `task-${Date.now()}-9`, minute: 15, description: 'Ground staff check pitch conditions', assignedRole: 'Ground Staff', completed: false },
+      { id: `task-${Date.now()}-10`, minute: 30, description: 'Half-time security check', assignedRole: 'Security', completed: false },
+      { id: `task-${Date.now()}-11`, minute: 45, description: 'Check floodlights operational', assignedRole: 'Technical Staff', completed: false },
+      { id: `task-${Date.now()}-12`, minute: 60, description: 'Monitor crowd behavior and occupancy', assignedRole: 'Control Room', completed: false },
+      { id: `task-${Date.now()}-13`, minute: 75, description: 'Medical team standby check', assignedRole: 'Medical', completed: false },
+      { id: `task-${Date.now()}-14`, minute: 90, description: 'Prepare for end of match procedures', assignedRole: 'Safety Officer', completed: false },
+      // Post-match tasks
+      { id: `task-${Date.now()}-15`, minute: 105, description: 'Open all exit gates', assignedRole: 'Stewards', completed: false },
+      { id: `task-${Date.now()}-16`, minute: 120, description: 'Monitor crowd dispersal', assignedRole: 'Control Room', completed: false },
+      { id: `task-${Date.now()}-17`, minute: 135, description: 'Final security sweep', assignedRole: 'Security', completed: false },
+      { id: `task-${Date.now()}-18`, minute: 150, description: 'Stand clearance check', assignedRole: 'Stewards', completed: false },
+      { id: `task-${Date.now()}-19`, minute: 180, description: 'Post-match debrief with key staff', assignedRole: 'Safety Officer', completed: false },
+      { id: `task-${Date.now()}-20`, minute: 240, description: 'Final incident report and handover', assignedRole: 'Control Room', completed: false },
+    ]
+    
+    const updatedTasks = [...fixtureChecklist.tasks, ...defaultTasks].sort((a, b) => a.minute - b.minute)
+    setFixtureChecklist({ ...fixtureChecklist, tasks: updatedTasks })
+    
+    // Save to backend
+    try {
+      await fetch('/api/football/fixture', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks: updatedTasks }),
+      })
+      alert('Default tasks added successfully')
+    } catch (error) {
+      console.error('Failed to save default tasks:', error)
+      alert('Failed to save default tasks')
     }
   }
 
@@ -278,6 +410,8 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
     setFixtureChecklist({ ...fixtureChecklist, tasks: updatedTasks })
   }
 
+  const roleOptions = ['Stewards', 'Police', 'Medical', 'Safety Officer', 'Response Team', 'Control Room', 'Unassigned']
+
   if (loading) {
     return <div className="p-4 text-center">Loading...</div>
   }
@@ -286,13 +420,105 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
     return <div className="p-4 text-center text-red-600">Failed to load fixture data</div>
   }
 
-  const roleOptions = ['Stewards', 'Police', 'Medical', 'Safety Officer', 'Response Team', 'Control Room', 'Unassigned']
-
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure matchday operational tasks. Changes require explicit save.
+    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
+      {/* Task Template Management Section */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <div>
+          <h4 className="font-medium mb-1">Task Templates</h4>
+          <p className="text-xs text-muted-foreground">
+            Save and manage task templates for quick setup. Templates can be reused across multiple events.
+          </p>
+        </div>
+
+        {/* Save current as template */}
+        <div className="border rounded p-3 bg-gray-50">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Template name (e.g., Standard Matchday)"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="flex-1"
+            />
+            <Button 
+              onClick={saveAsTemplate} 
+              disabled={!templateName.trim() || !fixtureChecklist || fixtureChecklist.tasks.length === 0}
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Save as Template
+            </Button>
+          </div>
+        </div>
+
+        {/* Seed default tasks */}
+        <div className="border rounded p-3 bg-blue-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Quick Setup</div>
+              <div className="text-xs text-muted-foreground">
+                Add comprehensive pre-match, during, and post-match checklist items
+              </div>
+            </div>
+            <Button 
+              onClick={seedDefaultTasks} 
+              disabled={!fixtureChecklist}
+              size="sm"
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Default Tasks
+            </Button>
+          </div>
+        </div>
+
+        {/* Load template */}
+        {templates.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Load Template</label>
+            <div className="grid grid-cols-1 gap-2">
+              {templates.map((template) => (
+                <div key={template.id} className="flex items-center justify-between border rounded p-2">
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{template.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {template.tasks.length} tasks
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => loadTemplate(template.id)}
+                    >
+                      Load
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteTemplate(template.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {templates.length === 0 && (
+          <div className="text-center py-4 text-sm text-muted-foreground">
+            No templates saved. Create one by saving your current task list.
+          </div>
+        )}
       </div>
+
+      {/* Task Configuration Section */}
+      <div className="border rounded-lg p-4">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure matchday operational tasks. Changes require explicit save.
+        </div>
       
       {/* Add new task */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -391,6 +617,7 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
         <div className="text-sm font-medium">
           Total Tasks: {fixtureChecklist.tasks.length}
         </div>
+      </div>
       </div>
     </div>
   )

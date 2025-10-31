@@ -17,9 +17,16 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   const [saving, setSaving] = useState(false)
   const [editingStand, setEditingStand] = useState<string | null>(null)
   const [newStand, setNewStand] = useState<Partial<StandConfig>>({ name: '', capacity: 0 })
+  const [thresholds, setThresholds] = useState({
+    default_green_threshold: 90,
+    default_amber_threshold: 97,
+    default_red_threshold: 100,
+    stand_overrides: {} as Record<string, { amber?: number; red?: number }>
+  })
 
   useEffect(() => {
     loadData()
+    loadThresholds()
   }, [])
 
   const loadData = async () => {
@@ -34,6 +41,35 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadThresholds = async () => {
+    try {
+      const res = await fetch('/api/football/thresholds?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      if (res.ok) {
+        const data = await res.json()
+        setThresholds({
+          default_green_threshold: data.default_green_threshold || 90,
+          default_amber_threshold: data.default_amber_threshold || 97,
+          default_red_threshold: data.default_red_threshold || 100,
+          stand_overrides: data.stand_overrides || {}
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load thresholds:', error)
+    }
+  }
+
+  const getColorForStand = (standName: string, percent: number): string => {
+    const override = thresholds.stand_overrides[standName]
+    const amberThreshold = override?.amber ?? thresholds.default_amber_threshold
+    const redThreshold = override?.red ?? thresholds.default_red_threshold
+    const greenThreshold = thresholds.default_green_threshold
+
+    if (percent >= redThreshold) return 'bg-red-500'
+    if (percent >= amberThreshold) return 'bg-amber-500'
+    if (percent >= greenThreshold) return 'bg-amber-500'
+    return 'bg-green-500'
   }
 
   const handleSave = async () => {
@@ -134,14 +170,14 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   }
 
   const currentTab = (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
       <div className="text-sm text-muted-foreground mb-4">
         Edit live occupancy numbers. Changes are saved automatically.
       </div>
       
       {standsSetup.stands.map((stand) => {
         const percent = stand.capacity ? Math.min(100, ((stand.current || 0) / stand.capacity) * 100) : 0
-        const colorClass = percent < 85 ? 'bg-green-500' : percent < 95 ? 'bg-amber-500' : 'bg-red-500'
+        const colorClass = getColorForStand(stand.name, percent)
         
         return (
           <div key={stand.id} className="border rounded-lg p-4">
@@ -280,10 +316,13 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newStand, setNewStand] = useState<Partial<StandConfig>>({ name: '', capacity: 0 })
-
-  useEffect(() => {
-    loadData()
-  }, [])
+  const [thresholds, setThresholds] = useState({
+    default_green_threshold: 90,
+    default_amber_threshold: 97,
+    default_red_threshold: 100,
+    stand_overrides: {} as Record<string, { amber?: number; red?: number }>
+  })
+  const [editingStandOverride, setEditingStandOverride] = useState<string | null>(null)
 
   const loadData = async () => {
     try {
@@ -296,6 +335,49 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
       console.error('Failed to load stands data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadThresholds = async () => {
+    try {
+      const res = await fetch('/api/football/thresholds?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      if (res.ok) {
+        const data = await res.json()
+        setThresholds({
+          default_green_threshold: data.default_green_threshold || 90,
+          default_amber_threshold: data.default_amber_threshold || 97,
+          default_red_threshold: data.default_red_threshold || 100,
+          stand_overrides: data.stand_overrides || {}
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load thresholds:', error)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadThresholds()
+  }, [])
+
+  const saveThresholds = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/football/thresholds', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          default_green_threshold: thresholds.default_green_threshold,
+          default_amber_threshold: thresholds.default_amber_threshold,
+          default_red_threshold: thresholds.default_red_threshold,
+          stand_overrides: thresholds.stand_overrides
+        }),
+      })
+      onSave?.()
+    } catch (error) {
+      console.error('Failed to save thresholds:', error)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -376,10 +458,156 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure stand names, capacities, and order. Changes require explicit save.
+    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
+      {/* Threshold Configuration Section */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <div>
+          <h4 className="font-medium mb-1">Occupancy Thresholds</h4>
+          <p className="text-xs text-muted-foreground">
+            Configure color thresholds for occupancy indicators. Stands below green threshold show green, 
+            between green and amber show amber, above amber show red.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Green Threshold (%)</label>
+            <Input
+              type="number"
+              value={thresholds.default_green_threshold}
+              onChange={(e) => setThresholds({
+                ...thresholds,
+                default_green_threshold: parseInt(e.target.value) || 90
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Below this: Green</p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Amber Threshold (%)</label>
+            <Input
+              type="number"
+              value={thresholds.default_amber_threshold}
+              onChange={(e) => setThresholds({
+                ...thresholds,
+                default_amber_threshold: parseInt(e.target.value) || 97
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Green to this: Amber</p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Red Threshold (%)</label>
+            <Input
+              type="number"
+              value={thresholds.default_red_threshold}
+              onChange={(e) => setThresholds({
+                ...thresholds,
+                default_red_threshold: parseInt(e.target.value) || 100
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Above amber: Red</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={saveThresholds} size="sm">
+            Save Thresholds
+          </Button>
+        </div>
+
+        {/* Stand-specific overrides */}
+        {standsSetup && standsSetup.stands.length > 0 && (
+          <div className="border-t pt-4 mt-4">
+            <h5 className="text-sm font-medium mb-2">Stand-Specific Overrides</h5>
+            <p className="text-xs text-muted-foreground mb-3">
+              Override thresholds for specific stands. Leave empty to use defaults.
+            </p>
+            <div className="space-y-2">
+              {standsSetup.stands.map((stand) => {
+                const override = thresholds.stand_overrides[stand.name] || {}
+                const isEditing = editingStandOverride === stand.name
+                
+                return (
+                  <div key={stand.id} className="border rounded p-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">{stand.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingStandOverride(isEditing ? null : stand.name)}
+                      >
+                        {isEditing ? 'Done' : 'Override'}
+                      </Button>
+                    </div>
+                    {isEditing && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Amber Threshold</label>
+                          <Input
+                            type="number"
+                            value={override.amber || ''}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseInt(e.target.value) : undefined
+                              setThresholds({
+                                ...thresholds,
+                                stand_overrides: {
+                                  ...thresholds.stand_overrides,
+                                  [stand.name]: {
+                                    ...override,
+                                    amber: value
+                                  }
+                                }
+                              })
+                            }}
+                            placeholder={`Default: ${thresholds.default_amber_threshold}`}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Red Threshold</label>
+                          <Input
+                            type="number"
+                            value={override.red || ''}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseInt(e.target.value) : undefined
+                              setThresholds({
+                                ...thresholds,
+                                stand_overrides: {
+                                  ...thresholds.stand_overrides,
+                                  [stand.name]: {
+                                    ...override,
+                                    red: value
+                                  }
+                                }
+                              })
+                            }}
+                            placeholder={`Default: ${thresholds.default_red_threshold}`}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Stand Configuration Section */}
+      <div className="border rounded-lg p-4">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure stand names, capacities, and order. Changes require explicit save.
+        </div>
       
       {/* Add new stand */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -454,6 +682,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
         <div className="text-sm font-medium">
           Total Stadium Capacity: {standsSetup.totalCapacity.toLocaleString()}
         </div>
+      </div>
       </div>
     </div>
   )

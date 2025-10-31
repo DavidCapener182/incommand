@@ -27,10 +27,10 @@ const getIconComponent = (iconName: string) => {
 export function StaffingActual({ onSave }: StaffingModalProps) {
   const [staffingData, setStaffingData] = useState<StaffingData | null>(null)
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadData()
-  }, [])
+  const [targetSettings, setTargetSettings] = useState({
+    target_threshold: 90,
+    alert_threshold: 85
+  })
 
   const loadData = async () => {
     try {
@@ -45,6 +45,41 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
       setLoading(false)
     }
   }
+
+  const loadTargetSettings = async () => {
+    try {
+      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=staffing')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.settings_json) {
+          setTargetSettings({
+            target_threshold: data.settings_json.target_threshold || 90,
+            alert_threshold: data.settings_json.alert_threshold || 85
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load target settings:', error)
+    }
+  }
+
+  const getStatusForRole = (percentOfPlanned: number): { status: 'at-target' | 'near-target' | 'below-target', label: string, color: string } => {
+    const targetThreshold = targetSettings.target_threshold
+    const alertThreshold = targetSettings.alert_threshold
+
+    if (percentOfPlanned >= targetThreshold) {
+      return { status: 'at-target', label: 'At Target', color: 'green' }
+    } else if (percentOfPlanned >= alertThreshold) {
+      return { status: 'near-target', label: 'Near Target', color: 'amber' }
+    } else {
+      return { status: 'below-target', label: 'Below Target', color: 'red' }
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadTargetSettings()
+  }, [])
 
   const handleActualChange = async (roleId: string, actual: number) => {
     if (!staffingData) return
@@ -76,7 +111,7 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
       <div className="text-sm text-muted-foreground mb-4">
         Input actual staffing numbers. Changes are saved automatically.
       </div>
@@ -84,8 +119,7 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
       {staffingData.roles.map((role) => {
         const variance = role.actual - role.planned
         const percentOfPlanned = role.planned > 0 ? (role.actual / role.planned) * 100 : 0
-        const isUnderstaffed = percentOfPlanned < 90
-        const isOverstaffed = role.actual > role.planned
+        const status = getStatusForRole(percentOfPlanned)
         
         return (
           <div key={role.id} className="border rounded-lg p-4">
@@ -98,8 +132,8 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="text-sm text-muted-foreground">
-                  Planned: {role.planned}
+                <div className="text-sm font-semibold text-gray-900">
+                  Planned: <span className="font-bold">{role.planned}</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {percentOfPlanned.toFixed(1)}% of target
@@ -109,31 +143,40 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
             
             <div className="space-y-3">
               <div className="flex gap-2 items-center">
-                <Input
-                  type="number"
-                  value={role.actual}
-                  onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
-                  className="w-32"
-                  min="0"
-                />
-                <span className="text-sm text-muted-foreground">actual present</span>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground mb-1">Actual Present</span>
+                  <Input
+                    type="number"
+                    value={role.actual}
+                    onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
+                    className="w-32"
+                    min="0"
+                  />
+                </div>
+                <div className="flex flex-col ml-4">
+                  <span className="text-xs text-muted-foreground mb-1">Planned</span>
+                  <div className="text-sm font-semibold text-gray-900 pt-2">{role.planned}</div>
+                </div>
               </div>
               
               <div className="flex items-center gap-2">
-                {isUnderstaffed ? (
+                {status.status === 'below-target' ? (
+                  <div className="flex items-center gap-1 text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">{status.label} - {Math.abs(variance)} below planned</span>
+                  </div>
+                ) : status.status === 'near-target' ? (
                   <div className="flex items-center gap-1 text-amber-600">
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Understaffed by {Math.abs(variance)}</span>
-                  </div>
-                ) : isOverstaffed ? (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Overstaffed by {variance}</span>
+                    <span className="text-sm font-medium">{status.label} - {Math.abs(variance)} below planned</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">At target</span>
+                    <span className="text-sm font-medium">
+                      {status.label}
+                      {variance > 0 ? ` (+${variance} over planned)` : ''}
+                    </span>
                   </div>
                 )}
               </div>
@@ -168,10 +211,27 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
     icon: '👤', 
     color: 'blue' 
   })
+  const [targetSettings, setTargetSettings] = useState({
+    target_threshold: 90, // Percentage of planned that's considered "at target"
+    alert_threshold: 85   // Percentage below which triggers alert
+  })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const loadTargetSettings = async () => {
+    try {
+      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=staffing')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.settings_json) {
+          setTargetSettings({
+            target_threshold: data.settings_json.target_threshold || 90,
+            alert_threshold: data.settings_json.alert_threshold || 85
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load target settings:', error)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -184,6 +244,28 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
       console.error('Failed to load staffing data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadTargetSettings()
+  }, [])
+
+  const saveTargetSettings = async () => {
+    try {
+      await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool_type: 'staffing',
+          settings_json: targetSettings
+        })
+      })
+      alert('Target settings saved successfully')
+    } catch (error) {
+      console.error('Failed to save target settings:', error)
+      alert('Failed to save target settings')
     }
   }
 
@@ -261,10 +343,66 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure staffing roles and deployment numbers. Changes require explicit save.
+    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
+      {/* Target Configuration Section */}
+      <div className="border rounded-lg p-4 space-y-4">
+        <div>
+          <h4 className="font-medium mb-1">Target Thresholds</h4>
+          <p className="text-xs text-muted-foreground">
+            Configure staffing target thresholds. These determine when staffing is considered "at target", 
+            "near target", or "below target" based on percentage of planned staff.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Target Threshold (%)</label>
+            <Input
+              type="number"
+              value={targetSettings.target_threshold}
+              onChange={(e) => setTargetSettings({
+                ...targetSettings,
+                target_threshold: parseInt(e.target.value) || 90
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              At or above this % of planned: "At Target"
+            </p>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Alert Threshold (%)</label>
+            <Input
+              type="number"
+              value={targetSettings.alert_threshold}
+              onChange={(e) => setTargetSettings({
+                ...targetSettings,
+                alert_threshold: parseInt(e.target.value) || 85
+              })}
+              min="0"
+              max="100"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Below this % of planned: "Below Target" (Alert)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={saveTargetSettings} size="sm">
+            Save Target Settings
+          </Button>
+        </div>
       </div>
+
+      {/* Role Configuration Section */}
+      <div className="border rounded-lg p-4">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure staffing roles and deployment numbers. Changes require explicit save.
+        </div>
       
       {/* Add new role */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -383,6 +521,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
         <div className="text-sm font-medium">
           Total Planned Staff: {staffingData.roles.reduce((sum, r) => sum + r.planned, 0)}
         </div>
+      </div>
       </div>
     </div>
   )
