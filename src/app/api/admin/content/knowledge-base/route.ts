@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       action: 'create_content',
       resourceType: 'knowledge_base',
       resourceId: contentData.id,
-      changes: data,
+      changes: contentData as Record<string, unknown>,
     })
 
     return NextResponse.json({ article: data })

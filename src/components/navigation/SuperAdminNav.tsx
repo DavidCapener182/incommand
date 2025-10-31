@@ -33,7 +33,7 @@ export default function SuperAdminNav() {
       
       <ul className="p-3 space-y-1">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = path === href || path.startsWith(href + '/');
+          const active = path === href || (path && path.startsWith(href + '/'));
           return (
             <li key={href}>
               <Link

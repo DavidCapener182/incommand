@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         action: 'create_plan',
         resourceType: 'plans',
         resourceId: planData.id,
-        changes: data,
+        changes: planData as Record<string, unknown>,
       })
 
       return NextResponse.json({ plan: data })

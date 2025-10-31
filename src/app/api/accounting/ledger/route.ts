@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       action: 'create_ledger_entry',
       resourceType: 'ledger_entries',
       resourceId: ledgerData.id,
-      changes: data,
+      changes: ledgerData as Record<string, unknown>,
     })
 
     return NextResponse.json({ entry: data })

@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       action: 'create_invoice',
       resourceType: 'invoices',
       resourceId: invoiceData.id,
-      changes: data,
+      changes: invoiceData as Record<string, unknown>,
     })
 
     return NextResponse.json({ invoice: data })
