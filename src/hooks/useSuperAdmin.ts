@@ -221,7 +221,7 @@ export async function sa_listBlogPosts() {
     if (role !== 'superadmin') return [];
     
     const { data, error } = await supabase
-      .from('blog_posts')
+      .from('blog_posts' as any)
       .select('*')
       .order('created_at', { ascending: false });
     
@@ -252,8 +252,8 @@ export async function sa_createBlogPost(post: {
       throw new Error('Unauthorized');
     }
     
-    const { data, error } = await (supabase as any)
-      .from('blog_posts')
+    const { data, error } = await supabase
+      .from('blog_posts' as any)
       .insert({
         ...post,
         published_at: post.status === 'published' ? new Date().toISOString() : null
@@ -292,8 +292,8 @@ export async function sa_updateBlogPost(id: string, updates: {
       updateData.published_at = new Date().toISOString();
     }
     
-    const { data, error } = await (supabase as any)
-      .from('blog_posts')
+    const { data, error } = await supabase
+      .from('blog_posts' as any)
       .update(updateData)
       .eq('id', id)
       .select()
