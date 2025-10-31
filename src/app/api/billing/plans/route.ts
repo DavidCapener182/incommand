@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error
 
+      if (!data || !('id' in data)) {
+        throw new Error('Failed to create plan: invalid response')
+      }
+
       await recordAdminAudit(context.serviceClient, {
         organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
