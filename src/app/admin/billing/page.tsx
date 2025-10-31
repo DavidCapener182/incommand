@@ -216,7 +216,6 @@ export default async function BillingPage() {
           </div>
 
           <div className="flex justify-end mb-4">
-            {/* @ts-expect-error client component */}
             <SyncMarketingPlansButton />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
