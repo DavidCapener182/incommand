@@ -220,8 +220,8 @@ export async function sa_listBlogPosts() {
     const { role, supabase } = await getServerUser();
     if (role !== 'superadmin') return [];
     
-    const { data, error } = await supabase
-      .from('blog_posts' as any)
+    const { data, error } = await (supabase as any)
+      .from('blog_posts')
       .select('*')
       .order('created_at', { ascending: false });
     
@@ -252,8 +252,8 @@ export async function sa_createBlogPost(post: {
       throw new Error('Unauthorized');
     }
     
-    const { data, error } = await supabase
-      .from('blog_posts' as any)
+    const { data, error } = await (supabase as any)
+      .from('blog_posts')
       .insert({
         ...post,
         published_at: post.status === 'published' ? new Date().toISOString() : null
@@ -292,8 +292,8 @@ export async function sa_updateBlogPost(id: string, updates: {
       updateData.published_at = new Date().toISOString();
     }
     
-    const { data, error } = await supabase
-      .from('blog_posts' as any)
+    const { data, error } = await (supabase as any)
+      .from('blog_posts')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -317,8 +317,8 @@ export async function sa_deleteBlogPost(id: string) {
       throw new Error('Unauthorized');
     }
     
-    const { error } = await supabase
-      .from('blog_posts' as any)
+    const { error } = await (supabase as any)
+      .from('blog_posts')
       .delete()
       .eq('id', id);
     
@@ -340,8 +340,8 @@ export async function sa_getContentStats() {
       return { totalPosts: 0, publishedPosts: 0, draftPosts: 0, totalViews: 0 };
     }
     
-    const { data, error } = await supabase
-      .from('blog_posts' as any)
+    const { data, error } = await (supabase as any)
+      .from('blog_posts')
       .select('status, views');
     
     if (error) {
