@@ -44,7 +44,7 @@ export default function AddCompanyButton() {
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg dark:bg-[#23408e] dark:text-white">
             <div className="mb-4">
               <h2 className="text-lg font-semibold">Create Company</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Enter the new company's details.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Enter the new company&apos;s details.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

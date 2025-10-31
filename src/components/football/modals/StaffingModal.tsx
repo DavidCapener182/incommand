@@ -349,8 +349,8 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
         <div>
           <h4 className="font-medium mb-1">Target Thresholds</h4>
           <p className="text-xs text-muted-foreground">
-            Configure staffing target thresholds. These determine when staffing is considered "at target", 
-            "near target", or "below target" based on percentage of planned staff.
+            Configure staffing target thresholds. These determine when staffing is considered &quot;at target&quot;, 
+            &quot;near target&quot;, or &quot;below target&quot; based on percentage of planned staff.
           </p>
         </div>
 
@@ -369,7 +369,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
               className="w-full"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              At or above this % of planned: "At Target"
+              At or above this % of planned: &quot;At Target&quot;
             </p>
           </div>
           <div>
@@ -386,7 +386,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
               className="w-full"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Below this % of planned: "Below Target" (Alert)
+              Below this % of planned: &quot;Below Target&quot; (Alert)
             </p>
           </div>
         </div>

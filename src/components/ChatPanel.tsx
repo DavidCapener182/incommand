@@ -125,6 +125,9 @@ export default function ChatPanel({
     }
   }, [isOpen, onClose])
 
+  const pathname = usePathname() || ''
+  const isAdmin = pathname.startsWith('/admin')
+
   if (!isOpen || !user || !isMounted) return null
 
   const panelVariants = {
@@ -187,9 +190,6 @@ export default function ChatPanel({
       }
     }
   }
-
-  const pathname = usePathname() || ''
-  const isAdmin = pathname.startsWith('/admin')
 
   return createPortal(
     <AnimatePresence>

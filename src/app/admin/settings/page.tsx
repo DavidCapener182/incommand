@@ -8,7 +8,7 @@ import {
   KeyIcon,
   ServerIcon,
   GlobeAltIcon,
-  DatabaseIcon,
+  CircleStackIcon,
   WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 
@@ -155,7 +155,7 @@ export default async function SettingsPage() {
 
           <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6">
             <div className="flex items-center mb-4">
-              <DatabaseIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mr-3" />
+              <CircleStackIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mr-3" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Database</h3>
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-4">Database configuration and maintenance</p>
