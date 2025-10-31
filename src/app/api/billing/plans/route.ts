@@ -83,12 +83,14 @@ export async function POST(request: NextRequest) {
         throw new Error('Failed to create plan: invalid response')
       }
 
+      const planData = data as { id: string; [key: string]: unknown }
+
       await recordAdminAudit(context.serviceClient, {
         organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
         action: 'create_plan',
         resourceType: 'plans',
-        resourceId: data.id,
+        resourceId: planData.id,
         changes: data,
       })
 
