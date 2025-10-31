@@ -253,7 +253,7 @@ export async function sa_createBlogPost(post: {
     }
     
     const { data, error } = await supabase
-      .from('blog_posts')
+      .from('blog_posts' as any)
       .insert({
         ...post,
         published_at: post.status === 'published' ? new Date().toISOString() : null
