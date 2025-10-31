@@ -109,7 +109,6 @@ export default async function ContentPage() {
             <p className="text-gray-600 dark:text-gray-300 mb-4">Create and manage blog posts for company updates and insights.</p>
             <div className="flex gap-2">
               <Link href="/admin/content?type=blog" className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm">View All</Link>
-              {/* @ts-expect-error client component */}
               <NewContentDialog />
             </div>
           </div>
