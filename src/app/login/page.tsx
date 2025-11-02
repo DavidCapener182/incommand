@@ -17,12 +17,62 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showLegalModal, setShowLegalModal] = useState(false)
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('privacy')
+  const [shouldShowMobileMessage, setShouldShowMobileMessage] = useState(false)
+  const [isCheckingMobileSupport, setIsCheckingMobileSupport] = useState(true)
+  const [forceDesktopUrl, setForceDesktopUrl] = useState('/login?force-desktop=1')
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
     emailRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const currentUrl = new URL(window.location.href)
+    currentUrl.searchParams.set('force-desktop', '1')
+    setForceDesktopUrl(`${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const forceDesktop = searchParams.get('force-desktop') === '1'
+
+    const checkMobileSupport = () => {
+      if (forceDesktop) {
+        setShouldShowMobileMessage(false)
+        setIsCheckingMobileSupport(false)
+        return
+      }
+
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || ''
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+      const isMobileDevice = mobileRegex.test(userAgent)
+      const isSmallScreen = window.innerWidth < 768
+
+      setShouldShowMobileMessage(isMobileDevice || isSmallScreen)
+      setIsCheckingMobileSupport(false)
+    }
+
+    checkMobileSupport()
+
+    if (!forceDesktop) {
+      window.addEventListener('resize', checkMobileSupport)
+    }
+
+    return () => {
+      if (!forceDesktop) {
+        window.removeEventListener('resize', checkMobileSupport)
+      }
+    }
   }, [])
 
   // Handle magic link authentication
@@ -125,6 +175,36 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!isCheckingMobileSupport && shouldShowMobileMessage) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#23408e] text-white text-center px-6 py-12">
+        <Image
+          src="/inCommand.png"
+          alt="inCommand Logo"
+          width={240}
+          height={180}
+          className="drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain mb-10"
+          priority
+        />
+        <h1 className="text-3xl font-semibold mb-4">Mobile experience coming soon</h1>
+        <p className="text-base text-blue-100 max-w-md mb-8 leading-relaxed">
+          We&apos;re crafting a dedicated mobile experience for inCommand. For now, please access the platform from a desktop browser
+          or request the desktop site from your mobile browser to continue.
+        </p>
+        <Link
+          href={forceDesktopUrl}
+          className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-[#23408e] font-semibold shadow-md hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition"
+        >
+          Continue to desktop site
+        </Link>
+      </div>
+    )
+  }
+
+  if (isCheckingMobileSupport) {
+    return <div className="min-h-screen bg-[#23408e]" />
   }
 
   return (
