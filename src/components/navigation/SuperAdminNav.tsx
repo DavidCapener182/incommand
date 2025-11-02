@@ -8,14 +8,18 @@ import {
   DocumentTextIcon,
   LifebuoyIcon,
   ChartBarIcon,
-  CogIcon
+  CogIcon,
+  BookOpenIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline';
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: HomeIcon },
   { href: '/admin/companies', label: 'Companies', icon: BuildingOfficeIcon },
   { href: '/admin/billing', label: 'Billing', icon: CreditCardIcon },
+  { href: '/admin/accounting/ledger', label: 'Accounting Ledger', icon: CalculatorIcon },
   { href: '/admin/content', label: 'Content', icon: DocumentTextIcon },
+  { href: '/admin/content/knowledge-base', label: 'Knowledge Base', icon: BookOpenIcon },
   { href: '/admin/support', label: 'Support', icon: LifebuoyIcon },
   { href: '/admin/metrics', label: 'System Metrics', icon: ChartBarIcon },
   { href: '/admin/settings', label: 'Settings', icon: CogIcon },

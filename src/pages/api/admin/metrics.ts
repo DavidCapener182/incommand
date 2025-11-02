@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerUser } from '@/lib/auth/getServerUser';
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { getServiceClient } from '@/lib/supabaseServer';
+import { deriveRole } from '@/lib/auth/roles';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -9,19 +10,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Check authentication and role
-    const { user, role } = await getServerUser();
-    if (!user) {
+    const supabase = createServerSupabaseClient({ req, res });
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    // Get user profile to check role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, email')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const role = deriveRole(user.email, (profile as any)?.role);
     if (role !== 'superadmin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Use service client for system-wide queries (bypasses RLS)
+    const serviceClient = getServiceClient();
+
     // Get system-wide metrics
     const [companiesCount, usersCount, eventsCount] = await Promise.all([
-      supabase.from('companies').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('events').select('id', { count: 'exact', head: true })
+      serviceClient.from('companies').select('id', { count: 'exact', head: true }),
+      serviceClient.from('profiles').select('id', { count: 'exact', head: true }),
+      serviceClient.from('events').select('id', { count: 'exact', head: true })
     ]);
 
     const metrics = {
