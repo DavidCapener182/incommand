@@ -62,14 +62,14 @@ export async function POST(request: NextRequest) {
 
       // Get user's current callsign from profile or assignment
       const { data: profile } = await typedSupabase
-        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
+        .from('profiles')
         .select('first_name, last_name, email')
         .eq('id', user.id)
         .single()
 
       // Try to get current callsign assignment
       const { data: assignment } = await typedSupabase
-        .from<Database['public']['Tables']['callsign_assignments']['Row'], Database['public']['Tables']['callsign_assignments']['Update']>('callsign_assignments')
+        .from('callsign_assignments')
         .select('callsign_positions(callsign, short_code)')
         .eq('user_id', user.id)
         .eq('event_id', body.event_id)
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       // Generate log number
       const { data: eventData } = await typedSupabase
-        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
+        .from('events')
         .select('event_name, name, event_date, date')
         .eq('id', body.event_id)
         .single()
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       
       // Get count for log number
       const { count } = await typedSupabase
-        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
+        .from('incident_logs')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', body.event_id)
 
@@ -125,13 +125,13 @@ export async function POST(request: NextRequest) {
         };
 
         const { data: previousLogsRaw } = await typedSupabase
-          .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
+          .from('incident_logs')
           .select('incident_type, time_of_occurrence, home_score, away_score, match_minute')
           .eq('event_id', body.event_id)
           .eq('type', 'match_log')
           .order('time_of_occurrence', { ascending: true });
 
-        const previousLogs = (previousLogsRaw ?? []) as MatchFlowLogRecord[];
+        const previousLogs = (previousLogsRaw ?? []) as unknown as MatchFlowLogRecord[];
 
         // Calculate current score by counting goal incidents
         // Simple approach: count Home Goal and Away Goal incident types
