@@ -37,9 +37,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (typeof body.subscription_plan === 'string') update.subscription_plan = body.subscription_plan;
   if (typeof body.account_status === 'string') update.account_status = body.account_status;
 
-  const { data, error } = await supabase
-    .from('companies')
-    .update(update)
+  // Type assertion needed: client is already typed with Database,
+  // so explicit generics on .from() conflict. Cast to any to bypass.
+  const { data, error } = await (supabase
+    .from('companies') as any)
+    .update(update as Database['public']['Tables']['companies']['Update'])
     .eq('id', params.id)
     .select('id, name, subscription_plan, account_status, created_at')
     .maybeSingle();
