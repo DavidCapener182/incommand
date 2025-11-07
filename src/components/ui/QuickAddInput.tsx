@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import VoiceInputButton from '../VoiceInputButton'
 import ParsedFieldsPreview from './ParsedFieldsPreview'
+import { detectMatchFlowType } from '@/utils/matchFlowParser'
 
 export interface ParsedIncidentData {
   incidentType?: string
@@ -22,6 +23,9 @@ interface QuickAddInputProps {
   autoParseOnEnter?: boolean
   onChangeValue?: (value: string) => void
   className?: string
+  eventType?: string
+  homeTeam?: string
+  awayTeam?: string
 }
 
 export default function QuickAddInput({
@@ -32,7 +36,10 @@ export default function QuickAddInput({
   showParseButton = true,
   autoParseOnEnter = false,
   onChangeValue,
-  className = ""
+  className = "",
+  eventType,
+  homeTeam,
+  awayTeam
 }: QuickAddInputProps) {
   const [value, setValue] = useState('')
   const [isParsing, setIsParsing] = useState(false)
@@ -44,6 +51,36 @@ export default function QuickAddInput({
     if (!text.trim()) return
 
     console.log('parseIncident called with:', text, 'v2.0'); // Debug log
+    console.log('Event type:', eventType, 'Home team:', homeTeam, 'Away team:', awayTeam); // Debug log
+    
+    // Check for match flow types FIRST (only for football events)
+    if (eventType && eventType.toLowerCase() === 'football') {
+      console.log('Checking for match flow types...'); // Debug log
+      const matchFlowResult = detectMatchFlowType(text, homeTeam, awayTeam);
+      console.log('Match flow result:', matchFlowResult); // Debug log
+      if (matchFlowResult.type && matchFlowResult.confidence >= 0.5) {
+        // Format callsign from match flow type
+        const callsign = matchFlowResult.type
+          .replace(/\(/g, '')
+          .replace(/\)/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        const incidentData: ParsedIncidentData = {
+          incidentType: matchFlowResult.type,
+          location: '',
+          callsign: callsign,
+          priority: 'low',
+          description: matchFlowResult.occurrence || text,
+          confidence: matchFlowResult.confidence * 100
+        }
+        
+        setParsedData(incidentData)
+        setShowParsedPreview(true)
+        return; // Don't call AI API for match flow incidents
+      }
+    }
+    
     setIsParsing(true)
     try {
       const response = await fetch('/api/enhanced-incident-parsing', {

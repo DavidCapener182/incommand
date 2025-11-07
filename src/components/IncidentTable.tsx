@@ -65,6 +65,9 @@ interface Incident {
   logged_by_callsign?: string
   is_amended?: boolean
   original_entry_id?: string
+  // Match flow log fields
+  type?: string // 'match_log', 'incident', etc.
+  category?: string // 'football', 'concert', etc.
 }
 
 const PRIORITY_FILTER_OPTIONS: NormalizedPriority[] = ['urgent', 'high', 'medium', 'low']
@@ -174,6 +177,7 @@ export default function IncidentTable({
   const [swipedIncidentId, setSwipedIncidentId] = useState<number | null>(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
+  const [showMatchFlowLogs, setShowMatchFlowLogs] = useState(true) // Show match flow logs by default
   
   // Performance monitoring
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
@@ -209,7 +213,10 @@ export default function IncidentTable({
           logged_by_user_id: incident.logged_by_user_id || undefined,
           logged_by_callsign: incident.logged_by_callsign ?? undefined,
           is_amended: incident.is_amended ?? undefined,
-          original_entry_id: incident.original_entry_id?.toString() || undefined
+          original_entry_id: incident.original_entry_id?.toString() || undefined,
+          // Ensure type and category fields are included (default to 'incident' if not set)
+          type: incident.type || 'incident',
+          category: incident.category || undefined,
         }))
       );
       setLastUpdated(new Date());
@@ -223,7 +230,10 @@ export default function IncidentTable({
             logged_by_user_id: incident.logged_by_user_id || undefined,
             logged_by_callsign: incident.logged_by_callsign ?? undefined,
             is_amended: incident.is_amended ?? undefined,
-            original_entry_id: incident.original_entry_id?.toString() || undefined
+            original_entry_id: incident.original_entry_id?.toString() || undefined,
+            // Ensure type and category fields are included (default to 'incident' if not set)
+            type: incident.type || 'incident',
+            category: incident.category || undefined,
           }))
         );
       }
@@ -370,7 +380,13 @@ export default function IncidentTable({
           setIncidents(prev => {
           let newIncidents: Incident[] = [];
           if (payload.eventType === 'INSERT') {
-              newIncidents = [payload.new as Incident, ...prev];
+              // Ensure type and category fields are included for new incidents
+              const newIncident = {
+                ...(payload.new as Incident),
+                type: (payload.new as any).type || 'incident',
+                category: (payload.new as any).category || undefined,
+              };
+              newIncidents = [newIncident, ...prev];
               
               // Show toast for new incident using global callback
               const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
@@ -453,7 +469,13 @@ export default function IncidentTable({
           } else if (payload.eventType === 'UPDATE') {
               newIncidents = prev.map(incident => {
                 if (incident.id === payload.new.id) {
-                  const updated = { ...incident, ...payload.new };
+                  const updated = { 
+                    ...incident, 
+                    ...payload.new,
+                    // Ensure type and category fields are preserved
+                    type: (payload.new as any).type || incident.type || 'incident',
+                    category: (payload.new as any).category || incident.category || undefined,
+                  };
                   
                   const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
                   
@@ -751,7 +773,20 @@ export default function IncidentTable({
   }
 
   // Filter incidents based on the filter prop and search query
-  const filteredIncidents: Incident[] = filterIncidents<Incident>(incidents, { ...safeFilters, query: searchQuery });
+  // Separate match flow logs from regular incidents for filtering
+  const regularIncidents = incidents.filter(incident => incident.type !== 'match_log')
+  const matchFlowLogs = incidents.filter(incident => incident.type === 'match_log')
+  
+  // Filter regular incidents
+  const filteredRegularIncidents: Incident[] = filterIncidents<Incident>(regularIncidents, { ...safeFilters, query: searchQuery })
+  
+  // Filter match flow logs (if enabled)
+  const filteredMatchFlowLogs: Incident[] = showMatchFlowLogs 
+    ? filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
+    : []
+  
+  // Combine filtered incidents (match flow logs appear after regular incidents)
+  const filteredIncidents: Incident[] = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
@@ -981,6 +1016,26 @@ export default function IncidentTable({
                 Clear
               </button>
             )}
+            {/* Match Flow Logs Toggle */}
+            {matchFlowLogs.length > 0 && (
+              <>
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300 ml-2">Match Flow</span>
+                <motion.button
+                  onClick={() => setShowMatchFlowLogs(!showMatchFlowLogs)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                    showMatchFlowLogs
+                      ? 'bg-gray-400 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-pressed={showMatchFlowLogs}
+                >
+                  <span>⚽</span>
+                  <span>{showMatchFlowLogs ? 'Show' : 'Hide'} Match Flow</span>
+                </motion.button>
+              </>
+            )}
           </div>
         )}
 
@@ -1027,31 +1082,46 @@ export default function IncidentTable({
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {sortedIncidents.map((incident) => (
+                        {sortedIncidents.map((incident) => {
+                          const isMatchFlowLog = incident.type === 'match_log'
+                          return (
                           <div
                             key={incident.id}
-                            className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                            className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
+                              isMatchFlowLog ? 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75' : ''
+                            }`}
                             onClick={() => handleIncidentClick(incident)}
                           >
                             <div className="flex items-start gap-4">
                               <div className="flex-shrink-0">
-                                {(() => {
-                                  const iconConfig = getIncidentTypeIcon(incident.incident_type)
-                                  const IconComponent = iconConfig.icon
-                                  return <IconComponent className="w-5 h-5 text-gray-400" />
-                                })()}
+                                {isMatchFlowLog ? (
+                                  <span className="text-lg" title="Match Flow Log">⚽</span>
+                                ) : (
+                                  (() => {
+                                    const iconConfig = getIncidentTypeIcon(incident.incident_type)
+                                    const IconComponent = iconConfig.icon
+                                    return <IconComponent className="w-5 h-5 text-gray-400" />
+                                  })()
+                                )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-3 mb-2">
-                                  <span className="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                  <span className={`font-mono text-sm font-medium ${
+                                    isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
+                                  }`}>
                                     {incident.log_number}
                                   </span>
-                                  <PriorityBadge priority={incident.priority} />
+                                  {!isMatchFlowLog && <PriorityBadge priority={incident.priority} />}
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
+                                  {isMatchFlowLog && (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500 italic">Match Flow</span>
+                                  )}
                                 </div>
-                                <p className="text-sm text-gray-800 dark:text-gray-100 leading-tight">
+                                <p className={`text-sm leading-tight ${
+                                  isMatchFlowLog ? 'text-gray-600 dark:text-gray-300' : 'text-gray-800 dark:text-gray-100'
+                                }`}>
                                   {incident.occurrence.length > 100 
                                     ? `${incident.occurrence.substring(0, 100)}...` 
                                     : incident.occurrence
@@ -1060,7 +1130,8 @@ export default function IncidentTable({
                               </div>
                             </div>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -1117,6 +1188,7 @@ export default function IncidentTable({
             </div>
             
             {sortedIncidents.map((incident) => {
+              const isMatchFlowLog = incident.type === 'match_log'
               const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
               const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
 
@@ -1124,7 +1196,9 @@ export default function IncidentTable({
               <motion.div
                 key={incident.id}
                 className={`card-table-row relative cursor-pointer touch-target ${priorityBorderClass} ${getRowStyle(incident)} ${
-                  isHighPriorityAndOpen(incident)
+                  isMatchFlowLog 
+                    ? 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75 border-gray-300 dark:border-gray-600' 
+                    : isHighPriorityAndOpen(incident)
                     ? 'ring-2 ring-red-400 shadow-xl shadow-red-500/50 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
                     : 'border-gray-200 dark:border-[#2d437a] active:border-blue-400 dark:active:border-blue-500'
                 }`}
@@ -1171,15 +1245,26 @@ export default function IncidentTable({
                   <div className="flex items-center justify-between w-full">
                     {/* Left Group: Log #, Icon, Type Name, Priority Pin */}
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                      <span className={`text-sm font-semibold ${
+                        isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-blue-600 dark:text-blue-400'
+                      }`}>
                         {(() => {
                           const match = incident.log_number.match(/(\d{3,})$/);
                           return match ? match[1] : incident.log_number;
                         })()}
                       </span>
-                      <IncidentTypeIcon size={16} aria-hidden className="w-4 h-4 text-gray-400" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{incident.incident_type}</span>
-                      {isHighPriorityAndOpen(incident) && (
+                      {isMatchFlowLog ? (
+                        <span className="text-base" title="Match Flow Log">⚽</span>
+                      ) : (
+                        <IncidentTypeIcon size={16} aria-hidden className="w-4 h-4 text-gray-400" />
+                      )}
+                      <span className={`text-xs ${
+                        isMatchFlowLog ? 'text-gray-400 dark:text-gray-500 italic' : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {incident.incident_type}
+                        {isMatchFlowLog && ' (Match Flow)'}
+                      </span>
+                      {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
                         <MapPinIcon className="h-4 w-4 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
                       )}
                     </div>
@@ -1193,7 +1278,7 @@ export default function IncidentTable({
 
                     {/* Right Group: Status Chips - Fixed spacing to prevent overlap */}
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {incident.incident_type !== 'Attendance' && (
+                      {!isMatchFlowLog && incident.incident_type !== 'Attendance' && (
                         <PriorityBadge priority={incident.priority} />
                       )}
                       {incident.is_amended && (
@@ -1211,6 +1296,11 @@ export default function IncidentTable({
                       {incident.incident_type === 'Attendance' ? (
                         // Hide "Logged" chip for Attendance incidents
                         null
+                      ) : isMatchFlowLog ? (
+                        // Match flow logs are always logged - show informational badge
+                        <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-400 text-white shadow-sm">
+                          Match Flow
+                        </span>
                       ) : (
                         // Hide "Closed" chip, only show "Open" chip
                         !incident.is_closed && (
@@ -1294,19 +1384,26 @@ export default function IncidentTable({
                 </thead>
                 <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
                 {sortedIncidents.map((incident, idx) => {
+                  const isMatchFlowLog = incident.type === 'match_log'
                   const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
                   const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
                   let rowColor = getRowStyle(incident);
                   if (rowColor === 'hover:bg-gray-50') {
                     rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
                   }
+                  // Match flow logs get grey styling
+                  if (isMatchFlowLog) {
+                    rowColor = 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75'
+                  }
                   return (
                     <tr
                       key={incident.id} 
-                      className={`cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${
-                        isHighPriorityAndOpen(incident)
-                          ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
-                          : 'hover:border-blue-300 dark:hover:border-blue-500'
+                      className={`cursor-pointer border border-transparent ${priorityBorderClass} ${rowColor} ${
+                        isMatchFlowLog 
+                          ? 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50 border-gray-300 dark:border-gray-600' 
+                          : isHighPriorityAndOpen(incident)
+                          ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300 hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300'
+                          : 'hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-500'
                       }`}
                       onClick={(e) => {
                         // Only open modal if not clicking on a button
@@ -1318,17 +1415,26 @@ export default function IncidentTable({
                       <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30">
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1 justify-center">
-                            {isHighPriorityAndOpen(incident) && (
+                            {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
                               <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
                             )}
-                            <span className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold">
+                            {isMatchFlowLog && (
+                              <span className="text-sm mr-1" title="Match Flow Log">⚽</span>
+                            )}
+                            <span className={`px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
+                              isMatchFlowLog 
+                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400' 
+                                : 'bg-blue-100 dark:bg-blue-900'
+                            }`}>
                               {(() => {
                                 const match = incident.log_number.match(/(\d{3,})$/);
                                 return match ? match[1] : incident.log_number;
                               })()}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center bg-transparent">
+                          <div className={`text-xs font-medium text-center bg-transparent ${
+                            isMatchFlowLog ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'
+                          }`}>
                             {new Date(incident.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
@@ -1373,7 +1479,9 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{
+                      <td className={`p-4 align-middle text-xs leading-relaxed border-r border-border/30 ${
+                        isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
+                      }`} style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1391,10 +1499,17 @@ export default function IncidentTable({
                       </td>
                       <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
                         <div className="flex items-center justify-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
-                            <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
-                            <span>{incident.incident_type}</span>
-                          </span>
+                          {isMatchFlowLog ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
+                              <span>⚽</span>
+                              <span>{incident.incident_type}</span>
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm ${getIncidentTypeStyle(incident.incident_type)}`}>
+                              <IncidentTypeIcon size={14} aria-hidden className="shrink-0" />
+                              <span>{incident.incident_type}</span>
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{

@@ -50,6 +50,16 @@ export const concertIncidentTypes = [
   'Queue Build-Up',
 ] as const;
 
+// Match flow incident types (non-escalating informational logs)
+export const matchFlowIncidentTypes = [
+  'Kick-Off (First Half)',
+  'Half-Time',
+  'Kick-Off (Second Half)',
+  'Full-Time',
+  'Home Goal',
+  'Away Goal',
+] as const;
+
 // Football-specific incident types
 export const footballIncidentTypes = [
   'Pitch Invasion',
@@ -72,6 +82,8 @@ export const footballIncidentTypes = [
   'Player Safety Concern',
   'Referee / Official Abuse',
   'Security Perimeter Breach',
+  // Match flow types
+  ...matchFlowIncidentTypes,
 ] as const;
 
 // Festival-specific incident types (placeholder for future)
@@ -208,5 +220,12 @@ export const INCIDENT_TYPE_DISPLAY_NAMES: Record<string, string> = {
   'Player Safety Concern': 'Player Safety Concern',
   'Referee / Official Abuse': 'Referee / Official Abuse',
   'Security Perimeter Breach': 'Security Perimeter Breach',
+  // Match flow types
+  'Kick-Off (First Half)': 'Kick-Off (First Half)',
+  'Half-Time': 'Half-Time',
+  'Kick-Off (Second Half)': 'Kick-Off (Second Half)',
+  'Full-Time': 'Full-Time',
+  'Home Goal': 'Home Goal',
+  'Away Goal': 'Away Goal',
 };
 

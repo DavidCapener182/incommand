@@ -46,6 +46,7 @@ import { shouldAutoClose, getAutoCloseReason } from '@/utils/autoCloseIncidents'
 import type { Coordinates } from '@/hooks/useGeocodeLocation'
 import type { IncidentSOPStep } from '@/types/sop'
 import SOPModal from './SOPModal'
+import { detectMatchFlowType, isMatchFlowType, type MatchFlowType } from '@/utils/matchFlowParser'
 
 interface Props {
   isOpen: boolean
@@ -227,8 +228,16 @@ const getFollowUpQuestions = (incidentType: string): string[] => {
   }
 };
 
-const detectIncidentType = (input: string): string => {
+const detectIncidentType = (input: string, homeTeam?: string, awayTeam?: string): string => {
   const text = input.toLowerCase();
+  
+  // --- MATCH FLOW DETECTION (PRIORITY - Check before other incident types) ---
+  // Only check for match flow if we're in a football event context
+  // This prevents false positives in non-football events
+  const matchFlowResult = detectMatchFlowType(input, homeTeam, awayTeam);
+  if (matchFlowResult.type && matchFlowResult.confidence >= 0.5) {
+    return matchFlowResult.type;
+  }
   
   // --- MISSING CHILD/PERSON DETECTION (PRIORITY) ---
   const missingChildPersonKeywords = [
@@ -1560,6 +1569,36 @@ const parseWeatherDisruptionIncident = async (input: string): Promise<IncidentPa
   }
 };
 
+const parseMatchFlowIncident = async (
+  input: string,
+  matchFlowType: MatchFlowType,
+  homeTeam?: string,
+  awayTeam?: string
+): Promise<IncidentParserResult> => {
+  const matchFlowResult = detectMatchFlowType(input, homeTeam, awayTeam);
+  
+  // For match flow incidents, use the match flow type as the callsign
+  // Format: "Kick-Off (First Half)" -> "Kick Off"
+  const callsign = matchFlowType
+    .replace(/\(/g, '')
+    .replace(/\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Generate occurrence text based on match flow type
+  const occurrence = matchFlowResult.occurrence || matchFlowType;
+
+  // Match flow logs are informational only - no action taken needed
+  const actionTaken = 'Match flow log - informational only';
+
+  return {
+    occurrence,
+    action_taken: actionTaken,
+    callsign_from: callsign,
+    incident_type: matchFlowType,
+  };
+};
+
 // Helper function to extract location from input
 const extractLocation = (input: string): string | null => {
   const locationMatch = input.match(/(?:at|in|near|by|from|to)\s+(the\s+)?([^,\.]+)(?:,|\.|$)/i);
@@ -1916,10 +1955,10 @@ export default function IncidentCreationModal({
 }: Props) {
   const { addToast } = useToast();
   const { membership } = useEventMembership();
-  const { eventType } = useEventContext();
+  const { eventType: contextEventType, eventId: contextEventId, eventData } = useEventContext();
   
   // Get incident types dynamically based on event type
-  const incidentTypes = useMemo(() => getIncidentTypesForEvent(eventType), [eventType]);
+  const incidentTypes = useMemo(() => getIncidentTypesForEvent(contextEventType), [contextEventType]);
   
   // Create INCIDENT_TYPES object mapping for backward compatibility
   const INCIDENT_TYPES = useMemo(() => {
@@ -3016,6 +3055,38 @@ export default function IncidentCreationModal({
   }
   // Handler for parsed AI data from QuickAddInput
   const handleParsedData = (data: ParsedIncidentData) => {
+    // Check for match flow types FIRST before applying AI-parsed data
+    // Use event context data for match flow detection
+    
+    // Get the text to check - use description if available, otherwise use incidentType as fallback
+    const textToCheck = data.description || data.incidentType || '';
+    
+    // Only check for match flow if this is a football event
+    if (contextEventType && contextEventType.toLowerCase() === 'football' && textToCheck) {
+      const matchFlowResult = detectMatchFlowType(textToCheck, eventData?.home_team, eventData?.away_team);
+      console.log('handleParsedData - Match flow check:', { textToCheck, matchFlowResult, contextEventType }); // Debug log
+      if (matchFlowResult.type && matchFlowResult.confidence >= 0.5) {
+        // This is a match flow incident - use match flow parsing instead of AI data
+        parseMatchFlowIncident(textToCheck, matchFlowResult.type, eventData?.home_team, eventData?.away_team)
+          .then(processedData => {
+            console.log('handleParsedData - Setting match flow data:', processedData); // Debug log
+            setFormData(prev => ({
+              ...prev,
+              incident_type: processedData.incident_type,
+              callsign_from: processedData.callsign_from,
+              occurrence: processedData.occurrence,
+              action_taken: processedData.action_taken,
+              priority: 'low',
+              is_closed: true,
+              status: 'logged',
+            }));
+          })
+          .catch(error => {
+            console.error('Error parsing match flow incident:', error);
+          });
+        return; // Don't process AI data for match flow incidents
+      }
+    }
     
     // Generate structured template fields from parsed data
     const generateStructuredFields = (parsedData: ParsedIncidentData) => {
@@ -3215,14 +3286,24 @@ export default function IncidentCreationModal({
       }
 
       try {
-        const incidentType = detectIncidentType(input);
+        // Get current event for team name extraction (for match flow detection)
+        const selectedEvent = events.find(e => e.id === selectedEventId);
+        const homeTeam = selectedEvent?.home_team;
+        const awayTeam = selectedEvent?.away_team;
+        
+        const incidentType = detectIncidentType(input, homeTeam, awayTeam);
         const callsign = detectCallsign(input) || '';
         const location = extractLocation(input) || '';
         const priorityDetected = detectPriority(input);
         let processedData: IncidentParserResult | null = null;
 
-        // Custom handler for showdown
-        if (incidentType === 'Event Timing' && input.toLowerCase().includes('showdown')) {
+        // Check if this is a match flow type
+        if (isMatchFlowType(incidentType)) {
+          processedData = await parseMatchFlowIncident(input, incidentType, homeTeam, awayTeam);
+        } else if (
+          // Custom handler for showdown
+          incidentType === 'Event Timing' && input.toLowerCase().includes('showdown')
+        ) {
           processedData = {
             occurrence: 'Showdown',
             action_taken: 'The show has ended',
@@ -3718,13 +3799,16 @@ export default function IncidentCreationModal({
         `${userProfile?.first_name?.[0]}${userProfile?.last_name?.[0]}`.toUpperCase() ||
         'Unknown'
 
-      // Determine status based on type - operational logs should be "logged" not "open"
+      // Determine status based on type - operational logs and match flow logs should be "logged" not "open"
       const operationalLogTypes = [
         'Artist On Stage', 'Artist Off Stage', 'Artist on Stage', 'Artist off Stage',
         'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Staffing',
         'Accreditation', 'Accessibility', 'Accsessablity' // Include typo variant
       ];
-      const shouldBeLogged = operationalLogTypes.includes(resolvedType) || formData.priority === 'low';
+      
+      // Check if this is a match flow log
+      const isMatchFlowLog = isMatchFlowType(resolvedType);
+      const shouldBeLogged = isMatchFlowLog || operationalLogTypes.includes(resolvedType) || formData.priority === 'low';
       
       // Prepare the incident data
       
@@ -3751,6 +3835,12 @@ export default function IncidentCreationModal({
         logged_by_user_id: user.id, // We've already verified user.id exists above
         logged_by_callsign: userCallsign,
         is_amended: false,
+        // Match flow log specific fields
+        ...(isMatchFlowLog && {
+          type: 'match_log',
+          category: 'football',
+          priority: 'low',
+        }),
         // Add GPS coordinates if map coordinates are available
         ...(resolvedCoordinates && {
           latitude: resolvedCoordinates.lat,
@@ -4314,6 +4404,9 @@ export default function IncidentCreationModal({
                     showParseButton={true}
                     autoParseOnEnter={true}
                     className="w-full"
+                    eventType={contextEventType}
+                    homeTeam={eventData?.home_team}
+                    awayTeam={eventData?.away_team}
                   />
                   {/* Voice input is now integrated into QuickAddInput */}
                 </div>
@@ -4341,13 +4434,11 @@ export default function IncidentCreationModal({
                     required
                   >
                     <option value="">Select incident type</option>
-                    <option value="Medical">Medical</option>
-                    <option value="Security">Security</option>
-                    <option value="Crowd Control">Crowd Control</option>
-                    <option value="Fire Safety">Fire Safety</option>
-                    <option value="Traffic">Traffic</option>
-                    <option value="Technical">Technical</option>
-                    <option value="Other">Other</option>
+                    {incidentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {INCIDENT_TYPE_DISPLAY_NAMES[type] || type}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -4528,6 +4619,9 @@ export default function IncidentCreationModal({
               isProcessing={isQuickAddProcessing} 
               showParseButton={true}
               autoParseOnEnter={true}
+              eventType={contextEventType}
+              homeTeam={eventData?.home_team}
+              awayTeam={eventData?.away_team}
               onChangeValue={(value: string) => {
                 // Clear auto-populated fields when user starts typing new text
                 if (value.trim() && value.trim() !== formData.occurrence) {

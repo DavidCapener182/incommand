@@ -464,6 +464,13 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         venue_capacity: formData.venue_capacity || null,
         company_id,
         event_brief: formData.event_brief || null,
+        // Football-specific fields
+        home_team: formData.home_team || null,
+        away_team: formData.away_team || null,
+        competition: formData.competition || null,
+        // Other event-type-specific fields
+        parade_route: formData.parade_route || null,
+        festival_theme: formData.festival_theme || null,
       }
 
       console.log('🔄 Inserting new event into database...');

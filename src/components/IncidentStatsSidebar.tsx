@@ -25,11 +25,15 @@ const COLORS = {
 }
 
 export default function IncidentStatsSidebar({ incidents, onExport }: IncidentStatsSidebarProps) {
-  // Filter today's incidents
+  // Filter today's incidents (exclude match flow logs)
   const todayIncidents = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     return incidents.filter(i => {
+      // Exclude match flow logs from statistics
+      if (i.type === 'match_log') {
+        return false
+      }
       const incidentDate = new Date(i.time_logged || i.created_at)
       incidentDate.setHours(0, 0, 0, 0)
       return incidentDate.getTime() === today.getTime()

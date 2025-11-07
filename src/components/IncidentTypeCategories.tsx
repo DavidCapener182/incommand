@@ -8,7 +8,8 @@ import {
   Globe2,
   FlaskConical,
   ClipboardList,
-  Football,
+  Activity,
+  Clock,
 } from 'lucide-react'
 import { getIncidentTypeIcon } from '@/utils/incidentIcons'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -74,6 +75,14 @@ const INCIDENT_CATEGORIES = {
     ],
     defaultExpanded: false
   },
+  'Match Flow': {
+    icon: '⏱️',
+    types: [
+      'Kick-Off (First Half)', 'Half-Time', 'Kick-Off (Second Half)', 
+      'Full-Time', 'Home Goal', 'Away Goal'
+    ],
+    defaultExpanded: false
+  },
   'Environment & Complaints': {
     icon: '🌍',
     types: [
@@ -103,7 +112,8 @@ const CATEGORY_ICONS: Record<keyof typeof INCIDENT_CATEGORIES, React.ComponentTy
   'Crowd & Safety': Users,
   Operations: Cog,
   Event: Music,
-  'Match Operations': Football,
+  'Match Operations': Activity,
+  'Match Flow': Clock,
   'Environment & Complaints': Globe2,
   Substances: FlaskConical,
   Other: ClipboardList,

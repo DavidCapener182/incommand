@@ -1,11 +1,16 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData, FootballPhase } from '@/types/football'
 import { RefreshCw, Download, Settings } from 'lucide-react'
 import QuickSettingsDropdown, { QuickSettingItem } from '@/components/football/QuickSettingsDropdown'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
+import { useMatchTimer } from '@/hooks/useMatchTimer'
+import { useEventContext } from '@/contexts/EventContext'
+import { supabase } from '@/lib/supabase'
+import { syncMatchFlowToStore, getEventMetadata } from '@/lib/football/matchFlowSync'
+import { motion } from 'framer-motion'
 
 interface FootballCard_LiveScoreProps {
   className?: string
@@ -13,26 +18,121 @@ interface FootballCard_LiveScoreProps {
 }
 
 export default function FootballCard_LiveScore({ className, onOpenModal }: FootballCard_LiveScoreProps) {
+  const { eventId, eventData } = useEventContext()
   const [data, setData] = useState<FootballData | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [fixtureChecklist, setFixtureChecklist] = useState<any>(null)
+  const [previousScore, setPreviousScore] = useState<{ home: number; away: number } | null>(null)
+  const [scoreChanged, setScoreChanged] = useState(false)
+  const subscriptionRef = useRef<any>(null)
+  
+  // Use match timer hook for live timer calculation
+  const matchTimer = useMatchTimer({
+    eventId: eventId || '',
+    refreshInterval: 1000,
+    enabled: !!eventId && autoRefresh,
+  })
+
   const matchDuration = 90
+  
+  // Calculate minutes from timer display (handles extra time format like "45+1", "90+2")
   const minutesFromTime = useMemo(() => {
+    if (matchTimer.displayTime) {
+      // Handle extra time format (e.g., "45+1" -> 46)
+      const match = matchTimer.displayTime.match(/^(\d+)\+(\d+)$/)
+      if (match) {
+        return parseInt(match[1]) + parseInt(match[2])
+      }
+      return parseInt(matchTimer.displayTime) || 0
+    }
+    // Fallback to data time if timer not available
     const t = data?.liveScore.time || '0:00'
     const [mm, ss] = t.split(':').map(Number)
     return (mm || 0) + (ss ? ss / 60 : 0)
-  }, [data?.liveScore.time])
+  }, [matchTimer.displayTime, data?.liveScore.time])
 
   const load = async () => {
-    const res = await fetch('/api/football/data')
-    if (!res.ok) return
-    const json = await res.json()
-    setData(json.data)
+    try {
+      // Only load if we don't have eventId (fallback for non-football events)
+      // For football events, syncMatchFlow() handles the data loading
+      if (!eventId) {
+        const res = await fetch('/api/football/data')
+        if (!res.ok) {
+          console.error('Failed to load football data:', res.status)
+          return
+        }
+        const json = await res.json()
+        // Only update if we have valid data and scores
+        if (json.data && json.data.liveScore) {
+          setData(json.data)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading football data:', error)
+    }
+  }
+
+  // Sync match flow data from database
+  const syncMatchFlow = async () => {
+    if (!eventId) return
+
+    try {
+      const metadata = await getEventMetadata(eventId)
+      const syncedData = await syncMatchFlowToStore(
+        eventId,
+        metadata?.homeTeam,
+        metadata?.awayTeam,
+        metadata?.competition
+      )
+
+      // Always update data with synced scores
+      if (syncedData) {
+        // Check for score changes
+        const currentScore = {
+          home: syncedData.liveScore.home ?? 0,
+          away: syncedData.liveScore.away ?? 0,
+        }
+
+        // Only update if score actually changed or if we don't have previous score
+        if (!previousScore || 
+            currentScore.home !== previousScore.home ||
+            currentScore.away !== previousScore.away) {
+          
+          if (previousScore && (
+            currentScore.home !== previousScore.home ||
+            currentScore.away !== previousScore.away
+          )) {
+            setScoreChanged(true)
+            setTimeout(() => setScoreChanged(false), 2000) // Reset after animation
+          }
+
+          setPreviousScore(currentScore)
+          setData(syncedData)
+          console.log('[FootballCard] Updated score from sync:', currentScore)
+        }
+      } else {
+        // If sync fails, don't reset to 0-0 - keep current data
+        console.warn('[FootballCard] Sync returned null, keeping current data')
+      }
+    } catch (error) {
+      console.error('Error syncing match flow:', error)
+      // Don't reset scores on error - keep current data
+    }
   }
 
   useEffect(() => {
     let mounted = true
-    const wrapped = async () => { if (mounted) await load() }
+    const wrapped = async () => { 
+      if (mounted) {
+        // For football events, sync from database (this handles all data loading)
+        // For non-football events, use the API endpoint
+        if (eventId) {
+          await syncMatchFlow()
+        } else {
+          await load()
+        }
+      }
+    }
     wrapped()
     
     // Load fixture checklist for next checkpoint
@@ -49,26 +149,67 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     }
     loadChecklist()
 
+    // Set up real-time subscription for match flow logs
+    if (eventId) {
+      // Debounce sync calls to prevent rapid updates
+      let syncTimeout: NodeJS.Timeout | null = null
+      
+      subscriptionRef.current = supabase
+        .channel(`match_flow_${eventId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'incident_logs',
+            filter: `event_id=eq.${eventId} AND type=eq.match_log`,
+          },
+          () => {
+            // Debounce sync calls - wait 500ms before syncing to batch rapid updates
+            if (syncTimeout) {
+              clearTimeout(syncTimeout)
+            }
+            syncTimeout = setTimeout(() => {
+              syncMatchFlow()
+            }, 500)
+          }
+        )
+        .subscribe()
+    }
+
     if (autoRefresh) {
       const id = setInterval(() => {
-        wrapped()
+        // Only sync, don't call load() to avoid conflicts
+        if (eventId) {
+          syncMatchFlow()
+        } else {
+          load()
+        }
         loadChecklist()
       }, 30000)
-    return () => { mounted = false; clearInterval(id) }
+      return () => { 
+        mounted = false
+        clearInterval(id)
+        if (subscriptionRef.current) {
+          subscriptionRef.current.unsubscribe()
+        }
+      }
     }
-    return () => { mounted = false }
-  }, [autoRefresh])
+    
+    return () => { 
+      mounted = false
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+      }
+    }
+  }, [autoRefresh, eventId])
 
   const circumference = 2 * Math.PI * 45
   const progress = Math.min(minutesFromTime / matchDuration, 1)
 
-  const nextCheckpoint = useMemo(() => {
-    if (!fixtureChecklist?.tasks) return null
-    const pendingTasks = fixtureChecklist.tasks
-      .filter((task: any) => !task.completed && task.minute > minutesFromTime)
-      .sort((a: any, b: any) => a.minute - b.minute)
-    return pendingTasks.length > 0 ? pendingTasks[0] : null
-  }, [fixtureChecklist, minutesFromTime])
+  // Use match timer phase if available, otherwise fallback to data phase
+  const currentPhase = matchTimer.phase !== 'Pre-Match' ? matchTimer.phase : (data?.liveScore.phase || 'Pre-Match')
+  const isLive = matchTimer.isRunning && (currentPhase === 'First Half' || currentPhase === 'Second Half')
 
   const statusType = useMemo((): StatusType => {
     if (!fixtureChecklist?.tasks) return 'normal'
@@ -193,8 +334,14 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
       {/* Overlay content */}
       <div className="relative z-10 flex flex-col items-center justify-center text-center w-full px-4">
         {/* Header - Left aligned at top */}
-        <div className="absolute top-3 left-4 text-left">
+        <div className="absolute top-3 left-4 text-left flex items-center gap-2">
           <div className="text-xs text-gray-200">{data?.liveScore.competition || 'Match'}</div>
+          {isLive && (
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="Live Match"></span>
+              <span className="text-[10px] text-red-200">LIVE</span>
+            </span>
+          )}
         </div>
 
         {!data ? (
@@ -229,31 +376,21 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-sm font-mono">
-                  <span>{Math.floor(minutesFromTime)}&apos;</span>
+                  <span>{matchTimer.displayTime || Math.floor(minutesFromTime)}&apos;</span>
                 </div>
               </div>
             </div>
 
             {/* Score & phase */}
             <div className="mt-24">
-              <p className="text-3xl font-bold">
-                {data.liveScore.home} – {data.liveScore.away}
-              </p>
-              <p className="text-xs text-gray-200">{data.liveScore.phase as FootballPhase}</p>
-              <div className="flex justify-around mt-2 text-xs">
-                <span>🟨 {data.liveScore.cards.yellow}</span>
-                <span>🟥 {data.liveScore.cards.red}</span>
-                <span>🔁 {data.liveScore.subs}</span>
-              </div>
-              
-              {/* Next Operational Checkpoint */}
-              {nextCheckpoint && (
-                <div className="mt-2 pt-2 border-t border-white/20">
-                  <p className="text-[10px] text-gray-200">
-                    Next: {nextCheckpoint.minute}&apos; – {nextCheckpoint.description}
-                  </p>
-                </div>
-              )}
+              <motion.p 
+                className="text-3xl font-bold"
+                animate={scoreChanged ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 0.5 }}
+              >
+                {data.liveScore.home ?? 0} – {data.liveScore.away ?? 0}
+              </motion.p>
+              <p className="text-xs text-gray-200">{currentPhase}</p>
             </div>
           </>
         )}

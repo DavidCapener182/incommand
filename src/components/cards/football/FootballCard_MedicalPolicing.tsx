@@ -20,10 +20,53 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
   useEffect(() => {
     let mounted = true
     const load = async () => {
-      const res = await fetch('/api/football/data')
-      if (!res.ok) return
-      const json = await res.json()
-      if (mounted) setData(json.data)
+      try {
+        const res = await fetch('/api/football/data')
+        if (!res.ok) {
+          console.error('Failed to load football data:', res.status, res.statusText)
+          return
+        }
+        const json = await res.json()
+        if (mounted) setData(json.data)
+      } catch (error) {
+        console.error('Error loading football data:', error)
+        // Set fallback data to prevent component crash
+        if (mounted) {
+          setData({
+            fixture: '',
+            matchDate: '',
+            liveScore: {
+              home: 0,
+              away: 0,
+              time: '0:00',
+              phase: 'Pre-Match',
+              cards: { yellow: 0, red: 0 },
+              subs: 0,
+              homeTeam: '',
+              awayTeam: '',
+              competition: '',
+            },
+            occupancy: {},
+            gateStatus: {
+              openTime: '',
+              totalTurnstiles: 0,
+              activeTurnstiles: 0,
+              entryRate: 0,
+              queueAlerts: [],
+              predictedFullEntry: '',
+            },
+            medicalPolicing: {
+              medicalTeams: 0,
+              policeDeployed: 0,
+              stewards: 0,
+            },
+            transportWeather: {
+              transport: {},
+              weather: {},
+            },
+          })
+        }
+      }
     }
     load()
     

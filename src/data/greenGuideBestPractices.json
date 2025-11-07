@@ -3012,6 +3012,152 @@
         "placeholder": "police_status"
       }
     ]
+  },
+  "Kick-Off (First Half)": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically updates match timer and phase.",
+      "Verify timestamp accuracy."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Kick-Off (First Half) - [Home Team] v [Away Team]",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Ensure timestamp is accurate for timer calculation"
+    ],
+    "links": [],
+    "template": {
+      "actions": "Kick-Off (First Half) - {{home_team}} v {{away_team}}",
+      "outcome": "Match timer started at 0:00"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
+  },
+  "Half-Time": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically pauses match timer at ~45:00",
+      "Verify timestamp accuracy."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Half-Time - [Home Team] v [Away Team]",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Ensure timestamp is accurate for timer calculation"
+    ],
+    "links": [],
+    "template": {
+      "actions": "Half-Time - {{home_team}} v {{away_team}}",
+      "outcome": "Match timer paused at half-time"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
+  },
+  "Kick-Off (Second Half)": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically resumes match timer from 45:00",
+      "Verify timestamp accuracy."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Kick-Off (Second Half) - [Home Team] v [Away Team]",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Ensure timestamp is accurate for timer calculation"
+    ],
+    "links": [],
+    "template": {
+      "actions": "Kick-Off (Second Half) - {{home_team}} v {{away_team}}",
+      "outcome": "Match timer resumed from 45:00"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
+  },
+  "Full-Time": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically stops match timer completely",
+      "Verify timestamp accuracy."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Full-Time - [Home Team] v [Away Team]",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Ensure timestamp is accurate for timer calculation"
+    ],
+    "links": [],
+    "template": {
+      "actions": "Full-Time - {{home_team}} v {{away_team}}",
+      "outcome": "Match timer stopped"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
+  },
+  "Home Goal": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically updates match score.",
+      "Verify team attribution."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "[Home Team] Goal",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Verify team attribution",
+      "Ensure the score is reflected on the Pitch Card"
+    ],
+    "links": [],
+    "template": {
+      "actions": "{{home_team}} Goal",
+      "outcome": "Score updated automatically"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
+  },
+  "Away Goal": {
+    "summary": [
+      "This is a match flow log. No escalation required.",
+      "Automatically updates match score.",
+      "Verify team attribution."
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "[Away Team] Goal",
+        "actions_taken": "Match flow log - informational only"
+      }
+    ],
+    "cautions": [
+      "Verify team attribution",
+      "Ensure the score is reflected on the Pitch Card"
+    ],
+    "links": [],
+    "template": {
+      "actions": "{{away_team}} Goal",
+      "outcome": "Score updated automatically"
+    },
+    "escalationRequired": false,
+    "category": "Match Flow"
   }
 }
 

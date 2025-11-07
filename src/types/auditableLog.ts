@@ -51,6 +51,13 @@ export interface AuditableIncidentLog {
   logged_by_callsign?: string         // Their callsign at time of logging
   is_amended: boolean | null           // Has this log been amended?
   original_entry_id?: number | null   // Reference to original if this is revision
+  
+  // Match flow log fields (for football match flow incidents)
+  type?: string                        // 'incident' | 'match_log' | 'flow_log'
+  category?: string                    // Event category: 'football', 'concert', etc.
+  match_minute?: number | null         // Calculated match minute
+  home_score?: number | null           // Home team score at time of log
+  away_score?: number | null           // Away team score at time of log
 }
 
 /**

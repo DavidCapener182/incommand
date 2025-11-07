@@ -495,8 +495,12 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
     // Ensure incidents is an array
     const safeIncidents = Array.isArray(incidents) ? incidents : [];
     
-    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage
+    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage, and match flow logs
     const filtered = safeIncidents.filter((i: any) => {
+      // Exclude match flow logs
+      if (i.type === 'match_log') {
+        return false
+      }
       return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage', 'Artist off Stage', 'Artist on Stage'].includes(i.incident_type);
     });
     
@@ -1234,8 +1238,13 @@ export default function Dashboard() {
       });
       
       // Always use unfiltered incidents for stats - StatCards should show total counts
-      const isCountable = (incident: any) => 
-        !['Attendance', 'Sit Rep'].includes(incident.incident_type);
+      const isCountable = (incident: any) => {
+        // Exclude match flow logs from statistics
+        if (incident.type === 'match_log') {
+          return false
+        }
+        return !['Attendance', 'Sit Rep'].includes(incident.incident_type);
+      }
 
       const countableIncidents = incidents.filter(isCountable);
       

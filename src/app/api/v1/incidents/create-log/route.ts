@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 import { createImmutableLog } from '@/lib/auditableLogging'
 
 import { CreateAuditableLogRequest, CreateLogResponse } from '@/types/auditableLog'
+import { isMatchFlowType, type MatchFlowType } from '@/utils/matchFlowParser'
 
 
 export async function POST(request: NextRequest) {
@@ -101,7 +102,73 @@ export async function POST(request: NextRequest) {
         'Attendance', 'Event Timing', 'Timings', 'Sit Rep', 'Staffing',
         'Accreditation', 'Accessibility', 'Accsessablity' // Include typo variant
       ];
-      const shouldBeLogged = operationalLogTypes.includes(body.incident_type) || body.priority === 'low';
+      const isMatchFlowLog = isMatchFlowType(body.incident_type);
+      const shouldBeLogged = isMatchFlowLog || operationalLogTypes.includes(body.incident_type) || body.priority === 'low';
+
+      // Calculate match flow specific fields
+      let matchMinute: number | null = null;
+      let homeScore: number | null = null;
+      let awayScore: number | null = null;
+
+      if (isMatchFlowLog) {
+        // Get previous match flow logs to calculate score and match minute
+        const { data: previousLogs } = await supabase
+          .from('incident_logs')
+          .select('incident_type, time_of_occurrence, home_score, away_score, match_minute')
+          .eq('event_id', body.event_id)
+          .eq('type', 'match_log')
+          .order('time_of_occurrence', { ascending: true });
+
+        // Calculate current score by counting goal incidents
+        // Simple approach: count Home Goal and Away Goal incident types
+        let currentHomeScore = 0;
+        let currentAwayScore = 0;
+        
+        if (previousLogs && previousLogs.length > 0) {
+          for (const log of previousLogs) {
+            if (log.incident_type === 'Home Goal') {
+              currentHomeScore++;
+            } else if (log.incident_type === 'Away Goal') {
+              currentAwayScore++;
+            }
+          }
+        }
+
+        // Handle goal logs - increment score
+        if (body.incident_type === 'Home Goal') {
+          homeScore = currentHomeScore + 1;
+          awayScore = currentAwayScore;
+          console.log('[CreateLog] Home Goal - Counted:', { currentHomeScore, currentAwayScore }, 'New score:', { homeScore, awayScore });
+        } else if (body.incident_type === 'Away Goal') {
+          homeScore = currentHomeScore;
+          awayScore = currentAwayScore + 1;
+          console.log('[CreateLog] Away Goal - Counted:', { currentHomeScore, currentAwayScore }, 'New score:', { homeScore, awayScore });
+        } else {
+          // For phase logs, keep current score
+          homeScore = currentHomeScore;
+          awayScore = currentAwayScore;
+        }
+
+        // Calculate match minute for phase logs
+        const kickOffFirstHalf = previousLogs?.find(log => log.incident_type === 'Kick-Off (First Half)');
+        const kickOffSecondHalf = previousLogs?.find(log => log.incident_type === 'Kick-Off (Second Half)');
+        const halfTime = previousLogs?.find(log => log.incident_type === 'Half-Time');
+        
+        if (kickOffFirstHalf) {
+          const occurrenceTime = new Date(body.time_of_occurrence).getTime();
+          const kickOffTime = new Date(kickOffFirstHalf.time_of_occurrence).getTime();
+          const elapsedMs = occurrenceTime - kickOffTime;
+          const elapsedMinutes = Math.floor(elapsedMs / 60000);
+
+          if (halfTime && occurrenceTime > new Date(halfTime.time_of_occurrence).getTime()) {
+            // After half-time, add 45 minutes
+            matchMinute = 45 + elapsedMinutes;
+          } else {
+            // First half
+            matchMinute = elapsedMinutes;
+          }
+        }
+      }
 
       // Prepare log data
       const logData = {
@@ -122,7 +189,15 @@ export async function POST(request: NextRequest) {
         event_id: body.event_id,
         status: shouldBeLogged ? 'logged' : (body.status || 'open'),
         is_closed: shouldBeLogged,
-        location: body.location_name || '' // Map location_name to database location field
+        location: body.location_name || '', // Map location_name to database location field
+        // Match flow log specific fields
+        ...(isMatchFlowLog && {
+          type: 'match_log',
+          category: 'football',
+          ...(matchMinute !== null && { match_minute: matchMinute }),
+          ...(homeScore !== null && { home_score: homeScore }),
+          ...(awayScore !== null && { away_score: awayScore }),
+        }),
       }
 
       // Create immutable log
