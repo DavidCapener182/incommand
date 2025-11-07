@@ -35,7 +35,7 @@ export async function updateProfile(formData: FormData) {
     const validated = profileSchema.parse(rawData)
 
     const { error } = await supabase
-      .from('profiles')
+      .from<Database['public']['Tables']['profiles']['Update']>('profiles')
       .update({
         first_name: validated.firstName,
         last_name: validated.lastName,
