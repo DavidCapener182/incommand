@@ -112,19 +112,29 @@ export async function POST(request: NextRequest) {
 
       if (isMatchFlowLog) {
         // Get previous match flow logs to calculate score and match minute
-        const { data: previousLogs } = await supabase
+        type MatchFlowLogRecord = {
+          incident_type: string;
+          time_of_occurrence: string | null;
+          home_score: number | null;
+          away_score: number | null;
+          match_minute: number | null;
+        };
+
+        const { data: previousLogsRaw } = await supabase
           .from('incident_logs')
           .select('incident_type, time_of_occurrence, home_score, away_score, match_minute')
           .eq('event_id', body.event_id)
           .eq('type', 'match_log')
           .order('time_of_occurrence', { ascending: true });
 
+        const previousLogs = (previousLogsRaw ?? []) as MatchFlowLogRecord[];
+
         // Calculate current score by counting goal incidents
         // Simple approach: count Home Goal and Away Goal incident types
         let currentHomeScore = 0;
         let currentAwayScore = 0;
         
-        if (previousLogs && previousLogs.length > 0) {
+        if (previousLogs.length > 0) {
           for (const log of previousLogs) {
             if (log.incident_type === 'Home Goal') {
               currentHomeScore++;
@@ -150,17 +160,27 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate match minute for phase logs
-        const kickOffFirstHalf = previousLogs?.find(log => log.incident_type === 'Kick-Off (First Half)');
-        const kickOffSecondHalf = previousLogs?.find(log => log.incident_type === 'Kick-Off (Second Half)');
-        const halfTime = previousLogs?.find(log => log.incident_type === 'Half-Time');
+        const kickOffFirstHalf = previousLogs.find(
+          (log: MatchFlowLogRecord) => log.incident_type === 'Kick-Off (First Half)'
+        );
+        const kickOffSecondHalf = previousLogs.find(
+          (log: MatchFlowLogRecord) => log.incident_type === 'Kick-Off (Second Half)'
+        );
+        const halfTime = previousLogs.find(
+          (log: MatchFlowLogRecord) => log.incident_type === 'Half-Time'
+        );
         
-        if (kickOffFirstHalf) {
+        if (kickOffFirstHalf && kickOffFirstHalf.time_of_occurrence) {
           const occurrenceTime = new Date(body.time_of_occurrence).getTime();
           const kickOffTime = new Date(kickOffFirstHalf.time_of_occurrence).getTime();
           const elapsedMs = occurrenceTime - kickOffTime;
           const elapsedMinutes = Math.floor(elapsedMs / 60000);
 
-          if (halfTime && occurrenceTime > new Date(halfTime.time_of_occurrence).getTime()) {
+          const halfTimeBoundary = halfTime?.time_of_occurrence
+            ? new Date(halfTime.time_of_occurrence).getTime()
+            : null;
+
+          if (halfTimeBoundary && occurrenceTime > halfTimeBoundary) {
             // After half-time, add 45 minutes
             matchMinute = 45 + elapsedMinutes;
           } else {
