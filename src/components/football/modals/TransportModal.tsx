@@ -239,9 +239,9 @@ export function TransportCurrent({ onSave }: TransportModalProps) {
         </div>
         {transportConfig.location || transportConfig.coordinates ? (
           <>
-            <div className="text-sm text-blue-700">
+        <div className="text-sm text-blue-700">
               {transportConfig.location || 'Location configured'}
-              {transportConfig.postcode && ` (${transportConfig.postcode})`}
+          {transportConfig.postcode && ` (${transportConfig.postcode})`}
               {transportConfig.coordinates && !transportConfig.location && 
                 ` (${transportConfig.coordinates.lat.toFixed(4)}, ${transportConfig.coordinates.lng.toFixed(4)})`}
             </div>
@@ -324,7 +324,7 @@ export function TransportCurrent({ onSave }: TransportModalProps) {
             <div className="text-xs text-purple-600 mb-1">Estimated Travel Time</div>
             <div className="text-lg font-semibold text-purple-900">{arrivalPlanning.estimatedArrivalTime}</div>
             <div className="text-xs text-gray-500 mt-1">from nearby transport hubs</div>
-          </div>
+      </div>
 
           {/* Warnings */}
           {arrivalPlanning.warnings && arrivalPlanning.warnings.length > 0 && (
@@ -601,7 +601,7 @@ export function TransportSetup({ onSave }: TransportModalProps) {
           </p>
         </div>
 
-        <div className="space-y-4">
+    <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm">Auto-escalate High Severity Issues</label>
@@ -715,9 +715,9 @@ export function TransportSetup({ onSave }: TransportModalProps) {
 
       {/* Transport Configuration Section */}
       <div className="border rounded-lg p-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure transport monitoring location and providers. Changes require explicit save.
-        </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        Configure transport monitoring location and providers. Changes require explicit save.
+      </div>
       
       {/* Location configuration */}
       <div className="border rounded-lg p-4">
@@ -864,7 +864,7 @@ export function TransportSetup({ onSave }: TransportModalProps) {
         <div className="text-sm font-medium">
           Monitoring {transportConfig.providers.length} providers within {transportConfig.radius} miles
         </div>
-      </div>
+        </div>
       </div>
     </div>
   )

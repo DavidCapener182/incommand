@@ -26,20 +26,21 @@ export default function MetricsPage() {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (user === null) {
-      // Still loading auth state
+    if (authLoading) {
       return;
     }
 
     if (!user) {
+      setLoading(false);
       router.replace('/login');
       return;
     }
 
     if (role !== 'superadmin') {
+      setLoading(false);
       router.replace('/admin');
       return;
     }
@@ -60,7 +61,7 @@ export default function MetricsPage() {
     }
 
     loadData();
-  }, [user, role, router]);
+  }, [authLoading, user, role, router]);
 
   if (loading) {
     return (

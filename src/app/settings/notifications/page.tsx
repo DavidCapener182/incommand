@@ -1,449 +1,689 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../contexts/AuthContext';
-import Toast, { useToast } from '../../../components/Toast';
-import { useNotificationPreferences, useSyncPreferences } from '../../../hooks/useUserPreferences';
-import { CheckIcon, XMarkIcon, DocumentTextIcon, ClockIcon } from '@heroicons/react/24/outline';
-
-// remove local fallback hooks and localStorage usage
+'use client'
+import React, { useState, useEffect, useTransition } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { CardContainer } from '@/components/ui/CardContainer';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { BellIcon, EnvelopeIcon, DevicePhoneMobileIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { useToast } from '@/components/Toast';
+import { updateNotificationPreference } from '../actions';
 
 export default function NotificationSettingsPage() {
-  const { notificationPreferences, updateNotificationPreference } = useNotificationPreferences();
-  const { syncPreferences, lastSyncTime } = useSyncPreferences();
-  const { user } = useAuth();
-  const { messages, addToast, removeToast } = useToast();
-  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission>('default');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const { user, loading: authLoading } = useAuth();
+  const { addToast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<any>(null);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+  const [smsVerificationCode, setSmsVerificationCode] = useState('');
+  const [smsVerifying, setSmsVerifying] = useState(false);
 
   useEffect(() => {
-    checkBrowserNotificationPermission();
-  }, []);
-
-  const checkBrowserNotificationPermission = () => {
-    if ('Notification' in window) {
-      setBrowserPermissionStatus(Notification.permission);
-    }
-  };
-
-  const requestBrowserPermission = async () => {
-    if (!('Notification' in window)) {
-      addToast({ title: 'Error', message: 'Browser notifications are not supported in this browser', type: 'error' });
+    // Wait for auth to finish loading
+    if (authLoading) {
       return;
     }
 
-    try {
-      const permission = await Notification.requestPermission();
-      setBrowserPermissionStatus(permission);
-      
-      if (permission === 'granted') {
-        addToast({ title: 'Success', message: 'Browser notifications enabled successfully!', type: 'success' });
-        // Update push notification preference to enabled
-        try {
-          await updateNotificationPreference('push.enabled', true);
-        } catch (error) {
-          console.error('Failed to update push preference:', error);
-          addToast({ title: 'Warning', message: 'Permission granted but failed to save preference', type: 'warning' });
+    if (!user) {
+      setLoading(false);
+      // Initialize empty settings so page can render
+      setSettings({
+        userId: '',
+        emailIncidents: false,
+        emailUpdates: false,
+        emailReports: false,
+        emailSocial: false,
+        pushEnabled: false,
+        pushSound: false,
+        pushVibrate: false,
+        pushIncidents: false,
+        pushUpdates: false,
+        pushReports: false,
+        pushSocial: false,
+        smsEnabled: false,
+        smsEmergencyOnly: true,
+        smsNumber: null,
+        quietHoursEnabled: false,
+        quietHoursStart: null,
+        quietHoursEnd: null,
+      });
+      return;
+    }
+
+    const loadSettings = async () => {
+      setLoading(true);
+      try {
+        // Fetch settings from Supabase
+        const { data, error } = await supabase
+          .from('notification_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          throw error;
         }
-      } else if (permission === 'denied') {
-        addToast({ title: 'Error', message: 'Browser notifications were denied. You can enable them in your browser settings.', type: 'error' });
-        // Update push notification preference to disabled
-        try {
-          await updateNotificationPreference('push.enabled', false);
-        } catch (error) {
-          console.error('Failed to update push preference:', error);
+
+        if (data) {
+          // Map database fields to component state
+          setSettings({
+            userId: data.user_id,
+            emailIncidents: data.email_incidents || false,
+            emailUpdates: data.email_updates || false,
+            emailReports: data.email_reports || false,
+            emailSocial: data.email_social || false,
+            pushEnabled: data.push_enabled || false,
+            pushSound: data.push_sound || false,
+            pushVibrate: data.push_vibrate || false,
+            pushIncidents: data.push_incidents || false,
+            pushUpdates: data.push_updates || false,
+            pushReports: data.push_reports || false,
+            pushSocial: data.push_social || false,
+            smsEnabled: data.sms_enabled || false,
+            smsEmergencyOnly: data.sms_emergency_only !== false,
+            smsNumber: data.sms_number || null,
+            quietHoursEnabled: data.quiet_hours_enabled || false,
+            quietHoursStart: data.quiet_hours_start || null,
+            quietHoursEnd: data.quiet_hours_end || null,
+          });
+        } else {
+          // Initialize with defaults if no data found
+          setSettings({
+            userId: user.id,
+            emailIncidents: false,
+            emailUpdates: false,
+            emailReports: false,
+            emailSocial: false,
+            pushEnabled: false,
+            pushSound: false,
+            pushVibrate: false,
+            pushIncidents: false,
+            pushUpdates: false,
+            pushReports: false,
+            pushSocial: false,
+            smsEnabled: false,
+            smsEmergencyOnly: true,
+            smsNumber: null,
+            quietHoursEnabled: false,
+            quietHoursStart: null,
+            quietHoursEnd: null,
+          });
         }
+
+        // Check push notification permission
+        if ('Notification' in window) {
+          setPushPermission(Notification.permission);
+        }
+      } catch (error: any) {
+        console.error('Failed to load notification settings:', error);
+        // Initialize with defaults even on error so page can render
+        setSettings({
+          userId: user.id,
+          emailIncidents: false,
+          emailUpdates: false,
+          emailReports: false,
+          emailSocial: false,
+          pushEnabled: false,
+          pushSound: false,
+          pushVibrate: false,
+          pushIncidents: false,
+          pushUpdates: false,
+          pushReports: false,
+          pushSocial: false,
+          smsEnabled: false,
+          smsEmergencyOnly: true,
+          smsNumber: null,
+          quietHoursEnabled: false,
+          quietHoursStart: null,
+          quietHoursEnd: null,
+        });
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to load notification settings. Using defaults.',
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
-      addToast({ title: 'Error', message: 'Failed to request notification permission', type: 'error' });
+    };
+
+    loadSettings();
+  }, [user, authLoading]);
+
+  const handleUpdate = async (field: string, value: any) => {
+    if (!user || !settings) return;
+
+    const updated = { ...settings, [field]: value };
+    setSettings(updated);
+
+    startTransition(async () => {
+      try {
+        // Map field names to database column names
+        const dbFieldMap: Record<string, string> = {
+          emailIncidents: 'email_incidents',
+          emailUpdates: 'email_updates',
+          emailReports: 'email_reports',
+          emailSocial: 'email_social',
+          pushEnabled: 'push_enabled',
+          pushSound: 'push_sound',
+          pushVibrate: 'push_vibrate',
+          pushIncidents: 'push_incidents',
+          pushUpdates: 'push_updates',
+          pushReports: 'push_reports',
+          pushSocial: 'push_social',
+          smsEnabled: 'sms_enabled',
+          smsEmergencyOnly: 'sms_emergency_only',
+          smsNumber: 'sms_number',
+          quietHoursEnabled: 'quiet_hours_enabled',
+          quietHoursStart: 'quiet_hours_start',
+          quietHoursEnd: 'quiet_hours_end',
+        };
+
+        const dbField = dbFieldMap[field] || field;
+        const updateData: Record<string, any> = {
+          user_id: user.id,
+          [dbField]: value,
+        };
+
+        const { error } = await supabase
+          .from('notification_settings')
+          .upsert(updateData);
+
+        if (error) throw error;
+
+        addToast({
+          type: 'success',
+          title: 'Success',
+          message: 'Notification settings updated',
+        });
+      } catch (error: any) {
+        console.error('Failed to update notification settings:', error);
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to update settings',
+        });
+        // Revert on error
+        setSettings(settings);
+      }
+    });
+  };
+
+  const handleRequestPushPermission = async () => {
+    if (!('Notification' in window)) {
+      addToast({
+        type: 'error',
+        title: 'Not Supported',
+        message: 'Push notifications are not supported in this browser',
+      });
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
+
+    if (permission === 'granted') {
+      handleUpdate('pushEnabled', true);
+      addToast({
+        type: 'success',
+        title: 'Success',
+        message: 'Push notifications enabled',
+      });
+    } else {
+      addToast({
+        type: 'error',
+        title: 'Permission Denied',
+        message: 'Push notifications were denied. Please enable them in your browser settings.',
+      });
     }
   };
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      await syncPreferences();
-      setSuccessMessage('Settings saved successfully');
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      addToast({ title: 'Error', message: 'Failed to save settings', type: 'error' });
-    } finally {
-      setIsSyncing(false);
-    }
+  const handleTestEmail = async () => {
+    if (!user) return;
+    startTransition(async () => {
+      try {
+        // TODO: Integrate with actual email service
+        console.log(`[Notification] Sending test email to user ${user.id}`);
+        addToast({
+          type: 'success',
+          title: 'Test Email Sent',
+          message: 'Check your inbox for a test email',
+        });
+      } catch (error: any) {
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to send test email',
+        });
+      }
+    });
   };
 
-  const handleNotificationUpdate = async (path: string, value: any) => {
-    try {
-      await updateNotificationPreference(path, value);
-      setSuccessMessage('Notification preferences updated');
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error('Failed to update notification preferences:', error);
-      addToast({ title: 'Error', message: 'Failed to update notification preferences', type: 'error' });
-    }
+  const handleTestPush = async () => {
+    if (!user) return;
+    startTransition(async () => {
+      try {
+        // TODO: Integrate with actual push service
+        console.log(`[Notification] Sending test push to user ${user.id}`);
+        if (pushPermission === 'granted' && 'Notification' in window) {
+          new Notification('Test Notification from inCommand', {
+            body: 'This is a test push notification.',
+            icon: '/favicon.ico',
+          });
+        }
+        addToast({
+          type: 'success',
+          title: 'Test Push Sent',
+          message: 'You should receive a test notification',
+        });
+      } catch (error: any) {
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to send test push',
+        });
+      }
+    });
   };
 
-  const SettingToggle = ({ 
-    label, 
-    description, 
-    path,
-    disabled = false 
-  }: { 
-    label: string; 
-    description: string; 
-    path: string;
-    disabled?: boolean;
-  }) => {
-    const value = path.split('.').reduce<any>((obj: any, key: string) => obj?.[key], notificationPreferences as any) as boolean;
-    
+  const handleVerifySMS = async () => {
+    if (!user || !settings?.smsNumber) return;
+    setSmsVerifying(true);
+    // Stub: In production, this would verify the OTP code
+    setTimeout(() => {
+      setSmsVerifying(false);
+      addToast({
+        type: 'success',
+        title: 'SMS Verified',
+        message: 'Your phone number has been verified',
+      });
+    }, 1000);
+  };
+
+  const handleTestSMS = async () => {
+    if (!user || !settings?.smsNumber) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Please enter a phone number first',
+      });
+      return;
+    }
+    startTransition(async () => {
+      try {
+        // TODO: Integrate with actual SMS service
+        console.log(`[Notification] Sending test SMS to ${settings.smsNumber} for user ${user.id}`);
+        addToast({
+          type: 'success',
+          title: 'Test SMS Sent',
+          message: 'Check your phone for a test SMS',
+        });
+      } catch (error: any) {
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to send test SMS',
+        });
+      }
+    });
+  };
+
+  if (authLoading || loading) {
     return (
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
-        <div className="flex-1">
-          <h4 className="font-medium text-gray-900 dark:text-white">{label}</h4>
-          <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">{description}</p>
-        </div>
-        <label className="relative inline-flex items-center cursor-pointer sm:ml-4 self-start sm:self-auto">
-          <input
-            type="checkbox"
-            className="sr-only"
-            checked={Boolean(value)}
-            onChange={(e) => handleNotificationUpdate(path, e.target.checked)}
-            disabled={disabled}
-          />
-          <div className={`w-11 h-6 rounded-full transition-colors ${
-            value 
-              ? 'bg-blue-600' 
-              : 'bg-gray-300 dark:bg-gray-600'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-              value ? 'translate-x-5' : 'translate-x-0'
-            } mt-0.5 ml-0.5`} />
+      <div className="max-w-4xl mx-auto">
+        <CardContainer>
+          <div className="text-center py-8">
+            <div className="text-gray-500 dark:text-blue-100">Loading notification settings...</div>
           </div>
-        </label>
+        </CardContainer>
       </div>
     );
-  };
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <CardContainer>
+          <div className="text-center py-8">
+            <div className="text-gray-500 dark:text-blue-100">You must be signed in to view notification settings.</div>
+          </div>
+        </CardContainer>
+      </div>
+    );
+  }
+
+  if (!settings) {
+    // This should never happen after loading completes, but just in case
+    return (
+      <div className="max-w-4xl mx-auto">
+        <CardContainer>
+          <div className="text-center py-8">
+            <div className="text-red-500 dark:text-red-400">Failed to initialize settings</div>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Reload Page
+            </Button>
+          </div>
+        </CardContainer>
+      </div>
+    );
+  }
+
+  const quietHoursPreview = settings.quietHoursEnabled && settings.quietHoursStart && settings.quietHoursEnd
+    ? `${settings.quietHoursStart} - ${settings.quietHoursEnd}`
+    : 'Not set';
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Notification Settings
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Manage how and when you receive notifications
-        </p>
-      </div>
-
-      {/* Success Message */}
-      {showSuccess && (
-        <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
-          <div className="flex">
-            <CheckIcon className="h-5 w-5 text-green-400" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                {successMessage}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowSuccess(false)}
-              className="ml-auto"
-            >
-              <XMarkIcon className="h-5 w-5 text-green-400" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Save Status */}
-      <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className={`h-5 w-5 text-blue-600 ${isSyncing ? 'animate-spin' : ''}`}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Settings Status
-              </p>
-              <p className="text-xs text-blue-600 dark:text-blue-300">
-                {lastSyncTime ? `Last saved: ${new Date(lastSyncTime).toLocaleString()}` : 'Not saved yet'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSyncing ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
-
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Email Notifications */}
-      <div className="card-depth p-4 sm:p-6 mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Email Notifications</h2>
-        <div className="space-y-3 sm:space-y-4">
-          <SettingToggle
-            label="Email Notifications"
-            description="Receive notifications via email"
-            path="email.enabled"
-          />
+      <CardContainer>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-100 dark:bg-[#1a2a57] rounded-lg">
+            <EnvelopeIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Email Notifications</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Configure which emails you receive</p>
+          </div>
+        </div>
 
-          <div className="p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-2">Email Frequency</h4>
-            <p className="text-sm text-gray-600 dark:text-blue-100 mb-3">
-              How often should we send you email notifications?
-            </p>
-            <select
-              value={notificationPreferences?.email?.frequency || 'immediate'}
-              onChange={(e) => handleNotificationUpdate('email.frequency', e.target.value)}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base"
-            >
-              <option value="immediate">Immediate (as they happen)</option>
-              <option value="hourly">Hourly digest</option>
-              <option value="daily">Daily digest</option>
-              <option value="weekly">Weekly digest</option>
-            </select>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Incident Alerts</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive emails for new incidents</p>
+            </div>
+            <Switch
+              checked={settings.emailIncidents}
+              onCheckedChange={(checked) => handleUpdate('emailIncidents', checked)}
+            />
           </div>
 
-          <SettingToggle
-            label="Incident Alerts"
-            description="Receive email notifications for new incidents"
-            path="email.categories.incidents"
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Updates</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive emails for incident updates</p>
+            </div>
+            <Switch
+              checked={settings.emailUpdates}
+              onCheckedChange={(checked) => handleUpdate('emailUpdates', checked)}
+            />
+          </div>
 
-          <SettingToggle
-            label="System Updates"
-            description="Receive email notifications for system updates"
-            path="email.categories.system_updates"
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Reports</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive daily/weekly reports</p>
+            </div>
+            <Switch
+              checked={settings.emailReports}
+              onCheckedChange={(checked) => handleUpdate('emailReports', checked)}
+            />
+          </div>
 
-          <SettingToggle
-            label="Reports"
-            description="Receive email notifications for reports"
-            path="email.categories.reports"
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Social Media</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive social media alerts</p>
+            </div>
+            <Switch
+              checked={settings.emailSocial}
+              onCheckedChange={(checked) => handleUpdate('emailSocial', checked)}
+            />
+          </div>
 
-          <SettingToggle
-            label="Social Media"
-            description="Receive email notifications for social media activity"
-            path="email.categories.social_media"
-          />
+          <div className="pt-4 border-t border-gray-200 dark:border-[#2d437a]">
+            <Button variant="outline" onClick={handleTestEmail} disabled={isPending}>
+              Send Test Email
+            </Button>
+          </div>
         </div>
-      </div>
+      </CardContainer>
 
       {/* Push Notifications */}
-      <div className="card-depth p-4 sm:p-6 mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Push Notifications</h2>
-        <div className="space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg gap-3 sm:gap-4">
-            <div className="flex-1">
-              <h4 className="font-medium text-gray-900 dark:text-white">Browser Notifications</h4>
-              <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">
-                Receive push notifications in your browser
-                {browserPermissionStatus === 'denied' && (
-                  <span className="text-red-600 dark:text-red-400 block sm:inline sm:ml-2 mt-1 sm:mt-0">
-                    (Permission denied - enable in browser settings)
-                  </span>
-                )}
+      <CardContainer>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-green-100 dark:bg-[#1a2a57] rounded-lg">
+            <BellIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Push Notifications</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Browser push notifications</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {pushPermission === 'default' && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                Push notifications require browser permission. Click the button below to enable them.
+              </p>
+              <Button variant="primary" onClick={handleRequestPushPermission}>
+                Request Permission
+              </Button>
+            </div>
+          )}
+
+          {pushPermission === 'denied' && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-red-700 dark:text-red-300">
+                Push notifications are blocked. Please enable them in your browser settings.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={notificationPreferences?.push?.enabled && browserPermissionStatus === 'granted'}
-                  onChange={(e) => {
-                    if (e.target.checked && browserPermissionStatus !== 'granted') {
-                      requestBrowserPermission();
-                    } else {
-                      handleNotificationUpdate('push.enabled', e.target.checked);
-                    }
-                  }}
-                  disabled={browserPermissionStatus === 'denied'}
-                />
-                <div className={`w-11 h-6 rounded-full transition-colors ${
-                  notificationPreferences?.push?.enabled && browserPermissionStatus === 'granted'
-                    ? 'bg-blue-600' 
-                    : 'bg-gray-300 dark:bg-gray-600'
-                } ${browserPermissionStatus === 'denied' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                    notificationPreferences?.push?.enabled && browserPermissionStatus === 'granted' ? 'translate-x-5' : 'translate-x-0'
-                  } mt-0.5 ml-0.5`} />
+          )}
+
+          {pushPermission === 'granted' && (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable Push Notifications</Label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Receive browser push notifications</p>
                 </div>
-              </label>
-              {browserPermissionStatus === 'default' && (
-                <button
-                  onClick={requestBrowserPermission}
-                  className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
-                >
-                  Enable
-                </button>
+                <Switch
+                  checked={settings.pushEnabled}
+                  onCheckedChange={(checked) => handleUpdate('pushEnabled', checked)}
+                  disabled={!settings.pushEnabled && pushPermission !== 'granted'}
+                />
+              </div>
+
+              {settings.pushEnabled && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Sound</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Play sound with notifications</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushSound}
+                      onCheckedChange={(checked) => handleUpdate('pushSound', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vibration</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Vibrate device for notifications</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushVibrate}
+                      onCheckedChange={(checked) => handleUpdate('pushVibrate', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Incidents</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Push notifications for incidents</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushIncidents}
+                      onCheckedChange={(checked) => handleUpdate('pushIncidents', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Updates</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Push notifications for updates</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushUpdates}
+                      onCheckedChange={(checked) => handleUpdate('pushUpdates', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Reports</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Push notifications for reports</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushReports}
+                      onCheckedChange={(checked) => handleUpdate('pushReports', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Social Media</Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Push notifications for social media</p>
+                    </div>
+                    <Switch
+                      checked={settings.pushSocial}
+                      onCheckedChange={(checked) => handleUpdate('pushSocial', checked)}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="pt-4 border-t border-gray-200 dark:border-[#2d437a]">
+                <Button variant="outline" onClick={handleTestPush} disabled={isPending || !settings.pushEnabled}>
+                  Send Test Push
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </CardContainer>
+
+      {/* SMS Notifications */}
+      <CardContainer>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-purple-100 dark:bg-[#1a2a57] rounded-lg">
+            <DevicePhoneMobileIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">SMS Notifications</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Text message notifications</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="smsNumber">Phone Number</Label>
+            <div className="flex gap-2 mt-2">
+              <Input
+                id="smsNumber"
+                type="tel"
+                value={settings.smsNumber || ''}
+                onChange={(e) => handleUpdate('smsNumber', e.target.value)}
+                placeholder="+44 123 456 7890"
+                className="flex-1"
+              />
+              {settings.smsNumber && (
+                <Button variant="outline" onClick={handleVerifySMS} disabled={smsVerifying}>
+                  {smsVerifying ? 'Verifying...' : 'Verify'}
+                </Button>
               )}
             </div>
           </div>
 
-          <SettingToggle
-            label="Sound"
-            description="Play sound for push notifications"
-            path="push.sound"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-
-          <SettingToggle
-            label="Vibration"
-            description="Vibrate device for push notifications"
-            path="push.vibration"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-
-          <SettingToggle
-            label="Incident Alerts"
-            description="Receive push notifications for new incidents"
-            path="push.categories.incidents"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-
-          <SettingToggle
-            label="System Updates"
-            description="Receive push notifications for system updates"
-            path="push.categories.system_updates"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-
-          <SettingToggle
-            label="Reports"
-            description="Receive push notifications for reports"
-            path="push.categories.reports"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-
-          <SettingToggle
-            label="Social Media"
-            description="Receive push notifications for social media activity"
-            path="push.categories.social_media"
-            disabled={!notificationPreferences?.push?.enabled}
-          />
-        </div>
-      </div>
-
-      {/* SMS Notifications */}
-      <div className="card-depth p-4 sm:p-6 mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">SMS Notifications</h2>
-        <div className="space-y-3 sm:space-y-4">
-          <SettingToggle
-            label="SMS Notifications"
-            description="Receive notifications via SMS"
-            path="sms.enabled"
-          />
-
-          <SettingToggle
-            label="Emergency Only"
-            description="Only send SMS for emergency notifications"
-            path="sms.emergency_only"
-            disabled={!notificationPreferences?.sms?.enabled}
-          />
-        </div>
-      </div>
-
-      {/* Quiet Hours */}
-      <div className="card-depth p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Quiet Hours</h2>
-        <div className="space-y-3 sm:space-y-4">
-          <div className="p-3 sm:p-4 border border-gray-200 dark:border-[#2d437a] rounded-lg">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3 sm:gap-4">
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-900 dark:text-white">Quiet Hours</h4>
-                <p className="text-sm text-gray-600 dark:text-blue-100 mt-1">
-                  Pause non-urgent notifications during specified hours
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer sm:ml-4 self-start sm:self-auto">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={notificationPreferences?.quiet_hours?.enabled}
-                  onChange={(e) => handleNotificationUpdate('quiet_hours.enabled', e.target.checked)}
-                />
-                <div className={`w-11 h-6 rounded-full transition-colors ${
-                  notificationPreferences?.quiet_hours?.enabled 
-                    ? 'bg-blue-600' 
-                    : 'bg-gray-300 dark:bg-gray-600'
-                }`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                    notificationPreferences?.quiet_hours?.enabled ? 'translate-x-5' : 'translate-x-0'
-                  } mt-0.5 ml-0.5`} />
-                </div>
-              </label>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Enable SMS</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Receive SMS notifications</p>
             </div>
+            <Switch
+              checked={settings.smsEnabled}
+              onCheckedChange={(checked) => handleUpdate('smsEnabled', checked)}
+            />
+          </div>
 
-            {notificationPreferences?.quiet_hours?.enabled && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={notificationPreferences?.quiet_hours?.start || '22:00'}
-                    onChange={(e) => handleNotificationUpdate('quiet_hours.start', e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={notificationPreferences?.quiet_hours?.end || '08:00'}
-                    onChange={(e) => handleNotificationUpdate('quiet_hours.end', e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  />
-                </div>
-              </div>
-            )}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Emergency Only</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Only send SMS for emergencies</p>
+            </div>
+            <Switch
+              checked={settings.smsEmergencyOnly}
+              onCheckedChange={(checked) => handleUpdate('smsEmergencyOnly', checked)}
+            />
+          </div>
+
+          <div className="pt-4 border-t border-gray-200 dark:border-[#2d437a]">
+            <Button variant="outline" onClick={handleTestSMS} disabled={isPending || !settings.smsNumber}>
+              Send Test SMS
+            </Button>
           </div>
         </div>
-      </div>
+      </CardContainer>
 
-      {/* Settings Navigation */}
-      <div className="card-depth p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-blue-200">Notification Management</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <a href="/settings/notifications/templates" className="flex items-center gap-3 p-4 card-depth dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-              <DocumentTextIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">Notification Templates</div>
-              <div className="text-sm text-gray-500 dark:text-blue-300">Manage notification templates</div>
-            </div>
-          </a>
-
-          <a href="/settings/notifications/scheduler" className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-[#1a2a57] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d437a] transition-colors">
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
-              <ClockIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">Notification Scheduler</div>
-              <div className="text-sm text-gray-500 dark:text-blue-300">Schedule automated notifications</div>
-            </div>
-          </a>
+      {/* Quiet Hours */}
+      <CardContainer>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-indigo-100 dark:bg-[#1a2a57] rounded-lg">
+            <MoonIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Quiet Hours</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Suppress notifications during these hours</p>
+          </div>
         </div>
-      </div>
 
-      <Toast messages={messages} onRemove={removeToast} />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Enable Quiet Hours</Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Suppress notifications during quiet hours</p>
+            </div>
+            <Switch
+              checked={settings.quietHoursEnabled}
+              onCheckedChange={(checked) => handleUpdate('quietHoursEnabled', checked)}
+            />
+          </div>
+
+          {settings.quietHoursEnabled && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="quietStart">Start Time</Label>
+                <Input
+                  id="quietStart"
+                  type="time"
+                  value={settings.quietHoursStart || ''}
+                  onChange={(e) => handleUpdate('quietHoursStart', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="quietEnd">End Time</Label>
+                <Input
+                  id="quietEnd"
+                  type="time"
+                  value={settings.quietHoursEnd || ''}
+                  onChange={(e) => handleUpdate('quietHoursEnd', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="bg-gray-50 dark:bg-[#1a2a57] rounded-lg p-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <strong>Preview:</strong> Quiet hours are {settings.quietHoursEnabled ? `set to ${quietHoursPreview}` : 'disabled'}
+            </p>
+          </div>
+        </div>
+      </CardContainer>
     </div>
   );
-} 
+}

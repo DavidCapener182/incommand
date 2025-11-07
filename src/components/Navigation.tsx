@@ -312,12 +312,13 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
     <>
       <nav
         role="banner"
-        className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow"
+        className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow font-sans"
       >
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-                <Link href="/incidents" className="flex-shrink-0 flex items-center" data-tour="dashboard">
+            {/* Logo - Left side */}
+            <div className="flex items-center flex-shrink-0">
+              <Link href="/incidents" className="flex items-center" data-tour="dashboard">
                 <Image
                   src="/inCommand.png"
                   alt="inCommand Logo"
@@ -326,197 +327,203 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   priority
                 />
               </Link>
+            </div>
+            
+            {/* Navigation Menu, Theme Toggle, and User Section - Right side */}
+            <div className="flex items-center gap-4 ml-auto">
               {/* Desktop Nav */}
               {!minimal && (
-              <div className="hidden xl:ml-16 xl:flex xl:items-center">
-                <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
-                  <NavigationMenuList className="gap-8">
-                    <NavigationMenuItem>
-                      <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
-                        Incidents
-                      </Link>
-                    </NavigationMenuItem>
-                    
-                    {/* Reports Dropdown */}
-                    <NavigationMenuItem>
-                      <NavigationMenuTrigger 
-                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
-                        onClick={() => {
-                          if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
-                            setShowNoEventModal(true);
-                            return;
-                          }
-                        }}
-                      >
-                        Reports
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md">
-                        <ul className="grid w-[300px] gap-4 p-4">
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/analytics" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Analytics</div>
-                                <div className="text-xs text-white/80 leading-relaxed">View event analytics and insights.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/analytics?tab=end-of-event" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">End of Event Report</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Generate comprehensive event reports.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                        </ul>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
-
-                    <NavigationMenuItem>
-                      <Link 
-                        href="/staffing" 
-                        className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
-                      >
-                        Staff
-                      </Link>
-                    </NavigationMenuItem>
-
-                    <NavigationMenuItem>
-                      <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
-                        Help
-                      </Link>
-                    </NavigationMenuItem>
-
-                    {canAccessAdminFeatures && (
+                <div className="hidden xl:flex xl:items-center">
+                  <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                    <NavigationMenuList className="gap-8">
                       <NavigationMenuItem>
-                        <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100`}>
-                          Settings
+                        <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                          Incidents
                         </Link>
                       </NavigationMenuItem>
-                    )}
-
-                    {/* More Dropdown */}
-                    <NavigationMenuItem>
-                      <NavigationMenuTrigger
-                        className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
-                      >
-                        More
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md">
-                        <ul className="grid w-[300px] gap-4 p-4">
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/features" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Features</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Explore all platform features.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Accreditation Management</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Manage Accreditation onboarding and access control.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/maintenance" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Maintenance & Assets</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Track assets, work orders, and schedules.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/lost-and-found" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Lost &amp; Found</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Reconcile guest reports with recovered items.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/pricing" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Pricing</div>
-                                <div className="text-xs text-white/80 leading-relaxed">View pricing plans and options.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/about" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">About</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Learn about our company and mission.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/blog" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Blog</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Read our latest blog posts.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/careers" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Careers</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Join our team.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                          <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/status" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white">Status</div>
-                                <div className="text-xs text-white/80 leading-relaxed">Check system status and uptime.</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                        </ul>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
-
-                    {/* Admin Button - only show for admin users */}
-                    {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+                      
+                      {/* Reports Dropdown */}
                       <NavigationMenuItem>
-                        <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100`}>
-                          Admin
+                        <NavigationMenuTrigger 
+                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                          onClick={() => {
+                            if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
+                              setShowNoEventModal(true);
+                              return;
+                            }
+                          }}
+                        >
+                          Reports
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
+                          <ul className="grid w-[300px] gap-4 p-4">
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/analytics" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Analytics</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">View event analytics and insights.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/analytics?tab=end-of-event" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">End of Event Report</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Generate comprehensive event reports.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                          </ul>
+                        </NavigationMenuContent>
+                      </NavigationMenuItem>
+
+                      <NavigationMenuItem>
+                        <Link 
+                          href="/staffing" 
+                          className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                        >
+                          Staff
                         </Link>
                       </NavigationMenuItem>
-                    )}
-                  </NavigationMenuList>
-                </NavigationMenu>
 
-                {/* Theme Toggle Button */}
+                      <NavigationMenuItem>
+                        <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                          Help
+                        </Link>
+                      </NavigationMenuItem>
+
+                      {canAccessAdminFeatures && (
+                        <NavigationMenuItem>
+                          <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                            Settings
+                          </Link>
+                        </NavigationMenuItem>
+                      )}
+
+                      {/* More Dropdown */}
+                      <NavigationMenuItem>
+                        <NavigationMenuTrigger
+                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
+                        >
+                          More
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
+                          <ul className="grid w-[300px] gap-4 p-4">
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/features" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Features</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Explore all platform features.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Accreditation Management</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Manage Accreditation onboarding and access control.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/maintenance" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Maintenance & Assets</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Track assets, work orders, and schedules.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/lost-and-found" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Lost &amp; Found</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Reconcile guest reports with recovered items.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/pricing" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Pricing</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">View pricing plans and options.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/about" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">About</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Learn about our company and mission.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/blog" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Blog</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Read our latest blog posts.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/careers" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Careers</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Join our team.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                            <li>
+                              <NavigationMenuLink asChild>
+                                <Link href="/status" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
+                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Status</div>
+                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Check system status and uptime.</div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                          </ul>
+                        </NavigationMenuContent>
+                      </NavigationMenuItem>
+
+                      {/* Admin Button - only show for admin users */}
+                      {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+                        <NavigationMenuItem>
+                          <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans`}>
+                            Admin
+                          </Link>
+                        </NavigationMenuItem>
+                      )}
+                    </NavigationMenuList>
+                  </NavigationMenu>
+                </div>
+              )}
+
+              {/* Theme Toggle Button */}
+              {!minimal && (
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="ml-4 p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
+                  className="hidden xl:flex p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
                   aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                   title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
                   {theme === 'dark' ? SunIcon : MoonIcon}
                 </button>
-              </div>
               )}
-            </div>
-            {/* User Avatar/Profile Dropdown - always far right */}
-            <div className="flex items-center ml-auto">
+
+              {/* User Avatar/Profile Dropdown */}
+              <div className="flex items-center gap-4">
               {user && (
-                <div className="relative flex items-center space-x-3">
+                <div className="relative flex items-center gap-4">
                   {/* Welcome message with first name, left of avatar */}
-                  <div className="hidden md:flex md:items-center md:gap-2">
-                    <span className="text-white font-semibold text-base">
+                  <div className="hidden md:flex md:items-center md:gap-3">
+                    <span className="text-white font-semibold text-base font-sans">
                       {getRandomGreeting()}, {(() => {
                         if (profile?.full_name) return profile.full_name.split(' ')[0];
                         return '';
                       })()}
                     </span>
                     {isTemporaryMember && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 font-sans">
                         Guest
                       </span>
                     )}
@@ -538,7 +545,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         onError={() => setAvatarError(true)}
                       />
                     ) : (
-                      <div className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500">
+                      <div className="w-10 h-10 md:w-9 md:h-9 rounded-full bg-blue-200 flex items-center justify-center text-lg font-bold text-blue-700 border-2 border-blue-500 font-sans">
                         {getInitials(displayName)}
                       </div>
                     )}
@@ -556,13 +563,14 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                     </svg>
                     {/* Notification Badge */}
                     {unreadNotifications > 0 && (
-                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 animate-pulse shadow-lg">
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 animate-pulse shadow-lg font-sans">
                         {unreadNotifications > 99 ? '99+' : unreadNotifications}
                       </span>
                     )}
                   </button>
                 </div>
               )}
+              </div>
             </div>
             {/* Hamburger for mobile - hidden in minimal mode */}
             {!minimal && (
@@ -632,7 +640,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
+            <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
 
             {/* Reports Dropdown for Mobile */}
             <div>
@@ -644,7 +652,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   }
                   setMobileReportsOpen(!mobileReportsOpen);
                 }}
-                className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans ${!hasCurrentEvent ? 'opacity-50' : ''}`}
               >
                 <span>Reports</span>
                 <svg className={`w-5 h-5 transition-transform duration-200 ${mobileReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -655,14 +663,14 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/analytics" 
-                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Analytics
                   </Link>
                   <Link 
                     href="/analytics?tab=end-of-event" 
-                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} 
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     End of Event Report
@@ -673,21 +681,21 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
 
             <Link 
               href="/staffing" 
-              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Staff
             </Link>
-            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
+            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
             {canAccessAdminFeatures && (
-              <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+              <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
             )}
             
             {/* More Dropdown for Mobile */}
             <div>
               <button
                 onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-                className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between"
+                className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans"
               >
                 <span>More</span>
                 <svg className={`w-5 h-5 transition-transform duration-200 ${mobileMoreOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -696,21 +704,21 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               </button>
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
-                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
-                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Accreditation Management</Link>
-                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
-                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
-                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
-                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>About</Link>
-                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
-                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
+                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
+                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Accreditation Management</Link>
+                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
+                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
+                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>About</Link>
+                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
+                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
                 </div>
               )}
             </div>
             
             {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-              <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
+              <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
             )}
             
             {/* Divider */}
@@ -729,7 +737,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   }
                 }, 100);
               }}
-              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
             >
               <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -743,11 +751,11 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 setNotificationDrawerOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="touch-target flex items-center justify-between w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+              className="touch-target flex items-center justify-between w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
             >
               <span>Notifications</span>
               {unreadNotifications > 0 && (
-                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 shadow-lg">
+                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] h-5 shadow-lg font-sans">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
@@ -759,7 +767,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 setTheme(theme === 'dark' ? 'light' : 'dark');
                 setMobileMenuOpen(false);
               }}
-              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px]"
+              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
             >
               {theme === 'dark' ? (
                 <>
@@ -793,7 +801,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   window.location.href = '/login';
                 }
               }} 
-              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 min-h-[44px] flex items-center"
+              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 min-h-[44px] flex items-center font-sans"
             >
               Sign Out
             </button>
@@ -879,6 +887,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
         unreadCount={unreadNotifications}
         onMarkAllRead={handleMarkAllNotificationsRead}
         onClearAll={handleClearAllNotifications}
+        initialTab={pathname === '/settings/support' ? 'support' : undefined}
       />
 
       {/* Only render the event group section in the messages sidebar context: */}

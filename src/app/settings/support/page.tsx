@@ -1,6 +1,12 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { CardContainer } from '@/components/ui/CardContainer';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   QuestionMarkCircleIcon, 
   ChatBubbleLeftRightIcon, 
@@ -10,9 +16,10 @@ import {
   EnvelopeIcon,
   BookOpenIcon,
   VideoCameraIcon,
-  ArrowTopRightOnSquareIcon,
-  XMarkIcon
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
+import { useToast } from '@/components/Toast';
+import { useNotificationDrawer } from '@/contexts/NotificationDrawerContext';
 
 interface FAQItem {
   question: string;
@@ -75,236 +82,178 @@ const faqData: FAQItem[] = [
 
 interface SupportTicket {
   id: string;
-  user_id: string | null;
-  company_id?: string | null;
+  userId: string;
+  orgId?: string | null;
+  channelId?: string | null;
   subject: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  category: 'general' | 'technical' | 'billing' | 'feature_request' | 'bug_report';
-  created_at: string | null;
-  updated_at: string | null;
-  resolved_at?: string | null;
-  assigned_to?: string | null;
+  category: 'incident' | 'technical' | 'billing' | 'other';
+  status: 'open' | 'in_progress' | 'resolved';
+  priority: 'normal' | 'urgent';
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SupportMessage {
   id: string;
-  ticket_id: string;
-  sender_id: string;
-  sender_type: 'user' | 'admin';
+  ticketId: string;
+  userId?: string | null;
   message: string;
-  is_internal: boolean;
-  created_at: string;
-  read_at?: string;
-  sender?: {
-    id: string;
-    full_name: string;
-    email: string;
-  };
+  attachments?: any[];
+  createdAt: string;
 }
 
 export default function SupportPage() {
+  const { user } = useAuth();
+  const { addToast } = useToast();
+  const { setIsOpen: setNotificationDrawerOpen } = useNotificationDrawer();
+  const [isPending, startTransition] = useTransition();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
-  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
-  const [currentTicket, setCurrentTicket] = useState<SupportTicket | null>(null);
-  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({
     subject: '',
-    category: 'general' as const,
-    priority: 'medium' as const,
+    category: 'technical' as const,
+    priority: 'normal' as const,
     message: ''
   });
   const [userTickets, setUserTickets] = useState<SupportTicket[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const categories = ['All', ...Array.from(new Set(faqData.map(item => item.category)))];
   const filteredFAQ = selectedCategory === 'All' ? faqData : faqData.filter(item => item.category === selectedCategory);
 
   useEffect(() => {
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session?.user);
-      setCurrentUser(session?.user || null);
-    });
+    if (user) {
+      loadTickets();
+    }
+  }, [user]);
 
-    // Initial check
-    checkUser();
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkUser = async () => {
+  const loadTickets = async () => {
+    if (!user) return;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const { data: { user }, error } = await supabase.auth.getUser();
-      console.log('Auth check result:', { user, error });
-      if (error) {
-        console.error('Auth error:', error);
-      }
-      
-      if (user) {
-        // Verify user exists in profiles table
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .eq('id', user.id)
-          .single();
-          
-        console.log('Profile check result:', { profile, profileError });
-        
-        if (profileError) {
-          console.error('Profile error:', profileError);
-        }
-      }
-      
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error checking user:', error);
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedTickets: SupportTicket[] = (data || []).map((ticket: any) => ({
+        id: ticket.id,
+        userId: ticket.user_id,
+        orgId: ticket.org_id || ticket.organization_id || ticket.company_id,
+        channelId: ticket.channel_id,
+        subject: ticket.subject,
+        category: ticket.category,
+        status: ticket.status === 'in_progress' ? 'in_progress' : ticket.status === 'resolved' ? 'resolved' : 'open',
+        priority: ticket.priority === 'urgent' ? 'urgent' : 'normal',
+        createdAt: ticket.created_at,
+        updatedAt: ticket.updated_at,
+      }));
+
+      setUserTickets(formattedTickets);
+    } catch (error: any) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: error.message || 'Failed to load tickets',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchUserTickets = useCallback(async () => {
-    if (!currentUser) return;
-    
-    try {
-      const { data: tickets, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUserTickets(
-        (tickets || []).map(t => ({
-          ...t,
-          status: t.status as "open" | "in_progress" | "closed" | "resolved",
-          priority: t.priority as "low" | "medium" | "high" | "urgent",
-          category: t.category as "general" | "technical" | "billing" | "feature_request" | "bug_report",
-        }))
-      );
-    } catch (error) {
-      console.error('Error fetching user tickets:', error);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchUserTickets();
-    }
-  }, [currentUser, fetchUserTickets]);
-
-  const fetchSupportMessages = async (ticketId: string) => {
-    try {
-      const { data: messages, error } = await supabase
-        .from('support_messages')
-        .select(`
-          *,
-          sender:profiles!support_messages_sender_id_fkey(id, full_name, email)
-        `)
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setSupportMessages((messages || []) as unknown as SupportMessage[]);
-    } catch (error) {
-      console.error('Error fetching support messages:', error);
-    }
-  };
-
   const createSupportTicket = async () => {
-    if (!currentUser) {
-      alert('You must be logged in to create a support ticket. Please refresh the page and try again.');
+    if (!user) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'You must be signed in to create a support ticket',
+      });
       return;
     }
     
     if (!newTicket.subject.trim() || !newTicket.message.trim()) {
-      alert('Please fill in both subject and message fields.');
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Please fill in both subject and message fields',
+      });
       return;
     }
 
-    try {
-      // Create the ticket
-      const { data: ticket, error: ticketError } = await (supabase as any)
-        .from('support_tickets')
-        .insert({
-          user_id: currentUser.id,
-          subject: newTicket.subject,
-          category: newTicket.category,
-          priority: newTicket.priority,
-          status: 'open'
-        })
-        .select()
-        .single();
+    setIsCreatingTicket(true);
+    
+    startTransition(async () => {
+      try {
+        // Create ticket
+        const { data: ticketData, error: ticketError } = await supabase
+          .from('support_tickets')
+          .insert({
+            user_id: user.id,
+            subject: newTicket.subject.trim(),
+            category: newTicket.category,
+            priority: newTicket.priority,
+            status: 'open',
+          })
+          .select()
+          .single();
 
-      if (ticketError) throw ticketError;
+        if (ticketError) throw ticketError;
 
-      // Create the initial message
-      const { error: messageError } = await (supabase as any)
-        .from('support_messages')
-        .insert({
-          ticket_id: ticket.id,
-          sender_id: currentUser.id,
-          sender_type: 'user',
-          message: newTicket.message,
-          is_internal: false
+        // Create initial message - use both user_id and sender_id for compatibility
+        const messagePayload: any = {
+          ticket_id: ticketData.id,
+          message: newTicket.message.trim(),
+          attachments: [],
+        };
+        
+        if (user) {
+          messagePayload.user_id = user.id;
+          messagePayload.sender_id = user.id;
+          messagePayload.sender_type = 'user';
+        }
+
+        const { error: messageError } = await supabase
+          .from('support_messages')
+          .insert(messagePayload);
+
+        if (messageError) throw messageError;
+
+        setNewTicket({
+          subject: '',
+          category: 'technical',
+          priority: 'normal',
+          message: '',
+        });
+        setIsCreatingTicket(false);
+        
+        await loadTickets();
+
+        addToast({
+          type: 'success',
+          title: 'Success',
+          message: 'Support ticket created successfully. Opening chat...',
         });
 
-      if (messageError) throw messageError;
-
-      // Reset form and close modal
-      setNewTicket({
-        subject: '',
-        category: 'general',
-        priority: 'medium',
-        message: ''
-      });
-      setIsCreatingTicket(false);
-      
-      // Refresh tickets
-      await fetchUserTickets();
-      
-      // Open the chat for the new ticket
-      setCurrentTicket(ticket);
-      setIsLiveChatOpen(true);
-      await fetchSupportMessages(ticket.id);
-    } catch (error) {
-      console.error('Error creating support ticket:', error);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!currentTicket || !newMessage.trim() || !currentUser) return;
-
-    try {
-      const { error } = await (supabase as any)
-        .from('support_messages')
-        .insert({
-          ticket_id: currentTicket.id,
-          sender_id: currentUser.id,
-          sender_type: 'user',
-          message: newMessage.trim(),
-          is_internal: false
+        // Open the NotificationDrawer with support tab
+        setNotificationDrawerOpen(true);
+      } catch (error: any) {
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to create support ticket',
         });
-
-      if (error) throw error;
-
-      setNewMessage('');
-      await fetchSupportMessages(currentTicket.id);
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
+        setIsCreatingTicket(false);
+      }
+    });
   };
 
-  const openTicketChat = async (ticket: SupportTicket) => {
-    setCurrentTicket(ticket);
-    setIsLiveChatOpen(true);
-    await fetchSupportMessages(ticket.id);
+  const openTicketChat = () => {
+    // Open the NotificationDrawer with support tab
+    setNotificationDrawerOpen(true);
   };
 
   return (
@@ -325,7 +274,7 @@ export default function SupportPage() {
               Get instant help from our support team during business hours (9 AM - 6 PM GMT).
             </p>
             <button 
-              onClick={() => setIsCreatingTicket(true)}
+              onClick={() => setNotificationDrawerOpen(true)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Start Live Chat
@@ -343,10 +292,10 @@ export default function SupportPage() {
               Send us detailed questions and we&apos;ll respond within 24 hours.
             </p>
             <a 
-              href="mailto:support@incommand.app" 
+              href="mailto:support@incommand.uk" 
               className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors block text-center"
             >
-              support@incommand.app
+              support@incommand.uk
             </a>
           </div>
         </div>
@@ -478,18 +427,17 @@ export default function SupportPage() {
                       </span>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         ticket.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                        ticket.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                        ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        ticket.priority === 'normal' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'
                       }`}>
                         {ticket.priority}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600 dark:text-blue-100">
-                    <span>{ticket.category} • Created {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'Unknown'}</span>
+                    <span>{ticket.category} • Created {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : 'Unknown'}</span>
                     <button
-                      onClick={() => openTicketChat(ticket)}
+                      onClick={openTicketChat}
                       className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                     >
                       View Chat
@@ -502,51 +450,75 @@ export default function SupportPage() {
         )}
 
         {/* Contact Form */}
-        <div className="card-depth p-4 sm:p-6">
+        <CardContainer className="p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-blue-200">Send us a Message</h2>
-          <form className="space-y-4">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              createSupportTicket();
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <Label htmlFor="ticketSubject">Subject</Label>
+              <Input
+                id="ticketSubject"
+                type="text"
+                value={newTicket.subject}
+                onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
+                placeholder="Brief description of your issue"
+                required
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Name</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Your name"
-                />
+                <Label htmlFor="ticketCategory">Category</Label>
+                <select
+                  id="ticketCategory"
+                  value={newTicket.category}
+                  onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="incident">Incident</option>
+                  <option value="technical">Technical</option>
+                  <option value="billing">Billing</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Email</label>
-                <input 
-                  type="email" 
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="your@email.com"
-                />
+                <Label htmlFor="ticketPriority">Priority</Label>
+                <select
+                  id="ticketPriority"
+                  value={newTicket.priority}
+                  onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="urgent">Urgent</option>
+                </select>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Subject</label>
-              <input 
-                type="text" 
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Brief description of your issue"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Message</label>
-              <textarea 
+              <Label htmlFor="ticketMessage">Message</Label>
+              <Textarea
+                id="ticketMessage"
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                value={newTicket.message}
+                onChange={(e) => setNewTicket(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="Please provide as much detail as possible..."
+                required
               />
             </div>
-            <button 
+            <Button 
               type="submit"
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              variant="default"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isPending || isCreatingTicket}
             >
-              Send Message
-            </button>
+              {isPending || isCreatingTicket ? 'Creating...' : 'Send Message'}
+            </Button>
           </form>
-        </div>
+        </CardContainer>
 
         {/* Status Page Link */}
         <div className="card-depth-subtle p-4 sm:p-6">
@@ -566,160 +538,6 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* Support Ticket Creation Modal */}
-      {isCreatingTicket && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a] flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-blue-200">Create Support Ticket</h3>
-              <button
-                onClick={() => setIsCreatingTicket(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Subject</label>
-                <input
-                  type="text"
-                  value={newTicket.subject}
-                  onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
-                  placeholder="Brief description of your issue"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Category</label>
-                  <select
-                    value={newTicket.category}
-                    onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="general">General</option>
-                    <option value="technical">Technical</option>
-                    <option value="billing">Billing</option>
-                    <option value="feature_request">Feature Request</option>
-                    <option value="bug_report">Bug Report</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Priority</label>
-                  <select
-                    value={newTicket.priority}
-                    onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-blue-200 mb-1">Message</label>
-                <textarea
-                  value={newTicket.message}
-                  onChange={(e) => setNewTicket(prev => ({ ...prev, message: e.target.value }))}
-                  rows={4}
-                  placeholder="Please provide as much detail as possible..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100 resize-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={createSupportTicket}
-                  disabled={!newTicket.subject.trim() || !newTicket.message.trim() || isLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                >
-                  {isLoading ? 'Loading...' : 'Create Ticket'}
-                </button>
-                <button
-                  onClick={() => setIsCreatingTicket(false)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Live Chat Modal */}
-      {isLiveChatOpen && currentTicket && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#23408e] rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2d437a] flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-blue-200">
-                  Support Chat - {currentTicket.subject}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-blue-100">
-                  Status: {currentTicket.status.replace('_', ' ')} • Priority: {currentTicket.priority}
-                </p>
-              </div>
-              <button
-                onClick={() => setIsLiveChatOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {supportMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.sender_type === 'admin'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                    }`}
-                  >
-                    <div className="text-sm font-medium mb-1">
-                      {message.sender?.full_name || message.sender?.email || 'Support Team'}
-                    </div>
-                    <div className="text-sm">{message.message}</div>
-                    <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Message Input */}
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-[#2d437a]">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type your message..."
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-gray-100"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 

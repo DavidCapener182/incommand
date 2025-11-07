@@ -50,15 +50,17 @@ export default function AccountingLedgerPage() {
   });
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (user === null) return;
+    if (authLoading) return;
     if (!user) {
+      setLoading(false);
       router.replace('/login');
       return;
     }
     if (role !== 'superadmin') {
+      setLoading(false);
       router.replace('/admin');
       return;
     }
@@ -79,7 +81,7 @@ export default function AccountingLedgerPage() {
     }
 
     loadLedgerData();
-  }, [user, role, router]);
+  }, [authLoading, user, role, router]);
 
   if (loading) {
     return (

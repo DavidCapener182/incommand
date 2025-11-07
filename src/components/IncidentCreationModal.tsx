@@ -4804,7 +4804,7 @@ export default function IncidentCreationModal({
                       onBlur={() => updateTyping('callsign-from', false)}
                       onKeyDown={() => updateTyping('callsign-from', true)}
                       placeholder="Enter callsign..."
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
                     />
                     <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
                   </div>
@@ -4816,7 +4816,7 @@ export default function IncidentCreationModal({
                     type="text"
                     value={formData.callsign_to || getCallsignTo()}
                     onChange={(e) => setFormData({ ...formData, callsign_to: e.target.value })}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
                   />
                 </div>
               </div>
@@ -4842,7 +4842,7 @@ export default function IncidentCreationModal({
                       id="priority"
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm appearance-none font-sans"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -4913,7 +4913,7 @@ export default function IncidentCreationModal({
                       onChange={(e) => setFormData({ ...formData, retrospective_justification: e.target.value })}
                       placeholder="Explain why this entry is being logged retrospectively (e.g., 'Live comms prevented immediate logging')"
                       rows={2}
-                      className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                      className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm font-sans"
                       required
                     />
                     <p className="text-xs text-amber-700 mt-1">Required for retrospective entries</p>
@@ -4952,7 +4952,7 @@ export default function IncidentCreationModal({
                             )
                             setEntryTypeWarnings(validation.warnings)
                           }}
-                          className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
                         />
                       </div>
                       <div>
@@ -4967,7 +4967,7 @@ export default function IncidentCreationModal({
                             const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
                             setFormData({ ...formData, time_logged: newTime })
                           }}
-                          className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
                           disabled
                         />
                         <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
@@ -5020,7 +5020,7 @@ export default function IncidentCreationModal({
                         value={formData.headline || ''}
                         onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
                         placeholder="e.g., Medical incident at north gate - person collapsed"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
                         maxLength={150}
                       />
                       <div className="flex justify-between items-center mt-1">
@@ -5047,7 +5047,7 @@ export default function IncidentCreationModal({
                         value={formData.source || ''}
                         onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                         placeholder="e.g., R3, CCTV North Gate, Security Team"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
                       />
                       <p className="text-xs text-gray-500 mt-1">Callsign, person, or source of information</p>
                     </div>
@@ -5071,10 +5071,10 @@ export default function IncidentCreationModal({
                         }}
                         placeholder="e.g., 15:03 - Person collapsed near north gate entrance. Crowd of approximately 20 people present. Person appears unconscious, not responsive to voice. No visible injuries observed."
                         rows={4}
-                        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-blue-500 resize-none bg-white ${
+                        className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 resize-none shadow-sm font-sans ${
                           factualValidationWarnings.length > 0 
-                            ? 'border-amber-300 focus:ring-amber-500' 
-                            : 'border-gray-200 focus:ring-blue-500'
+                            ? 'border-amber-300 focus:ring-amber-500 focus:border-amber-500' 
+                            : 'border-gray-300 focus:ring-[#3B82F6] focus:border-[#3B82F6]'
                         }`}
                       />
                       <p className="text-xs text-gray-500 mt-1">What was actually observed - who, what, where, when (no opinions)</p>
@@ -5133,7 +5133,7 @@ export default function IncidentCreationModal({
                         onChange={(e) => setFormData({ ...formData, actions_taken: e.target.value })}
                         placeholder="e.g., R3 called medical team at 15:04. Crowd control established by security. Medical team arrived at 15:06. Person assessed and transported to medical tent at 15:08."
                         rows={3}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] resize-none shadow-sm font-sans"
                       />
                       <div className="flex items-center justify-between mt-1">
                         <p className="text-xs text-gray-500">What actions were taken and by whom</p>
@@ -5158,7 +5158,7 @@ export default function IncidentCreationModal({
                         onChange={(e) => setFormData({ ...formData, outcome: e.target.value })}
                         placeholder="e.g., Person transported to medical tent. Incident ongoing. Crowd dispersed. Medical team monitoring."
                         rows={3}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] resize-none shadow-sm font-sans"
                       />
                     </div>
 
@@ -5304,7 +5304,7 @@ export default function IncidentCreationModal({
                         value={formData.location}
                         onChange={(e) => handleLocationChange(e.target.value)}
                         placeholder="e.g., Stage, Main Gate, North Entrance"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
                       />
                   {shouldRenderMap && (
                     <IncidentLocationMap
@@ -5406,19 +5406,19 @@ export default function IncidentCreationModal({
               resetForm()
               onClose()
             }}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 rounded-md transition-colors font-medium font-sans"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 focus:ring-2 focus:ring-gray-500 rounded-lg transition-colors font-medium"
+            className="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] transition-colors font-medium font-sans"
           >
             Save as Draft
           </button>
           <button
             onClick={handleSubmit}
-            className="px-6 py-2 text-sm bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 rounded-lg transition-colors flex items-center justify-center gap-2 font-semibold shadow-sm"
+            className="px-6 py-3 text-sm bg-[#3B82F6] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] rounded-md shadow-sm transition-colors flex items-center justify-center gap-2 font-medium font-sans"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />

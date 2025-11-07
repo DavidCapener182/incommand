@@ -317,19 +317,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       let session: Session | null = null;
       try {
+        console.log('[AuthContext] Starting initial session fetch...');
         // Get session with hard timeout protection to avoid infinite loading
+        // Increased timeout to 15 seconds to give more time for network issues
         const result = await Promise.race([
           supabase.auth.getSession(),
           new Promise<any>((resolve) =>
             setTimeout(() => {
-              console.warn('Session fetch timed out, proceeding without session')
-              resolve({ data: { session: null } })
-            }, 10000)
+              console.warn('[AuthContext] Session fetch timed out after 15s, proceeding without session. onAuthStateChange will handle auth updates.');
+              resolve({ data: { session: null }, error: { message: 'Session fetch timeout' } })
+            }, 15000)
           )
         ])
         session = result?.data?.session || null
         
+        console.log('[AuthContext] Initial session fetch result', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+          error: result?.error?.message
+        });
+        
         if (session?.user) {
+          console.log('[AuthContext] Setting user from initial session', {
+            userId: session.user.id,
+            email: session.user.email
+          });
           setUser(session.user)
           // Use Promise.allSettled to ensure all complete even if one fails
           await Promise.allSettled([
@@ -345,14 +358,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             })
           ])
         } else {
+          console.log('[AuthContext] No session found initially, waiting for onAuthStateChange');
           await loadSystemSettings().catch(err => {
             console.error('Error loading system settings:', err)
           })
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error)
+        console.error('[AuthContext] Error in getInitialSession:', error)
         // Always set loading to false even on error
       } finally {
+        console.log('[AuthContext] Setting loading to false');
         setLoading(false)
         
         if (session) {
@@ -380,13 +395,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for changes on auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('[AuthContext] Auth state changed', {
+        event: _event,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      });
+      
       if (session?.user) {
+        console.log('[AuthContext] Setting user from auth state change', {
+          userId: session.user.id,
+          email: session.user.email
+        });
         setUser(session.user)
         await Promise.all([
           fetchUserRole(session.user.id),
           loadUserPreferences(session.user.id)
         ])
       } else {
+        console.log('[AuthContext] No session in auth state change, clearing user');
         setUser(null)
         setRole(null)
         setUserPreferences(null)

@@ -54,7 +54,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
         wrapped()
         loadChecklist()
       }, 30000)
-      return () => { mounted = false; clearInterval(id) }
+    return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
   }, [autoRefresh])
@@ -158,7 +158,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
       {data && <StatusDot status={statusType} />}
       
           {/* Quick Settings Button */}
-          {onOpenModal && (
+      {onOpenModal && (
             <div className="absolute top-3 right-3 z-50">
               <button
                 type="button"
@@ -170,11 +170,11 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
                 }}
                 className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center text-white hover:text-white"
                 title="Quick Settings"
-              >
-                <Settings className="h-4 w-4" />
+        >
+          <Settings className="h-4 w-4" />
               </button>
             </div>
-          )}
+      )}
       {/* Perfectly centred pitch SVG */}
       <svg viewBox="0 0 120 72" className="absolute opacity-25" style={{ 
         top: '50%', 

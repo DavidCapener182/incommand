@@ -605,9 +605,9 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
 
       {/* Stand Configuration Section */}
       <div className="border rounded-lg p-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure stand names, capacities, and order. Changes require explicit save.
-        </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        Configure stand names, capacities, and order. Changes require explicit save.
+      </div>
       
       {/* Add new stand */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -682,7 +682,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
         <div className="text-sm font-medium">
           Total Stadium Capacity: {standsSetup.totalCapacity.toLocaleString()}
         </div>
-      </div>
+        </div>
       </div>
     </div>
   )

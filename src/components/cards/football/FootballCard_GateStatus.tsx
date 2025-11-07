@@ -39,7 +39,7 @@ export default function FootballCard_GateStatus({ className, onOpenModal }: Foot
         setLoading(false)
         return
       }
-      const json = await res.json()
+    const json = await res.json()
       setGateData(json)
     } catch (error) {
       console.error('Failed to load gate data:', error)
@@ -53,8 +53,8 @@ export default function FootballCard_GateStatus({ className, onOpenModal }: Foot
     const wrapped = async () => { if (mounted) await load() }
     wrapped()
     if (autoRefresh) {
-      const id = setInterval(wrapped, 30000)
-      return () => { mounted = false; clearInterval(id) }
+    const id = setInterval(wrapped, 30000)
+    return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
   }, [autoRefresh])
@@ -95,7 +95,7 @@ export default function FootballCard_GateStatus({ className, onOpenModal }: Foot
       {gateData && <StatusDot status={statusType} />}
       
           {/* Quick Settings Button */}
-          {onOpenModal && (
+      {onOpenModal && (
             <div className="absolute top-3 right-3 z-50">
               <button
                 type="button"
@@ -107,11 +107,11 @@ export default function FootballCard_GateStatus({ className, onOpenModal }: Foot
                 }}
                 className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
                 title="Quick Settings"
-              >
-                <Settings className="h-4 w-4" />
+        >
+          <Settings className="h-4 w-4" />
               </button>
             </div>
-          )}
+      )}
 
       <div className="flex items-start justify-between pr-10">
         <h3 className="text-gray-800 font-semibold text-lg">
@@ -128,7 +128,7 @@ export default function FootballCard_GateStatus({ className, onOpenModal }: Foot
       </div>
 
       {loading ? (
-        <div className="text-xs text-gray-500">Loading…</div>
+          <div className="text-xs text-gray-500">Loading…</div>
       ) : !gateData?.summary ? (
         <div className="text-xs text-gray-500">No gate data configured</div>
       ) : (

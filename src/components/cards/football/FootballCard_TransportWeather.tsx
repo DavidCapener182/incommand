@@ -37,8 +37,8 @@ export default function FootballCard_Transport({ className = '', onOpenModal }: 
     }
     load()
     if (autoRefresh) {
-      const id = setInterval(load, 60000)
-      return () => { mounted = false; clearInterval(id) }
+    const id = setInterval(load, 60000)
+    return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
   }, [autoRefresh])
@@ -110,7 +110,7 @@ export default function FootballCard_Transport({ className = '', onOpenModal }: 
       {data && <StatusDot status={statusType} />}
       
           {/* Quick Settings Button */}
-          {onOpenModal && (
+      {onOpenModal && (
             <div className="absolute top-3 right-3 z-50">
               <button
                 type="button"
@@ -122,11 +122,11 @@ export default function FootballCard_Transport({ className = '', onOpenModal }: 
                 }}
                 className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
                 title="Quick Settings"
-              >
-                <Settings className="h-4 w-4" />
+        >
+          <Settings className="h-4 w-4" />
               </button>
             </div>
-          )}
+      )}
 
       <div className="flex items-start justify-between pr-10">
         <h3 className="text-gray-800 font-semibold text-lg">
@@ -142,9 +142,9 @@ export default function FootballCard_Transport({ className = '', onOpenModal }: 
         )}
       </div>
 
-      {!data ? (
-        <div className="text-xs text-gray-500">Loading…</div>
-      ) : (
+          {!data ? (
+            <div className="text-xs text-gray-500">Loading…</div>
+          ) : (
         <ul className="text-sm space-y-1 flex-1 overflow-y-auto">
           <li className="text-gray-700 flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${parseTransportStatus(data.transportWeather.transport.rail) === 'alert' ? 'bg-red-500' : parseTransportStatus(data.transportWeather.transport.rail) === 'busy' ? 'bg-amber-500' : 'bg-green-500'}`} />
@@ -164,8 +164,8 @@ export default function FootballCard_Transport({ className = '', onOpenModal }: 
               Closures: <strong className="text-gray-900 truncate">{data.transportWeather.transport.roadClosures.join(', ')}</strong>
             </li>
           )}
-        </ul>
-      )}
+              </ul>
+          )}
     </div>
   )
 }

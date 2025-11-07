@@ -145,13 +145,13 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
               <div className="flex gap-2 items-center">
                 <div className="flex flex-col">
                   <span className="text-xs text-muted-foreground mb-1">Actual Present</span>
-                  <Input
-                    type="number"
-                    value={role.actual}
-                    onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
-                    className="w-32"
-                    min="0"
-                  />
+                <Input
+                  type="number"
+                  value={role.actual}
+                  onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
+                  className="w-32"
+                  min="0"
+                />
                 </div>
                 <div className="flex flex-col ml-4">
                   <span className="text-xs text-muted-foreground mb-1">Planned</span>
@@ -400,9 +400,9 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
 
       {/* Role Configuration Section */}
       <div className="border rounded-lg p-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure staffing roles and deployment numbers. Changes require explicit save.
-        </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        Configure staffing roles and deployment numbers. Changes require explicit save.
+      </div>
       
       {/* Add new role */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -521,7 +521,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
         <div className="text-sm font-medium">
           Total Planned Staff: {staffingData.roles.reduce((sum, r) => sum + r.planned, 0)}
         </div>
-      </div>
+        </div>
       </div>
     </div>
   )

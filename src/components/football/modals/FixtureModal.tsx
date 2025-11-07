@@ -516,9 +516,9 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
 
       {/* Task Configuration Section */}
       <div className="border rounded-lg p-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure matchday operational tasks. Changes require explicit save.
-        </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        Configure matchday operational tasks. Changes require explicit save.
+      </div>
       
       {/* Add new task */}
       <div className="border rounded-lg p-4 bg-gray-50">
@@ -617,7 +617,7 @@ export function FixtureSetup({ onSave }: FixtureModalProps) {
         <div className="text-sm font-medium">
           Total Tasks: {fixtureChecklist.tasks.length}
         </div>
-      </div>
+        </div>
       </div>
     </div>
   )

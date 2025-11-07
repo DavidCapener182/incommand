@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RecentAction } from '../pages/api/notifications/recent-actions';
 import AIChat from './AIChat';
+import SupportChat from './chat/SupportChat';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +16,7 @@ interface NotificationDrawerProps {
   unreadCount: number;
   onMarkAllRead: () => void;
   onClearAll?: () => void;
+  initialTab?: 'notifications' | 'chat' | 'support' | 'push-settings';
 }
 
 interface AISummaryData {
@@ -30,8 +32,15 @@ interface AISummaryData {
   incidentCount: number;
 }
 
-export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMarkAllRead, onClearAll }: NotificationDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'notifications' | 'chat' | 'push-settings'>('notifications');
+export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMarkAllRead, onClearAll, initialTab }: NotificationDrawerProps) {
+  const [activeTab, setActiveTab] = useState<'notifications' | 'chat' | 'support' | 'push-settings'>(initialTab || 'notifications');
+  
+  // Update activeTab when initialTab prop changes and drawer opens
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [actions, setActions] = useState<RecentAction[]>([]);
   const [aiSummary, setAISummary] = useState<AISummaryData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -553,6 +562,16 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
             AI Assistant
           </button>
           <button
+            onClick={() => setActiveTab('support')}
+            className={`flex-1 px-4 py-3 text-sm font-medium ${
+              activeTab === 'support'
+                ? 'text-[#2A3990] border-b-2 border-[#2A3990] bg-white'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Support
+          </button>
+          <button
             onClick={() => setActiveTab('push-settings')}
             className={`flex-1 px-4 py-3 text-sm font-medium ${
               activeTab === 'push-settings'
@@ -784,6 +803,11 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
           {/* Chat Tab - AI Assistant */}
           {activeTab === 'chat' && (
             <AIChat isVisible={activeTab === 'chat'} />
+          )}
+
+          {/* Support Tab */}
+          {activeTab === 'support' && (
+            <SupportChat isVisible={activeTab === 'support'} />
           )}
 
           {/* Push Settings Tab */}

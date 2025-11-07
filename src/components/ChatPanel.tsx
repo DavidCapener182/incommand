@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import TeamChat from './chat/TeamChat'
 import AdminSupportChat from './admin/support/AdminSupportChat'
+import SupportChat from './chat/SupportChat'
 import { usePathname } from 'next/navigation'
 import AIChat from './chat/AIChat'
 import ChatTabs from './chat/ChatTabs'
@@ -15,7 +16,7 @@ import ChatTabs from './chat/ChatTabs'
 interface ChatPanelProps {
   isOpen: boolean
   onClose: () => void
-  initialMode?: 'team' | 'ai'
+  initialMode?: 'team' | 'ai' | 'support'
   eventId: string
   companyId: string
 }
@@ -27,7 +28,7 @@ export default function ChatPanel({
   eventId,
   companyId
 }: ChatPanelProps) {
-  const [activeMode, setActiveMode] = useState<'team' | 'ai'>(initialMode)
+  const [activeMode, setActiveMode] = useState<'team' | 'ai' | 'support'>(initialMode)
   const { user } = useAuth()
   const { resolvedTheme } = useTheme()
   const isDarkMode = resolvedTheme === 'dark'
@@ -299,6 +300,8 @@ export default function ChatPanel({
                         userId={user.id}
                         userCallsign={user.user_metadata?.callsign || user.email?.split('@')[0] || 'User'}
                       />
+                    ) : activeMode === 'support' ? (
+                      <SupportChat isVisible={true} />
                     ) : (
                       <AIChat
                         eventId={eventId}

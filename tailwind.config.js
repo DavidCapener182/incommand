@@ -16,6 +16,10 @@ module.exports = {
   		'2xl': '1536px',
   	},
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-inter)', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+  			display: ['var(--font-inter)', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+  		},
   		animation: {
   			'pulse-border': 'pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
   			'slide-up': 'slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1)',

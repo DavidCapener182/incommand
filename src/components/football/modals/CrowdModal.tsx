@@ -441,49 +441,49 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
 
       {/* Gate Configuration Section */}
       <div className="border rounded-lg p-4">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure gate names, sensors, and thresholds. Changes require explicit save.
+      <div className="text-sm text-muted-foreground mb-4">
+        Configure gate names, sensors, and thresholds. Changes require explicit save.
+      </div>
+      
+      {/* Add new gate */}
+      <div className="border rounded-lg p-4 bg-gray-50">
+        <h4 className="font-medium mb-3">Add New Gate</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            placeholder="Gate name (e.g., Gate A)"
+            value={newGate.name || ''}
+            onChange={(e) => setNewGate({ ...newGate, name: e.target.value })}
+          />
+          <Input
+            placeholder="Sensor ID (optional)"
+            value={newGate.sensorId || ''}
+            onChange={(e) => setNewGate({ ...newGate, sensorId: e.target.value })}
+          />
+          <Input
+            type="number"
+            placeholder="Entry rate (per hour)"
+            value={newGate.entryRate || ''}
+            onChange={(e) => setNewGate({ ...newGate, entryRate: parseInt(e.target.value) || 0 })}
+            min="0"
+          />
+          <Input
+            type="number"
+            placeholder="Threshold (per hour)"
+            value={newGate.threshold || ''}
+            onChange={(e) => setNewGate({ ...newGate, threshold: parseInt(e.target.value) || 10000 })}
+            min="1"
+          />
+          <Button onClick={addGate} disabled={!newGate.name || newGate.entryRate === 0} className="col-span-2">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Gate
+          </Button>
         </div>
-        
-        {/* Add new gate */}
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <h4 className="font-medium mb-3">Add New Gate</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              placeholder="Gate name (e.g., Gate A)"
-              value={newGate.name || ''}
-              onChange={(e) => setNewGate({ ...newGate, name: e.target.value })}
-            />
-            <Input
-              placeholder="Sensor ID (optional)"
-              value={newGate.sensorId || ''}
-              onChange={(e) => setNewGate({ ...newGate, sensorId: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Entry rate (per hour)"
-              value={newGate.entryRate || ''}
-              onChange={(e) => setNewGate({ ...newGate, entryRate: parseInt(e.target.value) || 0 })}
-              min="0"
-            />
-            <Input
-              type="number"
-              placeholder="Threshold (per hour)"
-              value={newGate.threshold || ''}
-              onChange={(e) => setNewGate({ ...newGate, threshold: parseInt(e.target.value) || 10000 })}
-              min="1"
-            />
-            <Button onClick={addGate} disabled={!newGate.name || newGate.entryRate === 0} className="col-span-2">
-              <Plus className="h-4 w-4 mr-1" />
-              Add Gate
-            </Button>
-          </div>
-        </div>
-        
-        {/* Gates list */}
-        <div className="space-y-2">
-          {gatesSetup.gates.map((gate) => (
-            <div key={gate.id} className="border rounded-lg p-4">
+      </div>
+      
+      {/* Gates list */}
+      <div className="space-y-2">
+        {gatesSetup.gates.map((gate) => (
+          <div key={gate.id} className="border rounded-lg p-4">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-muted-foreground">Gate Name</label>
@@ -535,12 +535,12 @@ export function CrowdSetup({ onSave }: CrowdModalProps) {
               </Button>
             </div>
           </div>
-          ))}
-        </div>
-        
-        <div className="border-t pt-4">
-          <div className="text-sm font-medium">
-            Total Gates: {gatesSetup.gates.length}
+        ))}
+      </div>
+      
+      <div className="border-t pt-4">
+        <div className="text-sm font-medium">
+          Total Gates: {gatesSetup.gates.length}
           </div>
         </div>
       </div>

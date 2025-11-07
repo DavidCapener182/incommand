@@ -107,6 +107,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Admin routes use SuperAdminLayout which has its own navigation, so hide main nav
   const noNavRoutes = ['/', '/features', '/pricing', '/about', '/privacy', '/terms', '/login', '/signup'];
   const isAdminRoute = pathname.startsWith('/admin');
+  const isAuthRoute = pathname === '/login' || pathname === '/signup';
   
   // Only show the main application navigation for authenticated users on operational pages
   // Don't show nav on admin routes (they use SuperAdminLayout)
@@ -134,17 +135,19 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             <div className="bg-[#2A3990]" style={{ height: 'env(safe-area-inset-top)' }} />
           )}
           {showNav && <Navigation minimal={isAdminRoute} />}
-          <div className="flex flex-col min-h-screen">
+          <div className={`flex flex-col min-h-screen ${isAuthRoute ? 'data-auth-route' : ''}`} data-auth-route={isAuthRoute ? 'true' : undefined}>
             <main 
               id="main"
               role="main"
               className="flex-grow outline-none focus:outline-none"
+              data-auth-route={isAuthRoute ? 'true' : undefined}
               style={{
                 paddingTop: 'max(env(safe-area-inset-top), 0px)',
                 paddingLeft: 'max(env(safe-area-inset-left), 0px)',
                 paddingRight: 'max(env(safe-area-inset-right), 0px)',
                 paddingBottom: '0', // No padding needed - footer is positioned by flex layout
                 marginBottom: 0,
+                ...(isAuthRoute ? { backgroundColor: 'transparent' } : {})
               }}
             >
               {children}

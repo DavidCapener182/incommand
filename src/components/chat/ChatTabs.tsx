@@ -2,11 +2,11 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { ChatBubbleLeftRightIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import { ChatBubbleLeftRightIcon, SparklesIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 
 interface ChatTabsProps {
-  activeMode: 'team' | 'ai'
-  onModeChange: (mode: 'team' | 'ai') => void
+  activeMode: 'team' | 'ai' | 'support'
+  onModeChange: (mode: 'team' | 'ai' | 'support') => void
 }
 
 export default function ChatTabs({ activeMode, onModeChange }: ChatTabsProps) {
@@ -22,6 +22,12 @@ export default function ChatTabs({ activeMode, onModeChange }: ChatTabsProps) {
       label: 'AI Assistant',
       icon: SparklesIcon,
       emoji: '✨'
+    },
+    {
+      id: 'support' as const,
+      label: 'Support',
+      icon: QuestionMarkCircleIcon,
+      emoji: '🎧'
     }
   ]
 

@@ -82,13 +82,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create support ticket' }, { status: 500 })
     }
 
+    if (!data || !('id' in data)) {
+      throw new Error('Failed to create support ticket: invalid response')
+    }
+
+    const ticketData = data as unknown as { id: string; [key: string]: unknown }
+
     await recordAdminAudit(context.serviceClient, {
       organizationId: resolvedOrg,
       actorId: context.user.id,
       action: 'create_support_ticket',
       resourceType: 'support_tickets',
-      resourceId: data?.id || '',
-      changes: data,
+      resourceId: ticketData.id,
+      changes: ticketData as Record<string, unknown>,
     })
 
     return NextResponse.json({ ticket: data })

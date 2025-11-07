@@ -25,6 +25,29 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
+    // Set body and html background to blue with !important
+    const html = document.documentElement
+    const body = document.body
+    
+    // Remove Tailwind bg classes that override our background
+    body.classList.remove('bg-white', 'dark:bg-[#151d34]')
+    
+    // Set background with !important
+    body.style.setProperty('background-color', '#23408e', 'important')
+    html.style.setProperty('background-color', '#23408e', 'important')
+    body.setAttribute('data-login-page', 'true')
+    
+    return () => {
+      // Cleanup on unmount
+      body.style.removeProperty('background-color')
+      html.style.removeProperty('background-color')
+      body.removeAttribute('data-login-page')
+      // Restore original classes
+      body.classList.add('bg-white', 'dark:bg-[#151d34]')
+    }
+  }, [])
+
+  useEffect(() => {
     emailRef.current?.focus()
   }, [])
 
@@ -209,7 +232,7 @@ export default function LoginPage() {
 
   if (!isCheckingMobileSupport && shouldShowMobileMessage) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#23408e] text-white text-center px-6 py-12">
+      <div className="min-h-screen flex flex-col items-center justify-center text-white text-center px-6 py-12" style={{ backgroundColor: '#23408e' }}>
         <Image
           src="/inCommand.png"
           alt="inCommand Logo"
@@ -256,167 +279,188 @@ export default function LoginPage() {
   }
 
   if (isCheckingMobileSupport) {
-    return <div className="min-h-screen bg-[#23408e]" />
+    return <div data-login-page className="min-h-screen" style={{ backgroundColor: '#23408e' }} />
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-[#23408e] px-4 sm:px-6 lg:px-8">
-      <RedirectBanner />
-      {/* Logo & Tagline */}
-      <div className="flex flex-col items-center mb-10 sm:mb-14">
-        <Image
-          src="/inCommand.png"
-          alt="inCommand Logo"
-          width={400}
-          height={300}
-          className="drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain mb-6 sm:mb-8"
-          priority
-        />
-        <p className="text-sm sm:text-base text-blue-100 font-medium text-center max-w-md leading-relaxed">
-          Smart, scalable incident management — built for every operation.
-        </p>
-      </div>
-
-      {/* Login Card */}
-      <div className="w-full max-w-md mx-auto bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-4 sm:p-6 md:p-8 backdrop-blur-md">
-        <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-blue-900 mb-6 sm:mb-8 tracking-tight">
-          Sign in to your account
-        </h2>
-
-        {error && (
-          <div 
-            role="alert" 
-            aria-live="polite"
-            className="mb-4 text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3"
-          >
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          {/* Email */}
-          <div>
-            <label htmlFor="login-email" className="block text-sm font-medium text-[#2A3990] mb-2">
-              Email address
-            </label>
-            <input
-              ref={emailRef}
-              id="login-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        :root { --page-bg: #23408e !important; }
+        html, body { 
+          --page-bg: #23408e !important;
+          background-color: #23408e !important; 
+        }
+        body.bg-white { background-color: #23408e !important; }
+        body.dark\\:bg-\\[\\#151d34\\] { background-color: #23408e !important; }
+        [data-login-page] { 
+          --page-bg: #23408e !important;
+          background-color: #23408e !important; 
+        }
+        body[data-login-page] main,
+        body[data-login-page] [data-auth-route],
+        main[data-auth-route],
+        [data-auth-route="true"] { 
+          --page-bg: #23408e !important;
+          background-color: #23408e !important; 
+        }
+        [data-login-page] .bg-\\[\\#F3F4F6\\] { background-color: #F3F4F6 !important; }
+        [data-login-page] input { background-color: white !important; }
+      `}} />
+      <div data-login-page className="min-h-screen text-gray-900 antialiased" style={{ backgroundColor: '#23408e', minHeight: '100vh' }}>    
+        <RedirectBanner />
+      <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#23408e' }}>
+        {/* Logo & Tagline */}
+        <header className="text-center mb-8">
+          <div className="flex flex-col items-center gap-4">
+            <Image
+              src="/inCommand.png"
+              alt="inCommand Logo"
+              width={320}
+              height={240}
+              className="object-contain"
+              priority
             />
+            <p className="text-blue-200 text-sm sm:text-base max-w-md">
+              Smart, scalable incident management — built for every operation.
+            </p>
           </div>
+        </header>
 
-          {/* Password */}
-          <div>
-            <label htmlFor="login-password" className="block text-sm font-medium text-[#2A3990] mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                ref={passwordRef}
-                id="login-password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoComplete="current-password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-lg transition-all duration-200 placeholder-gray-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-700 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+        <main className="w-full max-w-md">
+          <div className="bg-[#F3F4F6] rounded-xl shadow-lg p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-gray-900">Sign in to your account</h2>
+              <p className="text-sm text-gray-600">Welcome back! Please enter your details.</p>
             </div>
-            <div className="flex justify-end mt-2">
-              <Link
-                href="/forgot-password"
-                className="text-xs text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400"
+
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="text-sm text-red-700 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3"
               >
-                Forgot password?
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label htmlFor="login-email" className="block text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <div className="mt-1">
+                  <input
+                    ref={emailRef}
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6]"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-medium text-[#3B82F6] hover:text-blue-600"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="mt-1 relative">
+                  <input
+                    ref={passwordRef}
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6]"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[#3B82F6] hover:text-blue-600 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-[#3B82F6] hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] transition-colors"
+              >
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+
+            <div className="text-center space-y-2">
+              <p className="text-sm text-gray-600">New to inCommand?</p>
+              <Link
+                href="/signup"
+                className="inline-flex justify-center w-full py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] transition-colors"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Create an account
               </Link>
             </div>
           </div>
+        </main>
 
-          {/* Submit */}
-          <div>
+        <footer className="text-center text-xs text-blue-200 mt-10 space-y-2">
+          <div className="space-x-2">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#2661F5] hover:bg-blue-700 text-white font-semibold text-lg py-3 rounded-xl shadow-md focus:ring-4 focus:ring-blue-300 transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
+              onClick={() => {
+                setLegalModalTab('privacy')
+                setShowLegalModal(true)
+              }}
+              className="hover:underline"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              Privacy Policy
+            </button>
+            <span>|</span>
+            <button
+              onClick={() => {
+                setLegalModalTab('terms')
+                setShowLegalModal(true)
+              }}
+              className="hover:underline"
+            >
+              Terms of Use
             </button>
           </div>
-        </form>
-
-        {/* Divider */}
-        <div className="mt-8 border-t border-blue-100"></div>
-
-        {/* Create Account */}
-        <div className="mt-6 flex flex-col items-center space-y-3">
-          <p className="text-sm text-blue-700">New to inCommand?</p>
-          <Link
-            href="/signup"
-            className="w-full flex items-center justify-center py-3 px-4 rounded-xl text-base font-semibold text-white bg-[#2661F5] hover:bg-blue-700 shadow-md focus:ring-4 focus:ring-blue-300 transition-transform duration-150 active:scale-95 hover:scale-[1.02]"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Create an account
-          </Link>
-        </div>
+          <div>
+            <a
+              href="mailto:support@incommand.uk?subject=Login Support"
+              className="hover:underline"
+            >
+              Need help? Contact support
+            </a>
+          </div>
+          <p>© {new Date().getFullYear()} inCommand. All rights reserved.</p>
+        </footer>
       </div>
 
-      {/* Footer */}
-      <footer className="mt-12 text-center text-xs text-blue-100 space-y-2">
-        <div className="flex justify-center gap-4">
-          <button 
-            onClick={() => {
-              setLegalModalTab('privacy')
-              setShowLegalModal(true)
-            }}
-            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
-          >
-            Privacy Policy
-          </button>
-          <span>|</span>
-          <button 
-            onClick={() => {
-              setLegalModalTab('terms')
-              setShowLegalModal(true)
-            }}
-            className="hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
-          >
-            Terms of Use
-          </button>
-        </div>
-        <div className="flex justify-center">
-          <a 
-            href="mailto:support@incommand.uk?subject=Login Support"
-            className="hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-1"
-          >
-            Need help? Contact support
-          </a>
-        </div>
-        <p>© {new Date().getFullYear()} inCommand. All rights reserved.</p>
-      </footer>
-
-      {/* Legal Modal */}
-      <LegalModal 
+      <LegalModal
         isOpen={showLegalModal}
         onClose={() => setShowLegalModal(false)}
         defaultTab={legalModalTab}
       />
     </div>
+    </>
   )
 }

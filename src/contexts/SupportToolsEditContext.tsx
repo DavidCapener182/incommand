@@ -78,18 +78,23 @@ export function SupportToolsEditContextProvider({ children }: { children: React.
         switch (type) {
           case 'stand':
             endpoint = '/api/football/stands'
+            method = 'PUT'
             break
           case 'staffing':
             endpoint = '/api/football/staffing'
+            method = 'PUT'
             break
           case 'crowd':
             endpoint = '/api/football/crowd'
+            method = 'POST'
             break
           case 'transport':
             endpoint = '/api/football/transport'
+            method = 'PUT'
             break
           case 'fixture':
             endpoint = '/api/football/fixture'
+            method = 'PUT'
             break
         }
 

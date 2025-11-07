@@ -161,16 +161,16 @@ export default function IncidentTypeCategories({
               key={value}
               value={value}
               className={cn(
-                'card-depth-subtle px-2',
+                'card-depth-subtle px-2 py-1.5',
                 isSelectedCategory || isExpanded
                   ? 'border-primary/40 bg-muted/30'
                   : 'border-border/50'
               )}
             >
-              <AccordionTrigger className="px-2 py-3 text-left text-sm font-medium">
+              <AccordionTrigger className="px-1.5 py-2 text-left text-sm font-medium">
                 <div className="flex w-full items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-8 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                       <Icon className="size-4" />
                     </span>
                     <div className="space-y-0.5">

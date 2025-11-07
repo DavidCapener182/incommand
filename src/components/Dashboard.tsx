@@ -183,22 +183,19 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col justify-between card-time relative p-3 sm:p-4 leading-tight">
-        <CardHeader className="pb-0.5 space-y-0">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold tracking-tight">
-            Current Time
-          </CardTitle>
-          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
-            Time Since Last Incident
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="flex-1 p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 h-full">
-            {/* Left Column - Time Info */}
-            <div className="space-y-2">
+      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 sm:p-8">
+        <div className="flex flex-col space-y-8">
+          {/* Header Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <ClockIcon className="h-5 w-5 text-[#4361EE]" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Current Time</h3>
+              </div>
               <motion.p
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -207,14 +204,27 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
               >
                 {currentTime}
               </motion.p>
+            </div>
+          </div>
 
-              <div className="leading-snug">
-                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-300 mb-0.5">
-                  Time Since Last Incident
-                </h3>
-                <p className="text-sm font-semibold text-orange-600 dark:text-orange-300 leading-none">
-                  {timeSinceLastIncident}
-                </p>
+          {/* Divider */}
+          <hr className="border-gray-200 dark:border-gray-700" />
+
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column - Time Info */}
+            <div className="space-y-4">
+
+              <div className="flex items-start space-x-3">
+                <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-1">
+                    Time Since Last Incident
+                  </h4>
+                  <p className="text-lg font-semibold text-orange-600 dark:text-orange-300">
+                    {timeSinceLastIncident}
+                  </p>
+                </div>
               </div>
 
               {(currentSlot || nextEvent) && (
@@ -222,15 +232,15 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mt-1.5 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-md border border-blue-200/50 dark:border-blue-700/30 shadow-sm"
+                  className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
                 >
-                  <h4 className="text-[10px] font-semibold text-blue-900 dark:text-blue-100 mb-0.5">
+                  <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
                     {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
                   </h4>
-                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-200 leading-tight">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
                     {currentSlot?.title || nextEvent?.title}
                   </p>
-                  <p className="text-[10px] text-blue-600 dark:text-blue-300">
+                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                     {currentSlot?.time || countdown}
                   </p>
                 </motion.div>
@@ -238,50 +248,53 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
             </div>
 
             {/* Right Column - Event Schedule */}
-            <div className="space-y-0.5">
-              <h4 className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1 font-medium">
-                Event Schedule
-              </h4>
-              <div className="space-y-0.5">
-                {eventTimings.map((timing, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className={`flex justify-between items-center px-2 py-1 rounded-md ${
-                      timing.isNext
-                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                    }`}
-                  >
-                    <span
-                      className={`text-[11px] font-medium ${
-                        timing.isNext
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : 'text-gray-600 dark:text-gray-300'
-                      }`}
-                    >
-                      {timing.title}
-                    </span>
-                    <span
-                      className={`text-[11px] font-bold ${
-                        timing.isNext
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}
-                    >
-                      {timing.time}
-                    </span>
-                  </motion.div>
-                ))}
-                {eventTimings.length === 0 && !nextEvent && (
-                  <p className="text-[11px] text-gray-400 dark:text-gray-400">No upcoming event timings</p>
-                )}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <CalendarIcon className="h-5 w-5 text-[#4361EE]" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
               </div>
+              {eventTimings.length > 0 && (
+                <div className="space-y-2">
+                  {eventTimings.map((timing, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 + index * 0.1 }}
+                      className={`flex justify-between items-center px-3 py-2 rounded-lg ${
+                        timing.isNext
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                      }`}
+                    >
+                      <span
+                        className={`text-sm font-medium ${
+                          timing.isNext
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : 'text-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        {timing.title}
+                      </span>
+                      <span
+                        className={`text-sm font-bold ${
+                          timing.isNext
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : 'text-gray-900 dark:text-gray-100'
+                        }`}
+                      >
+                        {timing.time}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+              {eventTimings.length === 0 && !nextEvent && (
+                <p className="text-sm text-gray-400 dark:text-gray-400">No upcoming event timings</p>
+              )}
             </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     </motion.div>
   )

@@ -27,15 +27,17 @@ export default function KnowledgeBasePage() {
   const [articles, setArticles] = useState<KnowledgeBaseArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (user === null) return;
+    if (authLoading) return;
     if (!user) {
+      setLoading(false);
       router.replace('/login');
       return;
     }
     if (role !== 'superadmin') {
+      setLoading(false);
       router.replace('/admin');
       return;
     }
@@ -55,7 +57,7 @@ export default function KnowledgeBasePage() {
     }
 
     loadArticles();
-  }, [user, role, router]);
+  }, [authLoading, user, role, router]);
 
   if (loading) {
     return (

@@ -81,48 +81,48 @@ export default function SupportToolsFootball() {
       </div>
 
       {/* Modals - Always render, control visibility via isOpen prop */}
-      <SupportToolModal
-        title="Stand Occupancy"
-        currentTab={<StandOccupancyCurrent />}
-        setupTab={<StandOccupancySetup />}
+        <SupportToolModal
+          title="Stand Occupancy"
+          currentTab={<StandOccupancyCurrent />}
+          setupTab={<StandOccupancySetup />}
         isOpen={activeModal === 'stand'}
-        onClose={() => setActiveModal(null)}
-        onSave={() => console.log('Stand occupancy saved')}
-      />
-      <SupportToolModal
-        title="Staffing Numbers"
-        currentTab={<StaffingActual />}
-        setupTab={<StaffingDeployment />}
-        currentTabLabel="Actual Staffing Numbers"
-        setupTabLabel="Deployment"
+          onClose={() => setActiveModal(null)}
+          onSave={() => console.log('Stand occupancy saved')}
+        />
+        <SupportToolModal
+          title="Staffing Numbers"
+          currentTab={<StaffingActual />}
+          setupTab={<StaffingDeployment />}
+          currentTabLabel="Actual Staffing Numbers"
+          setupTabLabel="Deployment"
         isOpen={activeModal === 'staff'}
-        onClose={() => setActiveModal(null)}
-        onSave={() => console.log('Staffing deployment saved')}
-      />
-      <SupportToolModal
-        title="Fixture / Match Progress"
-        currentTab={<FixtureCurrent />}
-        setupTab={<FixtureSetup />}
+          onClose={() => setActiveModal(null)}
+          onSave={() => console.log('Staffing deployment saved')}
+        />
+        <SupportToolModal
+          title="Fixture / Match Progress"
+          currentTab={<FixtureCurrent />}
+          setupTab={<FixtureSetup />}
         isOpen={activeModal === 'fixture'}
-        onClose={() => setActiveModal(null)}
-        onSave={() => console.log('Fixture checklist saved')}
-      />
-      <SupportToolModal
-        title="Crowd Movement & Gate Status"
-        currentTab={<CrowdCurrent />}
-        setupTab={<CrowdSetup />}
+          onClose={() => setActiveModal(null)}
+          onSave={() => console.log('Fixture checklist saved')}
+        />
+        <SupportToolModal
+          title="Crowd Movement & Gate Status"
+          currentTab={<CrowdCurrent />}
+          setupTab={<CrowdSetup />}
         isOpen={activeModal === 'crowd'}
-        onClose={() => setActiveModal(null)}
-        onSave={() => console.log('Gate configuration saved')}
-      />
-      <SupportToolModal
-        title="Transport Status"
-        currentTab={<TransportCurrent />}
-        setupTab={<TransportSetup />}
+          onClose={() => setActiveModal(null)}
+          onSave={() => console.log('Gate configuration saved')}
+        />
+        <SupportToolModal
+          title="Transport Status"
+          currentTab={<TransportCurrent />}
+          setupTab={<TransportSetup />}
         isOpen={activeModal === 'transport'}
-        onClose={() => setActiveModal(null)}
-        onSave={() => console.log('Transport configuration saved')}
-      />
+          onClose={() => setActiveModal(null)}
+          onSave={() => console.log('Transport configuration saved')}
+        />
     </>
   )
 }
