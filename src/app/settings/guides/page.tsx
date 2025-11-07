@@ -239,7 +239,7 @@ export default function UserGuidesPage() {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-blue-200">Need More Help?</h2>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Can't find what you're looking for? Our support team is here to help.
+          Can&apos;t find what you&apos;re looking for? Our support team is here to help.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link href="/settings/support">

@@ -312,7 +312,7 @@ export default function AIUsagePage() {
                 {quota.hardBlocked ? 'Usage Limit Reached' : 'Approaching Usage Limit'}
               </h3>
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                You've used {quota.usagePercentage.toFixed(1)}% of your monthly allowance ({tier?.monthlyTokenAllowance?.toLocaleString()} tokens).
+                You&apos;ve used {quota.usagePercentage.toFixed(1)}% of your monthly allowance ({tier?.monthlyTokenAllowance?.toLocaleString()} tokens).
                 {quota.hardBlocked && ' AI calls are currently blocked. Please upgrade your plan.'}
               </p>
             </div>
