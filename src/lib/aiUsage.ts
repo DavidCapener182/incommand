@@ -5,6 +5,7 @@
 
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface AIUsageLogParams {
   userId: string
@@ -51,7 +52,7 @@ export async function logAIUsage(
   const supabase = client || getServiceSupabaseClient()
 
   try {
-    const { error } = await supabase.from('ai_usage_logs').insert({
+    const { error } = await supabase.from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs').insert({
       user_id: params.userId,
       org_id: params.orgId,
       endpoint: params.endpoint,
@@ -86,7 +87,7 @@ export async function getUsageSummary(params: {
   const supabase = getServiceSupabaseClient()
 
   let query = supabase
-    .from('ai_usage_logs')
+    .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
     .select('tokens_total, cost_usd')
     .eq('user_id', params.userId)
     .gte('timestamp', params.from.toISOString())
@@ -133,7 +134,7 @@ export async function getUsageSeries(params: {
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('ai_usage_logs')
+    .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
     .select('timestamp, tokens_total, cost_usd')
     .eq('user_id', params.userId)
     .gte('timestamp', params.from.toISOString())
@@ -191,7 +192,7 @@ export async function getUsageTable(params: {
   const supabase = getServiceSupabaseClient()
 
   let query = supabase
-    .from('ai_usage_logs')
+    .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
     .select('id, timestamp, endpoint, model, tokens_total, cost_usd', { count: 'exact' })
     .eq('user_id', params.userId)
     .gte('timestamp', params.from.toISOString())

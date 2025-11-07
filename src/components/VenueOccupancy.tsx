@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useToast } from '../contexts/ToastContext'
@@ -87,7 +88,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       try {
         // Get expected attendance from events table
         const { data: eventData, error: eventError } = await supabase
-          .from('events')
+          .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
           .select('expected_attendance')
           .eq('id', currentEventId)
           .maybeSingle()

@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { BellIcon, EnvelopeIcon, DevicePhoneMobileIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useToast } from '@/components/Toast';
 import { updateNotificationPreference } from '../actions';
+import type { Database } from '@/types/supabase';
 
 export default function NotificationSettingsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -58,7 +59,7 @@ export default function NotificationSettingsPage() {
       try {
         // Fetch settings from Supabase
         const { data, error } = await supabase
-          .from('notification_settings')
+          .from<any, any>('notification_settings')
           .select('*')
           .eq('user_id', user.id)
           .single();
@@ -189,7 +190,7 @@ export default function NotificationSettingsPage() {
         };
 
         const { error } = await supabase
-          .from('notification_settings')
+          .from<any, any>('notification_settings')
           .upsert(updateData);
 
         if (error) throw error;

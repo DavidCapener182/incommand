@@ -15,7 +15,7 @@ export async function getServerUser() {
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
       .select('id,email,role,organization_id,company_id')
       .eq('id', user.id)
       .maybeSingle();

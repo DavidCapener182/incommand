@@ -14,6 +14,7 @@ import NotificationDrawer from './NotificationDrawer'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { Database } from '@/types/supabase'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -123,7 +124,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   useEffect(() => {
     async function checkCurrentEvent() {
       const { data: event } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('id')
         .eq('is_current', true)
         .single();
@@ -139,7 +140,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
       (async () => {
         console.log('Fetching profile for user:', user.id);
         const { data, error } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('full_name, email, company, avatar_url')
           .eq('id', user.id)
           .single();
@@ -171,7 +172,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
       setProfileLoading(true);
       (async () => {
         const { data, error } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('full_name, email, company, avatar_url')
           .eq('id', user.id)
           .single();
@@ -275,7 +276,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   useEffect(() => {
     async function fetchCurrentEvent() {
       const { data: event, error } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('id, event_name')
         .eq('is_current', true)
         .single();
@@ -292,7 +293,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
         return;
       }
       const { data, error } = await supabase
-        .from('event_chats')
+        .from<Database['public']['Tables']['event_chats']['Row'], Database['public']['Tables']['event_chats']['Update']>('event_chats')
         .select('id, name, type')
         .eq('event_id', currentEvent.id);
       console.log('Fetched event chats:', data, error);

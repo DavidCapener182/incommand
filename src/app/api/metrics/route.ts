@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/middleware/auth'
+import type { Database } from '@/types/supabase'
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'super_admin', async (context) => {
     const [{ count: ticketCount }, { count: organizationCount }, { count: invoiceCount }, { count: incidentCount }] = await Promise.all([
       context.serviceClient.from('support_tickets' as any).select('id', { count: 'exact', head: true }),
       context.serviceClient.from('organizations' as any).select('id', { count: 'exact', head: true }),
-      context.serviceClient.from('invoices').select('id', { count: 'exact', head: true }),
+      context.serviceClient.from<any, any>('invoices').select('id', { count: 'exact', head: true }),
       context.serviceClient.from('incident_reviews' as any).select('id', { count: 'exact', head: true }),
     ])
 

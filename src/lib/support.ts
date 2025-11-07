@@ -5,6 +5,7 @@
 
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface SupportTicket {
   id: string
@@ -42,7 +43,7 @@ export async function createTicket(params: {
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('support_tickets')
+    .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
     .insert({
       user_id: params.userId,
       org_id: params.orgId,
@@ -86,7 +87,7 @@ export async function postTicketMessage(params: {
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('support_messages')
+    .from<Database['public']['Tables']['support_messages']['Row'], Database['public']['Tables']['support_messages']['Update']>('support_messages')
     .insert({
       ticket_id: params.ticketId,
       user_id: params.userId,
@@ -103,7 +104,7 @@ export async function postTicketMessage(params: {
 
   // Update ticket's updated_at timestamp
   await supabase
-    .from('support_tickets')
+    .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
     .update({ updated_at: new Date().toISOString() })
     .eq('id', params.ticketId)
 
@@ -124,7 +125,7 @@ export async function getTicketsForUser(userId: string): Promise<SupportTicket[]
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('support_tickets')
+    .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -157,7 +158,7 @@ export async function getTicketThread(ticketId: string): Promise<SupportMessage[
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('support_messages')
+    .from<Database['public']['Tables']['support_messages']['Row'], Database['public']['Tables']['support_messages']['Update']>('support_messages')
     .select('*')
     .eq('ticket_id', ticketId)
     .order('created_at', { ascending: true })
@@ -189,7 +190,7 @@ export async function updateTicketStatus(
   const supabase = getServiceSupabaseClient()
 
   const { error } = await supabase
-    .from('support_tickets')
+    .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', ticketId)
 
@@ -206,7 +207,7 @@ export async function linkTicketToChannel(ticketId: string, channelId: string): 
   const supabase = getServiceSupabaseClient()
 
   const { error } = await supabase
-    .from('support_tickets')
+    .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
     .update({ channel_id: channelId, updated_at: new Date().toISOString() })
     .eq('id', ticketId)
 

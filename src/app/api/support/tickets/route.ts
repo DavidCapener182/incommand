@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
+import type { Database } from '@/types/supabase'
 
 const createTicketSchema = z.object({
   organizationId: z.string().uuid(),
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     const queue = url.searchParams.get('queue')
 
     let query = context.serviceClient
-      .from('support_tickets' as any)
+      .from('support_tickets')
       .select('*')
       .order('created_at', { ascending: false })
 

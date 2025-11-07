@@ -5,6 +5,7 @@
 
 import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface ChatMessage {
   id: string
@@ -139,7 +140,7 @@ export class ChatService {
   ): Promise<ChatMessage | null> {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .insert({
           channel_id: channelId,
           user_id: userId,
@@ -247,7 +248,7 @@ export class ChatService {
   ): Promise<ChatMessage[]> {
     try {
       let query = supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
@@ -278,7 +279,7 @@ export class ChatService {
   ): Promise<ChatChannel | null> {
     try {
       const { data, error } = await supabase
-        .from('chat_channels')
+        .from<any, any>('chat_channels')
         .insert({
           name: `Incident Thread: ${incidentType}`,
           type: 'incident',
@@ -308,7 +309,7 @@ export class ChatService {
   ): Promise<ChatMessage[]> {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('channel_id', channelId)
         .textSearch('message', query)
@@ -356,7 +357,7 @@ export class ChatService {
     try {
       // Try to insert with new schema first
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .insert({
           channel_id: crypto.randomUUID(),
           user_id: userId,
@@ -379,7 +380,7 @@ export class ChatService {
         if (error.code === 'PGRST204' || error.message?.includes('channel_name')) {
           console.log('Database schema not updated, using basic chat_messages structure')
           const { data: basicData, error: basicError } = await supabase
-            .from('chat_messages')
+            .from<any, any>('chat_messages')
             .insert({
               channel_id: crypto.randomUUID(),
               user_id: userId,
@@ -437,7 +438,7 @@ export class ChatService {
     try {
       // Get parent message to create thread context
       const { data: parentMessage, error: fetchError } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('id', parentMessageId)
         .single()
@@ -446,7 +447,7 @@ export class ChatService {
 
       // Create thread message
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .insert({
           channel_id: parentMessage.channel_id,
           user_id: parentMessage.user_id,
@@ -481,7 +482,7 @@ export class ChatService {
     try {
       // Try with new schema first
       let query = supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('event_id', eventId)
         .eq('company_id', companyId)
@@ -522,7 +523,7 @@ export class ChatService {
   ): Promise<ChatMessage[]> {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('event_id', eventId)
         .eq('company_id', companyId)

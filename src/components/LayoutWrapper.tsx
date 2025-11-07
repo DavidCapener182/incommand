@@ -12,6 +12,7 @@ import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { IncidentSummaryProvider } from '@/contexts/IncidentSummaryContext'
 import { EscalationToastProvider } from '@/contexts/EscalationToastContext'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import GlobalEscalationToast from './GlobalEscalationToast'
 import PWAInstallPrompt from './PWAInstallPrompt'
 import OfflineIndicator from './OfflineIndicator'
@@ -70,7 +71,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     // Fetch current event on mount
     const fetchCurrentEvent = async () => {
       const { data } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('id')
         .eq('is_current', true)
         .single();

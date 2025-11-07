@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
+import type { Database } from '@/types/supabase'
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'organization_admin', async (context) => {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(12),
       context.serviceClient
-        .from('invoices')
+        .from<any, any>('invoices')
         .select('*')
         .eq('organization_id', resolvedOrg)
         .order('issued_date', { ascending: false })

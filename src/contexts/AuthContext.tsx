@@ -7,6 +7,7 @@ import { logger } from '../lib/logger'
 import { useRouter, usePathname } from 'next/navigation'
 import { AuthContextType, UserRole } from '../types/auth'
 import { SystemSettings, UserPreferences, DEFAULT_USER_PREFERENCES, DEFAULT_SYSTEM_SETTINGS } from '../types/settings'
+import type { Database } from '@/types/supabase'
 
 // Role cache interface
 interface RoleCache {
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Get system settings - removed problematic singleton query
       const { data, error } = await supabase
-        .from('system_settings')
+        .from<any, any>('system_settings')
         .select('*')
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -159,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUserPreferences = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_preferences')
+        .from<Database['public']['Tables']['user_preferences']['Row'], Database['public']['Tables']['user_preferences']['Update']>('user_preferences')
         .select('*')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
@@ -228,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         logger.debug('Fetching role for user', { component: 'AuthContext', action: 'fetchUserRole', userId });
         const { data, error } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('role')
           .eq('id', userId)
           .single()

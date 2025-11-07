@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase'
+import type { Database } from '@/types/supabase'
 import {
   AuditableIncidentLog,
   LogRevision,
@@ -98,7 +99,7 @@ export async function createImmutableLog(
 
     // Insert immutable log record
     const { data, error } = await supabase
-      .from('incident_logs')
+      .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
       .insert({
         ...logData,
         logged_by_user_id: userId,
@@ -153,7 +154,7 @@ export async function createRevision(
 
     // Create revision record
     const { data, error } = await client
-      .from('incident_log_revisions')
+      .from<any, any>('incident_log_revisions')
       .insert({
         incident_log_id: parseInt(incidentLogId),
         revision_number: revisionNumber,
@@ -192,7 +193,7 @@ export async function getRevisionHistory(
 ): Promise<{ success: boolean; revisions?: LogRevisionWithDetails[]; error?: string }> {
   try {
     const { data, error } = await supabase
-      .from('incident_log_revision_history')
+      .from<any, any>('incident_log_revision_history')
       .select('*')
       .eq('incident_log_id', parseInt(incidentLogId))
       .order('revision_number', { ascending: true })
@@ -331,7 +332,7 @@ export async function canUserAmendLog(
 
     // Get the incident log
     const { data: log, error } = await client
-      .from('incident_logs')
+      .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
       .select('logged_by_user_id, created_at')
       .eq('id', incidentLogId)
       .single()
@@ -345,7 +346,7 @@ export async function canUserAmendLog(
 
     // Get user profile
     const { data: profile } = await client
-      .from('profiles')
+      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
       .select('role')
       .eq('id', userId)
       .single()

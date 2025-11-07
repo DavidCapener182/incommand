@@ -116,7 +116,7 @@ export async function logAIUsage(
   }
 
   try {
-    const { error } = await supabase.from('ai_usage_logs').insert([
+    const { error } = await supabase.from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs').insert([
       {
         event_id: params.event_id,
         user_id: params.user_id,

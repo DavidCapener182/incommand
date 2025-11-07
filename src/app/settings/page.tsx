@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { UserIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { useToast } from '@/components/Toast';
 import { updateProfile } from './actions';
+import type { Database } from '@/types/supabase';
 
 interface UserProfile {
   id: string;
@@ -62,7 +63,7 @@ export default function GeneralSettingsPage() {
       
       try {
         const { data, error: fetchError } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('id, email, first_name, last_name, role, phone_number')
           .eq('id', user.id)
           .single();
@@ -73,7 +74,7 @@ export default function GeneralSettingsPage() {
             console.log('Profile not found, creating default profile');
             // Try to create a basic profile
             const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
+              .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
               .insert({
                 id: user.id,
                 email: user.email,
@@ -88,7 +89,7 @@ export default function GeneralSettingsPage() {
               // If creation fails, try to fetch again (might have been created by trigger)
               await new Promise(resolve => setTimeout(resolve, 500)); // Wait a bit
               const { data: retryData, error: retryError } = await supabase
-                .from('profiles')
+                .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
                 .select('id, email, first_name, last_name, role, phone_number')
                 .eq('id', user.id)
                 .single();

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsAdmin } from '@/hooks/useRole'
@@ -129,7 +130,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('display_name, full_name, callsign')
           .eq('id', user.id)
           .maybeSingle()
@@ -234,7 +235,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     // Fetch current event id
     const fetchEvent = async () => {
       const { data: eventData } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('id')
         .eq('is_current', true)
         .single();
@@ -248,7 +249,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     
     try {
       const { data: assignmentsData } = await supabase
-        .from('callsign_assignments')
+        .from<any, any>('callsign_assignments')
         .select('callsign, staff_id, staff_name')
         .eq('event_id', currentEventId);
 
@@ -298,7 +299,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     try {
       // Fetch incident details
       const { data: incidentData, error: incidentError } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*')
         .eq('id', Number(incidentId))
         .single();
@@ -311,7 +312,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       // Fetch revision count if incident has been amended
       if (incidentData?.is_amended) {
         const { count } = await supabase
-          .from('incident_log_revisions')
+          .from<any, any>('incident_log_revisions')
           .select('*', { count: 'exact', head: true })
           .eq('incident_log_id', Number(incidentId))
         setRevisionCount(count || 0)
@@ -321,7 +322,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       // Fetch updates
       const { data: updatesData, error: updatesError } = await supabase
-        .from('incident_updates')
+        .from<any, any>('incident_updates')
         .select('*')
         .eq('incident_id', Number(incidentId))
         .order('created_at', { ascending: false });
@@ -383,7 +384,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
     try {
       const { error } = await supabase
-        .from('incident_updates')
+        .from<any, any>('incident_updates')
         .insert({
           incident_id: Number(incident.id),
           update_text: newUpdate,
@@ -398,7 +399,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       try {
         // Get current actions (fresh)
         const { data: current, error: selErr } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('action_taken')
         .eq('id', Number(incident.id))
         .single();
@@ -406,7 +407,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
         const prevActions = (current?.action_taken as string) || '';
         const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
         const { error: updErr } = await supabase
-          .from('incident_logs')
+          .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
           .update({ action_taken: updatedActions, updated_at: new Date().toISOString() })
           .eq('id', Number(incident.id));
         if (updErr) throw updErr;
@@ -429,7 +430,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
     try {
       const { error } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .update({
           occurrence: editedIncident.occurrence,
           action_taken: editedIncident.action_taken,
@@ -443,7 +444,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       // Add an update to the audit trail
       const { error: auditError } = await supabase
-        .from('incident_updates')
+        .from<any, any>('incident_updates')
         .insert({
           incident_id: Number(incident.id),
           update_text: 'Incident details updated',
@@ -468,7 +469,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       // Update the incident status
       const { error: updateError } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .update({
           is_closed: newStatus,
           updated_at: new Date().toISOString()
@@ -479,7 +480,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
       // Add an update to the audit trail
       const { error: auditError } = await supabase
-        .from('incident_updates')
+        .from<any, any>('incident_updates')
         .insert({
           incident_id: parseInt(incident.id),
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,

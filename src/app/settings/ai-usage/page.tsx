@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChartBarIcon, CpuChipIcon, CurrencyDollarIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import type { Database } from '@/types/supabase';
 
 export default function AIUsagePage() {
   const { user, loading: authLoading } = useAuth();
@@ -48,7 +49,7 @@ export default function AIUsagePage() {
 
         // Build query for logs
         let logsQuery = supabase
-          .from('ai_usage_logs')
+          .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
           .select('*', { count: 'exact' })
           .eq('user_id', user.id)
           .gte('created_at', from.toISOString())
@@ -133,7 +134,7 @@ export default function AIUsagePage() {
 
         // Fetch tier
         const { data: subscription, error: subError } = await supabase
-          .from('user_subscriptions')
+          .from<any, any>('user_subscriptions')
           .select('tier_id')
           .eq('user_id', user.id)
           .single();
@@ -144,7 +145,7 @@ export default function AIUsagePage() {
         }
 
         const { data: tierData, error: tierError } = await supabase
-          .from('subscription_tiers')
+          .from<any, any>('subscription_tiers')
           .select('*')
           .eq('id', tierId)
           .single();
@@ -167,7 +168,7 @@ export default function AIUsagePage() {
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
           const { data: periodUsage } = await supabase
-            .from('ai_usage_logs')
+            .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
             .select('tokens_used, cost_usd')
             .eq('user_id', user.id)
             .gte('created_at', periodStart.toISOString())

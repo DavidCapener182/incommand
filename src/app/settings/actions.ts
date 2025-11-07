@@ -35,7 +35,7 @@ export async function updateProfile(formData: FormData) {
     const validated = profileSchema.parse(rawData)
 
     const { error } = await supabase
-      .from<Database['public']['Tables']['profiles']['Update']>('profiles')
+      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
       .update({
         first_name: validated.firstName,
         last_name: validated.lastName,
@@ -115,7 +115,7 @@ export async function endEvent(eventId: string) {
 
     // Update the event to set is_current = false
     const { error, data } = await supabase
-      .from('events')
+      .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
       .update({ is_current: false })
       .eq('id', eventId)
       .select('id, event_name')
@@ -163,16 +163,16 @@ export async function deleteLog(logId: string) {
     const numericLogId = parseInt(logId)
 
     // Delete related data first
-    await supabase.from('incident_events').delete().eq('incident_id', numericLogId)
-    await supabase.from('incident_attachments').delete().eq('incident_id', numericLogId)
-    await supabase.from('incident_links').delete().or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`)
-    await supabase.from('incident_escalations').delete().eq('incident_id', numericLogId)
-    await supabase.from('incident_updates').delete().eq('incident_id', numericLogId)
-    await supabase.from('staff_assignments').delete().eq('incident_id', numericLogId)
+    await supabase.from<Database['public']['Tables']['incident_events']['Row'], Database['public']['Tables']['incident_events']['Update']>('incident_events').delete().eq('incident_id', numericLogId)
+    await supabase.from<Database['public']['Tables']['incident_attachments']['Row'], Database['public']['Tables']['incident_attachments']['Update']>('incident_attachments').delete().eq('incident_id', numericLogId)
+    await supabase.from<Database['public']['Tables']['incident_links']['Row'], Database['public']['Tables']['incident_links']['Update']>('incident_links').delete().or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`)
+    await supabase.from<Database['public']['Tables']['incident_escalations']['Row'], Database['public']['Tables']['incident_escalations']['Update']>('incident_escalations').delete().eq('incident_id', numericLogId)
+    await supabase.from<Database['public']['Tables']['incident_updates']['Row'], Database['public']['Tables']['incident_updates']['Update']>('incident_updates').delete().eq('incident_id', numericLogId)
+    await supabase.from<Database['public']['Tables']['staff_assignments']['Row'], Database['public']['Tables']['staff_assignments']['Update']>('staff_assignments').delete().eq('incident_id', numericLogId)
 
     // Delete the main log
     const { error } = await supabase
-      .from('incident_logs')
+      .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
       .delete()
       .eq('id', numericLogId)
 

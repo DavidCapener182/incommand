@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface SupportAct {
@@ -365,7 +366,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
       // Fetch company_id from profiles table
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
         .select('company_id')
         .eq('id', session.user.id)
         .single();
@@ -417,7 +418,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
       console.log('🔄 Starting database operations...');
       // First, set all events' is_current to false for this company only
       const { error: updateError } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .update({ is_current: false })
         .eq('company_id', company_id)
         .neq('id', '00000000-0000-0000-0000-000000000000')
@@ -475,7 +476,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
 
       console.log('🔄 Inserting new event into database...');
       const { error: insertError, data: insertedEvent } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .insert([eventData as any])
         .select()
 
@@ -494,7 +495,7 @@ export default function EventCreationModal({ isOpen, onClose, onEventCreated }: 
         }))
 
         const { error: supportActsError } = await supabase
-          .from('support_acts')
+          .from<any, any>('support_acts')
           .insert(supportActsData)
 
         if (supportActsError) throw supportActsError

@@ -82,7 +82,7 @@ async function loadAdminRoles(
   const organizationIds = activeMemberships.map((membership: any) => membership.organization_id).filter(Boolean)
 
   const { data: roleAssignments, error: roleAssignmentsError } = await serviceClient
-    .from('user_roles')
+    .from<Database['public']['Tables']['user_roles']['Row'], Database['public']['Tables']['user_roles']['Update']>('user_roles')
     .select('organization_id, role_id')
     .eq('user_id', userId)
 
@@ -100,7 +100,7 @@ async function loadAdminRoles(
 
     // Get the role name by querying the roles table
     const { data: role, error: roleError } = await serviceClient
-      .from('roles')
+      .from<any, any>('roles')
       .select('name')
       .eq('id', assignment.role_id)
       .single()

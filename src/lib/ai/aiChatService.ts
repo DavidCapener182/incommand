@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/supabase'
 
 export interface AIMessage {
   id: string
@@ -149,7 +150,7 @@ export class AIChatService {
 
       // Save to database
       const { error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .insert({
           channel_id: `ai_archive_${conversationId}`,
           user_id: userId,
@@ -270,7 +271,7 @@ User's message: ${message}`
   ): Promise<AIMessage[]> {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from<any, any>('chat_messages')
         .select('*')
         .eq('event_id', eventId)
         .eq('user_id', userId)

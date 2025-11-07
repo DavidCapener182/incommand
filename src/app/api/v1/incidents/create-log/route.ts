@@ -15,11 +15,15 @@ import { createImmutableLog } from '@/lib/auditableLogging'
 
 import { CreateAuditableLogRequest, CreateLogResponse } from '@/types/auditableLog'
 import { isMatchFlowType, type MatchFlowType } from '@/utils/matchFlowParser'
+import type { Database } from '@/types/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 
 export async function POST(request: NextRequest) {
   return secureApiHandler(request, async (supabase, user, request) => {
     try {
+      // Cast supabase to typed client for proper type inference
+      const typedSupabase = supabase as SupabaseClient<Database>
 
       // Parse request body
       const body: CreateAuditableLogRequest = await request.json()
@@ -57,15 +61,15 @@ export async function POST(request: NextRequest) {
       }
 
       // Get user's current callsign from profile or assignment
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: profile } = await typedSupabase
+        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
         .select('first_name, last_name, email')
         .eq('id', user.id)
         .single()
 
       // Try to get current callsign assignment
-      const { data: assignment } = await supabase
-        .from('callsign_assignments')
+      const { data: assignment } = await typedSupabase
+        .from<Database['public']['Tables']['callsign_assignments']['Row'], Database['public']['Tables']['callsign_assignments']['Update']>('callsign_assignments')
         .select('callsign_positions(callsign, short_code)')
         .eq('user_id', user.id)
         .eq('event_id', body.event_id)
@@ -77,8 +81,8 @@ export async function POST(request: NextRequest) {
                           'Unknown'
 
       // Generate log number
-      const { data: eventData } = await supabase
-        .from('events')
+      const { data: eventData } = await typedSupabase
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('event_name, name, event_date, date')
         .eq('id', body.event_id)
         .single()
@@ -89,8 +93,8 @@ export async function POST(request: NextRequest) {
       const eventDate = resolvedDate ? new Date(resolvedDate).toISOString().split('T')[0].replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '')
       
       // Get count for log number
-      const { count } = await supabase
-        .from('incident_logs')
+      const { count } = await typedSupabase
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', body.event_id)
 
@@ -120,8 +124,8 @@ export async function POST(request: NextRequest) {
           match_minute: number | null;
         };
 
-        const { data: previousLogsRaw } = await supabase
-          .from('incident_logs')
+        const { data: previousLogsRaw } = await typedSupabase
+          .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
           .select('incident_type, time_of_occurrence, home_score, away_score, match_minute')
           .eq('event_id', body.event_id)
           .eq('type', 'match_log')

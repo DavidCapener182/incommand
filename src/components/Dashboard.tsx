@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { cn } from '@/lib/utils'
 import { useEventContext } from '../contexts/EventContext'
+import type { Database } from '@/types/supabase'
 import {
   UsersIcon,
   ExclamationTriangleIcon,
@@ -719,7 +720,7 @@ export default function Dashboard() {
       setLoadingCurrentEvent(true);
       
       const { data: event, error } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('*')
         .eq('id', eventId)
         .single();
@@ -936,7 +937,7 @@ export default function Dashboard() {
       }
 
       const { data, error } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
         .eq('company_id', companyId)
@@ -1093,7 +1094,7 @@ export default function Dashboard() {
 
       console.log('Fetching event timings with company_id filter:', companyId);
       const { data: event, error } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('security_call_time, main_act_start_time, show_down_time, show_stop_meeting_time, doors_open_time, curfew_time, event_name, support_acts')
         .eq('is_current', true)
         .eq('company_id', companyId)
@@ -1189,7 +1190,7 @@ export default function Dashboard() {
       console.log('Fetching company ID for user:', user.id);
       
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
         .select('company_id')
         .eq('id', user.id)
         .single();
@@ -1205,7 +1206,7 @@ export default function Dashboard() {
       console.log('Setting company ID:', profile.company_id);
       setCompanyId(profile.company_id);
       const { data: profileFull } = await supabase
-        .from('profiles')
+        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
@@ -1317,7 +1318,7 @@ export default function Dashboard() {
     if (isOccupancyModalOpen && currentEventId) {
       (async () => {
         const { data, error } = await supabase
-          .from('attendance_records')
+          .from<Database['public']['Tables']['attendance_records']['Row'], Database['public']['Tables']['attendance_records']['Update']>('attendance_records')
           .select('count, timestamp')
           .eq('event_id', currentEventId)
           .order('timestamp', { ascending: true });

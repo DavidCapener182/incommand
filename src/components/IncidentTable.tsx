@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import { logger } from '../lib/logger'
 import IncidentDetailsModal from './IncidentDetailsModal'
 import { RealtimeChannel } from '@supabase/supabase-js'
@@ -198,7 +199,7 @@ export default function IncidentTable({
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*')
         .eq('event_id', currentEventId)
         .order('timestamp', { ascending: false });
@@ -308,7 +309,7 @@ export default function IncidentTable({
       logger.debug('Checking for current event', { component: 'IncidentTable', action: 'checkCurrentEvent' });
       try {
         const { data: eventData } = await supabase
-          .from('events')
+          .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
           .select('id')
           .eq('is_current', true)
           .single();
@@ -578,12 +579,12 @@ export default function IncidentTable({
     const fetchAssignments = async () => {
       // Get all roles
       const { data: roles } = await supabase
-        .from('callsign_positions')
+        .from<any, any>('callsign_positions')
         .select('id, short_code, callsign')
         .eq('event_id', currentEventId);
       // Get all assignments
       const { data: assignments } = await supabase
-        .from('callsign_assignments')
+        .from<any, any>('callsign_assignments')
         .select('callsign_role_id, assigned_name')
         .eq('event_id', currentEventId);
       // Build mapping
@@ -630,7 +631,7 @@ export default function IncidentTable({
     
     try {
       const { error } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .update({ 
           is_closed: newStatus,
           updated_at: new Date().toISOString()
@@ -640,7 +641,7 @@ export default function IncidentTable({
       
       // Add an update to track the status change
       await supabase
-        .from('incident_updates')
+        .from<any, any>('incident_updates')
         .insert({
           incident_id: incident.id,
           update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
@@ -1635,7 +1636,7 @@ export default function IncidentTable({
 
                   // Update the incident in the database
                   const { error: updateError } = await supabase
-                    .from('incident_logs')
+                    .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
                     .update(processedUpdates)
                     .eq('id', incident.id);
 

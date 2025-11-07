@@ -5,6 +5,7 @@
 
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface NotificationSettings {
   userId: string
@@ -38,7 +39,7 @@ export async function getNotificationSettings(userId: string): Promise<Notificat
   const supabase = getServiceSupabaseClient()
 
   const { data, error } = await supabase
-    .from('notification_settings')
+    .from<any, any>('notification_settings')
     .select('*')
     .eq('user_id', userId)
     .single()
@@ -104,7 +105,7 @@ export async function updateNotificationSettings(
   if (settings.quietHoursEnd !== undefined) updateData.quiet_hours_end = settings.quietHoursEnd
 
   const { error } = await supabase
-    .from('notification_settings')
+    .from<any, any>('notification_settings')
     .upsert({
       user_id: userId,
       ...updateData,

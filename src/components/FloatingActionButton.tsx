@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import IncidentCreationModal from './IncidentCreationModal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/supabase'
 
 interface FloatingActionButtonProps {
   className?: string
@@ -14,14 +15,14 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [hasCurrentEvent, setHasCurrentEvent] = useState(false)
   const [showEventModal, setShowEventModal] = useState(false)
-  const supabase = createClientComponentClient()
+  const supabase = createClientComponentClient<Database>()
 
   // Check for active event
   useEffect(() => {
     const checkCurrentEvent = async () => {
       try {
         const { data: event } = await supabase
-          .from('events')
+          .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
           .select('id')
           .eq('is_current', true)
           .single()

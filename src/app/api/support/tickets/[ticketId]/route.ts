@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
+import type { Database } from '@/types/supabase'
 
 const updateTicketSchema = z.object({
   status: z.enum(['open', 'assigned', 'resolved', 'closed']).optional(),

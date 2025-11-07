@@ -5,6 +5,7 @@
 
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 export interface SubscriptionTier {
   id: string
@@ -35,7 +36,7 @@ export async function getUserTier(userId: string): Promise<SubscriptionTier> {
 
   // Get user's subscription
   const { data: subscription, error: subError } = await supabase
-    .from('user_subscriptions')
+    .from<any, any>('user_subscriptions')
     .select('tier_id')
     .eq('user_id', userId)
     .single()
@@ -43,7 +44,7 @@ export async function getUserTier(userId: string): Promise<SubscriptionTier> {
   if (subError || !subscription) {
     // Default to free tier if no subscription found
     const { data: freeTier, error: tierError } = await supabase
-      .from('subscription_tiers')
+      .from<any, any>('subscription_tiers')
       .select('*')
       .eq('id', 'free')
       .single()
@@ -68,7 +69,7 @@ export async function getUserTier(userId: string): Promise<SubscriptionTier> {
 
   // Get tier details
   const { data: tier, error: tierError } = await supabase
-    .from('subscription_tiers')
+    .from<any, any>('subscription_tiers')
     .select('*')
     .eq('id', subscription.tier_id)
     .single()
@@ -102,7 +103,7 @@ export async function checkQuota(params: { userId: string }): Promise<QuotaCheck
 
   // Get user's subscription to find renewal anchor
   const { data: subscription } = await supabase
-    .from('user_subscriptions')
+    .from<any, any>('user_subscriptions')
     .select('renewal_anchor')
     .eq('user_id', params.userId)
     .single()
@@ -118,7 +119,7 @@ export async function checkQuota(params: { userId: string }): Promise<QuotaCheck
 
   // Get usage for current period
   const { data: usage, error } = await supabase
-    .from('ai_usage_logs')
+    .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
     .select('tokens_total, cost_usd')
     .eq('user_id', params.userId)
     .gte('timestamp', periodStart.toISOString())
@@ -170,7 +171,7 @@ export async function setUserSubscription(
   const supabase = getServiceSupabaseClient()
 
   const { error } = await supabase
-    .from('user_subscriptions')
+    .from<any, any>('user_subscriptions')
     .upsert({
       user_id: userId,
       tier_id: tierId,

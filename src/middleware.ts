@@ -1,6 +1,7 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import type { Database } from '@/types/supabase'
 
 // Standardized error messages that don't expose sensitive information
 const ERROR_MESSAGES = {
@@ -50,7 +51,7 @@ export async function middleware(req: NextRequest) {
   // Apply security headers to all responses
   applySecurityHeaders(res)
   
-  const supabase = createMiddlewareClient({ req, res })
+  const supabase = createMiddlewareClient<Database>({ req, res })
 
   const { pathname } = req.nextUrl
 
@@ -173,7 +174,7 @@ export async function middleware(req: NextRequest) {
 
         // Fetch user role from profiles table (no caching)
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('role')
           .eq('id', session.user.id)
           .single()

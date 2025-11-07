@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
 import { EventType, getEventStrategy } from '../lib/strategies/eventStrategies'
+import type { Database } from '@/types/supabase'
 
 interface EventContextType {
   eventId: string | null
@@ -51,7 +52,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
         .select('company_id')
         .eq('id', user.user.id)
         .single()
@@ -70,7 +71,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
       // Fetch most recent current event with company_id filter for data isolation
       const { data: event, error: eventError } = await supabase
-        .from('events')
+        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('*, event_name, venue_name, event_type, event_description, support_acts')
         .eq('is_current', true)
         .eq('company_id', profile.company_id)

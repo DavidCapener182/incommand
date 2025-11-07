@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { supabase } from '../lib/supabase'
+import type { Database } from '@/types/supabase'
 import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
 import { useAuth } from '../contexts/AuthContext'
@@ -2736,14 +2737,14 @@ export default function IncidentCreationModal({
     // Quick path: resolve current event immediately so UI never blocks on "Loading..."
     (async () => {
       try {
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        const { data: profile, error: profileError } = await supabase.from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles').select('company_id').eq('id', user.id).single();
         
         let chosen: any = null;
         
         if (profileError && profileError.code === 'PGRST116') {
           // No profile exists - this is a temporary user, fetch current event by membership
           const { data: membership } = await supabase
-            .from('event_members')
+            .from<any, any>('event_members')
             .select(`
               events!inner(
                 id, event_name, artist_name, expected_attendance, is_current, company_id
@@ -2759,7 +2760,7 @@ export default function IncidentCreationModal({
           } else {
             // If no current event, get the latest event for this user
             const { data: latestMembership } = await supabase
-              .from('event_members')
+              .from<any, any>('event_members')
               .select(`
                 events!inner(
                   id, event_name, artist_name, expected_attendance, is_current, company_id
@@ -2783,7 +2784,7 @@ export default function IncidentCreationModal({
           if (!companyId) return;
           
           const { data: current } = await supabase
-            .from('events')
+            .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
             .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
             .eq('company_id', companyId)
             .eq('is_current', true)
@@ -2793,7 +2794,7 @@ export default function IncidentCreationModal({
             chosen = current;
           } else {
             const { data: latest } = await supabase
-              .from('events')
+              .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
               .select('id, event_name, artist_name, expected_attendance, is_current, company_id')
               .eq('company_id', companyId)
               .order('start_datetime', { ascending: false })
@@ -2814,7 +2815,7 @@ export default function IncidentCreationModal({
         // For temporary users, fetch events based on event membership
         // For regular users, fetch events based on company_id
         console.log('IncidentCreationModal - Fetching profile for user:', user.id);
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('company_id').eq('id', user.id).single();
+        const { data: profile, error: profileError } = await supabase.from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles').select('company_id').eq('id', user.id).single();
         console.log('IncidentCreationModal - Profile query result:', { profile, profileError });
         
         let allEvents = [];
@@ -2823,7 +2824,7 @@ export default function IncidentCreationModal({
           // No profile exists - this is a temporary user, fetch events by membership
           console.log('IncidentCreationModal - Fetching events for temporary user:', user.id);
           const { data: memberships, error: membershipError } = await supabase
-            .from('event_members')
+            .from<any, any>('event_members')
             .select(`
               events!inner(
                 id, event_name, artist_name, is_current, expected_attendance
@@ -2843,7 +2844,7 @@ export default function IncidentCreationModal({
           if (!companyId) return;
           
           const { data: companyEvents } = await supabase
-            .from('events')
+            .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
             .select('id, event_name, artist_name, is_current, expected_attendance')
             .eq('company_id', companyId)
             .order('start_datetime', { ascending: false });
@@ -2857,7 +2858,7 @@ export default function IncidentCreationModal({
         if (allEvents.length === 0 && membership?.event_id) {
           console.log('IncidentCreationModal - No events found, trying to fetch specific event from membership:', membership.event_id);
           const { data: specificEvent } = await supabase
-            .from('events')
+            .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
             .select('id, event_name, artist_name, is_current, expected_attendance')
             .eq('id', membership.event_id)
             .single();
@@ -3625,7 +3626,7 @@ export default function IncidentCreationModal({
       if (!eventId) return null;
       // Get the current count of logs for this event
       const { count, error: countError } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('id', { count: 'exact', head: true })
         .eq('event_id', eventId);
       if (countError) {
@@ -3662,7 +3663,7 @@ export default function IncidentCreationModal({
           effectiveEvent = events[0];
         } else {
           const { data: currentEvent } = await supabase
-            .from('events')
+            .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
             .select('id, event_name, artist_name, expected_attendance')
             .eq('is_current', true)
             .single();
@@ -3850,7 +3851,7 @@ export default function IncidentCreationModal({
 
       // First, check if the log number already exists
       const { data: existingIncident } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('id')
         .eq('log_number', logNumber)
         .single();
@@ -3897,7 +3898,7 @@ export default function IncidentCreationModal({
       console.log('About to insert incident with logged_by_user_id:', user.id);
       let insertedIncident: { id: number } | null = null;
       const { data: insertReturn, error: insertError } = await supabase
-        .from('incident_logs')
+        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .insert([incidentData])
         .select('id')
         .maybeSingle();
@@ -3909,7 +3910,7 @@ export default function IncidentCreationModal({
       if (!insertedIncident?.id) {
         // Some RLS policies disable returning representation; fetch by unique log_number as fallback
         const { data: fetchedByLog, error: fetchByLogError } = await supabase
-          .from('incident_logs')
+          .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
           .select('id')
           .eq('log_number', logNumber)
           .eq('event_id', effectiveEvent.id)
@@ -3926,7 +3927,7 @@ export default function IncidentCreationModal({
         const count = parseInt(formData.occurrence.match(/\d+/)?.[0] || '0');
         if (count > 0) {
           const { error: attendanceError, data: attendanceData } = await supabase
-            .from('attendance_records')
+            .from<Database['public']['Tables']['attendance_records']['Row'], Database['public']['Tables']['attendance_records']['Update']>('attendance_records')
             .insert([{
               event_id: effectiveEvent.id,
               count: count,
@@ -3967,7 +3968,7 @@ export default function IncidentCreationModal({
             if (escalationTime) {
               // Update incident with escalation time
               await supabase
-                .from('incident_logs')
+                .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
                 .update({
                   escalate_at: escalationTime
                 })

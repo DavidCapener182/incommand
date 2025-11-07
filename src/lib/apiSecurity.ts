@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRlsServerClient } from './supabaseServer'
 import { logger } from './logger'
+import type { Database } from '@/types/supabase'
 
 /**
  * Secure API route handler that enforces authentication and RLS
@@ -33,7 +34,7 @@ export async function secureApiHandler(
     
     // Verify user still exists and is active
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
       .select('id, role, status')
       .eq('id', session.user.id)
       .single()

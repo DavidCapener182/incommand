@@ -1,4 +1,5 @@
 import { getServerUser } from '@/lib/auth/getServerUser';
+import type { Database } from '@/types/supabase';
 
 // Superadmin-only data helpers (server-side only)
 export async function sa_listCompanies() {
@@ -13,7 +14,7 @@ export async function sa_listCompanies() {
     
     // First check if we can access the table at all
     const { data: testData, error: testError } = await supabase
-      .from('companies')
+      .from<Database['public']['Tables']['companies']['Row'], Database['public']['Tables']['companies']['Update']>('companies')
       .select('id')
       .limit(1);
     
@@ -23,7 +24,7 @@ export async function sa_listCompanies() {
     }
     
     const { data, error } = await supabase
-      .from('companies')
+      .from<Database['public']['Tables']['companies']['Row'], Database['public']['Tables']['companies']['Update']>('companies')
       .select('id, name, subscription_plan, account_status, created_at')
       .order('created_at', { ascending: false });
     
@@ -61,7 +62,7 @@ export async function sa_listUsers() {
     }
     
     const { data, error } = await supabase
-      .from('profiles')
+      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
       .select('id, email, full_name, role, company_id, created_at, companies(name)')
       .order('created_at', { ascending: false });
     
@@ -84,7 +85,7 @@ export async function sa_listEvents() {
     if (role !== 'superadmin') return [];
     
     const { data, error } = await supabase
-      .from('events')
+      .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
       .select('id, event_name, event_type, company_id, is_current, created_at, companies(name)')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -109,7 +110,7 @@ export async function sa_billingOverview() {
     
     // Fetch companies to calculate billing stats
     const { data: companies } = await supabase
-      .from('companies')
+      .from<Database['public']['Tables']['companies']['Row'], Database['public']['Tables']['companies']['Update']>('companies')
       .select('id, name, created_at');
     
     // Calculate billing stats from companies
@@ -147,7 +148,7 @@ export async function sa_supportTickets() {
     if (role !== 'superadmin') return [];
     
     const { data, error } = await supabase
-      .from('support_tickets')
+      .from<Database['public']['Tables']['support_tickets']['Row'], Database['public']['Tables']['support_tickets']['Update']>('support_tickets')
       .select('*, companies(name)')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -172,9 +173,9 @@ export async function sa_systemMetrics() {
     
     // Get system-wide metrics
     const [companiesCount, usersCount, eventsCount] = await Promise.all([
-      supabase.from('companies').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('events').select('id', { count: 'exact', head: true })
+      supabase.from<Database['public']['Tables']['companies']['Row'], Database['public']['Tables']['companies']['Update']>('companies').select('id', { count: 'exact', head: true }),
+      supabase.from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events').select('id', { count: 'exact', head: true })
     ]);
     
     return {
@@ -194,7 +195,7 @@ export async function tenant_listEvents() {
   const { role, tenantId, supabase } = await getServerUser();
   if (!tenantId && role !== 'superadmin') throw new Error('No tenant');
   
-  const query = supabase.from('events').select('*').order('created_at', { ascending: false });
+  const query = supabase.from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events').select('*').order('created_at', { ascending: false });
   if (role !== 'superadmin') query.eq('company_id', tenantId);
   
   const { data, error } = await query;
@@ -206,7 +207,7 @@ export async function tenant_listUsers() {
   const { role, tenantId, supabase } = await getServerUser();
   if (!tenantId && role !== 'superadmin') throw new Error('No tenant');
   
-  const query = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+  const query = supabase.from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles').select('*').order('created_at', { ascending: false });
   if (role !== 'superadmin') query.eq('company_id', tenantId);
   
   const { data, error } = await query;
