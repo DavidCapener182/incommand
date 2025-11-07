@@ -38,9 +38,17 @@ export async function POST(req: Request) {
   const account_status = (body?.account_status || 'active').toString();
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
 
-  const { data, error } = await supabase
-    .from('companies')
-    .insert({ name, subscription_plan, account_status })
+  // Type assertion needed: client is already typed with Database,
+  // so explicit generics on .from() conflict. Cast to any to bypass.
+  const { data, error } = await (supabase
+    .from('companies') as any)
+    .insert([
+      {
+        name,
+        subscription_plan,
+        account_status,
+      } as Database['public']['Tables']['companies']['Insert'],
+    ])
     .select('id, name, subscription_plan, account_status, created_at')
     .single();
 
