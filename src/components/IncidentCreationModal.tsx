@@ -8,6 +8,7 @@ import debounce from 'lodash/debounce'
 import imageCompression from 'browser-image-compression'
 import { useAuth } from '../contexts/AuthContext'
 import { useEventMembership } from '../hooks/useEventMembership'
+import { useEventContext } from '../contexts/EventContext'
 import { usePresence } from '@/hooks/usePresence'
 import { ensureBrowserLLM, isBrowserLLMAvailable, parseIncidentWithBrowserLLM, rewriteIncidentFieldsWithBrowserLLM } from '@/services/browserLLMService'
 import type { EnhancedIncidentParsingResponse } from '../types/ai'
@@ -39,6 +40,7 @@ import { useScreenReader } from '@/hooks/useScreenReader'
 import greenGuideBestPractices from '@/data/greenGuideBestPractices.json'
 import { getOccurrenceTemplate } from '@/data/occurrenceTemplates'
 import GuidedActionsModal from './GuidedActionsModal'
+import { getIncidentTypesForEvent, INCIDENT_TYPE_DISPLAY_NAMES } from '@/config/incidentTypes'
 import { useGuidedActions } from '@/hooks/useGuidedActions'
 import { shouldAutoClose, getAutoCloseReason } from '@/utils/autoCloseIncidents'
 import type { Coordinates } from '@/hooks/useGeocodeLocation'
@@ -119,50 +121,12 @@ interface IncidentParserResult {
   ejectionDetails?: EjectionDetails;
 }
 
-const INCIDENT_TYPES = {
-  'Ejection': 'Ejection',
-  'Refusal': 'Refusal',
-  'Medical': 'Medical',
-  'Welfare': 'Welfare',
-  'Suspicious Behaviour': 'Suspicious Behaviour',
-  'Lost Property': 'Lost Property',
-  'Attendance': 'Attendance Update',
-  'Site Issue': 'Site Issue',
-  'Tech Issue': 'Tech Issue',
-  'Environmental': 'Environmental',
-  'Other': 'Other',
-  'Alcohol / Drug Related': 'Alcohol / Drug Related',
-  'Weapon Related': 'Weapon Related',
-  'Artist Movement': 'Artist Movement',
-  'Artist On Stage': 'Artist On Stage',
-  'Artist Off Stage': 'Artist Off Stage',
-  'Sexual Misconduct': 'Sexual Misconduct',
-  'Event Timing': 'Event Timing',
-  'Timings': 'Timing Update',
-  'Sit Rep': 'Situation Report',
-  'Crowd Management': 'Crowd Management',
-  'Hostile Act': 'Hostile Act',
-  'Fire Alarm': 'Fire Alarm',
-  'Noise Complaint': 'Noise Complaint',
-  'Evacuation': 'Evacuation',
-  'Counter-Terror Alert': 'Counter-Terror Alert',
-  'Entry Breach': 'Entry Breach',
-  'Theft': 'Theft',
-  'Emergency Show Stop': 'Emergency Show Stop',
-  'Animal Incident': 'Animal Incident',
-  'Missing Child/Person': 'Missing Child/Person',
-  'Accreditation': 'Accreditation',
-  'Staffing': 'Staffing',
-  'Accsessablity': 'Accsessablity',
-  'Suspected Fire': 'Suspected Fire',
-  'Fire': 'Fire',
-  'Showdown': 'Showdown',
-  'Fight': 'Fight',
-} as const
+// INCIDENT_TYPES is now dynamically generated based on event type
+// Use getIncidentTypesForEvent() to get available types
+// Display names are maintained in INCIDENT_TYPE_DISPLAY_NAMES from config
 
-export const incidentTypes = Object.keys(INCIDENT_TYPES);
-
-type IncidentType = keyof typeof INCIDENT_TYPES
+// Legacy type definition for backward compatibility
+type IncidentType = string
 
 const IncidentLocationMap = dynamic(() => import('./maps/IncidentLocationMap'), {
   ssr: false,
@@ -1926,13 +1890,15 @@ const INCIDENT_ACTIONS: Record<string, string[]> = {
 } as const
 
 // Helper to get usage counts from localStorage
+// Note: This function is called before component initialization, so it uses a fallback
+// The component will update usage counts based on actual available incident types
 function getUsageCounts() {
   try {
     const stored = localStorage.getItem('incidentTypeUsage');
     if (stored) return JSON.parse(stored);
   } catch {}
-  // Default: all types 0
-  return Object.fromEntries(Object.keys(INCIDENT_TYPES).map(type => [type, 0]));
+  // Default: empty object, will be populated by component based on available types
+  return {};
 }
 
 // Helper to save usage counts
@@ -1950,6 +1916,19 @@ export default function IncidentCreationModal({
 }: Props) {
   const { addToast } = useToast();
   const { membership } = useEventMembership();
+  const { eventType } = useEventContext();
+  
+  // Get incident types dynamically based on event type
+  const incidentTypes = useMemo(() => getIncidentTypesForEvent(eventType), [eventType]);
+  
+  // Create INCIDENT_TYPES object mapping for backward compatibility
+  const INCIDENT_TYPES = useMemo(() => {
+    const typesObj: Record<string, string> = {};
+    incidentTypes.forEach(type => {
+      typesObj[type] = INCIDENT_TYPE_DISPLAY_NAMES[type] || type;
+    });
+    return typesObj;
+  }, [incidentTypes]);
 
   // Function to determine the "To" field based on user's role
   const getCallsignTo = () => {
@@ -4775,6 +4754,7 @@ export default function IncidentCreationModal({
                 selectedType={formData.incident_type}
                 onTypeSelect={handleIncidentTypeSelect}
                 usageStats={incidentTypeUsageStats}
+                availableTypes={incidentTypes}
               />
             </aside>
 

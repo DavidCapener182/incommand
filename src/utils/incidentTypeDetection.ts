@@ -290,6 +290,147 @@ const INCIDENT_PATTERNS: Record<string, IncidentPattern> = {
     phrases: ['animal incident', 'dog on site', 'wildlife spotted'],
     priority: 'low',
     weight: 0.7
+  },
+  
+  // Football-specific incidents
+  'Pitch Invasion': {
+    keywords: ['pitch invasion', 'pitch invaded', 'on the pitch', 'entered pitch', 'pitch encroachment'],
+    phrases: ['pitch invasion', 'invaded the pitch', 'entered the field', 'on the field'],
+    priority: 'urgent',
+    weight: 0.95
+  },
+  
+  'Fan Disorder': {
+    keywords: ['fan disorder', 'disorder', 'disturbance', 'unrest', 'trouble'],
+    phrases: ['fan disorder', 'crowd disorder', 'supporters disorder', 'disorder in stand'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Pyrotechnic Incident': {
+    keywords: ['pyrotechnic', 'flare', 'smoke bomb', 'firework', 'smoke device'],
+    phrases: ['pyrotechnic device', 'flare activated', 'smoke bomb', 'firework set off'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Crowd Surge': {
+    keywords: ['crowd surge', 'surge', 'crush', 'pressure', 'crowd movement'],
+    phrases: ['crowd surge', 'crowd crush', 'surge forward', 'pressure building'],
+    priority: 'urgent',
+    weight: 0.95
+  },
+  
+  'Stand Conflict': {
+    keywords: ['stand conflict', 'stand trouble', 'stand disturbance', 'conflict in stand'],
+    phrases: ['stand conflict', 'conflict in stand', 'trouble in stand', 'stand disturbance'],
+    priority: 'high',
+    weight: 0.85
+  },
+  
+  'Supporter Ejection': {
+    keywords: ['supporter ejection', 'fan ejected', 'supporter removed', 'fan thrown out'],
+    phrases: ['supporter ejection', 'fan ejected', 'supporter removed from stadium'],
+    priority: 'medium',
+    weight: 0.85
+  },
+  
+  'Steward Deployment': {
+    keywords: ['steward deployment', 'deploy stewards', 'stewards needed', 'steward request'],
+    phrases: ['steward deployment', 'deploy stewards', 'stewards to', 'steward assistance'],
+    priority: 'medium',
+    weight: 0.75
+  },
+  
+  'Segregation Breach': {
+    keywords: ['segregation breach', 'segregation broken', 'mixed fans', 'segregation issue'],
+    phrases: ['segregation breach', 'breach of segregation', 'fans mixing', 'segregation broken'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Disorder at Entry/Exit': {
+    keywords: ['entry disorder', 'exit disorder', 'gate disorder', 'turnstile trouble'],
+    phrases: ['disorder at entry', 'disorder at exit', 'gate disorder', 'turnstile disorder'],
+    priority: 'high',
+    weight: 0.85
+  },
+  
+  'Offensive Chanting': {
+    keywords: ['offensive chanting', 'inappropriate chant', 'discriminatory chant', 'offensive song'],
+    phrases: ['offensive chanting', 'inappropriate chanting', 'discriminatory chanting'],
+    priority: 'medium',
+    weight: 0.8
+  },
+  
+  'Throwing Objects': {
+    keywords: ['throwing objects', 'objects thrown', 'missiles', 'throwing items'],
+    phrases: ['throwing objects', 'objects thrown', 'missiles thrown', 'throwing items'],
+    priority: 'high',
+    weight: 0.85
+  },
+  
+  'Use of Flares / Smoke Devices': {
+    keywords: ['flare', 'smoke device', 'smoke bomb', 'pyrotechnic'],
+    phrases: ['flare activated', 'smoke device', 'smoke bomb set off', 'use of flares'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Pitch Encroachment': {
+    keywords: ['pitch encroachment', 'encroached pitch', 'on pitch', 'field encroachment'],
+    phrases: ['pitch encroachment', 'encroached the pitch', 'on the pitch', 'field encroachment'],
+    priority: 'urgent',
+    weight: 0.95
+  },
+  
+  'Post-Match Incident': {
+    keywords: ['post-match', 'after match', 'after game', 'post game'],
+    phrases: ['post-match incident', 'after match incident', 'post game incident'],
+    priority: 'medium',
+    weight: 0.8
+  },
+  
+  'Half-Time Incident': {
+    keywords: ['half-time', 'half time', 'interval', 'break'],
+    phrases: ['half-time incident', 'half time incident', 'interval incident'],
+    priority: 'medium',
+    weight: 0.8
+  },
+  
+  'Match Abandonment': {
+    keywords: ['match abandoned', 'game abandoned', 'abandoned', 'match stopped'],
+    phrases: ['match abandoned', 'game abandoned', 'match called off', 'abandoned match'],
+    priority: 'urgent',
+    weight: 1.0
+  },
+  
+  'On-Field Medical Emergency': {
+    keywords: ['on-field medical', 'field medical', 'pitch medical', 'player medical'],
+    phrases: ['on-field medical emergency', 'medical emergency on pitch', 'player medical emergency'],
+    priority: 'urgent',
+    weight: 1.0
+  },
+  
+  'Player Safety Concern': {
+    keywords: ['player safety', 'player concern', 'safety concern', 'player welfare'],
+    phrases: ['player safety concern', 'concern for player', 'player safety issue'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Referee / Official Abuse': {
+    keywords: ['referee abuse', 'official abuse', 'abuse referee', 'abuse official'],
+    phrases: ['referee abuse', 'official abuse', 'abuse of referee', 'abuse of official'],
+    priority: 'high',
+    weight: 0.9
+  },
+  
+  'Security Perimeter Breach': {
+    keywords: ['perimeter breach', 'security breach', 'perimeter broken', 'security perimeter'],
+    phrases: ['security perimeter breach', 'perimeter breach', 'breach of perimeter'],
+    priority: 'urgent',
+    weight: 0.95
   }
 }
 

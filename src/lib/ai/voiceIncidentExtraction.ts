@@ -6,6 +6,7 @@
 import { generateText } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { getIncidentTypesForEvent } from '@/config/incidentTypes'
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY || ''
@@ -32,30 +33,6 @@ export interface VoiceIncidentData {
   }
 }
 
-const INCIDENT_TYPES = [
-  'Ejection',
-  'Code Green',
-  'Code Black',
-  'Code Pink',
-  'Aggressive Behaviour',
-  'Missing Child/Person',
-  'Hostile Act',
-  'Counter-Terror Alert',
-  'Fire Alarm',
-  'Evacuation',
-  'Medical',
-  'Suspicious Behaviour',
-  'Queue Build-Up',
-  'Sexual Misconduct',
-  'Fight',
-  'Theft',
-  'Lost Property',
-  'Attendance',
-  'Sit Rep',
-  'General',
-  'Other'
-]
-
 const VOICE_EXTRACTION_SYSTEM = `You are an expert at extracting structured incident data from natural speech. 
 You understand security and event management terminology. You ALWAYS return valid JSON.
 
@@ -68,10 +45,10 @@ Key rules:
 6. Confidence 0-1 based on clarity of speech
 7. Action taken should be specific and actionable`
 
-const buildVoiceExtractionPrompt = (transcript: string): string => {
+const buildVoiceExtractionPrompt = (transcript: string, incidentTypes: string[]): string => {
   return `Extract incident data from this voice transcript. Return strict JSON only.
 
-Allowed incident types: ${INCIDENT_TYPES.join(', ')}
+Allowed incident types: ${incidentTypes.join(', ')}
 
 Extract these fields:
 {
@@ -129,12 +106,19 @@ Return ONLY the JSON, no other text.`
 
 /**
  * Extract incident data from voice transcript using AI
+ * @param transcript - The voice transcript text
+ * @param eventType - Optional event type to filter available incident types
+ * @param provider - AI provider to use ('openai' or 'anthropic')
  */
 export async function extractIncidentFromVoice(
   transcript: string,
+  eventType: string | null = null,
   provider: 'openai' | 'anthropic' = 'openai'
 ): Promise<VoiceIncidentData> {
   try {
+    // Get incident types based on event type
+    const incidentTypes = getIncidentTypesForEvent(eventType)
+    
     const model = provider === 'openai' 
       ? openai('gpt-4o-mini')
       : anthropic('claude-3-5-sonnet-20241022')
@@ -142,7 +126,7 @@ export async function extractIncidentFromVoice(
     const { text } = await generateText({
       model,
       system: VOICE_EXTRACTION_SYSTEM,
-      prompt: buildVoiceExtractionPrompt(transcript),
+      prompt: buildVoiceExtractionPrompt(transcript, incidentTypes),
       temperature: 0.3,
       maxOutputTokens: 1000
     })
@@ -153,7 +137,7 @@ export async function extractIncidentFromVoice(
 
     // Validate and set defaults
     return {
-      incidentType: INCIDENT_TYPES.includes(extracted.incidentType) 
+      incidentType: incidentTypes.includes(extracted.incidentType) 
         ? extracted.incidentType 
         : 'Other',
       occurrence: extracted.occurrence || transcript,

@@ -28,7 +28,7 @@ export const eventStrategies = {
       'What3WordsSearchCard'
     ],
     aiFocus: 'crowd control, supporter safety, steward coordination, and pitch security',
-    incidentCategories: ['Pitch Invasion', 'Fan Disorder', 'Medical', 'Security', 'Ejection'],
+    incidentCategories: ['Pitch Invasion', 'Fan Disorder', 'Pyrotechnic Incident', 'Crowd Surge', 'Stand Conflict', 'Supporter Ejection', 'Steward Deployment', 'Segregation Breach', 'Disorder at Entry/Exit', 'Offensive Chanting', 'Throwing Objects', 'Use of Flares / Smoke Devices', 'Pitch Encroachment', 'Post-Match Incident', 'Half-Time Incident', 'Match Abandonment', 'On-Field Medical Emergency', 'Player Safety Concern', 'Referee / Official Abuse', 'Security Perimeter Breach', 'Medical', 'Security', 'Ejection'],
     priorityMetrics: ['ejections', 'stadium_capacity', 'medical_response', 'security_alerts']
   },
   festival: {

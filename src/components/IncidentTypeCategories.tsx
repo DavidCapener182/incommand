@@ -8,6 +8,7 @@ import {
   Globe2,
   FlaskConical,
   ClipboardList,
+  Football,
 } from 'lucide-react'
 import { getIncidentTypeIcon } from '@/utils/incidentIcons'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -18,6 +19,7 @@ interface IncidentTypeCategoriesProps {
   selectedType: string
   onTypeSelect: (type: string) => void
   usageStats?: Record<string, number>
+  availableTypes?: string[] // Filter categories to only show available types
 }
 
 const INCIDENT_CATEGORIES = {
@@ -25,14 +27,15 @@ const INCIDENT_CATEGORIES = {
     icon: '🛡️',
     types: [
       'Ejection', 'Refusal', 'Hostile Act', 'Counter-Terror Alert', 'Entry Breach', 
-      'Theft', 'Fight', 'Weapon Related', 'Suspicious Behaviour'
+      'Theft', 'Fight', 'Weapon Related', 'Suspicious Behaviour', 'Security Perimeter Breach'
     ],
     defaultExpanded: false
   },
   'Medical & Welfare': {
     icon: '🏥',
     types: [
-      'Medical', 'Welfare', 'Missing Child/Person', 'Sexual Misconduct'
+      'Medical', 'Welfare', 'Missing Child/Person', 'Sexual Misconduct',
+      'On-Field Medical Emergency', 'Player Safety Concern'
     ],
     defaultExpanded: false
   },
@@ -40,7 +43,7 @@ const INCIDENT_CATEGORIES = {
     icon: '👥',
     types: [
       'Crowd Management', 'Evacuation', 'Fire', 'Fire Alarm', 'Suspected Fire', 
-      'Queue Build-Up'
+      'Queue Build-Up', 'Crowd Surge'
     ],
     defaultExpanded: false
   },
@@ -48,7 +51,7 @@ const INCIDENT_CATEGORIES = {
     icon: '⚙️',
     types: [
       'Attendance', 'Site Issue', 'Tech Issue', 'Environmental', 'Lost Property', 
-      'Accreditation', 'Staffing', 'Accsessablity'
+      'Accreditation', 'Staffing', 'Accsessablity', 'Steward Deployment'
     ],
     defaultExpanded: false
   },
@@ -57,6 +60,17 @@ const INCIDENT_CATEGORIES = {
     types: [
       'Artist Movement', 'Artist On Stage', 'Artist Off Stage', 'Event Timing', 
       'Timings', 'Sit Rep', 'Showdown', 'Emergency Show Stop'
+    ],
+    defaultExpanded: false
+  },
+  'Match Operations': {
+    icon: '⚽',
+    types: [
+      'Pitch Invasion', 'Fan Disorder', 'Pyrotechnic Incident', 'Stand Conflict',
+      'Supporter Ejection', 'Segregation Breach', 'Disorder at Entry/Exit',
+      'Offensive Chanting', 'Throwing Objects', 'Use of Flares / Smoke Devices',
+      'Pitch Encroachment', 'Post-Match Incident', 'Half-Time Incident',
+      'Match Abandonment', 'Referee / Official Abuse'
     ],
     defaultExpanded: false
   },
@@ -89,6 +103,7 @@ const CATEGORY_ICONS: Record<keyof typeof INCIDENT_CATEGORIES, React.ComponentTy
   'Crowd & Safety': Users,
   Operations: Cog,
   Event: Music,
+  'Match Operations': Football,
   'Environment & Complaints': Globe2,
   Substances: FlaskConical,
   Other: ClipboardList,
@@ -97,15 +112,41 @@ const CATEGORY_ICONS: Record<keyof typeof INCIDENT_CATEGORIES, React.ComponentTy
 export default function IncidentTypeCategories({ 
   selectedType, 
   onTypeSelect, 
-  usageStats = {} 
+  usageStats = {},
+  availableTypes
 }: IncidentTypeCategoriesProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+
+  // Filter categories to only include types that are available
+  const filteredCategories = useMemo(() => {
+    if (!availableTypes || availableTypes.length === 0) {
+      return INCIDENT_CATEGORIES;
+    }
+    
+    const filtered: typeof INCIDENT_CATEGORIES = {} as typeof INCIDENT_CATEGORIES;
+    
+    Object.entries(INCIDENT_CATEGORIES).forEach(([categoryName, categoryData]) => {
+      const availableTypesInCategory = categoryData.types.filter(type => 
+        availableTypes.includes(type)
+      );
+      
+      // Only include category if it has at least one available type
+      if (availableTypesInCategory.length > 0) {
+        filtered[categoryName as keyof typeof INCIDENT_CATEGORIES] = {
+          ...categoryData,
+          types: availableTypesInCategory as any
+        };
+      }
+    });
+    
+    return filtered;
+  }, [availableTypes]);
 
   // Auto-expand category when incident type is selected
   useEffect(() => {
     if (selectedType) {
       // Find which category contains the selected type
-      const categoryWithType = Object.entries(INCIDENT_CATEGORIES).find(([_, categoryData]) =>
+      const categoryWithType = Object.entries(filteredCategories).find(([_, categoryData]) =>
         (categoryData.types as readonly string[]).includes(selectedType)
       )
       
@@ -114,11 +155,11 @@ export default function IncidentTypeCategories({
         setExpandedCategory(categoryName)
       }
     }
-  }, [selectedType])
+  }, [selectedType, filteredCategories])
 
   // Sort incident types within each category by usage stats
   const sortedCategories = useMemo(() => {
-    return Object.entries(INCIDENT_CATEGORIES).map(([categoryName, categoryData]) => {
+    return Object.entries(filteredCategories).map(([categoryName, categoryData]) => {
       const sortedTypes = [...categoryData.types].sort((a, b) => {
         const aUsage = usageStats[a] || 0
         const bUsage = usageStats[b] || 0
@@ -131,7 +172,7 @@ export default function IncidentTypeCategories({
         types: sortedTypes
       }
     })
-  }, [usageStats])
+  }, [usageStats, filteredCategories])
 
   return (
     <div className="flex h-full flex-col space-y-4">

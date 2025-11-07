@@ -2112,6 +2112,906 @@
         "placeholder": "search_outcome"
       }
     ]
+  },
+  "Pitch Invasion": {
+    "summary": [
+      "Record number of individuals and their location on pitch",
+      "Deploy immediate security response and coordinate with match officials",
+      "Document removal process and any arrests made"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Pitch invasion at [location/stand] at [HH:MM]. [Number] individual(s) entered pitch. Match status: [ongoing/stopped].",
+        "actions_taken": "Security deployed immediately. Match officials notified. Removal in progress. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record exact numbers and locations accurately",
+      "Note match impact and any delays"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Pitch invasion at {{location}} at {{time}}. {{number_of_individuals}} individual(s) entered pitch. {{security_deployed}}. {{match_officials_notified}}. {{police_status}}.",
+      "outcome": "{{removal_status}}. {{match_resumed}}. {{arrests_made}}. {{ban_status}}."
+    },
+    "questions": [
+      {
+        "id": "number_of_individuals",
+        "text": "How many individuals entered the pitch?",
+        "type": "text",
+        "placeholder": "number_of_individuals"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "match_stopped",
+        "text": "Was the match stopped?",
+        "type": "boolean",
+        "placeholder": "match_resumed"
+      }
+    ]
+  },
+  "Fan Disorder": {
+    "summary": [
+      "Record location, scale, and nature of disorder",
+      "Deploy appropriate security resources and coordinate response",
+      "Document any injuries, arrests, or ejections"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Fan disorder at [location/stand] at [HH:MM]. Nature: [description]. Scale: [number of individuals involved].",
+        "actions_taken": "Security teams deployed. Situation assessed. Additional resources requested: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Avoid inflammatory language; stick to factual observations",
+      "Record scale accurately for resource planning"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Fan disorder at {{location}} at {{time}}. Nature: {{disorder_description}}. Scale: {{number_involved}}. {{security_deployed}}. {{additional_resources}}. {{police_status}}.",
+      "outcome": "{{situation_status}}. {{injuries}}. {{arrests_made}}. {{ejections}}."
+    },
+    "questions": [
+      {
+        "id": "disorder_description",
+        "text": "Describe the nature of the disorder",
+        "type": "text",
+        "placeholder": "disorder_description"
+      },
+      {
+        "id": "number_involved",
+        "text": "How many individuals were involved?",
+        "type": "text",
+        "placeholder": "number_involved"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Pyrotechnic Incident": {
+    "summary": [
+      "Record location and type of pyrotechnic device",
+      "Assess safety risk and coordinate evacuation if necessary",
+      "Document removal and any injuries or arrests"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Pyrotechnic device activated at [location/stand] at [HH:MM]. Type: [flare/smoke bomb/other]. Safety risk: [low/medium/high].",
+        "actions_taken": "Area assessed for safety. Evacuation considered: [yes/no]. Device removed/secured. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Prioritize safety assessment over documentation",
+      "Record device type accurately for reporting"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Pyrotechnic device activated at {{location}} at {{time}}. Type: {{device_type}}. Safety risk: {{risk_level}}. {{area_assessed}}. {{evacuation_considered}}. {{device_status}}. {{police_status}}.",
+      "outcome": "{{incident_resolved}}. {{injuries}}. {{arrests_made}}. {{ban_status}}."
+    },
+    "questions": [
+      {
+        "id": "device_type",
+        "text": "What type of pyrotechnic device?",
+        "type": "text",
+        "placeholder": "device_type"
+      },
+      {
+        "id": "risk_level",
+        "text": "What was the safety risk level?",
+        "type": "text",
+        "placeholder": "risk_level"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Crowd Surge": {
+    "summary": [
+      "Record location, trigger, and number of people affected",
+      "Deploy immediate medical and security response",
+      "Document any injuries and crowd control measures implemented"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Crowd surge at [location/stand] at [HH:MM]. Trigger: [description]. Estimated number affected: [number].",
+        "actions_taken": "Medical teams deployed immediately. Crowd control measures implemented. Area secured. Ambulance requested: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Prioritize medical response over documentation",
+      "Record trigger accurately for prevention planning"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Crowd surge at {{location}} at {{time}}. Trigger: {{surge_trigger}}. Estimated affected: {{number_affected}}. {{medical_deployed}}. {{crowd_control_measures}}. {{area_secured}}. {{ambulance_status}}.",
+      "outcome": "{{situation_stabilized}}. {{injuries}}. {{medical_treatment}}. {{prevention_measures}}."
+    },
+    "questions": [
+      {
+        "id": "surge_trigger",
+        "text": "What triggered the crowd surge?",
+        "type": "text",
+        "placeholder": "surge_trigger"
+      },
+      {
+        "id": "number_affected",
+        "text": "How many people were affected?",
+        "type": "text",
+        "placeholder": "number_affected"
+      },
+      {
+        "id": "ambulance_requested",
+        "text": "Was an ambulance requested?",
+        "type": "boolean",
+        "placeholder": "ambulance_status"
+      }
+    ]
+  },
+  "Stand Conflict": {
+    "summary": [
+      "Record location, parties involved, and nature of conflict",
+      "Deploy security to separate and de-escalate",
+      "Document any injuries, ejections, or police involvement"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Stand conflict at [location/stand] at [HH:MM]. Parties: [description]. Nature: [verbal/physical/both].",
+        "actions_taken": "Security deployed to separate parties. Situation de-escalated. Ejections considered: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Avoid taking sides; record facts objectively",
+      "Note any segregation issues that may have contributed"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Stand conflict at {{location}} at {{time}}. Parties: {{parties_involved}}. Nature: {{conflict_type}}. {{security_deployed}}. {{de_escalation_status}}. {{ejections_considered}}. {{police_status}}.",
+      "outcome": "{{situation_resolved}}. {{injuries}}. {{ejections_made}}. {{segregation_reviewed}}."
+    },
+    "questions": [
+      {
+        "id": "parties_involved",
+        "text": "Describe the parties involved",
+        "type": "text",
+        "placeholder": "parties_involved"
+      },
+      {
+        "id": "conflict_type",
+        "text": "What type of conflict occurred?",
+        "type": "text",
+        "placeholder": "conflict_type"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Supporter Ejection": {
+    "summary": [
+      "Record reason for ejection and legal basis",
+      "Capture time, location, and staff involved",
+      "Note if police informed and re-entry refused"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Supporter ejection at [location/stand] at [HH:MM] for [reason]. Individual(s) removed from stadium.",
+        "actions_taken": "Individual(s) escorted from stadium. Re-entry refused: [yes/no]. Police informed: [yes/no]. Ban considered: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Stick to observed facts; avoid emotive descriptors",
+      "Include justification aligned to stadium policy"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Supporter ejection at {{location}} at {{time}}. Reason: {{reason}}. {{escorted_from_stadium}}. {{reentry_status}}. {{police_status}}. {{ban_status}}.",
+      "outcome": "Individual(s) removed from stadium. {{ban_applied}}. {{additional_notes}}."
+    },
+    "questions": [
+      {
+        "id": "ejection_reason",
+        "text": "What was the reason for ejection?",
+        "type": "text",
+        "placeholder": "reason"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      },
+      {
+        "id": "ban_applied",
+        "text": "Was a ban applied?",
+        "type": "boolean",
+        "placeholder": "ban_status"
+      }
+    ]
+  },
+  "Steward Deployment": {
+    "summary": [
+      "Record location and reason for deployment",
+      "Note number of stewards deployed and their roles",
+      "Document effectiveness and any follow-up actions"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Steward deployment at [location] at [HH:MM]. Reason: [description]. Number deployed: [number].",
+        "actions_taken": "Stewards deployed to [location]. Roles assigned: [description]. Situation monitored. Effectiveness assessed."
+      }
+    ],
+    "cautions": [
+      "Record deployment reason clearly for resource planning",
+      "Note any coordination issues"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Steward deployment at {{location}} at {{time}}. Reason: {{deployment_reason}}. Number: {{number_deployed}}. Roles: {{roles_assigned}}. {{monitoring_status}}.",
+      "outcome": "{{deployment_effectiveness}}. {{situation_status}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "deployment_reason",
+        "text": "What was the reason for steward deployment?",
+        "type": "text",
+        "placeholder": "deployment_reason"
+      },
+      {
+        "id": "number_deployed",
+        "text": "How many stewards were deployed?",
+        "type": "text",
+        "placeholder": "number_deployed"
+      },
+      {
+        "id": "effectiveness",
+        "text": "How effective was the deployment?",
+        "type": "text",
+        "placeholder": "deployment_effectiveness"
+      }
+    ]
+  },
+  "Segregation Breach": {
+    "summary": [
+      "Record location and nature of breach",
+      "Deploy immediate security response to restore segregation",
+      "Document any incidents resulting from breach"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Segregation breach at [location] at [HH:MM]. Nature: [description]. Number of individuals: [number].",
+        "actions_taken": "Security deployed immediately. Segregation restored. Individuals removed/redirected. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record breach accurately for security review",
+      "Note any contributing factors"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Segregation breach at {{location}} at {{time}}. Nature: {{breach_description}}. Number: {{number_involved}}. {{security_deployed}}. {{segregation_restored}}. {{individuals_status}}. {{police_status}}.",
+      "outcome": "{{breach_resolved}}. {{incidents_resulting}}. {{security_review}}."
+    },
+    "questions": [
+      {
+        "id": "breach_description",
+        "text": "Describe the nature of the segregation breach",
+        "type": "text",
+        "placeholder": "breach_description"
+      },
+      {
+        "id": "number_involved",
+        "text": "How many individuals were involved?",
+        "type": "text",
+        "placeholder": "number_involved"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Disorder at Entry/Exit": {
+    "summary": [
+      "Record location, scale, and nature of disorder",
+      "Deploy security resources and coordinate with entry/exit teams",
+      "Document any delays, injuries, or arrests"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Disorder at [entry/exit point] at [HH:MM]. Nature: [description]. Scale: [number of individuals].",
+        "actions_taken": "Security deployed. Entry/exit flow managed. Additional resources requested: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Note impact on entry/exit flow",
+      "Record any delays caused"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Disorder at {{location}} at {{time}}. Nature: {{disorder_description}}. Scale: {{number_involved}}. {{security_deployed}}. {{flow_managed}}. {{additional_resources}}. {{police_status}}.",
+      "outcome": "{{situation_resolved}}. {{flow_restored}}. {{injuries}}. {{arrests_made}}."
+    },
+    "questions": [
+      {
+        "id": "disorder_description",
+        "text": "Describe the nature of the disorder",
+        "type": "text",
+        "placeholder": "disorder_description"
+      },
+      {
+        "id": "flow_impact",
+        "text": "What was the impact on entry/exit flow?",
+        "type": "text",
+        "placeholder": "flow_managed"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Offensive Chanting": {
+    "summary": [
+      "Record location, nature of chanting, and number of individuals",
+      "Document any discriminatory or offensive content",
+      "Note response taken and any ejections or police involvement"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Offensive chanting at [location/stand] at [HH:MM]. Nature: [description]. Number of individuals: [number].",
+        "actions_taken": "Chanting documented. Warnings issued: [yes/no]. Ejections considered: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record exact nature of chanting for reporting",
+      "Avoid repeating offensive language unnecessarily"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Offensive chanting at {{location}} at {{time}}. Nature: {{chanting_description}}. Number: {{number_involved}}. {{documented}}. {{warnings_issued}}. {{ejections_considered}}. {{police_status}}.",
+      "outcome": "{{response_taken}}. {{ejections_made}}. {{ban_status}}. {{reporting_status}}."
+    },
+    "questions": [
+      {
+        "id": "chanting_description",
+        "text": "Describe the nature of the offensive chanting",
+        "type": "text",
+        "placeholder": "chanting_description"
+      },
+      {
+        "id": "warnings_issued",
+        "text": "Were warnings issued?",
+        "type": "boolean",
+        "placeholder": "warnings_issued"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Throwing Objects": {
+    "summary": [
+      "Record location, type of objects, and direction thrown",
+      "Assess safety risk and deploy security response",
+      "Document any injuries, arrests, or ejections"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Objects thrown from [location/stand] at [HH:MM]. Type: [description]. Direction: [towards pitch/opposing fans/other].",
+        "actions_taken": "Security deployed to identify source. Safety risk assessed. Ejections made: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record type of objects accurately",
+      "Note any injuries or near misses"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Objects thrown from {{location}} at {{time}}. Type: {{object_type}}. Direction: {{direction}}. {{security_deployed}}. {{risk_assessed}}. {{ejections_made}}. {{police_status}}.",
+      "outcome": "{{incident_resolved}}. {{injuries}}. {{arrests_made}}. {{ban_status}}."
+    },
+    "questions": [
+      {
+        "id": "object_type",
+        "text": "What type of objects were thrown?",
+        "type": "text",
+        "placeholder": "object_type"
+      },
+      {
+        "id": "direction",
+        "text": "In what direction were objects thrown?",
+        "type": "text",
+        "placeholder": "direction"
+      },
+      {
+        "id": "injuries",
+        "text": "Were there any injuries?",
+        "type": "boolean",
+        "placeholder": "injuries"
+      }
+    ]
+  },
+  "Use of Flares / Smoke Devices": {
+    "summary": [
+      "Record location and type of device activated",
+      "Assess safety risk and coordinate response",
+      "Document removal, injuries, and any arrests"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Flares/smoke device activated at [location/stand] at [HH:MM]. Type: [flare/smoke/other]. Safety risk: [low/medium/high].",
+        "actions_taken": "Area assessed for safety. Device removed/secured. Medical teams on standby: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Prioritize safety assessment",
+      "Record device type accurately"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Flares/smoke device activated at {{location}} at {{time}}. Type: {{device_type}}. Safety risk: {{risk_level}}. {{area_assessed}}. {{device_removed}}. {{medical_standby}}. {{police_status}}.",
+      "outcome": "{{incident_resolved}}. {{injuries}}. {{arrests_made}}. {{ban_status}}."
+    },
+    "questions": [
+      {
+        "id": "device_type",
+        "text": "What type of device was activated?",
+        "type": "text",
+        "placeholder": "device_type"
+      },
+      {
+        "id": "risk_level",
+        "text": "What was the safety risk level?",
+        "type": "text",
+        "placeholder": "risk_level"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Pitch Encroachment": {
+    "summary": [
+      "Record location and number of individuals",
+      "Deploy immediate security response",
+      "Document removal and any match impact"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Pitch encroachment at [location] at [HH:MM]. Number of individuals: [number]. Match status: [ongoing/stopped].",
+        "actions_taken": "Security deployed immediately. Individuals removed. Match officials notified. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record exact numbers accurately",
+      "Note any match delays"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Pitch encroachment at {{location}} at {{time}}. Number: {{number_of_individuals}}. Match status: {{match_status}}. {{security_deployed}}. {{individuals_removed}}. {{match_officials_notified}}. {{police_status}}.",
+      "outcome": "{{encroachment_resolved}}. {{match_resumed}}. {{arrests_made}}. {{ban_status}}."
+    },
+    "questions": [
+      {
+        "id": "number_of_individuals",
+        "text": "How many individuals encroached?",
+        "type": "text",
+        "placeholder": "number_of_individuals"
+      },
+      {
+        "id": "match_stopped",
+        "text": "Was the match stopped?",
+        "type": "boolean",
+        "placeholder": "match_resumed"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Post-Match Incident": {
+    "summary": [
+      "Record location, nature, and timing of incident",
+      "Deploy security resources for crowd management",
+      "Document any injuries, arrests, or ejections"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Post-match incident at [location] at [HH:MM]. Nature: [description]. Scale: [number of individuals].",
+        "actions_taken": "Security deployed. Crowd management measures implemented. Police informed: [yes/no]. Additional resources requested: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Note timing relative to match end",
+      "Record any dispersal issues"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Post-match incident at {{location}} at {{time}}. Nature: {{incident_description}}. Scale: {{number_involved}}. {{security_deployed}}. {{crowd_management_measures}}. {{police_status}}. {{additional_resources}}.",
+      "outcome": "{{incident_resolved}}. {{injuries}}. {{arrests_made}}. {{dispersal_status}}."
+    },
+    "questions": [
+      {
+        "id": "incident_description",
+        "text": "Describe the nature of the post-match incident",
+        "type": "text",
+        "placeholder": "incident_description"
+      },
+      {
+        "id": "number_involved",
+        "text": "How many individuals were involved?",
+        "type": "text",
+        "placeholder": "number_involved"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Half-Time Incident": {
+    "summary": [
+      "Record location, nature, and timing of incident",
+      "Deploy security resources during break",
+      "Document any injuries, arrests, or ejections"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Half-time incident at [location] at [HH:MM]. Nature: [description]. Scale: [number of individuals].",
+        "actions_taken": "Security deployed during break. Situation assessed. Additional resources requested: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Note timing relative to half-time",
+      "Record any impact on second half"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Half-time incident at {{location}} at {{time}}. Nature: {{incident_description}}. Scale: {{number_involved}}. {{security_deployed}}. {{situation_assessed}}. {{additional_resources}}. {{police_status}}.",
+      "outcome": "{{incident_resolved}}. {{injuries}}. {{arrests_made}}. {{second_half_impact}}."
+    },
+    "questions": [
+      {
+        "id": "incident_description",
+        "text": "Describe the nature of the half-time incident",
+        "type": "text",
+        "placeholder": "incident_description"
+      },
+      {
+        "id": "number_involved",
+        "text": "How many individuals were involved?",
+        "type": "text",
+        "placeholder": "number_involved"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Match Abandonment": {
+    "summary": [
+      "Record reason for abandonment and timing",
+      "Coordinate with match officials and police",
+      "Document crowd management and evacuation procedures"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Match abandonment at [HH:MM]. Reason: [description]. Decision made by: [match official/police/other].",
+        "actions_taken": "Crowd management procedures activated. Evacuation coordinated. Communications sent to all staff. Police liaison maintained."
+      }
+    ],
+    "cautions": [
+      "Record exact reason and decision-maker",
+      "Document all coordination steps"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Match abandonment at {{time}}. Reason: {{abandonment_reason}}. Decision by: {{decision_maker}}. {{crowd_management_activated}}. {{evacuation_coordinated}}. {{communications_sent}}. {{police_liaison}}.",
+      "outcome": "{{evacuation_status}}. {{crowd_dispersed}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "abandonment_reason",
+        "text": "What was the reason for match abandonment?",
+        "type": "text",
+        "placeholder": "abandonment_reason"
+      },
+      {
+        "id": "decision_maker",
+        "text": "Who made the decision to abandon?",
+        "type": "text",
+        "placeholder": "decision_maker"
+      },
+      {
+        "id": "evacuation_complete",
+        "text": "Was evacuation completed?",
+        "type": "boolean",
+        "placeholder": "evacuation_status"
+      }
+    ]
+  },
+  "On-Field Medical Emergency": {
+    "summary": [
+      "Record location, patient details, and nature of emergency",
+      "Deploy immediate medical response and coordinate with match officials",
+      "Document treatment provided and any match impact"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "On-field medical emergency at [location] at [HH:MM]. Patient: [player/official/other]. Nature: [description].",
+        "actions_taken": "Medical teams deployed immediately. Match officials notified. Match stopped: [yes/no]. Ambulance requested: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Prioritize medical response over documentation",
+      "Record match impact accurately"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "On-field medical emergency at {{location}} at {{time}}. Patient: {{patient_type}}. Nature: {{emergency_description}}. {{medical_deployed}}. {{match_officials_notified}}. {{match_stopped}}. {{ambulance_status}}.",
+      "outcome": "{{patient_status}}. {{treatment_provided}}. {{match_resumed}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "patient_type",
+        "text": "Who was the patient?",
+        "type": "text",
+        "placeholder": "patient_type"
+      },
+      {
+        "id": "emergency_description",
+        "text": "Describe the nature of the medical emergency",
+        "type": "text",
+        "placeholder": "emergency_description"
+      },
+      {
+        "id": "ambulance_requested",
+        "text": "Was an ambulance requested?",
+        "type": "boolean",
+        "placeholder": "ambulance_status"
+      }
+    ]
+  },
+  "Player Safety Concern": {
+    "summary": [
+      "Record nature of safety concern and affected player(s)",
+      "Coordinate with match officials and medical teams",
+      "Document any actions taken to address concern"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Player safety concern at [location] at [HH:MM]. Concern: [description]. Affected player(s): [name/team].",
+        "actions_taken": "Match officials notified. Medical teams on standby. Safety measures implemented. Concern addressed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record concern accurately for review",
+      "Note any ongoing monitoring required"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Player safety concern at {{location}} at {{time}}. Concern: {{concern_description}}. Affected: {{affected_players}}. {{match_officials_notified}}. {{medical_standby}}. {{safety_measures}}. {{concern_addressed}}.",
+      "outcome": "{{concern_resolved}}. {{ongoing_monitoring}}. {{followup_required}}."
+    },
+    "questions": [
+      {
+        "id": "concern_description",
+        "text": "Describe the nature of the safety concern",
+        "type": "text",
+        "placeholder": "concern_description"
+      },
+      {
+        "id": "affected_players",
+        "text": "Which player(s) were affected?",
+        "type": "text",
+        "placeholder": "affected_players"
+      },
+      {
+        "id": "concern_addressed",
+        "text": "Was the concern addressed?",
+        "type": "boolean",
+        "placeholder": "concern_addressed"
+      }
+    ]
+  },
+  "Referee / Official Abuse": {
+    "summary": [
+      "Record location, nature of abuse, and individuals involved",
+      "Deploy security response and coordinate with match officials",
+      "Document any ejections, arrests, or bans"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Referee/official abuse at [location] at [HH:MM]. Nature: [verbal/physical/both]. Target: [referee/official/other].",
+        "actions_taken": "Security deployed immediately. Match officials notified. Ejections made: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record nature of abuse accurately",
+      "Note any match impact"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Referee/official abuse at {{location}} at {{time}}. Nature: {{abuse_type}}. Target: {{target}}. {{security_deployed}}. {{match_officials_notified}}. {{ejections_made}}. {{police_status}}.",
+      "outcome": "{{incident_resolved}}. {{arrests_made}}. {{ban_status}}. {{match_impact}}."
+    },
+    "questions": [
+      {
+        "id": "abuse_type",
+        "text": "What type of abuse occurred?",
+        "type": "text",
+        "placeholder": "abuse_type"
+      },
+      {
+        "id": "target",
+        "text": "Who was the target of the abuse?",
+        "type": "text",
+        "placeholder": "target"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
+  },
+  "Security Perimeter Breach": {
+    "summary": [
+      "Record location and nature of breach",
+      "Deploy immediate security response to secure perimeter",
+      "Document any individuals involved and arrests made"
+    ],
+    "checklists": [
+      {
+        "label": "Occurrence template",
+        "occurrence": "Security perimeter breach at [location] at [HH:MM]. Nature: [description]. Number of individuals: [number].",
+        "actions_taken": "Security deployed immediately. Perimeter secured. Individuals detained: [yes/no]. Police informed: [yes/no]."
+      }
+    ],
+    "cautions": [
+      "Record breach location accurately",
+      "Note any security vulnerabilities identified"
+    ],
+    "links": [
+      { "title": "Green Guide PDF", "href": "/docs/green-guide.pdf" }
+    ],
+    "template": {
+      "actions": "Security perimeter breach at {{location}} at {{time}}. Nature: {{breach_description}}. Number: {{number_involved}}. {{security_deployed}}. {{perimeter_secured}}. {{individuals_detained}}. {{police_status}}.",
+      "outcome": "{{breach_resolved}}. {{arrests_made}}. {{security_review}}. {{vulnerabilities_addressed}}."
+    },
+    "questions": [
+      {
+        "id": "breach_description",
+        "text": "Describe the nature of the perimeter breach",
+        "type": "text",
+        "placeholder": "breach_description"
+      },
+      {
+        "id": "number_involved",
+        "text": "How many individuals were involved?",
+        "type": "text",
+        "placeholder": "number_involved"
+      },
+      {
+        "id": "police_informed",
+        "text": "Were police informed?",
+        "type": "boolean",
+        "placeholder": "police_status"
+      }
+    ]
   }
 }
 
