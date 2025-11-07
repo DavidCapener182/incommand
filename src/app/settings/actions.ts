@@ -8,6 +8,7 @@ import { logClientEvent } from '@/analytics/events'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import { logger } from '@/lib/logger'
 import type { Database } from '@/types/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
@@ -20,8 +21,9 @@ export async function updateProfile(formData: FormData) {
   try {
     const cookieStore = cookies()
     const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
+    const typedSupabase = supabase as unknown as SupabaseClient<Database>
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await typedSupabase.auth.getUser()
     if (!user) {
       return { error: 'Not authenticated' }
     }
@@ -34,13 +36,13 @@ export async function updateProfile(formData: FormData) {
 
     const validated = profileSchema.parse(rawData)
 
-    const { error } = await supabase
-      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
+    const { error } = await (typedSupabase
+      .from('profiles') as any)
       .update({
         first_name: validated.firstName,
         last_name: validated.lastName,
         phone_number: validated.phone || null,
-      })
+      } as Database['public']['Tables']['profiles']['Update'])
       .eq('id', user.id)
 
     if (error) {
@@ -77,9 +79,10 @@ export async function endEvent(eventId: string) {
     console.log('[endEvent] Starting endEvent server action', { eventId });
     const cookieStore = cookies()
     const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
+    const typedSupabase = supabase as unknown as SupabaseClient<Database>
     
     console.log('[endEvent] Getting user from session...');
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const { data: { user }, error: userError } = await typedSupabase.auth.getUser()
     
     console.log('[endEvent] User check result', {
       hasUser: !!user,
@@ -114,9 +117,9 @@ export async function endEvent(eventId: string) {
     });
 
     // Update the event to set is_current = false
-    const { error, data } = await supabase
-      .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
-      .update({ is_current: false })
+    const { error, data } = await (typedSupabase
+      .from('events') as any)
+      .update({ is_current: false } as Database['public']['Tables']['events']['Update'])
       .eq('id', eventId)
       .select('id, event_name')
       .single()
@@ -160,19 +163,20 @@ export async function endEvent(eventId: string) {
 export async function deleteLog(logId: string) {
   try {
     const supabase = getServiceSupabaseClient()
+    const typedSupabase = supabase as unknown as SupabaseClient<Database>
     const numericLogId = parseInt(logId)
 
     // Delete related data first
-    await supabase.from<Database['public']['Tables']['incident_events']['Row'], Database['public']['Tables']['incident_events']['Update']>('incident_events').delete().eq('incident_id', numericLogId)
-    await supabase.from<Database['public']['Tables']['incident_attachments']['Row'], Database['public']['Tables']['incident_attachments']['Update']>('incident_attachments').delete().eq('incident_id', numericLogId)
-    await supabase.from<Database['public']['Tables']['incident_links']['Row'], Database['public']['Tables']['incident_links']['Update']>('incident_links').delete().or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`)
-    await supabase.from<Database['public']['Tables']['incident_escalations']['Row'], Database['public']['Tables']['incident_escalations']['Update']>('incident_escalations').delete().eq('incident_id', numericLogId)
-    await supabase.from<Database['public']['Tables']['incident_updates']['Row'], Database['public']['Tables']['incident_updates']['Update']>('incident_updates').delete().eq('incident_id', numericLogId)
-    await supabase.from<Database['public']['Tables']['staff_assignments']['Row'], Database['public']['Tables']['staff_assignments']['Update']>('staff_assignments').delete().eq('incident_id', numericLogId)
+    await typedSupabase.from('incident_events').delete().eq('incident_id', numericLogId)
+    await typedSupabase.from('incident_attachments').delete().eq('incident_id', numericLogId)
+    await typedSupabase.from('incident_links').delete().or(`incident_id.eq.${numericLogId},linked_incident_id.eq.${numericLogId}`)
+    await typedSupabase.from('incident_escalations').delete().eq('incident_id', numericLogId)
+    await typedSupabase.from('incident_updates').delete().eq('incident_id', numericLogId)
+    await typedSupabase.from('staff_assignments').delete().eq('incident_id', numericLogId)
 
     // Delete the main log
-    const { error } = await supabase
-      .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
+    const { error } = await typedSupabase
+      .from('incident_logs')
       .delete()
       .eq('id', numericLogId)
 
