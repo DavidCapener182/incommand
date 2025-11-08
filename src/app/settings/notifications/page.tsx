@@ -10,7 +10,27 @@ import { Switch } from '@/components/ui/switch';
 import { BellIcon, EnvelopeIcon, DevicePhoneMobileIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useToast } from '@/components/Toast';
 import { updateNotificationPreference } from '../actions';
-import type { Database } from '@/types/supabase';
+
+type NotificationSettingsRecord = {
+  user_id: string;
+  email_incidents: boolean | null;
+  email_updates: boolean | null;
+  email_reports: boolean | null;
+  email_social: boolean | null;
+  push_enabled: boolean | null;
+  push_sound: boolean | null;
+  push_vibrate: boolean | null;
+  push_incidents: boolean | null;
+  push_updates: boolean | null;
+  push_reports: boolean | null;
+  push_social: boolean | null;
+  sms_enabled: boolean | null;
+  sms_emergency_only: boolean | null;
+  sms_number: string | null;
+  quiet_hours_enabled: boolean | null;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+};
 
 export default function NotificationSettingsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -68,27 +88,29 @@ export default function NotificationSettingsPage() {
           throw error;
         }
 
-        if (data) {
+        const notificationData = data as NotificationSettingsRecord | null;
+
+        if (notificationData) {
           // Map database fields to component state
           setSettings({
-            userId: data.user_id,
-            emailIncidents: data.email_incidents || false,
-            emailUpdates: data.email_updates || false,
-            emailReports: data.email_reports || false,
-            emailSocial: data.email_social || false,
-            pushEnabled: data.push_enabled || false,
-            pushSound: data.push_sound || false,
-            pushVibrate: data.push_vibrate || false,
-            pushIncidents: data.push_incidents || false,
-            pushUpdates: data.push_updates || false,
-            pushReports: data.push_reports || false,
-            pushSocial: data.push_social || false,
-            smsEnabled: data.sms_enabled || false,
-            smsEmergencyOnly: data.sms_emergency_only !== false,
-            smsNumber: data.sms_number || null,
-            quietHoursEnabled: data.quiet_hours_enabled || false,
-            quietHoursStart: data.quiet_hours_start || null,
-            quietHoursEnd: data.quiet_hours_end || null,
+            userId: notificationData.user_id,
+            emailIncidents: notificationData.email_incidents ?? false,
+            emailUpdates: notificationData.email_updates ?? false,
+            emailReports: notificationData.email_reports ?? false,
+            emailSocial: notificationData.email_social ?? false,
+            pushEnabled: notificationData.push_enabled ?? false,
+            pushSound: notificationData.push_sound ?? false,
+            pushVibrate: notificationData.push_vibrate ?? false,
+            pushIncidents: notificationData.push_incidents ?? false,
+            pushUpdates: notificationData.push_updates ?? false,
+            pushReports: notificationData.push_reports ?? false,
+            pushSocial: notificationData.push_social ?? false,
+            smsEnabled: notificationData.sms_enabled ?? false,
+            smsEmergencyOnly: notificationData.sms_emergency_only !== false,
+            smsNumber: notificationData.sms_number ?? null,
+            quietHoursEnabled: notificationData.quiet_hours_enabled ?? false,
+            quietHoursStart: notificationData.quiet_hours_start,
+            quietHoursEnd: notificationData.quiet_hours_end,
           });
         } else {
           // Initialize with defaults if no data found
@@ -184,7 +206,7 @@ export default function NotificationSettingsPage() {
         };
 
         const dbField = dbFieldMap[field] || field;
-        const updateData: Record<string, any> = {
+        const updateData: Partial<NotificationSettingsRecord> & { user_id: string } = {
           user_id: user.id,
           [dbField]: value,
         };
