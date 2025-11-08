@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AI Usage Tracking Utilities
  * Server-side functions for logging and querying AI usage

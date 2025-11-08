@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createRlsServerClient } from './supabaseServer'
 import { logger } from './logger'

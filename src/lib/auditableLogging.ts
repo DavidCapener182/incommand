@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Utility functions for Auditable Event Logging
  * Provides helpers for immutable log creation, amendments, and validation

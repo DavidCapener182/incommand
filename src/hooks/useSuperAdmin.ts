@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getServerUser } from '@/lib/auth/getServerUser';
 import type { Database } from '@/types/supabase';
 

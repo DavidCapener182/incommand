@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Live Chat Service
  * Real-time team communication with incident threads

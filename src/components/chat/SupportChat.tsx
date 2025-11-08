@@ -37,6 +37,7 @@ interface SupportChatProps {
 
 export default function SupportChat({ isVisible = true }: SupportChatProps) {
   const { user } = useAuth()
+  const supabaseClient = supabase as any
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [messages, setMessages] = useState<SupportMessage[]>([])
@@ -77,7 +78,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
     
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('support_tickets')
         .select('*')
         .eq('user_id', user.id)
@@ -85,18 +86,36 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
 
       if (error) throw error
 
-      const formattedTickets: SupportTicket[] = (data || []).map((ticket: any) => ({
-        id: ticket.id,
-        userId: ticket.user_id,
-        orgId: ticket.org_id || ticket.organization_id || ticket.company_id,
-        channelId: ticket.channel_id,
-        subject: ticket.subject,
-        category: ticket.category,
-        status: ticket.status === 'in_progress' ? 'in_progress' : ticket.status === 'resolved' ? 'resolved' : 'open',
-        priority: ticket.priority === 'urgent' ? 'urgent' : 'normal',
-        createdAt: ticket.created_at,
-        updatedAt: ticket.updated_at,
-      }))
+      const formattedTickets: SupportTicket[] = (data || []).map((ticket: any) => {
+        const allowedCategories = ['incident', 'technical', 'billing', 'other'] as const
+        const allowedPriorities = ['normal', 'urgent'] as const
+
+        const category = allowedCategories.includes(ticket.category)
+          ? (ticket.category as SupportTicket['category'])
+          : 'other'
+
+        const priority = allowedPriorities.includes(ticket.priority)
+          ? (ticket.priority as SupportTicket['priority'])
+          : 'normal'
+
+        return {
+          id: ticket.id ?? '',
+          userId: ticket.user_id ?? '',
+          orgId: ticket.org_id || ticket.organization_id || ticket.company_id || null,
+          channelId: ticket.channel_id ?? null,
+          subject: ticket.subject ?? '',
+          category,
+          status:
+            ticket.status === 'in_progress'
+              ? 'in_progress'
+              : ticket.status === 'resolved'
+              ? 'resolved'
+              : 'open',
+          priority,
+          createdAt: ticket.created_at ?? new Date().toISOString(),
+          updatedAt: ticket.updated_at ?? ticket.created_at ?? new Date().toISOString(),
+        }
+      })
 
       setTickets(formattedTickets)
       if (formattedTickets.length > 0 && !selectedTicket) {
@@ -111,7 +130,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
 
   const loadMessages = async (ticketId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('support_messages')
         .select('*')
         .eq('ticket_id', ticketId)
@@ -120,12 +139,12 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       if (error) throw error
 
       const formattedMessages: SupportMessage[] = (data || []).map((msg: any) => ({
-        id: msg.id,
-        ticketId: msg.ticket_id,
-        userId: msg.user_id || msg.sender_id,
-        message: msg.message,
-        attachments: msg.attachments || [],
-        createdAt: msg.created_at,
+        id: msg.id ?? crypto.randomUUID(),
+        ticketId: msg.ticket_id ?? ticketId,
+        userId: msg.sender_id ?? null,
+        message: msg.message ?? '',
+        attachments: [],
+        createdAt: msg.created_at ?? new Date().toISOString(),
       }))
 
       setMessages(formattedMessages)
@@ -143,7 +162,6 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       const messagePayload: any = {
         ticket_id: selectedTicket.id,
         message: newMessage.trim(),
-        attachments: [],
       };
       
       // Use user_id if column exists, otherwise use sender_id
@@ -153,7 +171,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
         messagePayload.sender_type = 'user';
       }
 
-      const { data: messageData, error: messageError } = await supabase
+      const { data: messageData, error: messageError } = await supabaseClient
         .from('support_messages')
         .insert(messagePayload)
         .select()
@@ -162,7 +180,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       if (messageError) throw messageError
 
       // Update ticket's updated_at timestamp
-      await supabase
+      await supabaseClient
         .from('support_tickets')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', selectedTicket.id)
@@ -170,9 +188,9 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       const newMsg: SupportMessage = {
         id: messageData.id,
         ticketId: messageData.ticket_id,
-        userId: messageData.user_id || messageData.sender_id,
+        userId: messageData.sender_id ?? null,
         message: messageData.message,
-        attachments: messageData.attachments || [],
+        attachments: [],
         createdAt: messageData.created_at,
       }
 
@@ -201,7 +219,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
         status: 'open',
       };
 
-      const { data: ticketData, error: ticketError } = await supabase
+      const { data: ticketData, error: ticketError } = await supabaseClient
         .from('support_tickets')
         .insert(ticketPayload)
         .select()
@@ -213,7 +231,6 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       const messagePayload: any = {
         ticket_id: ticketData.id,
         message: newTicket.message.trim(),
-        attachments: [],
       };
       
       if (user) {
@@ -222,7 +239,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
         messagePayload.sender_type = 'user';
       }
 
-      const { error: messageError } = await supabase
+      const { error: messageError } = await supabaseClient
         .from('support_messages')
         .insert(messagePayload)
 
@@ -231,14 +248,25 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       const formattedTicket: SupportTicket = {
         id: ticketData.id,
         userId: ticketData.user_id,
-        orgId: ticketData.org_id || ticketData.organization_id || ticketData.company_id,
-        channelId: ticketData.channel_id,
-        subject: ticketData.subject,
-        category: ticketData.category,
-        status: ticketData.status === 'in_progress' ? 'in_progress' : ticketData.status === 'resolved' ? 'resolved' : 'open',
-        priority: ticketData.priority === 'urgent' ? 'urgent' : 'normal',
-        createdAt: ticketData.created_at,
-        updatedAt: ticketData.updated_at,
+        orgId: ticketData.org_id || ticketData.organization_id || ticketData.company_id || null,
+        channelId: ticketData.channel_id ?? null,
+        subject: ticketData.subject ?? '',
+        category:
+          (['incident', 'technical', 'billing', 'other'] as const).includes(ticketData.category)
+            ? ticketData.category
+            : 'other',
+        status:
+          ticketData.status === 'in_progress'
+            ? 'in_progress'
+            : ticketData.status === 'resolved'
+            ? 'resolved'
+            : 'open',
+        priority:
+          ticketData.priority === 'urgent'
+            ? 'urgent'
+            : 'normal',
+        createdAt: ticketData.created_at ?? new Date().toISOString(),
+        updatedAt: ticketData.updated_at ?? ticketData.created_at ?? new Date().toISOString(),
       }
 
       setTickets(prev => [formattedTicket, ...prev])

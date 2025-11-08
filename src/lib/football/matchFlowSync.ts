@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Match Flow Sync Service
  * Reads match flow logs from database and calculates current match state

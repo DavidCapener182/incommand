@@ -511,7 +511,7 @@ export default function SupportPage() {
             </div>
             <Button 
               type="submit"
-              variant="default"
+              variant="primary"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               disabled={isPending || isCreatingTicket}
             >

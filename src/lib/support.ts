@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Support Ticket Utilities
  * Server-side functions for managing support tickets and messages

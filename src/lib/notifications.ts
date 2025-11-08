@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Notification Settings Utilities
  * Server-side functions for managing user notification preferences

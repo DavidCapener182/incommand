@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'

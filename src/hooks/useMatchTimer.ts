@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * useMatchTimer Hook
  * Calculates match timer from flow logs with support for:

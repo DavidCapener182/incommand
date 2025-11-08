@@ -61,8 +61,18 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
               stewards: 0,
             },
             transportWeather: {
-              transport: {},
-              weather: {},
+              transport: {
+                rail: 'Normal service',
+                buses: 'Normal service',
+                taxi: 'Operating normally',
+                roadClosures: [],
+              },
+              weather: {
+                temp: 0,
+                wind: 'Calm',
+                condition: 'Clear',
+                risk: 'Low',
+              },
             },
           })
         }
