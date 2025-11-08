@@ -139,7 +139,7 @@ export default function GeneralSettingsPage() {
     };
 
     fetchProfile();
-  }, [user, authLoading]);
+  }, [user, authLoading, addToast]);
 
   // Track changes
   useEffect(() => {

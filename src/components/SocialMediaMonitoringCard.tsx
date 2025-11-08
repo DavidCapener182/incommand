@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ChatBubbleLeftRightIcon, 
@@ -27,7 +27,7 @@ export default function SocialMediaMonitoringCard({ eventId }: SocialMediaMonito
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -48,7 +48,7 @@ export default function SocialMediaMonitoringCard({ eventId }: SocialMediaMonito
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
 
   const fetchPosts = async () => {
     try {
@@ -72,7 +72,7 @@ export default function SocialMediaMonitoringCard({ eventId }: SocialMediaMonito
     // Refresh every 60 seconds
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
-  }, [eventId]);
+  }, [eventId, fetchData]);
 
   // Handle ESC key to close modal
   useEffect(() => {

@@ -28,7 +28,7 @@ interface HeroActionsProps {
 export const HeroActions = ({
   className,
   primaryHref = '/signup',
-  secondaryHref = '/features',
+  secondaryHref = '/#features',
   preLaunchLabel = 'Book a Demo',
   postLaunchLabel = 'Book a Demo',
   secondaryLabel = 'Explore Features',

@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '@/types/supabase'
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline'
@@ -24,7 +24,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   const { addToast, removeToast, clearAll } = useToast()
 
   // Function to handle capacity alerts
-  const handleCapacityAlert = (percentage: number, count: number, expected: number) => {
+  const handleCapacityAlert = useCallback((percentage: number, count: number, expected: number) => {
     const now = Date.now();
     const timeSinceLastAlert = now - lastAlertTimeRef.current;
     
@@ -57,7 +57,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       
       addToast(toastData);
     }
-  }
+  }, [addToast, clearAll])
 
   // Cleanup function to handle unsubscribe
   const cleanup = () => {
@@ -253,7 +253,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       }
       isCreatingToastRef.current = false;
     };
-      }, [currentEventId]); // Only depend on currentEventId to prevent flickering
+      }, [capacityToastId, currentEventId, handleCapacityAlert, removeToast]); // Only depend on currentEventId to prevent flickering
 
 
   // Calculate percentage and determine progress bar color

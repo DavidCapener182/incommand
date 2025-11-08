@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -120,9 +120,9 @@ export default function EnhancedAIInsights({
       generatePredictiveForecast();
       analyzePatterns();
     }
-  }, [insights, enablePredictiveMode]);
+  }, [insights.length, enablePredictiveMode, generatePredictiveForecast, analyzePatterns]);
 
-  const generatePredictiveForecast = () => {
+  const generatePredictiveForecast = useCallback(() => {
     const currentInsight = insights[currentIndex];
     if (!currentInsight) return;
 
@@ -153,9 +153,9 @@ export default function EnhancedAIInsights({
     };
 
     setPredictiveData(forecast);
-  };
+  }, [currentIndex, insights]);
 
-  const analyzePatterns = () => {
+  const analyzePatterns = useCallback(() => {
     const patterns: PatternAnalysis[] = [
       {
         patternType: 'temporal',
@@ -193,7 +193,7 @@ export default function EnhancedAIInsights({
     ];
 
     setPatternData(patterns);
-  };
+  }, [insights]);
 
   const currentInsight = insights[currentIndex];
 

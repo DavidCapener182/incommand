@@ -71,7 +71,7 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
     } else {
       showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
     }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification]);
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   const setupSubscription = useCallback(async () => {
     let subscription: any;
@@ -133,10 +133,10 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
     }
 
     return subscription;
-  }, [eventId]);
+  }, [eventId, fetchStaffData, fetchStaffDataDirect]);
 
   // Direct function to avoid circular dependency
-  const fetchStaffDataDirect = async () => {
+  const fetchStaffDataDirect = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -173,7 +173,7 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchStaffData = useCallback(async () => {
     try {
@@ -242,7 +242,7 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
       }
       clearInterval(interval);
     };
-  }, [eventId, isConnected, isReconnecting, setupSubscription]);
+  }, [eventId, isConnected, isReconnecting, setupSubscription, fetchStaffDataDirect]);
 
   // Calculate efficiency metrics using hook data
   const calculateEfficiencyMetrics = () => {

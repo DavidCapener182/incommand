@@ -334,7 +334,7 @@ export function useVirtualizedIncidents(
     } finally {
       setLoading(false)
     }
-  }, [hasMore, loading, page, pageSize])
+  }, [hasMore, loading])
   
   const updateIncident = useCallback((incidentId: number, updates: Partial<Incident>) => {
     setIncidents(prev => 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { PaperAirplaneIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -53,27 +53,7 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (user && isVisible) {
-      loadTickets()
-    }
-  }, [user, isVisible])
-
-  useEffect(() => {
-    if (selectedTicket) {
-      loadMessages(selectedTicket.id)
-    }
-  }, [selectedTicket])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const loadTickets = async () => {
+  const loadTickets = useCallback(async () => {
     if (!user) return
     
     setLoading(true)
@@ -118,17 +98,18 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
       })
 
       setTickets(formattedTickets)
+
       if (formattedTickets.length > 0 && !selectedTicket) {
         setSelectedTicket(formattedTickets[0])
       }
     } catch (error) {
-      console.error('Failed to load tickets:', error)
+      console.error('Error loading tickets:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedTicket, supabaseClient, user])
 
-  const loadMessages = async (ticketId: string) => {
+  const loadMessages = useCallback(async (ticketId: string) => {
     try {
       const { data, error } = await supabaseClient
         .from('support_messages')
@@ -138,20 +119,41 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
 
       if (error) throw error
 
-      const formattedMessages: SupportMessage[] = (data || []).map((msg: any) => ({
-        id: msg.id ?? crypto.randomUUID(),
-        ticketId: msg.ticket_id ?? ticketId,
-        userId: msg.sender_id ?? null,
-        message: msg.message ?? '',
-        attachments: [],
-        createdAt: msg.created_at ?? new Date().toISOString(),
+      const formattedMessages: SupportMessage[] = (data || []).map((message: any) => ({
+        id: message.id ?? '',
+        ticketId: message.ticket_id ?? '',
+        userId: message.user_id,
+        message: message.message ?? '',
+        attachments: message.attachments ?? [],
+        createdAt: message.created_at ?? new Date().toISOString(),
       }))
 
       setMessages(formattedMessages)
     } catch (error) {
-      console.error('Failed to load messages:', error)
+      console.error('Error loading messages:', error)
     }
+  }, [supabaseClient])
+
+  useEffect(() => {
+    if (user && isVisible) {
+      loadTickets()
+    }
+  }, [isVisible, loadTickets, user])
+
+  useEffect(() => {
+    if (selectedTicket) {
+      loadMessages(selectedTicket.id)
+    }
+  }, [loadMessages, selectedTicket])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
 
   const handleSendMessage = async () => {
     if (!selectedTicket || !newMessage.trim() || !user) return
@@ -505,4 +507,3 @@ export default function SupportChat({ isVisible = true }: SupportChatProps) {
     </div>
   )
 }
-

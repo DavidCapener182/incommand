@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { supabase } from '../lib/supabase'
@@ -230,7 +230,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
     // Cleanup on unmount or when modal closes
     return cleanup;
-  }, [isOpen, incidentId]);
+  }, [isOpen, incidentId, fetchIncidentDetails]);
 
   useEffect(() => {
     // Fetch current event id
@@ -245,7 +245,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     fetchEvent();
   }, []);
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     if (!currentEventId) return;
     
     try {
@@ -271,15 +271,16 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     } catch (error) {
       console.error('Error fetching callsign assignments:', error);
     }
-  };
+  }, [currentEventId]);
 
-  const getSignedUrl = async () => {
-    if (!incident?.photo_url) return;
+  const getSignedUrl = useCallback(async (photoUrl?: string) => {
+    const targetPhotoUrl = photoUrl ?? incident?.photo_url;
+    if (!targetPhotoUrl) return;
     
     try {
       const { data } = await supabase.storage
         .from('incident-photos')
-        .createSignedUrl(incident.photo_url, 3600);
+        .createSignedUrl(targetPhotoUrl, 3600);
       
       if (data?.signedUrl) {
         setPhotoUrl(data.signedUrl);
@@ -287,11 +288,9 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     } catch (error) {
       console.error('Error getting signed URL:', error);
     }
-  };
+  }, [incident?.photo_url]);
 
-
-
-  const fetchIncidentDetails = async () => {
+  const fetchIncidentDetails = useCallback(async () => {
     if (!incidentId) return;
 
     setLoading(true);
@@ -335,7 +334,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       // Fetch additional data
       await Promise.all([
         fetchAssignments(),
-        getSignedUrl()
+        getSignedUrl(incidentData?.photo_url)
       ]);
 
     } catch (err) {
@@ -344,7 +343,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     } finally {
       setLoading(false);
     }
-  };
+  }, [incidentId, fetchAssignments, getSignedUrl]);
 
   const handleEscalationSuccess = (_escalation: EscalationResponse) => {
     setIncident((prev) => {

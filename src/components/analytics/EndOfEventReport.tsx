@@ -527,7 +527,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       return
     }
     fetchEventData()
-  }, [eventId])
+  }, [eventId, fetchEventData])
 
   const generateCSVReport = useCallback((): string => {
     const rows = [

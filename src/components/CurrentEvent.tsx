@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import EventCreationModal from './EventCreationModal'
@@ -117,16 +117,18 @@ export default function CurrentEvent({
     }
   }
 
-  const fetchAiInsights = async () => {
+  const currentEventId = currentEvent?.id
+
+  const fetchAiInsights = useCallback(async () => {
     try {
       setAiLoading(true)
       setAiError(null)
       
-      if (!currentEvent?.id) {
+      if (!currentEventId) {
         throw new Error('No current event selected')
       }
-      
-      const response = await fetch(`/api/notifications/ai-summary?eventId=${currentEvent.id}`)
+
+      const response = await fetch(`/api/notifications/ai-summary?eventId=${currentEventId}`)
       if (!response.ok) throw new Error('Failed to fetch AI insights')
       
       const data = await response.json()
@@ -169,16 +171,16 @@ export default function CurrentEvent({
     } finally {
       setAiLoading(false)
     }
-  }
+  }, [currentEventId])
 
   useEffect(() => {
-    if (currentEvent) {
+    if (currentEventId) {
       fetchAiInsights()
       // Refresh every 5 minutes
       const interval = setInterval(fetchAiInsights, 5 * 60 * 1000)
       return () => clearInterval(interval)
     }
-  }, [currentEvent])
+  }, [currentEventId, fetchAiInsights])
 
   // Auto-advance logic - increased to 45 seconds
   useEffect(() => {

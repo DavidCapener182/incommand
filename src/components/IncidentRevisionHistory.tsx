@@ -5,7 +5,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   ChevronDownIcon, 
   ChevronUpIcon,
@@ -64,13 +64,7 @@ export default function IncidentRevisionHistory({
     }
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      loadRevisions()
-    }
-  }, [isOpen, incidentId])
-
-  const loadRevisions = async () => {
+  const loadRevisions = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -88,7 +82,13 @@ export default function IncidentRevisionHistory({
     } finally {
       setLoading(false)
     }
-  }
+  }, [incidentId])
+
+  useEffect(() => {
+    if (isOpen) {
+      loadRevisions()
+    }
+  }, [isOpen, loadRevisions])
 
   const summary = getRevisionSummary(revisions)
 

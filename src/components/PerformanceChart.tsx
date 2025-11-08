@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useMemo, useRef, useEffect } from 'react'
+import React, { memo, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 
 interface PerformanceChartProps {
@@ -40,7 +40,7 @@ const PerformanceChart = memo(function PerformanceChart({
 
   const maxValue = useMemo(() => Math.max(...data.map(d => d.value)), [data])
 
-  const drawChart = (progress = 1) => {
+  const drawChart = useCallback((progress = 1) => {
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -150,7 +150,7 @@ const PerformanceChart = memo(function PerformanceChart({
         currentAngle += sliceAngle
       })
     }
-  }
+  }, [colors, data, maxValue, showLabels, showValues, type])
 
   useEffect(() => {
     if (animate) {
@@ -178,7 +178,7 @@ const PerformanceChart = memo(function PerformanceChart({
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [data, type, animate])
+  }, [data, type, animate, drawChart])
 
   // Handle resize
   useEffect(() => {
@@ -188,7 +188,7 @@ const PerformanceChart = memo(function PerformanceChart({
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [animate])
+  }, [animate, drawChart])
 
   return (
     <motion.div

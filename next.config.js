@@ -4,6 +4,15 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   
+  // Redirects for unified marketing page
+  async redirects() {
+    return [
+      { source: '/features', destination: '/#features', permanent: true },
+      { source: '/about', destination: '/#how-it-works', permanent: true },
+      { source: '/pricing', destination: '/#pricing', permanent: true },
+    ];
+  },
+  
   // Disable service workers in development
   ...(process.env.NODE_ENV === 'development' && {
     async rewrites() {

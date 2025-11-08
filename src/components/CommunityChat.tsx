@@ -26,6 +26,7 @@ export function getGroupInfoTooltip(name: string) {
 // CommunityChat component for group chat UI/UX
 const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToast, isMobile, inputRef, handleInputFocus, handleInputBlur }) => {
   const { user } = useAuth();
+  const userId = user?.id;
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +70,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
             const lastMsg = result.data[result.data.length - 1];
             if (
               lastMsg.id !== lastToastMsgId.current &&
-              lastMsg.user_id !== user?.id
+              lastMsg.user_id !== userId
             ) {
               const jumpToMessage = () => {
                 const el = messageRefs.current[lastMsg.id];
@@ -94,7 +95,7 @@ const CommunityChat: React.FC<CommunityChatProps> = ({ chatId, chatName, addToas
       });
     // Optionally: add real-time subscription here
     // ...
-  }, [chatId]);
+  }, [chatId, addToast, userId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   RadioIcon,
@@ -77,7 +77,7 @@ export default function RadioSignOutSystem({
     spareBattery: false
   })
 
-  const fetchSignOuts = async () => {
+  const fetchSignOuts = useCallback(async () => {
     setLoading(true)
     setError(null)
     
@@ -99,13 +99,13 @@ export default function RadioSignOutSystem({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   useEffect(() => {
     if (eventId) {
       fetchSignOuts()
     }
-  }, [eventId])
+  }, [eventId, fetchSignOuts])
 
   // Auto-refresh every 30 seconds to keep data in sync
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function RadioSignOutSystem({
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
-  }, [eventId])
+  }, [eventId, fetchSignOuts])
 
   // Equipment handlers
   const handleEquipmentChange = (item: keyof typeof equipment) => {

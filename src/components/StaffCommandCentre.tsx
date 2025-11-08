@@ -85,6 +85,26 @@ const StaffList = () => {
     active: true,
   });
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+  const fetchStaff = useCallback(async () => {
+    if (!userCompanyId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('company_id', userCompanyId)
+        .order('full_name');
+      
+      if (error) throw error;
+      setStaff(data || []);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      setStaff([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [userCompanyId]);
 
   useEffect(() => {
     fetchUserCompany();
@@ -94,7 +114,7 @@ const StaffList = () => {
     if (userCompanyId) {
       fetchStaff();
     }
-  }, [userCompanyId]);
+  }, [userCompanyId, fetchStaff]);
 
   async function fetchUserCompany() {
     try {
@@ -117,26 +137,6 @@ const StaffList = () => {
     }
   }
 
-  async function fetchStaff() {
-    if (!userCompanyId) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('*')
-        .eq('company_id', userCompanyId)
-        .order('full_name');
-      
-      if (error) throw error;
-      setStaff(data || []);
-    } catch (error) {
-      console.error('Error fetching staff:', error);
-      setStaff([]);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function openAddModal() {
     setCurrentStaff({

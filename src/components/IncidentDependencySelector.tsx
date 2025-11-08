@@ -137,7 +137,7 @@ export default function IncidentDependencySelector({
     };
 
     calculateCircularDependencies();
-  }, [incidents, currentIncidentId]);
+  }, [incidents, currentIncidentId, checkCircularDependency]);
 
   // Handle dependency selection
   const handleDependencyToggle = useCallback(async (incidentId: string) => {

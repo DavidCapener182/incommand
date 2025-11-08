@@ -205,7 +205,7 @@ export default function What3WordsSearchCard({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchInput, searchWhat3Words, searchGeocode, gpsState.currentLocation]);
+  }, [searchInput, searchWhat3Words, searchGeocode, gpsState.currentLocation, updateDropdownPosition]);
 
   // Update dropdown position
   const updateDropdownPosition = useCallback(() => {
@@ -309,7 +309,7 @@ export default function What3WordsSearchCard({
         setActiveIndex(-1);
         break;
     }
-  }, [activeIndex, searchSuggestions, geocodeSuggestions, searchInput]);
+  }, [activeIndex, geocodeSuggestions, handleGeocodeSelect, handleSearchSubmit, handleSuggestionSelect, searchInput, searchSuggestions]);
 
   // Handle suggestion selection
   const handleSuggestionSelect = useCallback(async (suggestion: SearchSuggestion) => {

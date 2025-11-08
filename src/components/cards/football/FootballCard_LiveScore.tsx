@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData, FootballPhase } from '@/types/football'
 import { RefreshCw, Download, Settings } from 'lucide-react'
@@ -51,7 +51,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     return (mm || 0) + (ss ? ss / 60 : 0)
   }, [matchTimer.displayTime, data?.liveScore.time])
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       // Only load if we don't have eventId (fallback for non-football events)
       // For football events, syncMatchFlow() handles the data loading
@@ -70,10 +70,10 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     } catch (error) {
       console.error('Error loading football data:', error)
     }
-  }
+  }, [eventId, load, syncMatchFlow])
 
   // Sync match flow data from database
-  const syncMatchFlow = async () => {
+  const syncMatchFlow = useCallback(async () => {
     if (!eventId) return
 
     try {
@@ -118,7 +118,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
       console.error('Error syncing match flow:', error)
       // Don't reset scores on error - keep current data
     }
-  }
+  }, [eventId, previousScore])
 
   useEffect(() => {
     let mounted = true
@@ -202,7 +202,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
         subscriptionRef.current.unsubscribe()
       }
     }
-  }, [autoRefresh, eventId])
+  }, [autoRefresh, eventId, load, syncMatchFlow])
 
   const circumference = 2 * Math.PI * 45
   const progress = Math.min(minutesFromTime / matchDuration, 1)
@@ -398,5 +398,3 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     </div>
   )
 }
-
-

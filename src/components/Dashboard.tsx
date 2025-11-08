@@ -984,7 +984,7 @@ export default function Dashboard() {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
     }
-  }, [companyId, userRole]);
+  }, [companyId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
