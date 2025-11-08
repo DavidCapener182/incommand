@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/auth/getServerUser'
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout'
 import PricingPlansManager from '@/components/admin/pricing/PricingPlansManager'
+import QuoteCalculator from '@/components/admin/pricing/QuoteCalculator'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,9 @@ export default async function PricingPage() {
 
         {/* Pricing Plans Manager */}
         <PricingPlansManager />
+
+        {/* Quote Calculator */}
+        <QuoteCalculator />
       </div>
     </SuperAdminLayout>
   )

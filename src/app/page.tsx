@@ -8,7 +8,7 @@ import { FadeIn } from '@/components/marketing/Motion'
 import { HeroActions } from '@/components/marketing/interactives/HeroActions'
 import { FeatureShowcase } from '@/components/marketing/interactives/FeatureShowcase'
 import { PricingPlans, type PricingPlan } from '@/components/marketing/interactives/PricingPlans'
-import { defaultMarketingPlans } from '@/data/marketingPlans'
+import { PRICING_PLANS, type Plan, type PlanCode } from '@/config/PricingConfig'
 import { pageMetadata } from '@/config/seo.config'
 import { getServerUser } from '@/lib/auth/getServerUser'
 import {
@@ -26,55 +26,110 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 
-async function loadPlans(): Promise<PricingPlan[]> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
-    if (!baseUrl) {
-      // If no base URL, use default plans
-      return defaultMarketingPlans.map((p) => ({
-        name: p.name,
-        price: `£${p.priceMonthly}`,
-        period: 'per month',
-        description: '',
-        features: p.features,
-        cta: 'Get Started',
-        ctaLink: '/signup',
-        highlighted: p.code === 'professional',
-      }))
-    }
-    
-    const res = await fetch(`${baseUrl}/api/billing/plans`, { 
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    })
-    if (res.ok) {
-      const json = await res.json()
-      const apiPlans = (json.plans ?? []).map((p: any) => ({
-        name: p.name,
-        price: `£${p.price_monthly ?? 0}`,
-        period: 'per month',
-        description: '',
-        features: p.metadata?.features ?? [],
-        cta: 'Get Started',
-        ctaLink: '/signup',
-        highlighted: p.code === 'professional',
-      })) as PricingPlan[]
-      if (apiPlans.length > 0) return apiPlans
-    }
-  } catch (error) {
-    console.error('Error loading plans:', error)
+const PLAN_ORDER: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
+const CURRENCY_SYMBOLS: Record<string, string> = { GBP: '£', USD: '$', EUR: '€' }
+const PLAN_NOTES: Record<PlanCode, string> = {
+  starter: 'Built for smaller teams just getting started.',
+  operational: 'Our most popular plan for growing venues.',
+  command: 'Advanced control and AI insights for complex operations.',
+  enterprise: 'Includes dedicated onboarding, custom SLAs, and private deployment options.',
+}
+
+function buildPricingPlan(
+  plan: Plan,
+  options: {
+    monthlyPrice?: number | null
+    annualPrice?: number | null
+    currency?: string
+    features?: string[]
+  } = {}
+): PricingPlan {
+  const monthlyPrice =
+    options.monthlyPrice !== undefined
+      ? options.monthlyPrice
+      : typeof plan.pricing.monthly === 'number'
+      ? plan.pricing.monthly
+      : null
+
+  const annualPrice =
+    options.annualPrice !== undefined
+      ? options.annualPrice
+      : typeof plan.pricing.annual === 'number'
+      ? plan.pricing.annual
+      : null
+
+  const currency = options.currency ?? plan.pricing.currency
+  const features = options.features ?? plan.features.features
+  const isCustom = monthlyPrice === null
+
+  return {
+    name: plan.displayName,
+    description: plan.metadata.description ?? '',
+    features,
+    cta: isCustom ? 'Talk to Sales' : 'Get Started',
+    ctaLink: isCustom
+      ? 'mailto:support@incommand.uk?subject=InCommand%20Enterprise%20Pricing'
+      : `/signup?plan=${plan.code}`,
+    note: PLAN_NOTES[plan.code],
+    monthlyPrice,
+    annualPrice,
+    currency,
+    isCustom,
   }
-  // Fallback to marketing defaults when no DB plans
-  return defaultMarketingPlans.map((p) => ({
-    name: p.name,
-    price: `£${p.priceMonthly}`,
-    period: 'per month',
-    description: '',
-    features: p.features,
-    cta: 'Get Started',
-    ctaLink: '/signup',
-    highlighted: p.code === 'professional',
-  }))
+}
+
+async function loadPlans(): Promise<PricingPlan[]> {
+  const normalizedBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+
+  if (normalizedBase) {
+    try {
+      const baseUrl = normalizedBase.startsWith('http') ? normalizedBase : `https://${normalizedBase}`
+      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/billing/plans`, {
+        cache: 'no-store',
+        next: { revalidate: 0 },
+      })
+
+      if (res.ok) {
+        const json = await res.json()
+        const planMap = new Map<string, any>((json.plans ?? []).map((p: any) => [p.code, p]))
+
+        const apiPlans = PLAN_ORDER.map((code) => {
+          const configPlan = PRICING_PLANS[code]
+          if (!configPlan) return null
+          const apiPlan = planMap.get(code)
+
+          const monthlyPrice =
+            typeof apiPlan?.price_monthly === 'number'
+              ? apiPlan.price_monthly
+              : typeof configPlan.pricing.monthly === 'number'
+              ? configPlan.pricing.monthly
+              : null
+
+          const annualPrice =
+            typeof apiPlan?.price_annual === 'number'
+              ? apiPlan.price_annual
+              : typeof configPlan.pricing.annual === 'number'
+              ? configPlan.pricing.annual
+              : null
+
+          const currency = apiPlan?.currency ?? configPlan.pricing.currency
+          const features = Array.isArray(apiPlan?.metadata?.features)
+            ? apiPlan.metadata.features
+            : configPlan.features.features
+
+          return buildPricingPlan(configPlan, { monthlyPrice, annualPrice, currency, features })
+        }).filter((plan): plan is PricingPlan => Boolean(plan))
+
+        if (apiPlans.length > 0) {
+          return apiPlans
+        }
+      }
+    } catch (error) {
+      console.error('Error loading plans:', error)
+    }
+  }
+
+  return PLAN_ORDER.map((code) => buildPricingPlan(PRICING_PLANS[code]))
 }
 
 const testimonials = [

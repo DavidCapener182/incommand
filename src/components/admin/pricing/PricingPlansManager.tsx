@@ -326,17 +326,12 @@ export default function PricingPlansManager() {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white">Key Features:</h4>
                   <ul className="space-y-1">
-                    {plan.features.features.slice(0, 5).map((feature, idx) => (
+                    {plan.features.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
                         <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
-                    {plan.features.features.length > 5 && (
-                      <li className="text-xs text-gray-500 dark:text-gray-400">
-                        +{plan.features.features.length - 5} more features
-                      </li>
-                    )}
                   </ul>
                 </div>
 

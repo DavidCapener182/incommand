@@ -11,12 +11,14 @@ import {
   CogIcon,
   BookOpenIcon,
   CalculatorIcon,
-  BanknotesIcon
+  BanknotesIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: HomeIcon },
   { href: '/admin/companies', label: 'Companies', icon: BuildingOfficeIcon },
+  { href: '/admin/crm', label: 'CRM', icon: UserGroupIcon },
   { href: '/admin/billing', label: 'Billing', icon: CreditCardIcon },
   { href: '/admin/pricing', label: 'Pricing', icon: BanknotesIcon },
   { href: '/admin/accounting/ledger', label: 'Accounting Ledger', icon: CalculatorIcon },

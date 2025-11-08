@@ -64,9 +64,7 @@ export const PRICING_PLANS: Record<PlanCode, Plan> = {
       features: [
         'Event dashboard',
         'Basic incident management',
-        'Staff scheduling',
         'Email notifications',
-        'Mobile app access',
         'Basic analytics',
         'Email support',
       ],
@@ -95,13 +93,12 @@ export const PRICING_PLANS: Record<PlanCode, Plan> = {
       maxStaff: 20,
       features: [
         'Everything in Starter',
+        'Mobile app access',
+        'Staff scheduling',
         'Advanced reporting',
         'SMS alerts',
-        'API access',
-        'Custom branding',
         'Priority support',
-        'Advanced analytics',
-        'Multi-event management',
+        'Advanced analytics'
       ],
       addOns: ['AI-powered insights', 'Custom integrations', 'White-label options'],
     },
@@ -128,6 +125,7 @@ export const PRICING_PLANS: Record<PlanCode, Plan> = {
       maxStaff: 50,
       features: [
         'Everything in Operational',
+        'Multi-event management',
         'AI-powered insights',
         'Advanced analytics suite',
         'Custom integrations',
@@ -161,6 +159,8 @@ export const PRICING_PLANS: Record<PlanCode, Plan> = {
       maxStaff: -1, // Unlimited
       features: [
         'Everything in Command',
+        'API access',
+        'Custom branding',
         'Unlimited events',
         'Unlimited attendees',
         'Unlimited staff',
