@@ -22,6 +22,23 @@ export function useOffline() {
     lastSyncTime: null
   })
 
+  const handleServiceWorkerMessage = useCallback((message: any) => {
+    console.log('Service worker message:', message)
+
+    if (message.type === 'incident-synced' || message.type === 'log-synced') {
+      setState(prev => ({
+        ...prev,
+        hasPendingSync: false,
+        syncStatus: message.data.success ? 'success' : 'error',
+        lastSyncTime: new Date()
+      }))
+
+      setTimeout(() => {
+        setState(prev => ({ ...prev, syncStatus: 'idle' }))
+      }, 3000)
+    }
+  }, [])
+
   // Initialize service worker
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -90,25 +107,6 @@ export function useOffline() {
     }
   }, [])
 
-  // Handle service worker messages
-  const handleServiceWorkerMessage = useCallback((message: any) => {
-    console.log('Service worker message:', message)
-
-    if (message.type === 'incident-synced' || message.type === 'log-synced') {
-      setState(prev => ({
-        ...prev,
-        hasPendingSync: false,
-        syncStatus: message.data.success ? 'success' : 'error',
-        lastSyncTime: new Date()
-      }))
-
-      // Reset sync status after 3 seconds
-      setTimeout(() => {
-        setState(prev => ({ ...prev, syncStatus: 'idle' }))
-      }, 3000)
-    }
-  }, [])
-
   // Save data for offline use
   const saveOfflineData = useCallback(async (type: 'incident' | 'log', data: any) => {
     try {
@@ -167,39 +165,10 @@ export function useOffline() {
     }
   }, [])
 
-  // Manually trigger sync
-  const triggerSync = useCallback(async () => {
-    if (!state.isOnline) {
-      console.warn('Cannot sync while offline')
-      return false
-    }
-
-    setState(prev => ({ ...prev, syncStatus: 'syncing' }))
-
-    try {
-      if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
-        const registration: any = await navigator.serviceWorker.ready
-        await registration.sync.register('sync-incidents')
-        await registration.sync.register('sync-logs')
-        console.log('Sync triggered successfully')
-        return true
-      } else {
-        // Fallback for browsers without background sync
-        await manualSync()
-        return true
-      }
-    } catch (error) {
-      console.error('Sync failed:', error)
-      setState(prev => ({ ...prev, syncStatus: 'error' }))
-      return false
-    }
-  }, [manualSync, state.isOnline])
-
-  // Manual sync fallback
   const manualSync = useCallback(async () => {
     try {
       const db = await openIndexedDB()
-      
+
       // Sync incidents
       const incidentsTx = db.transaction('pendingIncidents', 'readwrite')
       const incidentsStore = incidentsTx.objectStore('pendingIncidents')
@@ -250,6 +219,32 @@ export function useOffline() {
       throw error
     }
   }, [])
+
+  const triggerSync = useCallback(async () => {
+    if (!state.isOnline) {
+      console.warn('Cannot sync while offline')
+      return false
+    }
+
+    setState(prev => ({ ...prev, syncStatus: 'syncing' }))
+
+    try {
+      if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
+        const registration: any = await navigator.serviceWorker.ready
+        await registration.sync.register('sync-incidents')
+        await registration.sync.register('sync-logs')
+        console.log('Sync triggered successfully')
+        return true
+      } else {
+        await manualSync()
+        return true
+      }
+    } catch (error) {
+      console.error('Sync failed:', error)
+      setState(prev => ({ ...prev, syncStatus: 'error' }))
+      return false
+    }
+  }, [manualSync, state.isOnline])
 
   // Clear cache
   const clearCache = useCallback(async () => {

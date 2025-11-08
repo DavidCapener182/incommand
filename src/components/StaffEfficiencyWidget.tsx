@@ -53,88 +53,6 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
     }, 5000);
   }, []);
 
-  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
-    console.error(`Subscription error for ${channelName}:`, error);
-    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
-    setIsConnected(false);
-    
-    if (retryCount < MAX_RETRIES) {
-      setIsReconnecting(true);
-      const delay = calculateBackoffDelay(retryCount);
-      
-      setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        setupSubscription();
-      }, delay);
-      
-      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
-    } else {
-      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
-    }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
-
-  const setupSubscription = useCallback(async () => {
-    let subscription: any;
-
-    try {
-      // Check if staff table exists first
-      const { error: tableCheckError } = await supabase
-        .from('staff')
-        .select('id')
-        .limit(1);
-
-      if (tableCheckError) {
-        console.warn('Staff table not found, using hook data');
-        setStaffData([]);
-        setLoading(false);
-        setError(null);
-        setConnectionError(null);
-        return;
-      }
-
-      subscription = supabase
-        .channel(`staff-efficiency-${eventId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'staff'
-          },
-          () => {
-            fetchStaffData();
-            setConnectionError(null); // Clear any previous errors on successful update
-          }
-        )
-
-        .subscribe((status) => {
-          console.log(`Staff subscription status: ${status}`);
-          // Show as connected if subscription works, or if we can fetch data
-          setIsConnected(status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT');
-          setIsReconnecting(false);
-          
-          if (status === 'SUBSCRIBED') {
-            setConnectionError(null);
-            setRetryCount(0);
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            // Don't treat these as critical errors - just log them
-            console.warn(`Staff efficiency subscription ${status.toLowerCase()}`);
-            setConnectionError(null);
-          }
-        });
-
-      // Always try to fetch data regardless of subscription status
-      await fetchStaffDataDirect();
-    } catch (error) {
-      console.error('Error setting up staff subscription:', error);
-      // Don't treat setup errors as critical - continue with data fetching
-      setConnectionError(null);
-      await fetchStaffDataDirect();
-    }
-
-    return subscription;
-  }, [eventId, fetchStaffData, fetchStaffDataDirect]);
-
   // Direct function to avoid circular dependency
   const fetchStaffDataDirect = useCallback(async () => {
     try {
@@ -213,6 +131,82 @@ export default function StaffEfficiencyWidget({ eventId }: StaffEfficiencyWidget
       setLoading(false);
     }
   }, []);
+
+  const setupSubscription = useCallback(async () => {
+    let subscription: any;
+
+    try {
+      const { error: tableCheckError } = await supabase
+        .from('staff')
+        .select('id')
+        .limit(1);
+
+      if (tableCheckError) {
+        console.warn('Staff table not found, using hook data');
+        setStaffData([]);
+        setLoading(false);
+        setError(null);
+        setConnectionError(null);
+        return;
+      }
+
+      subscription = supabase
+        .channel(`staff-efficiency-${eventId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'staff'
+          },
+          () => {
+            fetchStaffData();
+            setConnectionError(null);
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Staff subscription status: ${status}`);
+          setIsConnected(status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT');
+          setIsReconnecting(false);
+          
+          if (status === 'SUBSCRIBED') {
+            setConnectionError(null);
+            setRetryCount(0);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn(`Staff efficiency subscription ${status.toLowerCase()}`);
+            setConnectionError(null);
+          }
+        });
+
+      await fetchStaffDataDirect();
+    } catch (error) {
+      console.error('Error setting up staff subscription:', error);
+      setConnectionError(null);
+      await fetchStaffDataDirect();
+    }
+
+    return subscription;
+  }, [eventId, fetchStaffData, fetchStaffDataDirect]);
+
+  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
+    console.error(`Subscription error for ${channelName}:`, error);
+    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
+    setIsConnected(false);
+    
+    if (retryCount < MAX_RETRIES) {
+      setIsReconnecting(true);
+      const delay = calculateBackoffDelay(retryCount);
+      
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setupSubscription();
+      }, delay);
+      
+      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
+    } else {
+      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
+    }
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   useEffect(() => {
     let subscription: any;

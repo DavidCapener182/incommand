@@ -181,32 +181,6 @@ export default function What3WordsSearchCard({
     }
   }, [isWhat3WordsPattern]);
 
-  // Handle search input changes with debouncing
-  useEffect(() => {
-    const timeoutId = setTimeout(async () => {
-      if (searchInput.trim()) {
-        const location = gpsState.currentLocation;
-        const focus = location ? { lat: location.latitude, lon: location.longitude } : undefined;
-        
-        // Search both What3Words and geocoding in parallel
-        await Promise.all([
-          searchWhat3Words(searchInput, focus),
-          searchGeocode(searchInput)
-        ]);
-        
-        // Update dropdown position when suggestions change
-        updateDropdownPosition();
-      } else {
-        setSearchSuggestions([]);
-        setGeocodeSuggestions([]);
-        setDropdownPosition(null);
-        setShowDropdown(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchInput, searchWhat3Words, searchGeocode, gpsState.currentLocation, updateDropdownPosition]);
-
   // Update dropdown position
   const updateDropdownPosition = useCallback(() => {
     if (searchInputRef.current) {
@@ -235,6 +209,29 @@ export default function What3WordsSearchCard({
       setShowDropdown(true);
     }
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (searchInput.trim()) {
+        const location = gpsState.currentLocation;
+        const focus = location ? { lat: location.latitude, lon: location.longitude } : undefined;
+        
+        await Promise.all([
+          searchWhat3Words(searchInput, focus),
+          searchGeocode(searchInput)
+        ]);
+        
+        updateDropdownPosition();
+      } else {
+        setSearchSuggestions([]);
+        setGeocodeSuggestions([]);
+        setDropdownPosition(null);
+        setShowDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchWhat3Words, searchGeocode, gpsState.currentLocation, updateDropdownPosition]);
 
   // Handle scroll and resize events
   useEffect(() => {
@@ -277,39 +274,6 @@ export default function What3WordsSearchCard({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showDropdown]);
-
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const totalSuggestions = searchSuggestions.length + geocodeSuggestions.length;
-    
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setActiveIndex(prev => Math.min(prev + 1, totalSuggestions - 1));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setActiveIndex(prev => Math.max(prev - 1, -1));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (activeIndex >= 0) {
-          if (activeIndex < searchSuggestions.length) {
-            handleSuggestionSelect(searchSuggestions[activeIndex]);
-          } else {
-            const geocodeIndex = activeIndex - searchSuggestions.length;
-            handleGeocodeSelect(geocodeSuggestions[geocodeIndex]);
-          }
-        } else if (searchInput.trim()) {
-          handleSearchSubmit(e);
-        }
-        break;
-      case 'Escape':
-        setShowDropdown(false);
-        setActiveIndex(-1);
-        break;
-    }
-  }, [activeIndex, geocodeSuggestions, handleGeocodeSelect, handleSearchSubmit, handleSuggestionSelect, searchInput, searchSuggestions]);
 
   // Handle suggestion selection
   const handleSuggestionSelect = useCallback(async (suggestion: SearchSuggestion) => {
@@ -427,6 +391,38 @@ export default function What3WordsSearchCard({
       }
     }
   }, [searchInput, isWhat3WordsPattern, handleAddressSearch]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const totalSuggestions = searchSuggestions.length + geocodeSuggestions.length;
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveIndex(prev => Math.min(prev + 1, totalSuggestions - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveIndex(prev => Math.max(prev - 1, -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeIndex >= 0) {
+          if (activeIndex < searchSuggestions.length) {
+            handleSuggestionSelect(searchSuggestions[activeIndex]);
+          } else {
+            const geocodeIndex = activeIndex - searchSuggestions.length;
+            handleGeocodeSelect(geocodeSuggestions[geocodeIndex]);
+          }
+        } else if (searchInput.trim()) {
+          handleSearchSubmit(e);
+        }
+        break;
+      case 'Escape':
+        setShowDropdown(false);
+        setActiveIndex(-1);
+        break;
+    }
+  }, [activeIndex, geocodeSuggestions, handleGeocodeSelect, handleSearchSubmit, handleSuggestionSelect, searchInput, searchSuggestions]);
 
   // Clear search
   const clearSearch = useCallback(() => {

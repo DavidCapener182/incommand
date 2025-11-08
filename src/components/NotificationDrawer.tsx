@@ -269,14 +269,6 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     }
   };
 
-  // Fetch data when drawer opens or when read notifications change
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotificationData();
-      updateLastViewedTimestamp(); // Update timestamp when drawer opens
-    }
-  }, [isOpen, fetchNotificationData]);
-
   // Auto-refresh AI summary 30 seconds after last log is created
   useEffect(() => {
     if (!lastLogTimestamp || !isOpen) return;
@@ -368,6 +360,13 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       setLoading(false);
     }
   }, [readNotifications]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotificationData();
+      updateLastViewedTimestamp();
+    }
+  }, [isOpen, fetchNotificationData]);
 
   const fetchAISummary = async () => {
     try {

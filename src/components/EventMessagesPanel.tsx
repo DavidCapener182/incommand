@@ -113,17 +113,6 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     cancelRecording
   } = useVoiceRecording();
 
-  // Handle voice recording completion
-  useEffect(() => {
-    if (recordingState === 'idle' && recordingDuration > 0) {
-      // Voice recording completed, send the message
-      handleVoiceMessage({
-        url: '', // This will be set by the useVoiceRecording hook
-        duration: Math.round(recordingDuration / 1000)
-      });
-    }
-  }, [recordingState, recordingDuration, handleVoiceMessage]);
-
   // Set or fetch current event based on provided props
   useEffect(() => {
     let isMounted = true;
@@ -308,6 +297,17 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
       console.error('Error sending voice message:', error);
     }
   }, [currentUserId, selectedGroup, fetchMessages]);
+
+  // Handle voice recording completion
+  useEffect(() => {
+    if (recordingState === 'idle' && recordingDuration > 0) {
+      // Voice recording completed, send the message
+      handleVoiceMessage({
+        url: '', // This will be set by the useVoiceRecording hook
+        duration: Math.round(recordingDuration / 1000)
+      });
+    }
+  }, [recordingState, recordingDuration, handleVoiceMessage]);
 
   // Find selected group meta
   const selectedGroupMeta =

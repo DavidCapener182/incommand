@@ -317,38 +317,6 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     void fetchProfile()
   }, [])
 
-  useEffect(() => {
-    if (!companyId) return
-    
-    const fetchStaff = async () => {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, full_name, contact_number, email, skill_tags, notes, active')
-        .eq('company_id', companyId)
-        .order('full_name', { ascending: true })
-
-      if (error) {
-        console.error('Failed to load staff roster', error)
-        setAvailableStaff([])
-        return
-      }
-
-      const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-      console.log('StaffingCentre: Loaded staff data:', data)
-      console.log('StaffingCentre: Normalized staff:', normalized)
-      
-      // Remove duplicates based on ID
-      const uniqueStaff = normalized.filter((staff, index, self) => 
-        index === self.findIndex(s => s.id === staff.id)
-      )
-      console.log('StaffingCentre: Unique staff after deduplication:', uniqueStaff)
-      
-      distributeStaff(uniqueStaff)
-    }
-
-    void fetchStaff()
-  }, [companyId, distributeStaff, normalizeStaffRecord])
-
   const normalizeStaffRecord = useCallback((record: any, index: number): StaffMember => {
     const qualifications = Array.isArray(record.skill_tags)
       ? record.skill_tags.filter((tag: unknown): tag is string => typeof tag === 'string')
@@ -381,6 +349,33 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     })
     setColumns(nextColumns)
   }, [])
+
+  useEffect(() => {
+    if (!companyId) return
+    
+    const fetchStaff = async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
+        .eq('company_id', companyId)
+        .order('full_name', { ascending: true })
+
+      if (error) {
+        console.error('Failed to load staff roster', error)
+        setAvailableStaff([])
+        return
+      }
+
+      const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+      const uniqueStaff = normalized.filter((staff, index, self) => 
+        index === self.findIndex(s => s.id === staff.id)
+      )
+      
+      distributeStaff(uniqueStaff)
+    }
+
+    void fetchStaff()
+  }, [companyId, distributeStaff, normalizeStaffRecord])
 
   const inferDepartmentFromSkills = (staff: StaffMember): string | null => {
     const tags = staff.qualifications.map((tag) => tag.toLowerCase())

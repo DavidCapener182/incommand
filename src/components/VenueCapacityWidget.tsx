@@ -81,26 +81,6 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
     }, 5000);
   }, []);
 
-  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
-    console.error(`Subscription error for ${channelName}:`, error);
-    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
-    setIsConnected(false);
-    
-    if (retryCount < MAX_RETRIES) {
-      setIsReconnecting(true);
-      const delay = calculateBackoffDelay(retryCount);
-      
-      setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        setupSubscription();
-      }, delay);
-      
-      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
-    } else {
-      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
-    }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
-
   // Calculate flow rate based on attendance changes
   const calculateFlowRate = useCallback((history: AttendanceRecord[]) => {
     if (history.length < 2) return { entering: 0, leaving: 0, net: 0 };
@@ -275,7 +255,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       setConnectionError(null);
       setIsConnected(true);
     }
-  }, [eventId, maxCapacity]);
+  }, [calculateCrowdDensity, calculateEvacuationTime, calculateFlowRate, eventId, generatePredictions, maxCapacity]);
 
   const setupSubscription = useCallback(async () => {
     let subscription: any;
@@ -335,6 +315,26 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
 
     return subscription;
   }, [eventId, fetchOccupancyDataDirect]);
+
+  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
+    console.error(`Subscription error for ${channelName}:`, error);
+    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
+    setIsConnected(false);
+    
+    if (retryCount < MAX_RETRIES) {
+      setIsReconnecting(true);
+      const delay = calculateBackoffDelay(retryCount);
+      
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setupSubscription();
+      }, delay);
+      
+      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
+    } else {
+      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
+    }
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   const fetchOccupancyData = useCallback(async () => {
     try {

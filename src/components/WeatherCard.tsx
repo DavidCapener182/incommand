@@ -93,7 +93,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
     }, 30 * 60 * 1000);
     
     return () => clearInterval(refreshInterval);
-  }, [fetchWeather, fetchHourly]);
+  }, [fetchHourly, fetchWeather, lat, lon]);
 
   const WeatherIcon = () => {
     if (!weather) return <CloudIcon className="h-8 w-8 text-gray-400" />;

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const INCIDENT_TYPES = ['Ejection', 'ejection', 'Refusal', 'refusal']
 
 export async function GET() {

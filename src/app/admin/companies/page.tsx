@@ -7,6 +7,9 @@ import CompanyEditDialogButton from '@/components/admin/companies/CompanyEditDia
 import DeleteCompanyButton from '@/components/admin/companies/DeleteCompanyButton'
 import { sa_listCompanies } from '@/hooks/useSuperAdmin';
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function CompaniesPage() {
   const { user, role } = await getServerUser();
   if (!user) redirect('/login');

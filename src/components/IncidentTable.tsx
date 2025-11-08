@@ -293,7 +293,7 @@ export default function IncidentTable({
   }, [isMobile, onViewModeChange, viewMode])
 
   // Cleanup function to handle unsubscribe
-  const cleanup = () => {
+  const cleanup = useCallback(() => {
     if (subscriptionRef.current) {
       logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: currentEventId || undefined });
       subscriptionRef.current.unsubscribe();
@@ -306,7 +306,7 @@ export default function IncidentTable({
       globalToastCallbacks.delete(subscriptionKey);
       logger.debug('Removed subscription and toast callback from active maps', { component: 'IncidentTable', action: 'cleanup', subscriptionKey });
     }
-  };
+  }, [currentEventId]);
 
   useEffect(() => {
     const checkCurrentEvent = async () => {
@@ -568,7 +568,7 @@ export default function IncidentTable({
         globalToastCallbacks.delete(subscriptionKey);
       }
     };
-  }, [currentEventId]);
+  }, [cleanup, currentEventId, fetchBestPractice, fetchIncidents, onToast]);
 
   // Separate useEffect for onDataLoaded callback to avoid stale closures
   useEffect(() => {
@@ -786,12 +786,18 @@ export default function IncidentTable({
   const filteredRegularIncidents: Incident[] = filterIncidents<Incident>(regularIncidents, { ...safeFilters, query: searchQuery })
   
   // Filter match flow logs (if enabled)
-  const filteredMatchFlowLogs: Incident[] = showMatchFlowLogs 
-    ? filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
-    : []
+  const filteredMatchFlowLogs: Incident[] = useMemo(() => {
+    if (!showMatchFlowLogs) {
+      return []
+    }
+    return filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
+  }, [matchFlowLogs, safeFilters, searchQuery, showMatchFlowLogs])
   
   // Combine filtered incidents (match flow logs appear after regular incidents)
-  const filteredIncidents: Incident[] = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
+  const filteredIncidents: Incident[] = useMemo(
+    () => [...filteredRegularIncidents, ...filteredMatchFlowLogs],
+    [filteredMatchFlowLogs, filteredRegularIncidents]
+  )
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
@@ -875,7 +881,7 @@ export default function IncidentTable({
     return () => {
       endRenderMeasurement('IncidentTable')
     }
-  }, [])
+  }, [endRenderMeasurement, startRenderMeasurement])
 
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {

@@ -70,7 +70,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     } catch (error) {
       console.error('Error loading football data:', error)
     }
-  }, [eventId, load, syncMatchFlow])
+  }, [eventId])
 
   // Sync match flow data from database
   const syncMatchFlow = useCallback(async () => {

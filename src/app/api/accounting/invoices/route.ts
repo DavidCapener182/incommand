@@ -3,6 +3,9 @@ import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const lineItemSchema = z.object({
   description: z.string(),
   quantity: z.number().positive().default(1),

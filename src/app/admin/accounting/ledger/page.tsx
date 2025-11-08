@@ -37,6 +37,9 @@ interface LedgerData {
   metrics: LedgerMetrics;
 }
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export default function AccountingLedgerPage() {
   const [ledgerData, setLedgerData] = useState<LedgerData>({
     entries: [],
@@ -257,4 +260,3 @@ export default function AccountingLedgerPage() {
     </SuperAdminLayout>
   );
 }
-

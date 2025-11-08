@@ -47,13 +47,6 @@ export default function LocationCapture({
   const [address, setAddress] = useState<string | null>(null)
   const [what3words, setWhat3words] = useState<string | null>(null)
 
-  // Auto-capture on mount if enabled
-  useEffect(() => {
-    if (autoCapture) {
-      captureLocation()
-    }
-  }, [autoCapture, captureLocation])
-
   const fetchAddress = useCallback(async (lat: number, lng: number) => {
     try {
       // Using OpenStreetMap Nominatim (free)
@@ -152,6 +145,12 @@ export default function LocationCapture({
       setIsCapturing(false)
     }
   }, [fetchAddress, fetchWhat3Words, onLocationCaptured])
+
+  useEffect(() => {
+    if (autoCapture) {
+      captureLocation()
+    }
+  }, [autoCapture, captureLocation])
 
   const clearLocation = () => {
     setLocation(null)

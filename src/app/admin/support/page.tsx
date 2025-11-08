@@ -15,6 +15,9 @@ import {
   PencilIcon
 } from '@heroicons/react/24/outline';
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function SupportPage() {
   const { user, role } = await getServerUser();
   if (!user) redirect('/login');
@@ -241,4 +244,3 @@ export default async function SupportPage() {
     </SuperAdminLayout>
   );
 }
-

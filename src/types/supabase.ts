@@ -4443,6 +4443,72 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+        email_incidents: boolean | null // format: boolean
+        email_reports: boolean | null // format: boolean
+        email_social: boolean | null // format: boolean
+        email_updates: boolean | null // format: boolean
+        push_enabled: boolean | null // format: boolean
+        push_incidents: boolean | null // format: boolean
+        push_reports: boolean | null // format: boolean
+        push_social: boolean | null // format: boolean
+        push_sound: boolean | null // format: boolean
+        push_updates: boolean | null // format: boolean
+        push_vibrate: boolean | null // format: boolean
+        quiet_hours_enabled: boolean | null // format: boolean
+        quiet_hours_end: string | null // format: time without time zone
+        quiet_hours_start: string | null // format: time without time zone
+        sms_emergency_only: boolean | null // format: boolean
+        sms_enabled: boolean | null // format: boolean
+        sms_number: string | null // format: text
+        updated_at: string // format: timestamp with time zone
+        user_id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        }
+        Insert: {
+        email_incidents?: boolean | null // format: boolean
+        email_reports?: boolean | null // format: boolean
+        email_social?: boolean | null // format: boolean
+        email_updates?: boolean | null // format: boolean
+        push_enabled?: boolean | null // format: boolean
+        push_incidents?: boolean | null // format: boolean
+        push_reports?: boolean | null // format: boolean
+        push_social?: boolean | null // format: boolean
+        push_sound?: boolean | null // format: boolean
+        push_updates?: boolean | null // format: boolean
+        push_vibrate?: boolean | null // format: boolean
+        quiet_hours_enabled?: boolean | null // format: boolean
+        quiet_hours_end?: string | null // format: time without time zone
+        quiet_hours_start?: string | null // format: time without time zone
+        sms_emergency_only?: boolean | null // format: boolean
+        sms_enabled?: boolean | null // format: boolean
+        sms_number?: string | null // format: text
+        updated_at?: string // format: timestamp with time zone
+        user_id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        }
+        Update: {
+        email_incidents?: boolean | null // format: boolean
+        email_reports?: boolean | null // format: boolean
+        email_social?: boolean | null // format: boolean
+        email_updates?: boolean | null // format: boolean
+        push_enabled?: boolean | null // format: boolean
+        push_incidents?: boolean | null // format: boolean
+        push_reports?: boolean | null // format: boolean
+        push_social?: boolean | null // format: boolean
+        push_sound?: boolean | null // format: boolean
+        push_updates?: boolean | null // format: boolean
+        push_vibrate?: boolean | null // format: boolean
+        quiet_hours_enabled?: boolean | null // format: boolean
+        quiet_hours_end?: string | null // format: time without time zone
+        quiet_hours_start?: string | null // format: time without time zone
+        sms_emergency_only?: boolean | null // format: boolean
+        sms_enabled?: boolean | null // format: boolean
+        sms_number?: string | null // format: text
+        updated_at?: string // format: timestamp with time zone
+        user_id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        }
+        Relationships: []
+      }
       parade_events: {
         Row: {
         assembly_point: string | null // format: text

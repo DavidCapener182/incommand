@@ -99,9 +99,10 @@ export const useUpdatePreference = () => {
   
   // Cleanup on unmount
   useEffect(() => {
+    const timeoutId = updateTimeoutRef.current
     return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
     }
   }, [])

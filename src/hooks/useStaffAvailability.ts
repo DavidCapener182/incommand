@@ -211,6 +211,42 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
   }, [allStaffData]);
 
   // Optimized fetch with incremental updates
+  const calculateStatsIncremental = useCallback((existingData: StaffMember[], changes: any[]) => {
+    const stats = {
+      totalStaff: existingData.length,
+      availableStaff: existingData.filter(s => s.availability_status === 'available').length,
+      assignedStaff: existingData.filter(s => s.active_assignments > 0).length,
+      averageWorkload: existingData.reduce((sum, s) => sum + s.active_assignments, 0) / existingData.length,
+      skillGaps: []
+    };
+
+    changes.forEach(change => {
+      const existingStaff = existingData.find(s => s.id === change.id);
+      if (existingStaff) {
+        if (existingStaff.availability_status !== change.availability_status) {
+          if (change.availability_status === 'available') {
+            stats.availableStaff++;
+          } else if (existingStaff.availability_status === 'available') {
+            stats.availableStaff--;
+          }
+        }
+
+        if (existingStaff.active_assignments !== change.active_assignments) {
+          if (existingStaff.active_assignments === 0 && change.active_assignments > 0) {
+            stats.assignedStaff++;
+          } else if (existingStaff.active_assignments > 0 && change.active_assignments === 0) {
+            stats.assignedStaff--;
+          }
+        }
+      }
+    });
+
+    const totalWorkload = existingData.reduce((sum, s) => sum + s.active_assignments, 0);
+    stats.averageWorkload = totalWorkload / existingData.length;
+
+    return stats;
+  }, []);
+
   const fetchStaffAvailability = useCallback(async (force = false, incremental = false) => {
     if (!eventId) return;
 
@@ -346,47 +382,7 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
         error: 'Failed to fetch staff availability'
       }));
     }
-  }, [eventId, allStaffData.length]);
-
-  // Calculate stats incrementally
-  const calculateStatsIncremental = useCallback((existingData: StaffMember[], changes: any[]) => {
-    const stats = {
-      totalStaff: existingData.length,
-      availableStaff: existingData.filter(s => s.availability_status === 'available').length,
-      assignedStaff: existingData.filter(s => s.active_assignments > 0).length,
-      averageWorkload: existingData.reduce((sum, s) => sum + s.active_assignments, 0) / existingData.length,
-      skillGaps: []
-    };
-
-    // Update stats based on changes
-    changes.forEach(change => {
-      const existingStaff = existingData.find(s => s.id === change.id);
-      if (existingStaff) {
-        // Adjust counts based on changes
-        if (existingStaff.availability_status !== change.availability_status) {
-          if (change.availability_status === 'available') {
-            stats.availableStaff++;
-          } else if (existingStaff.availability_status === 'available') {
-            stats.availableStaff--;
-          }
-        }
-
-        if (existingStaff.active_assignments !== change.active_assignments) {
-          if (existingStaff.active_assignments === 0 && change.active_assignments > 0) {
-            stats.assignedStaff++;
-          } else if (existingStaff.active_assignments > 0 && change.active_assignments === 0) {
-            stats.assignedStaff--;
-          }
-        }
-      }
-    });
-
-    // Recalculate average workload
-    const totalWorkload = existingData.reduce((sum, s) => sum + s.active_assignments, 0);
-    stats.averageWorkload = totalWorkload / existingData.length;
-
-    return stats;
-  }, []);
+  }, [allStaffData, calculateStatsIncremental, eventId, pageSize]);
 
   // Optimized staff suggestions with caching
   const getSuggestions = useCallback(async (
@@ -607,31 +603,32 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
   // Optimized real-time subscriptions with global management
   useEffect(() => {
     if (!eventId) return;
+    const manager = globalSubscriptionManager.current;
 
     // Initial fetch
     fetchStaffAvailability(true);
 
     // Track component instances per event
-    const currentCount = globalSubscriptionManager.current.componentCount.get(eventId) || 0;
-    globalSubscriptionManager.current.componentCount.set(eventId, currentCount + 1);
+    const currentCount = manager.componentCount.get(eventId) || 0;
+    manager.componentCount.set(eventId, currentCount + 1);
 
     // Check if we already have subscriptions for this event
-    if (globalSubscriptionManager.current.eventId === eventId && globalSubscriptionManager.current.isSubscribed) {
+    if (manager.eventId === eventId && manager.isSubscribed) {
       return; // Already subscribed to this event
     }
 
     // Clean up existing subscriptions if switching events
-    if (globalSubscriptionManager.current.eventId && globalSubscriptionManager.current.eventId !== eventId) {
-      globalSubscriptionManager.current.subscriptions.forEach((sub, key) => {
+    if (manager.eventId && manager.eventId !== eventId) {
+      manager.subscriptions.forEach((sub) => {
         try {
           supabase.removeChannel(sub);
         } catch (error) {
           console.warn('Error removing subscription during event switch:', error);
         }
       });
-      globalSubscriptionManager.current.subscriptions.clear();
-      globalSubscriptionManager.current.isSubscribed = false;
-      globalSubscriptionManager.current.componentCount.clear();
+      manager.subscriptions.clear();
+      manager.isSubscribed = false;
+      manager.componentCount.clear();
     }
 
     // Throttled update function with proper cleanup
@@ -641,7 +638,7 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
           // Only update if component is still mounted and event is still valid
-          if (globalSubscriptionManager.current.eventId === eventId) {
+          if (manager.eventId === eventId) {
             staffCacheRef.current.clear();
             assignmentScoresCacheRef.current.clear();
             fetchStaffAvailability(false, true); // Use incremental update
@@ -706,40 +703,40 @@ export function useStaffAvailability(eventId: string, pageSize = DEFAULT_PAGE_SI
 
     // Store subscriptions in global manager
     subscriptionKeys.forEach((key, index) => {
-      globalSubscriptionManager.current.subscriptions.set(key, subscriptions[index]);
+      manager.subscriptions.set(key, subscriptions[index]);
     });
-    globalSubscriptionManager.current.eventId = eventId;
-    globalSubscriptionManager.current.isSubscribed = true;
+    manager.eventId = eventId;
+    manager.isSubscribed = true;
 
     return () => {
       // Decrement component count for this event
-      const currentCount = globalSubscriptionManager.current.componentCount.get(eventId) || 0;
+      const currentCount = manager.componentCount.get(eventId) || 0;
       const newCount = Math.max(0, currentCount - 1);
       
       if (newCount === 0) {
         // No more components using this event, clean up subscriptions
-        globalSubscriptionManager.current.componentCount.delete(eventId);
+        manager.componentCount.delete(eventId);
         
         // Clear existing cleanup timer
-        if (globalSubscriptionManager.current.cleanupTimer) {
-          clearTimeout(globalSubscriptionManager.current.cleanupTimer);
+        if (manager.cleanupTimer) {
+          clearTimeout(manager.cleanupTimer);
         }
         
         // Immediate cleanup for last component
-        globalSubscriptionManager.current.subscriptions.forEach((sub, key) => {
+        manager.subscriptions.forEach((sub) => {
           try {
             supabase.removeChannel(sub);
           } catch (error) {
             console.warn('Error removing subscription:', error);
           }
         });
-        globalSubscriptionManager.current.subscriptions.clear();
-        globalSubscriptionManager.current.isSubscribed = false;
-        globalSubscriptionManager.current.eventId = null;
-        globalSubscriptionManager.current.cleanupTimer = null;
+        manager.subscriptions.clear();
+        manager.isSubscribed = false;
+        manager.eventId = null;
+        manager.cleanupTimer = null;
       } else {
         // Other components still using this event, update count
-        globalSubscriptionManager.current.componentCount.set(eventId, newCount);
+        manager.componentCount.set(eventId, newCount);
       }
       
       // Clean up debounce timer

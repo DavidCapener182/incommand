@@ -164,7 +164,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     } finally {
       setLoading(false)
     }
-  }, [eventId])
+  }, [addToast, eventId])
 
   useEffect(() => {
     loadPositions()

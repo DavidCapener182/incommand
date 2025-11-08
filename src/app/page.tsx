@@ -1,5 +1,3 @@
-export const revalidate = 3600
-
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
@@ -20,6 +18,9 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   ...pageMetadata.home,
   alternates: { canonical: '/' },
@@ -27,7 +28,25 @@ export const metadata: Metadata = {
 
 async function loadPlans(): Promise<PricingPlan[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/billing/plans`, { cache: 'no-store' })
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+    if (!baseUrl) {
+      // If no base URL, use default plans
+      return defaultMarketingPlans.map((p) => ({
+        name: p.name,
+        price: `£${p.priceMonthly}`,
+        period: 'per month',
+        description: '',
+        features: p.features,
+        cta: 'Get Started',
+        ctaLink: '/signup',
+        highlighted: p.code === 'professional',
+      }))
+    }
+    
+    const res = await fetch(`${baseUrl}/api/billing/plans`, { 
+      cache: 'no-store',
+      next: { revalidate: 0 }
+    })
     if (res.ok) {
       const json = await res.json()
       const apiPlans = (json.plans ?? []).map((p: any) => ({
@@ -42,7 +61,9 @@ async function loadPlans(): Promise<PricingPlan[]> {
       })) as PricingPlan[]
       if (apiPlans.length > 0) return apiPlans
     }
-  } catch {}
+  } catch (error) {
+    console.error('Error loading plans:', error)
+  }
   // Fallback to marketing defaults when no DB plans
   return defaultMarketingPlans.map((p) => ({
     name: p.name,

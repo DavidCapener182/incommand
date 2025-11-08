@@ -10,6 +10,9 @@ type Company = {
   created_at: string | null;
 };
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
   const { user, role, supabase } = await getServerUser();
   if (!user) redirect('/login');
@@ -58,7 +61,6 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
     </SuperAdminLayout>
   );
 }
-
 
 
 

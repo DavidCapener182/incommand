@@ -3,6 +3,9 @@ import { withAdminAuth } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const updateInvoiceSchema = z.object({
   status: z.enum(['paid', 'pending', 'overdue']).optional(),
   paymentReference: z.string().optional(),

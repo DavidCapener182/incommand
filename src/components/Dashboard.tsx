@@ -1183,7 +1183,7 @@ export default function Dashboard() {
     fetchEventTimings();
     const refreshTimer = setInterval(fetchEventTimings, 60000);
     return () => clearInterval(refreshTimer);
-  }, [companyId]);
+  }, [companyId, eventType]);
 
   useEffect(() => {
     const fetchCompanyId = async () => {

@@ -311,6 +311,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Define signOut before useEffect that uses it
+  const signOut = useCallback(async () => {
+    try {
+      // Clear cached role before signing out
+      if (user?.id) {
+        clearCachedRole(user.id)
+      }
+      await supabase.auth.signOut()
+      // Use window.location.href for immediate redirect to avoid route protection conflicts
+      window.location.href = '/login'
+    } catch (error) {
+      logger.error('Error during sign out', error, { component: 'AuthContext', action: 'signOut' });
+      // Fallback: redirect to login even if signOut fails
+      window.location.href = '/login'
+    }
+  }, [user?.id])
+
   useEffect(() => {
     let logoutTimeout: NodeJS.Timeout | null = null;
     let stayLoggedInTimeout: NodeJS.Timeout | null = null;
@@ -321,14 +338,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('[AuthContext] Starting initial session fetch...');
         // Get session with hard timeout protection to avoid infinite loading
-        // Increased timeout to 15 seconds to give more time for network issues
+        // Reduced timeout to 3 seconds - if it takes longer, rely on onAuthStateChange
         const result = await Promise.race([
           supabase.auth.getSession(),
           new Promise<any>((resolve) =>
             setTimeout(() => {
-              console.warn('[AuthContext] Session fetch timed out after 15s, proceeding without session. onAuthStateChange will handle auth updates.');
+              console.warn('[AuthContext] Session fetch timed out after 3s, proceeding without session. onAuthStateChange will handle auth updates.');
               resolve({ data: { session: null }, error: { message: 'Session fetch timeout' } })
-            }, 15000)
+            }, 3000)
           )
         ])
         session = result?.data?.session || null
@@ -361,7 +378,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ])
         } else {
           console.log('[AuthContext] No session found initially, waiting for onAuthStateChange');
-          await loadSystemSettings().catch(err => {
+          // Don't wait for system settings - load them in background
+          loadSystemSettings().catch(err => {
             console.error('Error loading system settings:', err)
           })
         }
@@ -452,22 +470,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user?.id) {
       clearCachedRole(user.id)
       logger.debug('Role cache invalidated for user', { component: 'AuthContext', action: 'invalidateRoleCache', userId: user.id });
-    }
-  }
-
-  const signOut = async () => {
-    try {
-      // Clear cached role before signing out
-      if (user?.id) {
-        clearCachedRole(user.id)
-      }
-      await supabase.auth.signOut()
-      // Use window.location.href for immediate redirect to avoid route protection conflicts
-      window.location.href = '/login'
-    } catch (error) {
-      logger.error('Error during sign out', error, { component: 'AuthContext', action: 'signOut' });
-      // Fallback: redirect to login even if signOut fails
-      window.location.href = '/login'
     }
   }
 

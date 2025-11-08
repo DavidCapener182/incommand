@@ -4,7 +4,7 @@ import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import EscalationTimer from './EscalationTimer';
-import { useEscalationToast } from '../contexts/EscalationToastContext';
+import { useOptionalEscalationToast } from '../contexts/EscalationToastContext';
 
 interface EscalationToastIncident {
   id: number;
@@ -28,12 +28,7 @@ export default function GlobalEscalationToast() {
   const incidentId = incident?.id;
   const hasIncident = Boolean(incident);
   
-  let escalationContext: ReturnType<typeof useEscalationToast> | null = null;
-  try {
-    escalationContext = useEscalationToast();
-  } catch (error) {
-    console.debug('EscalationToast context not available in GlobalEscalationToast');
-  }
+  const escalationContext = useOptionalEscalationToast();
 
   const setEscalationToastVisible = useCallback(
     (visible: boolean) => {

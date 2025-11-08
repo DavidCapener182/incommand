@@ -114,16 +114,9 @@ export default function EnhancedAIInsights({
     return () => clearTimeout(timer);
   }, [currentIndex]);
 
-  // Generate predictive forecast data
-  useEffect(() => {
-    if (enablePredictiveMode && insights.length > 0) {
-      generatePredictiveForecast();
-      analyzePatterns();
-    }
-  }, [insights.length, enablePredictiveMode, generatePredictiveForecast, analyzePatterns]);
+  const currentInsight = insights[currentIndex];
 
   const generatePredictiveForecast = useCallback(() => {
-    const currentInsight = insights[currentIndex];
     if (!currentInsight) return;
 
     // Simulate predictive forecasting based on current data
@@ -153,7 +146,7 @@ export default function EnhancedAIInsights({
     };
 
     setPredictiveData(forecast);
-  }, [currentIndex, insights]);
+  }, [currentInsight]);
 
   const analyzePatterns = useCallback(() => {
     const patterns: PatternAnalysis[] = [
@@ -193,9 +186,15 @@ export default function EnhancedAIInsights({
     ];
 
     setPatternData(patterns);
-  }, [insights]);
+  }, []);
 
-  const currentInsight = insights[currentIndex];
+  // Generate predictive forecast data
+  useEffect(() => {
+    if (enablePredictiveMode && insights.length > 0) {
+      generatePredictiveForecast();
+      analyzePatterns();
+    }
+  }, [insights.length, enablePredictiveMode, generatePredictiveForecast, analyzePatterns]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {

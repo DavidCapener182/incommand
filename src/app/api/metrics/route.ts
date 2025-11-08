@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/middleware/auth'
 import type { Database } from '@/types/supabase'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'super_admin', async (context) => {
     const [{ count: ticketCount }, { count: organizationCount }, { count: invoiceCount }, { count: incidentCount }] = await Promise.all([

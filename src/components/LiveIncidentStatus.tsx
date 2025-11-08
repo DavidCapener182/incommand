@@ -59,75 +59,6 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     }, 5000);
   }, []);
 
-  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
-    console.error(`Subscription error for ${channelName}:`, error);
-    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
-    setIsConnected(false);
-    
-    if (retryCount < MAX_RETRIES) {
-      setIsReconnecting(true);
-      const delay = calculateBackoffDelay(retryCount);
-      
-      setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        setupSubscription();
-      }, delay);
-      
-      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
-    } else {
-      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
-    }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
-
-  const setupSubscription = useCallback(async () => {
-    let subscription: any;
-
-    try {
-      // Subscribe to incident_logs changes with error handling
-      subscription = supabase
-        .channel(`incident-logs-${eventId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'incident_logs'
-          },
-          (payload) => {
-            console.log('Incident update received:', payload);
-            fetchLatestIncident();
-            setLastUpdate(new Date());
-            setConnectionError(null); // Clear any previous errors on successful update
-          }
-        )
-        .subscribe((status) => {
-          console.log(`Subscription status: ${status}`);
-          // Show as connected if subscription works, or if we can fetch data
-          setIsConnected(status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT');
-          setIsReconnecting(false);
-          
-          if (status === 'SUBSCRIBED') {
-            setConnectionError(null);
-            setRetryCount(0);
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            // Don't treat these as critical errors - just log them
-            console.warn(`Live incident subscription ${status.toLowerCase()}`);
-            setConnectionError(null);
-          }
-        });
-
-      // Always try to fetch data regardless of subscription status
-      await fetchLatestIncidentDirect();
-    } catch (error) {
-      console.error('Error setting up subscription:', error);
-      // Don't treat setup errors as critical - continue with data fetching
-      setConnectionError(null);
-      await fetchLatestIncidentDirect();
-    }
-
-    return subscription;
-  }, [eventId, fetchLatestIncident, fetchLatestIncidentDirect]);
-
   // Direct function to avoid circular dependency
   const fetchLatestIncidentDirect = useCallback(async () => {
     try {
@@ -250,6 +181,75 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       setCurrentIncident(null);
     }
   }, [eventId]);
+
+  const setupSubscription = useCallback(async () => {
+    let subscription: any;
+
+    try {
+      // Subscribe to incident_logs changes with error handling
+      subscription = supabase
+        .channel(`incident-logs-${eventId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'incident_logs'
+          },
+          (payload) => {
+            console.log('Incident update received:', payload);
+            fetchLatestIncident();
+            setLastUpdate(new Date());
+            setConnectionError(null); // Clear any previous errors on successful update
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Subscription status: ${status}`);
+          // Show as connected if subscription works, or if we can fetch data
+          setIsConnected(status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT');
+          setIsReconnecting(false);
+          
+          if (status === 'SUBSCRIBED') {
+            setConnectionError(null);
+            setRetryCount(0);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            // Don't treat these as critical errors - just log them
+            console.warn(`Live incident subscription ${status.toLowerCase()}`);
+            setConnectionError(null);
+          }
+        });
+
+      // Always try to fetch data regardless of subscription status
+      await fetchLatestIncidentDirect();
+    } catch (error) {
+      console.error('Error setting up subscription:', error);
+      // Don't treat setup errors as critical - continue with data fetching
+      setConnectionError(null);
+      await fetchLatestIncidentDirect();
+    }
+
+    return subscription;
+  }, [eventId, fetchLatestIncident, fetchLatestIncidentDirect]);
+
+  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
+    console.error(`Subscription error for ${channelName}:`, error);
+    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
+    setIsConnected(false);
+    
+    if (retryCount < MAX_RETRIES) {
+      setIsReconnecting(true);
+      const delay = calculateBackoffDelay(retryCount);
+      
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setupSubscription();
+      }, delay);
+      
+      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
+    } else {
+      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
+    }
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   useEffect(() => {
     let subscription: any;

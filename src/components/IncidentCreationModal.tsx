@@ -1972,7 +1972,7 @@ export default function IncidentCreationModal({
   }, [incidentTypes]);
 
   // Function to determine the "To" field based on user's role
-  const getCallsignTo = () => {
+  const getCallsignTo = useCallback(() => {
     if (!membership?.role) return 'Event Control';
     
     const role = membership.role.toLowerCase();
@@ -1994,7 +1994,7 @@ export default function IncidentCreationModal({
       default:
         return 'Event Control';
     }
-  };
+  }, [membership?.role]);
 
   // Swipe gestures for modal interaction
   const swipeGestures = useSwipeModal(
@@ -2159,7 +2159,7 @@ export default function IncidentCreationModal({
     if (formData.callsign_to !== newCallsignTo) {
       setFormData(prev => ({ ...prev, callsign_to: newCallsignTo }));
     }
-  }, [membership?.role, formData.callsign_to]);
+  }, [formData.callsign_to, getCallsignTo, membership?.role]);
   
   // New state for tabbed interface and AI parsing
   const [currentTab, setCurrentTab] = useState<'quick' | 'details' | 'people' | 'priority' | 'additional'>('quick')
@@ -2261,7 +2261,10 @@ export default function IncidentCreationModal({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   // Enhanced voice recognition setup with fallback
+  // The recognition lifecycle must remain stable; re-running this effect whenever helper callbacks change
+  // interrupts the microphone mid-dictation, so we intentionally scope the deps to config values only.
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -2496,7 +2499,8 @@ export default function IncidentCreationModal({
         clearTimeout(recognitionTimeout);
       }
     };
-  }, [transcript, voiceError]);
+  }, [continuous, interimResults, language, maxAlternatives, noiseThreshold, silenceTimeout, transcript, voiceError]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Offline mode detection and local storage
   useEffect(() => {
@@ -2882,7 +2886,7 @@ export default function IncidentCreationModal({
       }
     };
     fetchEvents();
-  }, [user]);
+  }, [membership?.event_id, user]);
   
   // Map AI outputs into the incident form in one place to avoid duplication
   type AICommonData = { incidentType?: string; description?: string; callsign?: string; location?: string; priority?: string; confidence?: number; actionTaken?: string };
@@ -3271,211 +3275,6 @@ export default function IncidentCreationModal({
     }
   };
 
-
-  // Create a debounced function for processing input
-  const debouncedProcessInput = useCallback(
-    debounce(async (input: string) => {
-      if (!input.trim()) {
-        setFormData(prev => ({ 
-          ...prev, 
-          occurrence: '', 
-          action_taken: '',
-          incident_type: 'Select Type',
-          callsign_from: '',
-          log_number: ''
-        }));
-        return;
-      }
-
-      try {
-        // Get current event for team name extraction (for match flow detection)
-        const selectedEvent = events.find(e => e.id === selectedEventId);
-        const homeTeam = selectedEvent?.home_team;
-        const awayTeam = selectedEvent?.away_team;
-        
-        const incidentType = detectIncidentType(input, homeTeam, awayTeam);
-        const callsign = detectCallsign(input) || '';
-        const location = extractLocation(input) || '';
-        const priorityDetected = detectPriority(input);
-        let processedData: IncidentParserResult | null = null;
-
-        // Check if this is a match flow type
-        if (isMatchFlowType(incidentType)) {
-          processedData = await parseMatchFlowIncident(input, incidentType, homeTeam, awayTeam);
-        } else if (
-          // Custom handler for showdown
-          incidentType === 'Event Timing' && input.toLowerCase().includes('showdown')
-        ) {
-          processedData = {
-            occurrence: 'Showdown',
-            action_taken: 'The show has ended',
-            callsign_from: 'PM',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' &&
-          (input.toLowerCase().includes('doors open') || input.toLowerCase().includes('doors green') || input.toLowerCase().includes('venue open'))
-        ) {
-          processedData = {
-            occurrence: 'Doors Open',
-            action_taken: 'The venue is now open and customers are entering',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' && input.toLowerCase().includes('venue clear')
-        ) {
-          processedData = {
-            occurrence: 'Venue is clear of public',
-            action_taken: 'Venue Clear',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' && (input.toLowerCase().includes('staff briefed') || input.toLowerCase().includes('staff briefed and in position'))
-        ) {
-          processedData = {
-            occurrence: 'Staff briefed and in position',
-            action_taken: 'All staff have been briefed and are in position',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else {
-        switch (incidentType) {
-          case 'Medical':
-            processedData = await parseMedicalIncident(input);
-            break;
-          case 'Ejection':
-            processedData = await parseEjectionIncident(input);
-            break;
-          case 'Refusal':
-            processedData = await parseRefusalIncident(input);
-            break;
-          case 'Attendance':
-            const selectedEvent = events.find(e => e.id === selectedEventId);
-            const expectedAttendance = selectedEvent?.expected_attendance || 3500;
-            processedData = await parseAttendanceIncident(input, expectedAttendance);
-            break;
-          case 'Welfare':
-            processedData = await parseWelfareIncident(input);
-            break;
-          case 'Lost Property':
-            processedData = await parseLostPropertyIncident(input);
-            break;
-          case 'Suspicious Behaviour':
-            processedData = await parseSuspiciousBehaviourIncident(input);
-            break;
-          case 'Aggressive Behaviour':
-            processedData = await parseAggressiveBehaviourIncident(input);
-            break;
-          case 'Queue Build-Up':
-            processedData = await parseQueueBuildUpIncident(input);
-            break;
-          case 'Technical Issue':
-            processedData = await parseTechnicalIncident(input);
-            break;
-          case 'Weather Disruption':
-            processedData = await parseWeatherDisruptionIncident(input);
-            break;
-          default:
-            // Use the general incident endpoint for all other types
-            try {
-              const response = await fetch('/api/generate-incident-details', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  input,
-                  incident_type: incidentType,
-                  location,
-                  description: input,
-                  callsign
-                })
-              });
-
-              if (!response.ok) {
-                throw new Error('Failed to generate incident details');
-              }
-
-              const data = await response.json();
-               processedData = {
-                occurrence: data.occurrence || input,
-                action_taken: data.action_taken || '',
-                callsign_from: callsign,
-                incident_type: incidentType
-              };
-              } catch (error) {
-              console.error('Error generating incident details:', error);
-              // Unified fallback using parseIncidentUnified; keep local heuristics as backup
-              try {
-                const { data, source } = await parseIncidentUnified(input, incidentTypes);
-                if (data) {
-                  processedData = {
-                    occurrence: data.description || input,
-                    action_taken: '',
-                    callsign_from: detectCallsign(input) || '',
-                    incident_type: normalizeIncidentType(data.incidentType || '', incidentTypes) || incidentType,
-                  } as IncidentParserResult;
-                  if (data.priority) setFormData(prev => ({ ...prev, priority: data.priority || prev.priority }));
-                } else {
-                  processedData = {
-                    occurrence: input,
-                    action_taken: '',
-                    callsign_from: callsign,
-                    incident_type: incidentType
-                  };
-                }
-              } catch (err2) {
-                processedData = {
-                  occurrence: input,
-                  action_taken: '',
-                  callsign_from: callsign,
-                  incident_type: incidentType
-                };
-              }
-              }
-            }
-        }
-
-        // Get current event for log number generation
-        const { data: currentEvent } = await supabase
-          .from('events')
-          .select('id, event_name')
-          .eq('is_current', true)
-          .single();
-
-        if (!currentEvent) {
-          console.error('No current event found');
-          return;
-        }
-
-        // Generate log number
-        const logNumber = await generateNextLogNumber(currentEvent.event_name);
-        const safeLogNumber = logNumber || '';
-
-        if (processedData) {
-          setFormData(prev => ({
-            ...prev,
-            occurrence: processedData.occurrence,
-            action_taken: processedData.action_taken,
-            incident_type: processedData.incident_type || incidentType,
-            callsign_from: processedData.callsign_from || prev.callsign_from,
-            log_number: safeLogNumber,
-            priority: priorityDetected || prev.priority
-          }));
-        } else {
-          setFormData(prev => ({ 
-            ...prev,
-            incident_type: incidentType,
-            log_number: safeLogNumber,
-            priority: priorityDetected || prev.priority
-          }));
-        }
-      } catch (error) {
-        console.error('Error processing input:', error);
-      }
-    }, 500),
-    []
-  );
 
   // Handle input change
   const handleQuickInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -4288,7 +4087,7 @@ export default function IncidentCreationModal({
         if (diff !== 0) return diff;
         return a.localeCompare(b);
       });
-  }, [usageCounts]);
+  }, [INCIDENT_TYPES, usageCounts]);
 
   // Use sortedIncidentTypes for grid
   const desktopVisibleTypes = sortedIncidentTypes.slice(0, desktopVisibleCount);

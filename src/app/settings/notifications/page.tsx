@@ -80,7 +80,7 @@ export default function NotificationSettingsPage() {
       try {
         // Fetch settings from Supabase
         const { data, error } = await supabase
-          .from<Database['public']['Tables']['notification_settings']['Row']>('notification_settings')
+          .from('notification_settings')
           .select('*')
           .eq('user_id', user.id)
           .single();
@@ -213,7 +213,7 @@ export default function NotificationSettingsPage() {
         };
 
         const { error } = await supabase
-          .from<Database['public']['Tables']['notification_settings']['Insert']>('notification_settings')
+          .from('notification_settings')
           .upsert(updateData);
 
         if (error) throw error;

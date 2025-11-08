@@ -24,6 +24,11 @@ const nextConfig = {
         {
           source: '/sw-enhanced.js',
           destination: '/api/disable-sw'
+        },
+        // Fix incorrect /next/ paths - redirect to correct /_next/ paths
+        {
+          source: '/next/:path*',
+          destination: '/_next/:path*'
         }
       ]
     }
@@ -32,30 +37,13 @@ const nextConfig = {
   // Performance optimization
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react']
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', 'react-icons']
   },
   
-  // Bundle optimization
+  // Bundle optimization - let Next.js handle vendor chunking by default
   webpack: (config, { dev, isServer }) => {
-    if (!dev && !isServer) {
-      // Production client-side optimizations
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'all',
-            enforce: true,
-          },
-        },
-      };
-    }
+    // Don't override Next.js's default vendor chunking in development
+    // Next.js handles vendor chunks automatically
     return config;
   },
   
@@ -69,7 +57,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/:path*',
         headers: [
           {
             key: 'X-Frame-Options',

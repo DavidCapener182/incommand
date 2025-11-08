@@ -24,37 +24,63 @@ function applySecurityHeaders(res: NextResponse) {
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
   res.headers.set('X-XSS-Protection', '1; mode=block')
   
-  // Content Security Policy
+  // Content Security Policy - relaxed for Next.js development
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://vercel.live",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://va.vercel-scripts.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
     "img-src 'self' data: blob: https://*.supabase.co https://vercel.live",
-    "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com wss://*.supabase.co",
+    "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com wss://*.supabase.co ws://localhost:* https://va.vercel-scripts.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    "upgrade-insecure-requests"
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:"
   ].join('; ')
   res.headers.set('Content-Security-Policy', csp)
   
-  // Additional security headers
-  res.headers.set('Cross-Origin-Embedder-Policy', 'require-corp')
+  // Additional security headers - relaxed for development compatibility
+  // Only apply COEP in production to avoid blocking Next.js scripts
+  if (process.env.NODE_ENV === 'production') {
+    res.headers.set('Cross-Origin-Embedder-Policy', 'require-corp')
+  }
   res.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
   res.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
 }
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  
-  // Apply security headers to all responses
-  applySecurityHeaders(res)
-  
-  const supabase = createMiddlewareClient<Database>({ req, res })
-
-  const { pathname } = req.nextUrl
+  try {
+    const { pathname } = req.nextUrl
+    
+    // Redirect /next/ paths to /_next/ paths (fix for incorrect HTML generation)
+    if (pathname.startsWith('/next/')) {
+      const newUrl = req.nextUrl.clone()
+      newUrl.pathname = pathname.replace('/next/', '/_next/')
+      return NextResponse.rewrite(newUrl)
+    }
+    
+    // Skip middleware for static assets and Next.js internal files - MUST be first check
+    if (
+      pathname.startsWith('/_next/') ||
+      pathname.startsWith('/next/') ||
+      pathname.startsWith('/_vercel/') ||
+      pathname.startsWith('/vercel/') ||
+      pathname.startsWith('/static/') ||
+      pathname.startsWith('/api/') ||
+      pathname.match(/\.(ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot|css|js|json|map)$/)
+    ) {
+      // Return immediately without any processing
+      return NextResponse.next()
+    }
+    
+    const res = NextResponse.next()
+    
+    // Apply security headers to all responses
+    applySecurityHeaders(res)
+    
+    const supabase = createMiddlewareClient<Database>({ req, res })
 
   // Define public routes (anyone can access)
   const publicRoutes = [
@@ -105,22 +131,29 @@ export async function middleware(req: NextRequest) {
       return res
     }
     
-    // Get session for redirect logic
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    // If user is logged in and visiting login or signup, redirect based on role
-    // But allow them to stay on the landing page and other marketing pages
-    if (session && ["/login", "/signup"].includes(pathname)) {
-      const redirectUrl = req.nextUrl.clone()
-      
-      // Check if this is david@incommand.uk (superadmin) - redirect to admin
-      if (session.user.email === 'david@incommand.uk') {
-        redirectUrl.pathname = "/admin"
-      } else {
-        redirectUrl.pathname = "/incidents"
+    // For public routes, only check session if we need to redirect logged-in users
+    // Skip session check for most public routes to avoid errors
+    if (["/login", "/signup"].includes(pathname)) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        // If user is logged in and visiting login or signup, redirect based on role
+        if (session) {
+          const redirectUrl = req.nextUrl.clone()
+          
+          // Check if this is david@incommand.uk (superadmin) - redirect to admin
+          if (session.user.email === 'david@incommand.uk') {
+            redirectUrl.pathname = "/admin"
+          } else {
+            redirectUrl.pathname = "/incidents"
+          }
+          
+          return NextResponse.redirect(redirectUrl)
+        }
+      } catch (error) {
+        // If session check fails, just allow the route to proceed
+        console.error('Middleware - Session check failed for public route:', error)
       }
-      
-      return NextResponse.redirect(redirectUrl)
     }
     
     return res
@@ -246,18 +279,25 @@ export async function middleware(req: NextRequest) {
   }
 
   return res
+  } catch (error) {
+    // If middleware fails, log error but don't block the request
+    console.error('Middleware error:', error instanceof Error ? error.message : 'Unknown error')
+    // Return a basic response to prevent 500 errors
+    return NextResponse.next()
+  }
 }
 
 export const config = {
   matcher: [
-    // Protected application routes
-    "/incidents/:path*",
-    "/reports/:path*",
-    "/staff/:path*",
-    "/settings/:path*",
-    "/admin/:path*",
-    "/dashboard/:path*",
-    "/analytics/:path*",
-    "/profile/:path*"
+    /*
+     * Match all paths except:
+     * - API routes (handled separately)
+     * - Static files with extensions
+     * - Favicon
+     * Note: We need to match /next/ paths to rewrite them to /_next/
+     */
+    '/((?!api|_vercel|vercel|static|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|map|json)).*)',
+    // Explicitly include /next/ paths so we can rewrite them
+    '/next/:path*',
   ],
 }
