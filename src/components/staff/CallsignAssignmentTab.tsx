@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { 
@@ -103,12 +103,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   const [loading, setLoading] = useState(false)
 
   // Load positions from database or create default ones
-  useEffect(() => {
-    loadPositions()
-  }, [eventId])
-
-
-  const loadPositions = async () => {
+  const loadPositions = useCallback(async () => {
     setLoading(true)
     try {
       // Create default positions from templates
@@ -169,7 +164,11 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    loadPositions()
+  }, [eventId, loadPositions])
 
   const assignStaffToPosition = async (positionId: string, staffId: string) => {
     const staffMember = staff.find(s => s.id === staffId)

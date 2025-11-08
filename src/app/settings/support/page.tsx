@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { CardContainer } from '@/components/ui/CardContainer';
@@ -122,13 +122,7 @@ export default function SupportPage() {
   const categories = ['All', ...Array.from(new Set(faqData.map(item => item.category)))];
   const filteredFAQ = selectedCategory === 'All' ? faqData : faqData.filter(item => item.category === selectedCategory);
 
-  useEffect(() => {
-    if (user) {
-      loadTickets();
-    }
-  }, [user]);
-
-  const loadTickets = async () => {
+  const loadTickets = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
@@ -163,7 +157,13 @@ export default function SupportPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, addToast]);
+
+  useEffect(() => {
+    if (user) {
+      loadTickets();
+    }
+  }, [user, loadTickets]);
 
   const createSupportTicket = async () => {
     if (!user) {

@@ -230,57 +230,58 @@ export default function LoginPage() {
     },
   ]
 
-  if (!isCheckingMobileSupport && shouldShowMobileMessage) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-white text-center px-6 py-12" style={{ backgroundColor: '#23408e' }}>
-        <Image
-          src="/inCommand.png"
-          alt="inCommand Logo"
-          width={240}
-          height={180}
-          className="drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain mb-10"
-          priority
-        />
-        <h1 className="text-3xl font-semibold mb-4">Mobile experience coming soon</h1>
-        <p className="text-base text-blue-100 max-w-md mb-8 leading-relaxed">
-          We&apos;re crafting a dedicated mobile experience for inCommand. For now, please access the platform from a desktop browser
-          or request the desktop site from your mobile browser to continue.
-        </p>
-        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
-          <Link
-            href={forceDesktopUrl}
-            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-[#23408e] font-semibold shadow-md hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition"
-          >
-            Continue to desktop site
-          </Link>
-          <a
-            href="mailto:info@incommand.uk"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-full border-2 border-white text-white font-semibold shadow-md hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition"
-          >
-            Contact us for information
-          </a>
-        </div>
-        <div className="mt-10 flex items-center justify-center gap-6 text-blue-100">
-          {socialLinks.map((social) => (
-            <a
-              key={social.name}
-              href={social.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full border border-white/40 bg-white/5 p-3 transition hover:bg-white/10 hover:text-white"
-              aria-label={social.name}
-            >
-              {social.icon}
-            </a>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  // Disabled mobile coming soon message - marketing page is now mobile responsive
+  // if (!isCheckingMobileSupport && shouldShowMobileMessage) {
+  //   return (
+  //     <div className="min-h-screen flex flex-col items-center justify-center text-white text-center px-6 py-12" style={{ backgroundColor: '#23408e' }}>
+  //       <Image
+  //         src="/inCommand.png"
+  //         alt="inCommand Logo"
+  //         width={240}
+  //         height={180}
+  //         className="drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)] object-contain mb-10"
+  //         priority
+  //       />
+  //       <h1 className="text-3xl font-semibold mb-4">Mobile experience coming soon</h1>
+  //       <p className="text-base text-blue-100 max-w-md mb-8 leading-relaxed">
+  //         We&apos;re crafting a dedicated mobile experience for inCommand. For now, please access the platform from a desktop browser
+  //         or request the desktop site from your mobile browser to continue.
+  //       </p>
+  //       <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+  //         <Link
+  //           href={forceDesktopUrl}
+  //           className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-[#23408e] font-semibold shadow-md hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition"
+  //         >
+  //           Continue to desktop site
+  //         </Link>
+  //         <a
+  //           href="mailto:info@incommand.uk"
+  //           className="inline-flex items-center justify-center px-6 py-3 rounded-full border-2 border-white text-white font-semibold shadow-md hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition"
+  //         >
+  //           Contact us for information
+  //         </a>
+  //       </div>
+  //       <div className="mt-10 flex items-center justify-center gap-6 text-blue-100">
+  //         {socialLinks.map((social) => (
+  //           <a
+  //             key={social.name}
+  //             href={social.href}
+  //             target="_blank"
+  //             rel="noopener noreferrer"
+  //             className="flex items-center justify-center rounded-full border border-white/40 bg-white/5 p-3 transition hover:bg-white/10 hover:text-white"
+  //             aria-label={social.name}
+  //           >
+  //             {social.icon}
+  //           </a>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
-  if (isCheckingMobileSupport) {
-    return <div data-login-page className="min-h-screen" style={{ backgroundColor: '#23408e' }} />
-  }
+  // if (isCheckingMobileSupport) {
+  //   return <div data-login-page className="min-h-screen" style={{ backgroundColor: '#23408e' }} />
+  // }
 
   return (
     <>

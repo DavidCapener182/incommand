@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import EscalationTimer from './EscalationTimer';
 import { useEscalationToast } from '../contexts/EscalationToastContext';
@@ -25,21 +25,31 @@ export default function GlobalEscalationToast() {
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const incidentId = incident?.id;
+  const hasIncident = Boolean(incident);
   
-  // Use escalation toast context to notify other components (with safe fallback)
-  let setEscalationToastVisible = (_visible: boolean) => {};
-  let setEscalationToastExpanded = (_expanded: boolean) => {};
-  
+  let escalationContext: ReturnType<typeof useEscalationToast> | null = null;
   try {
-    const escalationContext = useEscalationToast();
-    setEscalationToastVisible = escalationContext.setEscalationToastVisible;
-    setEscalationToastExpanded = escalationContext.setEscalationToastExpanded;
+    escalationContext = useEscalationToast();
   } catch (error) {
-    // Context not available, use no-op functions
     console.debug('EscalationToast context not available in GlobalEscalationToast');
   }
 
-  const fetchCurrentEvent = async () => {
+  const setEscalationToastVisible = useCallback(
+    (visible: boolean) => {
+      escalationContext?.setEscalationToastVisible(visible);
+    },
+    [escalationContext]
+  );
+
+  const setEscalationToastExpanded = useCallback(
+    (expanded: boolean) => {
+      escalationContext?.setEscalationToastExpanded(expanded);
+    },
+    [escalationContext]
+  );
+
+  const fetchCurrentEvent = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('events')
@@ -51,9 +61,9 @@ export default function GlobalEscalationToast() {
       console.error('Error fetching current event:', error);
       setCurrentEventId(null);
     }
-  };
+  }, []);
 
-  const fetchNextEscalatingIncident = async (eventId?: string | null) => {
+  const fetchNextEscalatingIncident = useCallback(async (eventId?: string | null) => {
     setLoading(true);
     try {
       const now = new Date().toISOString();
@@ -110,11 +120,11 @@ export default function GlobalEscalationToast() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hiddenIds]);
 
   useEffect(() => {
     fetchCurrentEvent();
-  }, []);
+  }, [fetchCurrentEvent]);
 
   useEffect(() => {
     // Initial fetch (try with event, fall back to global)
@@ -129,24 +139,24 @@ export default function GlobalEscalationToast() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current as any);
     };
-  }, [currentEventId]);
+  }, [currentEventId, fetchNextEscalatingIncident]);
 
   // Auto-collapse after ~10s when a new incident is shown
   useEffect(() => {
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current as any);
     setCollapsed(false);
-    if (incident) {
+    if (incidentId) {
       collapseTimerRef.current = setTimeout(() => setCollapsed(true), 10000);
     }
     return () => {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current as any);
     };
-  }, [incident?.id]);
+  }, [incidentId]);
 
   // Update context when incident visibility changes
   useEffect(() => {
-    setEscalationToastVisible(!!incident);
-  }, [incident, setEscalationToastVisible]);
+    setEscalationToastVisible(hasIncident);
+  }, [hasIncident, setEscalationToastVisible]);
 
   // Update context when collapsed state changes
   useEffect(() => {
@@ -286,5 +296,3 @@ export default function GlobalEscalationToast() {
     </div>
   );
 }
-
-

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { Dialog, Transition, Listbox } from '@headlessui/react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
@@ -40,11 +40,7 @@ export default function UserManagementModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('companies')
@@ -53,13 +49,17 @@ export default function UserManagementModal({
 
       if (error) throw error;
       setCompanies(data || []);
-      if (data && data.length > 0 && !selectedCompany) {
-        setSelectedCompany(data[0]);
+      if (data && data.length > 0) {
+        setSelectedCompany(prev => prev ?? data[0]);
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

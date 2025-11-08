@@ -20,7 +20,7 @@ export default function ResolutionTimeWidget({ currentEventId }: ResolutionTimeW
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchResolutionStats = async () => {
+  const fetchResolutionStats = useCallback(async () => {
     if (!currentEventId) {
       console.log('No currentEventId provided, skipping fetch');
       setLoading(false);
@@ -139,7 +139,7 @@ export default function ResolutionTimeWidget({ currentEventId }: ResolutionTimeW
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentEventId]);
 
   useEffect(() => {
     fetchResolutionStats();
@@ -147,7 +147,7 @@ export default function ResolutionTimeWidget({ currentEventId }: ResolutionTimeW
     // Refresh every 5 minutes
     const interval = setInterval(fetchResolutionStats, 300000);
     return () => clearInterval(interval);
-  }, [currentEventId]);
+  }, [currentEventId, fetchResolutionStats]);
 
   const formatTime = (minutes: number): string => {
     if (minutes < 60) {

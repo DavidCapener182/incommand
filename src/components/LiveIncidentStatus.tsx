@@ -77,7 +77,7 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     } else {
       showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
     }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification]);
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   const setupSubscription = useCallback(async () => {
     let subscription: any;
@@ -126,10 +126,10 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     }
 
     return subscription;
-  }, [eventId]);
+  }, [eventId, fetchLatestIncident, fetchLatestIncidentDirect]);
 
   // Direct function to avoid circular dependency
-  const fetchLatestIncidentDirect = async () => {
+  const fetchLatestIncidentDirect = useCallback(async () => {
     try {
       // First, let's get all incidents to see what's available
       let query = supabase
@@ -188,7 +188,7 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       setConnectionError(null);
       setCurrentIncident(null);
     }
-  };
+  }, [eventId]);
 
   const fetchLatestIncident = useCallback(async () => {
     try {

@@ -2,17 +2,14 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 export default function MarketingNavigation() {
-  const pathname = usePathname()
-
   return (
-    <header className="sticky top-0 flex flex-col items-center z-50">
-      {/* Top Navy Bar with balanced spacing */}
-      <div className="w-full bg-[#1E3A8A] relative flex flex-col items-center justify-center py-5">
+    <header className="sticky top-0 z-50">
+      {/* Top Navy Bar with logo and Log In button */}
+      <div className="w-full bg-[#1E3A8A] relative flex items-center justify-center py-5">
         {/* Logo */}
-        <div className="relative z-30 mb-2">
+        <div className="relative z-30">
           <Image
             src="/inCommand.png"
             alt="InCommand Logo"
@@ -23,8 +20,8 @@ export default function MarketingNavigation() {
           />
         </div>
 
-        {/* Log In button – refined design & alignment */}
-        <div className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2">
+        {/* Log In button – hidden on mobile, visible on desktop */}
+        <div className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 hidden sm:block">
           <Link
             href="/login"
             className="px-5 py-2 sm:px-6 sm:py-2.5 border border-white/70 text-white font-semibold rounded-full text-sm sm:text-base hover:bg-white/15 hover:backdrop-blur-sm transition-all duration-300 shadow-sm"
@@ -33,40 +30,6 @@ export default function MarketingNavigation() {
           </Link>
         </div>
       </div>
-
-       {/* Capsule Navigation */}
-       <nav className="absolute top-[calc(100%-0.75rem)] bg-blue-100/95 backdrop-blur-md border border-blue-200 shadow-md rounded-full px-4 sm:px-6 md:px-8 py-1 sm:py-1.5 flex justify-center space-x-2 sm:space-x-4 md:space-x-6 z-20">
-        <Link
-          href="/features"
-          className={`px-5 py-1 rounded-full text-sm font-semibold transition-all ${
-            pathname === "/features"
-              ? "bg-blue-600 text-white shadow-md"
-              : "text-blue-800 hover:bg-blue-200/70 hover:text-blue-900"
-          }`}
-        >
-          Features
-        </Link>
-        <Link
-          href="/pricing"
-          className={`px-5 py-1 rounded-full text-sm font-semibold transition-all ${
-            pathname === "/pricing"
-              ? "bg-blue-600 text-white shadow-md"
-              : "text-blue-800 hover:bg-blue-200/70 hover:text-blue-900"
-          }`}
-        >
-          Pricing
-        </Link>
-        <Link
-          href="/about"
-          className={`px-5 py-1 rounded-full text-sm font-semibold transition-all ${
-            pathname === "/about"
-              ? "bg-blue-600 text-white shadow-md"
-              : "text-blue-800 hover:bg-blue-200/70 hover:text-blue-900"
-          }`}
-        >
-          About
-        </Link>
-      </nav>
     </header>
   )
 }

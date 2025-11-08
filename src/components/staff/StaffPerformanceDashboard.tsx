@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ChartBarIcon,
@@ -46,7 +46,7 @@ export default function StaffPerformanceDashboard({
   const [error, setError] = useState<string | null>(null)
   const [selectedStaff, setSelectedStaff] = useState<StaffPerformance | null>(null)
 
-  const fetchPerformanceData = async () => {
+  const fetchPerformanceData = useCallback(async () => {
     setLoading(true)
     setError(null)
     
@@ -74,13 +74,13 @@ export default function StaffPerformanceDashboard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   useEffect(() => {
     if (eventId) {
       fetchPerformanceData()
     }
-  }, [eventId])
+  }, [eventId, fetchPerformanceData])
 
   const getPerformanceColor = (score: number) => {
     if (score >= 90) return 'text-green-600 bg-green-100'

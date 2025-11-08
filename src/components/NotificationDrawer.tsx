@@ -275,7 +275,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
       fetchNotificationData();
       updateLastViewedTimestamp(); // Update timestamp when drawer opens
     }
-  }, [isOpen, readNotifications]);
+  }, [isOpen, fetchNotificationData]);
 
   // Auto-refresh AI summary 30 seconds after last log is created
   useEffect(() => {
@@ -329,7 +329,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  const fetchNotificationData = async () => {
+  const fetchNotificationData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -367,7 +367,7 @@ export default function NotificationDrawer({ isOpen, onClose, unreadCount, onMar
     } finally {
       setLoading(false);
     }
-  };
+  }, [readNotifications]);
 
   const fetchAISummary = async () => {
     try {

@@ -117,7 +117,7 @@ export default function EnhancedSearch({
     }
 
     setSuggestions(newSuggestions.slice(0, 8)) // Limit to 8 suggestions
-  }, [value, isFocused, savedSearches, recentSearches])
+  }, [value, isFocused, savedSearches, recentSearches, smartSuggestions])
 
   // Save search to recent searches
   const saveToRecent = useCallback((query: string) => {
@@ -356,4 +356,3 @@ export default function EnhancedSearch({
     </div>
   )
 }
-

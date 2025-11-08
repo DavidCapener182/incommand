@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WeatherData, getCurrentWeather } from '@/services/weatherService';
 import { 
   CloudIcon, 
@@ -35,7 +35,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
   const [hourly, setHourly] = useState<HourlyForecast[]>([]);
   const [retryCount, setRetryCount] = useState(0);
 
-  const fetchWeather = async () => {
+  const fetchWeather = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -54,10 +54,10 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
     } finally {
       setLoading(false);
     }
-  };
+  }, [lat, lon]);
 
   // Fetch hourly forecast for the event day
-  const fetchHourly = async () => {
+  const fetchHourly = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         lat: lat.toString(),
@@ -76,7 +76,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
     } catch (err) {
       console.error('Error fetching hourly forecast:', err);
     }
-  };
+  }, [lat, lon, eventDate, startTime, curfewTime]);
 
   useEffect(() => {
     if (lat && lon) {
@@ -93,7 +93,7 @@ export default function WeatherCard({ lat, lon, locationName, eventDate, startTi
     }, 30 * 60 * 1000);
     
     return () => clearInterval(refreshInterval);
-  }, [lat, lon, eventDate, startTime, curfewTime]);
+  }, [fetchWeather, fetchHourly]);
 
   const WeatherIcon = () => {
     if (!weather) return <CloudIcon className="h-8 w-8 text-gray-400" />;

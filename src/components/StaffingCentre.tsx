@@ -347,7 +347,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     }
 
     void fetchStaff()
-  }, [companyId])
+  }, [companyId, distributeStaff, normalizeStaffRecord])
 
   const normalizeStaffRecord = useCallback((record: any, index: number): StaffMember => {
     const qualifications = Array.isArray(record.skill_tags)

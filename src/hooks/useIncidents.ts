@@ -73,7 +73,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [addToast, eventId]);
 
   const updateIncident = useCallback(async (id: string, updates: Partial<Incident>) => {
     try {
@@ -108,7 +108,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
       });
       throw err;
     }
-  }, [fetchIncidents]);
+  }, [addToast, fetchIncidents]);
 
   const deleteIncident = useCallback(async (id: string) => {
     try {
@@ -139,7 +139,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
       });
       throw err;
     }
-  }, [fetchIncidents]);
+  }, [addToast, fetchIncidents]);
 
   const refreshIncidents = useCallback(async () => {
     await fetchIncidents();
@@ -185,7 +185,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [eventId, fetchIncidents]);
+  }, [addToast, eventId, fetchIncidents]);
 
   return {
     incidents,

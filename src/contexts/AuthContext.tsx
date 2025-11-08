@@ -433,7 +433,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (logoutTimeout) clearTimeout(logoutTimeout);
       if (stayLoggedInTimeout) clearTimeout(stayLoggedInTimeout);
     }
-  }, [fetchUserRole, loadSystemSettings, loadUserPreferences, user?.id])
+  }, [fetchUserRole, loadSystemSettings, loadUserPreferences, signOut, user?.id])
 
   // Temporarily disable route protection
   /*

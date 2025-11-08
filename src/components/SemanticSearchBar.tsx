@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   MagnifyingGlassIcon,
   SparklesIcon,
@@ -60,6 +60,38 @@ export default function SemanticSearchBar({
     }
   }, [query, incidents])
 
+  const performSearch = useCallback(async () => {
+    setIsSearching(true)
+    setShowSuggestions(false)
+
+    try {
+      const results = await semanticSearch.search(incidents, {
+        query,
+        filters,
+        limit: 50,
+        threshold: 0.2
+      })
+
+      onSearch(results)
+
+      // Save to recent searches
+      if (query.trim()) {
+        setRecentSearches(prev => {
+          if (prev.includes(query)) {
+            return prev
+          }
+          const updated = [query, ...prev].slice(0, 10)
+          localStorage.setItem('incommand_recent_searches', JSON.stringify(updated))
+          return updated
+        })
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [filters, incidents, onSearch, query])
+
   // Debounced search
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -79,34 +111,7 @@ export default function SemanticSearchBar({
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [query, filters])
-
-  const performSearch = async () => {
-    setIsSearching(true)
-    setShowSuggestions(false)
-
-    try {
-      const results = await semanticSearch.search(incidents, {
-        query,
-        filters,
-        limit: 50,
-        threshold: 0.2
-      })
-
-      onSearch(results)
-
-      // Save to recent searches
-      if (query.trim() && !recentSearches.includes(query)) {
-        const updated = [query, ...recentSearches].slice(0, 10)
-        setRecentSearches(updated)
-        localStorage.setItem('incommand_recent_searches', JSON.stringify(updated))
-      }
-    } catch (error) {
-      console.error('Search error:', error)
-    } finally {
-      setIsSearching(false)
-    }
-  }
+  }, [query, filters, performSearch, onClear])
 
   const handleSuggestionClick = (suggestion: string) => {
     setQuery(suggestion)

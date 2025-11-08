@@ -138,7 +138,10 @@ export default function IncidentTable({
   logger.debug('IncidentTable component rendered', { component: 'IncidentTable', action: 'render', componentId: componentId.current, onToastAvailable: !!onToast });
 
   // Safety check for filters prop
-  const safeFilters = filters || { types: [], statuses: [], priorities: [], query: '' };
+  const safeFilters = useMemo(
+    () => filters || { types: [], statuses: [], priorities: [], query: '' },
+    [filters]
+  );
 
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)

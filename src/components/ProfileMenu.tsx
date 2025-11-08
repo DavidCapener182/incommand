@@ -44,7 +44,7 @@ export default function ProfileMenu() {
         </Link>
 
         <Link 
-          href="/about" 
+          href="/#how-it-works" 
           className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
         >
           <Info className="w-4 h-4" />

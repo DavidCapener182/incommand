@@ -80,7 +80,7 @@ export default function MobileAnalyticsCarousel({
     }, autoSwipeInterval)
 
     return () => clearInterval(interval)
-  }, [autoSwipe, autoSwipeInterval, currentIndex, cards.length])
+  }, [autoSwipe, autoSwipeInterval, cards.length, currentIndex, handleNext])
 
   const slideVariants = {
     enter: (direction: number) => ({

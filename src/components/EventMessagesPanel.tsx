@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { FaRobot, FaUsers, FaShieldAlt, FaExclamationCircle, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -122,7 +122,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
         duration: Math.round(recordingDuration / 1000)
       });
     }
-  }, [recordingState, recordingDuration]);
+  }, [recordingState, recordingDuration, handleVoiceMessage]);
 
   // Set or fetch current event based on provided props
   useEffect(() => {
@@ -184,7 +184,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   }, []);
 
   // Fetch messages from Supabase for selected group
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (selectedGroup === 'ai') return;
     const { data, error } = await supabase
       .from('event_chat_messages')
@@ -204,11 +204,11 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
         })),
       }));
     }
-  };
+  }, [selectedGroup]);
 
   useEffect(() => {
     fetchMessages();
-  }, [selectedGroup]);
+  }, [fetchMessages]);
 
   // Fetch missing profiles for senders in current messages
   useEffect(() => {
@@ -280,7 +280,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     if (e.key === 'Enter') handleSend();
   };
 
-  const handleVoiceMessage = async (voiceData: { url: string; duration: number }) => {
+  const handleVoiceMessage = useCallback(async (voiceData: { url: string; duration: number }) => {
     if (!currentUserId || !selectedGroup) return;
 
     try {
@@ -307,7 +307,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     } catch (error) {
       console.error('Error sending voice message:', error);
     }
-  };
+  }, [currentUserId, selectedGroup, fetchMessages]);
 
   // Find selected group meta
   const selectedGroupMeta =

@@ -57,7 +57,7 @@ export function useOffline() {
         handleServiceWorkerMessage(event.data)
       })
     }
-  }, [])
+  }, [handleServiceWorkerMessage])
 
   // Monitor online/offline status
   useEffect(() => {
@@ -193,10 +193,10 @@ export function useOffline() {
       setState(prev => ({ ...prev, syncStatus: 'error' }))
       return false
     }
-  }, [state.isOnline])
+  }, [manualSync, state.isOnline])
 
   // Manual sync fallback
-  const manualSync = async () => {
+  const manualSync = useCallback(async () => {
     try {
       const db = await openIndexedDB()
       
@@ -249,7 +249,7 @@ export function useOffline() {
       setState(prev => ({ ...prev, syncStatus: 'error' }))
       throw error
     }
-  }
+  }, [])
 
   // Clear cache
   const clearCache = useCallback(async () => {

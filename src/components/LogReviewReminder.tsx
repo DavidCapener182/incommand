@@ -5,7 +5,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ClockIcon, 
@@ -67,7 +67,7 @@ export default function LogReviewReminder({
   }, [user])
 
   // Fetch recent logs data
-  const fetchRecentLogs = async () => {
+  const fetchRecentLogs = useCallback(async () => {
     if (!user || !isSilverCommander) return
 
     setIsLoading(true)
@@ -127,7 +127,7 @@ export default function LogReviewReminder({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [isSilverCommander, lastReminderTime, user])
 
   // Check for reminder every 30 minutes
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function LogReviewReminder({
     const interval = setInterval(checkReminder, 5 * 60 * 1000)
 
     return () => clearInterval(interval)
-  }, [isSilverCommander, isVisible, lastReminderTime])
+  }, [isSilverCommander, isVisible, lastReminderTime, fetchRecentLogs])
 
   // Auto-open if there are new logs since last reminder
   useEffect(() => {

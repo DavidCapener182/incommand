@@ -99,7 +99,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
     } else {
       showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
     }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification]);
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   // Calculate flow rate based on attendance changes
   const calculateFlowRate = useCallback((history: AttendanceRecord[]) => {
@@ -198,6 +198,85 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
     return predictions;
   }, []);
 
+  const fetchOccupancyDataDirect = useCallback(async () => {
+    try {
+      // Get attendance history for analysis
+      let attendanceQuery = supabase
+        .from('attendance_records')
+        .select('count, timestamp')
+        .order('timestamp', { ascending: true });
+      
+      // Try to filter by event_id if the column exists
+      try {
+        attendanceQuery = attendanceQuery.eq('event_id', eventId);
+      } catch (e) {
+        console.warn('event_id column not found in attendance_records, fetching all records');
+      }
+      
+      const { data: attendanceData, error: attendanceError } = await attendanceQuery;
+
+      if (attendanceError) {
+        console.warn('Error fetching attendance data:', attendanceError);
+        setConnectionError(null);
+      } else if (attendanceData && attendanceData.length > 0) {
+        setAttendanceHistory(attendanceData);
+        setCurrentOccupancy(attendanceData[attendanceData.length - 1].count || 0);
+        
+        const flowRateData = calculateFlowRate(attendanceData);
+        setFlowRate(flowRateData);
+        
+        const density = calculateCrowdDensity(attendanceData[attendanceData.length - 1].count, maxCapacity);
+        setCrowdDensity(density);
+        
+        const evacuationTimeMinutes = calculateEvacuationTime(
+          attendanceData[attendanceData.length - 1].count, 
+          maxCapacity, 
+          flowRateData
+        );
+        setEvacuationTime(evacuationTimeMinutes);
+      }
+
+      let eventQuery = supabase
+        .from('events')
+        .select('expected_attendance');
+      
+      try {
+        const { data: eventData, error: eventError } = await eventQuery.eq('id', eventId).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          setMaxCapacity(25000);
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
+        }
+      } catch (e) {
+        console.warn('id column not found in events, fetching first event');
+        const { data: eventData, error: eventError } = await eventQuery.limit(1).single();
+        if (eventError) {
+          console.warn('Error fetching event data:', eventError);
+          setMaxCapacity(25000);
+        } else if (eventData && eventData.expected_attendance) {
+          setMaxCapacity(eventData.expected_attendance);
+          if (attendanceData && attendanceData.length > 0) {
+            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+            setPredictions(predictions);
+          }
+        }
+      }
+
+      setConnectionError(null);
+      setIsConnected(true);
+    } catch (error) {
+      console.warn('Error fetching occupancy data:', error);
+      setConnectionError(null);
+      setIsConnected(true);
+    }
+  }, [eventId, maxCapacity]);
+
   const setupSubscription = useCallback(async () => {
     let subscription: any;
 
@@ -255,99 +334,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
     }
 
     return subscription;
-  }, [eventId]);
-
-  // Direct function to avoid circular dependency
-  const fetchOccupancyDataDirect = async () => {
-    try {
-      // Get attendance history for analysis
-      let attendanceQuery = supabase
-        .from('attendance_records')
-        .select('count, timestamp')
-        .order('timestamp', { ascending: true });
-      
-      // Try to filter by event_id if the column exists
-      try {
-        attendanceQuery = attendanceQuery.eq('event_id', eventId);
-      } catch (e) {
-        // If event_id column doesn't exist, just get all attendance records
-        console.warn('event_id column not found in attendance_records, fetching all records');
-      }
-      
-      const { data: attendanceData, error: attendanceError } = await attendanceQuery;
-
-      if (attendanceError) {
-        console.warn('Error fetching attendance data:', attendanceError);
-        // Don't set connection error for data fetch issues - just use defaults
-        setConnectionError(null);
-      } else if (attendanceData && attendanceData.length > 0) {
-        setAttendanceHistory(attendanceData);
-        setCurrentOccupancy(attendanceData[attendanceData.length - 1].count || 0);
-        
-        // Calculate derived metrics
-        const flowRateData = calculateFlowRate(attendanceData);
-        setFlowRate(flowRateData);
-        
-        const density = calculateCrowdDensity(attendanceData[attendanceData.length - 1].count, maxCapacity);
-        setCrowdDensity(density);
-        
-        const evacuationTimeMinutes = calculateEvacuationTime(
-          attendanceData[attendanceData.length - 1].count, 
-          maxCapacity, 
-          flowRateData
-        );
-        setEvacuationTime(evacuationTimeMinutes);
-      }
-
-      // Get expected capacity from events table
-      let eventQuery = supabase
-        .from('events')
-        .select('expected_attendance');
-      
-      // Try to filter by id if the column exists
-      try {
-        const { data: eventData, error: eventError } = await eventQuery.eq('id', eventId).single();
-        if (eventError) {
-          console.warn('Error fetching event data:', eventError);
-          // Use default capacity if event data can't be fetched
-          setMaxCapacity(25000); // Default capacity
-        } else if (eventData && eventData.expected_attendance) {
-          setMaxCapacity(eventData.expected_attendance);
-          
-          // Generate predictions after setting capacity
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
-            setPredictions(predictions);
-          }
-        }
-      } catch (e) {
-        // If id column doesn't exist, just get the first event
-        console.warn('id column not found in events, fetching first event');
-        const { data: eventData, error: eventError } = await eventQuery.limit(1).single();
-        if (eventError) {
-          console.warn('Error fetching event data:', eventError);
-          // Use default capacity if event data can't be fetched
-          setMaxCapacity(25000); // Default capacity
-        } else if (eventData && eventData.expected_attendance) {
-          setMaxCapacity(eventData.expected_attendance);
-          
-          // Generate predictions after setting capacity
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
-            setPredictions(predictions);
-          }
-        }
-      }
-      
-      setConnectionError(null); // Clear errors on successful fetch
-      setIsConnected(true); // Show as connected when data is fetched successfully
-    } catch (error) {
-      console.warn('Error fetching occupancy data:', error);
-      // Don't set connection error for data fetch issues - just use defaults
-      setConnectionError(null);
-      setIsConnected(true); // Show as connected even if there's an error
-    }
-  };
+  }, [eventId, fetchOccupancyDataDirect]);
 
   const fetchOccupancyData = useCallback(async () => {
     try {
@@ -478,7 +465,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       }
       clearInterval(interval);
     };
-  }, [eventId, isConnected, isReconnecting, setupSubscription]);
+  }, [eventId, isConnected, isReconnecting, setupSubscription, fetchOccupancyDataDirect]);
 
   const occupancyPercentage = (currentOccupancy / maxCapacity) * 100;
   const getCapacityColor = () => {

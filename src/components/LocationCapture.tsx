@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import {
   MapPinIcon,
@@ -52,9 +52,44 @@ export default function LocationCapture({
     if (autoCapture) {
       captureLocation()
     }
-  }, [autoCapture])
+  }, [autoCapture, captureLocation])
 
-  const captureLocation = async () => {
+  const fetchAddress = useCallback(async (lat: number, lng: number) => {
+    try {
+      // Using OpenStreetMap Nominatim (free)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'inCommand Event Management System'
+          }
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const formattedAddress = data.display_name || 
+          `${data.address?.road || ''}, ${data.address?.city || data.address?.town || ''}`
+        setAddress(formattedAddress)
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error)
+    }
+  }, [])
+
+  const fetchWhat3Words = useCallback(async (lat: number, lng: number) => {
+    try {
+      // This would require a What3Words API key
+      // For now, we'll generate a mock what3words address
+      const words = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel']
+      const mockW3W = `///${words[Math.floor(Math.random() * words.length)]}.${words[Math.floor(Math.random() * words.length)]}.${words[Math.floor(Math.random() * words.length)]}`
+      setWhat3words(mockW3W)
+    } catch (error) {
+      console.error('What3Words error:', error)
+    }
+  }, [])
+
+  const captureLocation = useCallback(async () => {
     if (!('geolocation' in navigator)) {
       setError('Geolocation is not supported by your browser')
       return
@@ -116,7 +151,7 @@ export default function LocationCapture({
       setError(errorMessage)
       setIsCapturing(false)
     }
-  }
+  }, [fetchAddress, fetchWhat3Words, onLocationCaptured])
 
   const clearLocation = () => {
     setLocation(null)
@@ -126,40 +161,7 @@ export default function LocationCapture({
     onLocationCleared?.()
   }
 
-  const fetchAddress = async (lat: number, lng: number) => {
-    try {
-      // Using OpenStreetMap Nominatim (free)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'inCommand Event Management System'
-          }
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        const formattedAddress = data.display_name || 
-          `${data.address?.road || ''}, ${data.address?.city || data.address?.town || ''}`
-        setAddress(formattedAddress)
-      }
-    } catch (error) {
-      console.error('Reverse geocoding error:', error)
-    }
-  }
-
-  const fetchWhat3Words = async (lat: number, lng: number) => {
-    try {
-      // This would require a What3Words API key
-      // For now, we'll generate a mock what3words address
-      const words = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel']
-      const mockW3W = `///${words[Math.floor(Math.random() * words.length)]}.${words[Math.floor(Math.random() * words.length)]}.${words[Math.floor(Math.random() * words.length)]}`
-      setWhat3words(mockW3W)
-    } catch (error) {
-      console.error('What3Words error:', error)
-    }
-  }
+  
 
   const openInMaps = () => {
     if (!location) return

@@ -1,6 +1,6 @@
 // src/components/ColorContrastAudit.tsx
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   auditColorContrast, 
   checkTailwindContrast, 
@@ -98,10 +98,10 @@ const ColorContrastAudit: React.FC = () => {
     }, 1000)
   }
 
-  const testCustomColors = () => {
+  const testCustomColors = useCallback(() => {
     const result = checkContrast(customTest.foreground, customTest.background, customTest.fontSize)
     setCustomResult(result)
-  }
+  }, [customTest])
 
   const getStatusColor = (result: ColorContrastResult) => {
     if (result.passesAAA) return 'text-green-600 bg-green-100'
@@ -117,7 +117,7 @@ const ColorContrastAudit: React.FC = () => {
 
   useEffect(() => {
     testCustomColors()
-  }, [customTest])
+  }, [testCustomColors])
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">

@@ -26,13 +26,13 @@ export function FooterSimple({
   description = "Professional event management and incident response platform for festivals, venues, and public events.",
   links = {
     product: [
-      { name: "Features", url: "/features" },
-      { name: "Pricing", url: "/pricing" },
+      { name: "Features", url: "/#features" },
+      { name: "Pricing", url: "/#pricing" },
       { name: "Documentation", url: "/help" },
       { name: "API", url: "/help" },
     ],
     company: [
-      { name: "About", url: "/about" },
+      { name: "About", url: "/#how-it-works" },
       { name: "Blog", url: "/blog" },
       { name: "Careers", url: "/careers" },
       { name: "Contact", url: "mailto:info@incommand.uk" },
