@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChartBarIcon, CpuChipIcon, CurrencyDollarIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import type { Database } from '@/types/supabase';
 
 export default function AIUsagePage() {
   const { user, loading: authLoading } = useAuth();
@@ -49,7 +48,7 @@ export default function AIUsagePage() {
 
         // Build query for logs
         let logsQuery = supabase
-          .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
+          .from('ai_usage_logs')
           .select('*', { count: 'exact' })
           .eq('user_id', user.id)
           .gte('created_at', from.toISOString())
@@ -89,6 +88,9 @@ export default function AIUsagePage() {
         const byDate = new Map<string, { calls: number; tokens: number; cost: number }>();
 
         logs.forEach((log) => {
+          if (!log.created_at) {
+            return;
+          }
           const date = new Date(log.created_at).toISOString().split('T')[0];
           const existing = byDate.get(date) || { calls: 0, tokens: 0, cost: 0 };
           byDate.set(date, {
@@ -122,7 +124,7 @@ export default function AIUsagePage() {
 
         const tableRows = paginatedLogs.map((log) => ({
           id: log.id,
-          date: log.created_at,
+          date: log.created_at ?? '',
           endpoint: log.endpoint,
           model: log.model,
           tokens: log.tokens_used || 0,
@@ -133,9 +135,11 @@ export default function AIUsagePage() {
         setTotalCount(logs.length);
 
         // Fetch tier
-        const { data: subscription, error: subError } = await supabase
-          .from<any, any>('user_subscriptions')
-          .select('tier_id')
+        const supabaseAny = supabase as any;
+
+        const { data: subscription, error: subError } = await supabaseAny
+          .from('user_subscriptions')
+          .select('tier_id, renewal_anchor')
           .eq('user_id', user.id)
           .single();
 
@@ -144,8 +148,8 @@ export default function AIUsagePage() {
           tierId = subscription.tier_id;
         }
 
-        const { data: tierData, error: tierError } = await supabase
-          .from<any, any>('subscription_tiers')
+        const { data: tierData, error: tierError } = await supabaseAny
+          .from('subscription_tiers')
           .select('*')
           .eq('id', tierId)
           .single();
@@ -168,7 +172,7 @@ export default function AIUsagePage() {
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
           const { data: periodUsage } = await supabase
-            .from<Database['public']['Tables']['ai_usage_logs']['Row'], Database['public']['Tables']['ai_usage_logs']['Update']>('ai_usage_logs')
+            .from('ai_usage_logs')
             .select('tokens_used, cost_usd')
             .eq('user_id', user.id)
             .gte('created_at', periodStart.toISOString())
