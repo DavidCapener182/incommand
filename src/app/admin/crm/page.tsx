@@ -10,8 +10,12 @@ import {
   PhoneIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import { getServerUser } from '@/lib/auth/getServerUser';
+import type { Database } from '@/types/supabase';
+
+export const runtime = 'nodejs';
 
 type QuoteStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
 type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'lost';
@@ -62,6 +66,15 @@ type CrmDashboardData = {
 };
 
 type RawRecord = Record<string, unknown>;
+
+function isSupabaseClient(value: unknown): value is SupabaseClient<Database> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'from' in value &&
+    typeof (value as { from?: unknown }).from === 'function'
+  );
+}
 
 const DEFAULT_QUOTES: QuoteRecord[] = [
   {
@@ -302,11 +315,12 @@ async function loadCrmData(): Promise<CrmDashboardData> {
     return { quotes: [], campaigns: [], activities: [] };
   }
 
+  const supabaseClient = isSupabaseClient(supabase) ? supabase : null;
+
   const safeSelect = async (table: string): Promise<unknown[]> => {
     try {
-      const query = (supabase as { from?: (table: string) => { select: (fields: string) => Promise<{ data?: unknown[] }> } }).from;
-      if (!query) return [];
-      const { data } = await query(table).select('*');
+      if (!supabaseClient) return [];
+      const { data } = await supabaseClient.from(table as any).select('*');
       return Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn(`CRM dashboard: falling back to defaults for ${table} due to`, error);
