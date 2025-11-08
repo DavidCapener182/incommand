@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CalendarDaysIcon, TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useToast } from '@/components/Toast';
 import { endEvent, deleteLog } from '../actions';
-import type { Database } from '@/types/supabase';
 
 // Utility to format date/time for logs table
 function formatDateTime(ts: string | Date | undefined) {
@@ -79,7 +78,7 @@ export default function EventsSettingsPage() {
 
     console.log('[EventsPage] Fetching profile for user', { userId: effectiveUserId });
     const { data: profile, error: profileError } = await supabase
-      .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
+      .from('profiles')
       .select('company_id')
       .eq('id', effectiveUserId)
       .single();
@@ -109,7 +108,7 @@ export default function EventsSettingsPage() {
 
     // Fetch current events with company_id filter
     const { data: current, error: currentError } = await supabase
-      .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
+      .from('events')
       .select('*')
       .eq('is_current', true)
       .eq('company_id', profile.company_id);
@@ -137,7 +136,7 @@ export default function EventsSettingsPage() {
     }
     // Fetch past events with company_id filter
     const { data: past, error: pastError } = await supabase
-      .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
+      .from('events')
       .select('*')
       .eq('is_current', false)
       .eq('company_id', profile.company_id)
@@ -168,7 +167,7 @@ export default function EventsSettingsPage() {
     setLogsLoading(true);
     setError(null);
     const { data, error } = await supabase
-      .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
+      .from('incident_logs')
       .select('*')
       .eq('event_id', eventId)
       .order('created_at', { ascending: false });
