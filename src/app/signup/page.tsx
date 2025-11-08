@@ -6,17 +6,22 @@ import { supabase } from '../../lib/supabase'
 import Image from 'next/image'
 import Link from 'next/link'
 import LegalModal from '../../components/modals/LegalModal'
+import { createCompanyWithPlan } from './actions'
+import { getAllPlans, type PlanCode } from '@/config/PricingConfig'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [company, setCompany] = useState('')
+  const [selectedPlan, setSelectedPlan] = useState<PlanCode>('starter')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [showLegalModal, setShowLegalModal] = useState(false)
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('privacy')
   const router = useRouter()
+
+  const plans = getAllPlans().filter(p => p.code !== 'enterprise' || typeof p.pricing.monthly === 'number')
 
   useEffect(() => {
     // Set body and html background to blue with !important
@@ -65,11 +70,21 @@ export default function SignUpPage() {
       if (error) throw error
 
       if (data.user) {
+        // Create company with selected plan using server action
+        try {
+          await createCompanyWithPlan(data.user.id, company, selectedPlan)
+        } catch (err) {
+          console.error('Company creation error:', err)
+          // Still allow signup to proceed - company can be created later
+        }
+
+        // Create profile
         const { error: profileError } = await (supabase as any).from('profiles').insert([
           {
             id: data.user.id,
             email,
             company,
+            role: 'company_admin',
           },
         ])
         if (profileError) throw profileError
@@ -197,6 +212,30 @@ export default function SignUpPage() {
                   />
                 </div>
                 <p className="mt-2 text-xs text-gray-500">At least 8 characters, including one number or symbol.</p>
+              </div>
+
+              <div>
+                <label htmlFor="signup-plan" className="block text-sm font-medium text-gray-700">
+                  Choose Your Plan
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="signup-plan"
+                    name="plan"
+                    value={selectedPlan}
+                    onChange={(e) => setSelectedPlan(e.target.value as PlanCode)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6]"
+                  >
+                    {plans.map((plan) => (
+                      <option key={plan.code} value={plan.code}>
+                        {plan.displayName} - {typeof plan.pricing.monthly === 'number' ? `£${plan.pricing.monthly}/month` : 'Custom pricing'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {plans.find(p => p.code === selectedPlan)?.metadata.description}
+                </p>
               </div>
 
               <button

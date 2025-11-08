@@ -7,6 +7,7 @@
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import { getPlan, getPlanFeatures, canCreateEvent, canCreateUser, canCreateStaff, withinAttendeeLimit, type PlanCode } from '@/config/PricingConfig'
 
 export interface SubscriptionTier {
   id: string
@@ -27,6 +28,83 @@ export interface QuotaCheck {
   policy: 'block' | 'warn'
   hardBlocked: boolean
   usagePercentage: number
+}
+
+/**
+ * Get company's subscription plan code
+ */
+export async function getCompanyPlan(companyId: string): Promise<PlanCode | null> {
+  const supabase = getServiceSupabaseClient()
+  
+  const { data: company, error } = await supabase
+    .from<any, any>('companies')
+    .select('subscription_plan')
+    .eq('id', companyId)
+    .single()
+
+  if (error || !company) return null
+
+  const planCode = company.subscription_plan
+  // Map legacy plan codes to new ones
+  if (planCode === 'trial' || planCode === 'basic') return 'starter'
+  if (planCode === 'premium' || planCode === 'professional') return 'operational'
+  
+  // Validate plan code
+  if (['starter', 'operational', 'command', 'enterprise'].includes(planCode)) {
+    return planCode as PlanCode
+  }
+
+  return 'starter' // Default fallback
+}
+
+/**
+ * Get plan features for a company
+ */
+export async function getCompanyPlanFeatures(companyId: string) {
+  const planCode = await getCompanyPlan(companyId)
+  if (!planCode) return null
+  
+  return getPlanFeatures(planCode)
+}
+
+/**
+ * Check if company can create an event
+ */
+export async function canCompanyCreateEvent(companyId: string, currentEventCount: number): Promise<boolean> {
+  const planCode = await getCompanyPlan(companyId)
+  if (!planCode) return false
+  
+  return canCreateEvent(planCode, currentEventCount)
+}
+
+/**
+ * Check if company can create a user
+ */
+export async function canCompanyCreateUser(companyId: string, currentUserCount: number): Promise<boolean> {
+  const planCode = await getCompanyPlan(companyId)
+  if (!planCode) return false
+  
+  return canCreateUser(planCode, currentUserCount)
+}
+
+/**
+ * Check if company can create staff member
+ */
+export async function canCompanyCreateStaff(companyId: string, currentStaffCount: number): Promise<boolean> {
+  const planCode = await getCompanyPlan(companyId)
+  if (!planCode) return false
+  
+  return canCreateStaff(planCode, currentStaffCount)
+}
+
+/**
+ * Check if event attendee count is within plan limits
+ */
+export async function isCompanyWithinAttendeeLimit(companyId: string, attendeeCount: number): Promise<boolean> {
+  const planCode = await getCompanyPlan(companyId)
+  if (!planCode) return false
+  
+  return withinAttendeeLimit(planCode, attendeeCount)
 }
 
 /**

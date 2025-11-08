@@ -2499,7 +2499,7 @@ export default function IncidentCreationModal({
         clearTimeout(recognitionTimeout);
       }
     };
-  }, [continuous, interimResults, language, maxAlternatives, noiseThreshold, silenceTimeout, transcript, voiceError]);
+  }, []);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   // Offline mode detection and local storage
