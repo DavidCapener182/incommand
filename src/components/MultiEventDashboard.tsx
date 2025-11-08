@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   CalendarIcon,
   MapPinIcon,
@@ -12,6 +12,11 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
+import { FeatureGate } from '@/components/FeatureGate'
+import { useUserPlan } from '@/hooks/useUserPlan'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/components/Toast'
 
 interface Event {
   id: string
@@ -34,7 +39,7 @@ interface Event {
 }
 
 interface MultiEventDashboardProps {
-  organizationId: string
+  organizationId?: string
   className?: string
 }
 
@@ -42,44 +47,118 @@ export default function MultiEventDashboard({
   organizationId,
   className = ''
 }: MultiEventDashboardProps) {
+  const { user } = useAuth()
+  const { showToast } = useToast()
   const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | 'upcoming'>('all')
   const [sortBy, setSortBy] = useState<'date' | 'incidents' | 'name'>('date')
+  const userPlan = useUserPlan() || 'starter'
+
+  const loadEvents = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      // Get company_id from user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.company_id) {
+        setLoading(false)
+        return
+      }
+
+      // Fetch events for the company
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('id, event_name, event_type, venue_name, start_datetime, end_datetime, expected_attendance, is_current')
+        .eq('company_id', profile.company_id)
+        .order('start_datetime', { ascending: false })
+
+      if (eventsError) throw eventsError
+
+      // Fetch incidents and staff for each event
+      const eventsWithMetrics = await Promise.all(
+        (eventsData || []).map(async (event) => {
+          // Get incidents for this event
+          const { data: incidents, error: incidentsError } = await supabase
+            .from('incident_logs')
+            .select('id, status, priority')
+            .eq('event_id', event.id)
+
+          if (incidentsError) console.error('Error fetching incidents:', incidentsError)
+
+          // Get staff for this event
+          const { data: staff, error: staffError } = await supabase
+            .from('staff')
+            .select('id, active, availability_status')
+            .eq('event_id', event.id)
+
+          if (staffError) console.error('Error fetching staff:', staffError)
+
+          // Determine status based on dates
+          const now = new Date()
+          const startDate = event.start_datetime ? new Date(event.start_datetime) : null
+          const endDate = event.end_datetime ? new Date(event.end_datetime) : null
+
+          let status: 'upcoming' | 'active' | 'completed' = 'upcoming'
+          if (startDate && endDate) {
+            if (now >= startDate && now <= endDate) {
+              status = 'active'
+            } else if (now > endDate) {
+              status = 'completed'
+            }
+          } else if (event.is_current) {
+            status = 'active'
+          }
+
+          const incidentList = incidents || []
+          const staffList = staff || []
+
+          return {
+            id: event.id,
+            name: event.event_name || 'Unnamed Event',
+            type: event.event_type || 'Other',
+            venue: event.venue_name || 'TBD',
+            startDate: event.start_datetime || new Date().toISOString(),
+            endDate: event.end_datetime || new Date().toISOString(),
+            status,
+            attendance: event.expected_attendance || 0,
+            incidents: {
+              total: incidentList.length,
+              open: incidentList.filter((i: any) => i.status !== 'closed' && i.status !== 'resolved').length,
+              high_priority: incidentList.filter((i: any) => i.priority === 'high' || i.priority === 'urgent').length,
+            },
+            staff: {
+              assigned: staffList.length,
+              on_duty: staffList.filter((s: any) => s.active && s.availability_status === 'available').length,
+            },
+          }
+        })
+      )
+
+      setEvents(eventsWithMetrics)
+    } catch (error) {
+      console.error('Error loading events:', error)
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load events',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id, showToast])
 
   useEffect(() => {
     loadEvents()
-  }, [organizationId])
-
-  const loadEvents = async () => {
-    // Mock data - in production, fetch from API
-    const mockEvents: Event[] = [
-      {
-        id: '1',
-        name: 'Summer Music Festival 2024',
-        type: 'Festival',
-        venue: 'Central Park Arena',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active',
-        attendance: 15000,
-        incidents: { total: 45, open: 8, high_priority: 2 },
-        staff: { assigned: 50, on_duty: 45 }
-      },
-      {
-        id: '2',
-        name: 'Championship Finals',
-        type: 'Sports',
-        venue: 'Stadium North',
-        startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'upcoming',
-        attendance: 25000,
-        incidents: { total: 0, open: 0, high_priority: 0 },
-        staff: { assigned: 75, on_duty: 0 }
-      }
-    ]
-    setEvents(mockEvents)
-  }
+  }, [loadEvents])
 
   const filteredEvents = events
     .filter(event => filter === 'all' || event.status === filter)
@@ -123,7 +202,14 @@ export default function MultiEventDashboard({
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <FeatureGate 
+      feature="multi-event-management" 
+      plan={userPlan} 
+      showUpgradeCard={true}
+      upgradeCardVariant="banner"
+      upgradeCardDescription="Manage multiple concurrent events, switch between them seamlessly, and get a unified view of all your operations."
+    >
+      <div className={`space-y-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -170,8 +256,23 @@ export default function MultiEventDashboard({
       </div>
 
       {/* Event Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredEvents.map((event, index) => {
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <div key={i} className="card-depth p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredEvents.map((event, index) => {
           const statusConfig = getStatusConfig(event.status)
           const StatusIcon = statusConfig.icon
 
@@ -256,20 +357,27 @@ export default function MultiEventDashboard({
 
               {/* Actions */}
               <div className="mt-4 flex gap-2">
-                <button className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => window.location.href = `/incidents?eventId=${event.id}`}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
                   View Dashboard
                 </button>
-                <button className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => window.location.href = `/analytics?eventId=${event.id}`}
+                  className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+                >
                   <ChartBarIcon className="h-5 w-5" />
                 </button>
               </div>
             </motion.div>
           )
         })}
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredEvents.length === 0 && (
+      {!loading && filteredEvents.length === 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
           <CalendarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -284,5 +392,6 @@ export default function MultiEventDashboard({
         </div>
       )}
     </div>
+    </FeatureGate>
   )
 }

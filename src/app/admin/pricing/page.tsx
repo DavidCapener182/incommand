@@ -3,6 +3,7 @@ import { getServerUser } from '@/lib/auth/getServerUser'
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout'
 import PricingPlansManager from '@/components/admin/pricing/PricingPlansManager'
 import QuoteCalculator from '@/components/admin/pricing/QuoteCalculator'
+import FeatureAvailabilityGrid from '@/components/admin/pricing/FeatureAvailabilityGrid'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,9 @@ export default async function PricingPage() {
 
         {/* Pricing Plans Manager */}
         <PricingPlansManager />
+
+        {/* Feature Availability Grid */}
+        <FeatureAvailabilityGrid />
 
         {/* Quote Calculator */}
         <QuoteCalculator />

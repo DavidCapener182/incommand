@@ -1,25 +1,26 @@
 'use client'
 
 import React from 'react'
-import OfflineMode from '@/components/features/offline-mode'
+import TaskDispatch from '@/components/features/task-dispatch'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
-export default function OfflinePage() {
+export default function TasksPage() {
   const userPlan = useUserPlan() || 'starter'
 
   return (
     <PageWrapper>
       <FeatureGate
-        feature="offline-mode"
+        feature="task-dispatch"
         plan={userPlan}
         showUpgradeCard={true}
         upgradeCardVariant="banner"
-        upgradeCardDescription="Capture data offline and sync automatically when connection is restored. Perfect for field operations in areas with poor connectivity."
+        upgradeCardDescription="Allocate and monitor field staff tasks in real time. Create tasks, assign them to staff members, and track completion status."
       >
-        <OfflineMode />
+        <TaskDispatch />
       </FeatureGate>
     </PageWrapper>
   )
 }
+

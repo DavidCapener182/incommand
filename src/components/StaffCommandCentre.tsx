@@ -8,6 +8,8 @@ import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from './ui/button';
+import { FeatureGate } from './FeatureGate';
+import { useUserPlan } from '@/hooks/useUserPlan';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -489,6 +491,7 @@ export default function StaffCommandCentre() {
 
   // Real-time staff location tracking
   const { user } = useAuth();
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   const [staffLocations, setStaffLocations] = useState<Record<string, any>>({});
   const [locationChannel, setLocationChannel] = useState<any>(null);
   const [isLocationConnected, setIsLocationConnected] = useState(false);
@@ -993,7 +996,14 @@ export default function StaffCommandCentre() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <FeatureGate 
+      feature="command-centre" 
+      plan={userPlan} 
+      showUpgradeCard={true}
+      upgradeCardVariant="banner"
+      upgradeCardDescription="Get a map-based operational overview for multiple venues, real-time staff tracking, and advanced command capabilities."
+    >
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -1031,5 +1041,6 @@ export default function StaffCommandCentre() {
         {renderView()}
       </div>
     </div>
+    </FeatureGate>
   );
 }

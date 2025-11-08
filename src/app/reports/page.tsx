@@ -9,6 +9,8 @@ import { PageWrapper } from '@/components/layout/PageWrapper';
 import { StackedPanel } from '@/components/ui/StackedPanel';
 import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer';
 import { CardContainer } from '@/components/ui/CardContainer';
+import { FeatureGate } from '@/components/FeatureGate';
+import { useUserPlan } from '@/hooks/useUserPlan';
 
 export default function ReportsPage() {
   const [event, setEvent] = useState<any>(null);
@@ -26,6 +28,7 @@ export default function ReportsPage() {
   const [callsignAssignments, setCallsignAssignments] = useState<Record<string, string>>({});
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({});
   const [allLogs, setAllLogs] = useState<any[]>([]);
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
 
   useEffect(() => {
     const fetchData = async () => {

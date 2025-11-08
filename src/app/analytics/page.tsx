@@ -39,6 +39,7 @@ import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
 import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
 import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
 import EndOfEventReport from '@/components/analytics/EndOfEventReport'
+import RealtimeAnalyticsDashboard from '@/components/analytics/RealtimeAnalyticsDashboard'
 import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
 import ComparativeAnalytics from '@/components/analytics/ComparativeAnalytics'
 import MobileOptimizedChart from '@/components/MobileOptimizedChart'
@@ -47,6 +48,8 @@ import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Card } from '@/components/ui/card'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { FeatureGate } from '@/components/FeatureGate'
+import { useUserPlan } from '@/hooks/useUserPlan'
 
 interface IncidentRecord {
   id: string
@@ -85,10 +88,11 @@ export default function AnalyticsPage() {
   const [aiSummary, setAiSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
-  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event'>('operational')
+  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event' | 'real-time'>('operational')
   const searchParams = useSearchParams()
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const isDesktop = useMediaQuery('(min-width: 768px)')
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
@@ -946,6 +950,20 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                         <span className="sm:hidden">Report</span>
                       </div>
                     </button>
+                    <button
+                      onClick={() => setActiveTab('real-time')}
+                      className={`${
+                        activeTab === 'real-time'
+                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                        <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">Real-Time</span>
+                        <span className="sm:hidden">Live</span>
+                      </div>
+                    </button>
           </nav>
         </Card>
 
@@ -995,15 +1013,23 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 )}
 
                 {activeTab === 'custom-dashboards' && (
-                  <CustomDashboardBuilder
-                    eventId={eventData?.id || ''}
-                    onSave={(dashboard) => {
-                      console.log('Dashboard saved:', dashboard)
-                    }}
-                    onCancel={() => {
-                      console.log('Dashboard creation cancelled')
-                    }}
-                  />
+                  <FeatureGate 
+                    feature="custom-dashboards" 
+                    plan={userPlan} 
+                    showUpgradeCard={true}
+                    upgradeCardVariant="card"
+                    upgradeCardDescription="Build custom dashboards with drag-and-drop widgets, save layouts, and share with your team."
+                  >
+                    <CustomDashboardBuilder
+                      eventId={eventData?.id || ''}
+                      onSave={(dashboard) => {
+                        console.log('Dashboard saved:', dashboard)
+                      }}
+                      onCancel={() => {
+                        console.log('Dashboard creation cancelled')
+                      }}
+                    />
+                  </FeatureGate>
                 )}
 
                 {activeTab === 'benchmarking' && (
@@ -1014,6 +1040,23 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
                 {activeTab === 'end-of-event' && (
                   <EndOfEventReport eventId={eventData?.id} />
+                )}
+
+                {activeTab === 'real-time' && (
+                  <FeatureGate
+                    feature="real-time-analytics"
+                    plan={userPlan}
+                    showUpgradeCard={true}
+                    upgradeCardVariant="card"
+                    upgradeCardDescription="Monitor your event operations in real-time with live metrics, auto-refreshing charts, and instant alerts."
+                  >
+                    {eventData?.id && (
+                      <RealtimeAnalyticsDashboard
+                        eventId={eventData.id}
+                        refreshInterval={5000}
+                      />
+                    )}
+                  </FeatureGate>
                 )}
 
         {/* Operational Tab Content - Dynamic Split */}

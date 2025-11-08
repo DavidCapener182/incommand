@@ -1,25 +1,26 @@
 'use client'
 
 import React from 'react'
-import OfflineMode from '@/components/features/offline-mode'
+import SSOIntegration from '@/components/features/sso-integration'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
-export default function OfflinePage() {
+export default function SSOSettingsPage() {
   const userPlan = useUserPlan() || 'starter'
 
   return (
     <PageWrapper>
       <FeatureGate
-        feature="offline-mode"
+        feature="sso-integration"
         plan={userPlan}
         showUpgradeCard={true}
         upgradeCardVariant="banner"
-        upgradeCardDescription="Capture data offline and sync automatically when connection is restored. Perfect for field operations in areas with poor connectivity."
+        upgradeCardDescription="Enable Single Sign-On with Azure AD, Okta, or SAML providers. Streamline user authentication and improve security."
       >
-        <OfflineMode />
+        <SSOIntegration />
       </FeatureGate>
     </PageWrapper>
   )
 }
+

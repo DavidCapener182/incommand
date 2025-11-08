@@ -337,24 +337,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let session: Session | null = null;
       try {
         console.log('[AuthContext] Starting initial session fetch...');
-        // Get session with hard timeout protection to avoid infinite loading
-        // Reduced timeout to 3 seconds - if it takes longer, rely on onAuthStateChange
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<any>((resolve) =>
-            setTimeout(() => {
-              console.warn('[AuthContext] Session fetch timed out after 3s, proceeding without session. onAuthStateChange will handle auth updates.');
-              resolve({ data: { session: null }, error: { message: 'Session fetch timeout' } })
-            }, 3000)
-          )
-        ])
-        session = result?.data?.session || null
+        const { data: { session: fetchedSession }, error } = await supabase.auth.getSession();
+        session = fetchedSession;
         
         console.log('[AuthContext] Initial session fetch result', {
           hasSession: !!session,
           hasUser: !!session?.user,
           userId: session?.user?.id,
-          error: result?.error?.message
+          email: session?.user?.email,
+          error: error?.message
         });
         
         if (session?.user) {
@@ -429,9 +420,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: session.user.email
         });
         setUser(session.user)
-        await Promise.all([
-          fetchUserRole(session.user.id),
-          loadUserPreferences(session.user.id)
+        // Use Promise.allSettled to ensure all complete even if one fails
+        await Promise.allSettled([
+          fetchUserRole(session.user.id).catch(err => {
+            console.error('[AuthContext] Error fetching user role:', err)
+            setRole('user' as UserRole) // Fallback
+          }),
+          loadUserPreferences(session.user.id).catch(err => {
+            console.error('[AuthContext] Error loading user preferences:', err)
+          })
         ])
       } else {
         console.log('[AuthContext] No session in auth state change, clearing user');
@@ -546,4 +543,4 @@ export const useAuth = () => {
       },
     }
   }
-} 
+}

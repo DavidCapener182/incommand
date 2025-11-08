@@ -146,10 +146,18 @@ export default function IncidentTable({
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [internalEventId, setInternalEventId] = useState<string | null>(null)
+
+  const effectiveEventId = useMemo(() => {
+    const incomingId =
+      typeof propCurrentEventId === 'string' && propCurrentEventId.trim().length > 0
+        ? propCurrentEventId
+        : null
+    return incomingId ?? internalEventId
+  }, [propCurrentEventId, internalEventId])
   
   // Real-time revision tracking
-  const { revisionCount } = useLogRevisions(currentEventId, (notification) => {
+  const { revisionCount } = useLogRevisions(effectiveEventId, (notification) => {
     // Show toast for new revisions
     if (onToast) {
       onToast({
@@ -168,6 +176,10 @@ export default function IncidentTable({
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
   const { state: bpState, data: bpData, fetchBestPractice } = useBestPractice()
+  const fetchBestPracticeRef = useRef(fetchBestPractice)
+  useEffect(() => {
+    fetchBestPracticeRef.current = fetchBestPractice
+  }, [fetchBestPractice])
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -195,70 +207,62 @@ export default function IncidentTable({
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
   const onToastRef = useRef(onToast)
+  const onDataLoadedRef = useRef(onDataLoaded)
   
-  // Create a reusable fetchIncidents function
+  // Keep refs in sync with props/callbacks
+  useEffect(() => {
+    onToastRef.current = onToast
+  }, [onToast])
+  
+  useEffect(() => {
+    onDataLoadedRef.current = onDataLoaded
+  }, [onDataLoaded])
+  
+  useEffect(() => {
+    manualStatusChangesRef.current = manualStatusChanges
+  }, [manualStatusChanges])
+  
+  // Create a reusable fetchIncidents function using refs to avoid dependency issues
   const fetchIncidents = useCallback(async () => {
-    if (!currentEventId) return;
+    const eventId = effectiveEventId
+    if (!eventId) return;
     
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*')
-        .eq('event_id', currentEventId)
+        .eq('event_id', eventId)
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
-      setIncidents(
-        (data || []).map(incident => ({
-          ...incident,
-          status: incident.status || 'open',
-          entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
-          retrospective_justification: incident.retrospective_justification || undefined,
-          logged_by_user_id: incident.logged_by_user_id || undefined,
-          logged_by_callsign: incident.logged_by_callsign ?? undefined,
-          is_amended: incident.is_amended ?? undefined,
-          original_entry_id: incident.original_entry_id?.toString() || undefined,
-          // Ensure type and category fields are included (default to 'incident' if not set)
-          type: incident.type || 'incident',
-          category: incident.category || undefined,
-        }))
-      );
+      const mappedIncidents = (data || []).map(incident => ({
+        ...incident,
+        status: incident.status || 'open',
+        entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+        retrospective_justification: incident.retrospective_justification || undefined,
+        logged_by_user_id: incident.logged_by_user_id || undefined,
+        logged_by_callsign: incident.logged_by_callsign ?? undefined,
+        is_amended: incident.is_amended ?? undefined,
+        original_entry_id: incident.original_entry_id?.toString() || undefined,
+        type: incident.type || 'incident',
+        category: incident.category || undefined,
+      }))
+      
+      setIncidents(mappedIncidents);
       setLastUpdated(new Date());
-      if (onDataLoaded) {
-        onDataLoaded(
-          (data || []).map(incident => ({
-            ...incident,
-            status: incident.status || 'open',
-            entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
-            retrospective_justification: incident.retrospective_justification || undefined,
-            logged_by_user_id: incident.logged_by_user_id || undefined,
-            logged_by_callsign: incident.logged_by_callsign ?? undefined,
-            is_amended: incident.is_amended ?? undefined,
-            original_entry_id: incident.original_entry_id?.toString() || undefined,
-            // Ensure type and category fields are included (default to 'incident' if not set)
-            type: incident.type || 'incident',
-            category: incident.category || undefined,
-          }))
-        );
+      
+      if (onDataLoadedRef.current) {
+        onDataLoadedRef.current(mappedIncidents);
       }
     } catch (err) {
-      logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: currentEventId || undefined });
+      logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: eventId || undefined });
       setError('Failed to fetch incidents');
       trackError(err instanceof Error ? err : new Error('Failed to fetch incidents'), 'fetchIncidents');
     } finally {
       setLoading(false);
     }
-  }, [currentEventId, onDataLoaded, trackError]);
-  
-  // Keep refs in sync with state/props
-  useEffect(() => {
-    manualStatusChangesRef.current = manualStatusChanges
-  }, [manualStatusChanges])
-  
-  useEffect(() => {
-    onToastRef.current = onToast
-  }, [onToast])
+  }, [effectiveEventId, trackError])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -292,58 +296,75 @@ export default function IncidentTable({
     }
   }, [isMobile, onViewModeChange, viewMode])
 
-  // Cleanup function to handle unsubscribe
-  const cleanup = useCallback(() => {
+  // Cleanup function - stable callback that doesn't need to be in dependencies
+  const performCleanup = useCallback((eventId: string | null) => {
     if (subscriptionRef.current) {
-      logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: currentEventId || undefined });
+      logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: eventId || undefined });
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
     // Remove from active subscriptions map and global toast callbacks
-    if (currentEventId) {
-      const subscriptionKey = `incident_logs_${currentEventId}`;
+    if (eventId) {
+      const subscriptionKey = `incident_logs_${eventId}`;
       activeSubscriptions.delete(subscriptionKey);
       globalToastCallbacks.delete(subscriptionKey);
       logger.debug('Removed subscription and toast callback from active maps', { component: 'IncidentTable', action: 'cleanup', subscriptionKey });
     }
-  }, [currentEventId]);
+  }, [])
 
   useEffect(() => {
+    // If an effective event ID already exists (from parent or prior fetch), skip
+    if (effectiveEventId) {
+      return
+    }
+
+    // Ensure we only query once the user context is ready (prevents unauthenticated requests)
+    if (!currentUser?.id) {
+      logger.debug('Skipping checkCurrentEvent until user is available', { component: 'IncidentTable', action: 'checkCurrentEvent' })
+      return
+    }
+
     const checkCurrentEvent = async () => {
       logger.debug('Checking for current event', { component: 'IncidentTable', action: 'checkCurrentEvent' });
       try {
-        const { data: eventData } = await supabase
+        const { data: eventData, error } = await supabase
           .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
           .select('id')
           .eq('is_current', true)
-          .single();
+          .maybeSingle();
+
+        if (error) {
+          logger.error('Error checking current event', error, { component: 'IncidentTable', action: 'checkCurrentEvent' });
+          setInternalEventId(null);
+          return;
+        }
 
         const newEventId = eventData?.id || null;
-        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
-        setCurrentEventId(newEventId);
+        logger.debug('Setting internal event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
+        setInternalEventId(newEventId);
       } catch (err) {
         logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
-        setCurrentEventId(null);
+        setInternalEventId(null);
       }
     };
 
     checkCurrentEvent();
-  }, []);
+  }, [effectiveEventId, currentUser?.id]);
 
   useEffect(() => {
-    logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, eventIdType: typeof currentEventId });
-    if (!currentEventId || typeof currentEventId !== 'string' || currentEventId.trim() === '') {
-      logger.debug('No current event ID - skipping subscription', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId, eventIdType: typeof effectiveEventId });
+    if (!effectiveEventId || typeof effectiveEventId !== 'string' || effectiveEventId.trim() === '') {
+      logger.debug('No current event ID - skipping subscription', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
       return;
     }
-    logger.debug('Current event ID valid - proceeding with subscription setup', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Current event ID valid - proceeding with subscription setup', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
 
     // Check if there's already an active subscription for this event
-    const subscriptionKey = `incident_logs_${currentEventId}`;
+    const subscriptionKey = `incident_logs_${effectiveEventId}`;
     logger.debug('Checking subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current, subscriptionKey });
     
     if (activeSubscriptions.has(subscriptionKey)) {
-      logger.debug('Subscription already exists for event - skipping duplicate', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, componentId: componentId.current });
+      logger.debug('Subscription already exists for event - skipping duplicate', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId, componentId: componentId.current });
       // IMPORTANT: Don't overwrite existing toast callback to prevent duplicates
       logger.debug('Keeping existing toast callback to prevent duplicates', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
       return;
@@ -355,27 +376,27 @@ export default function IncidentTable({
 
     // Mark this subscription as active and register toast callback
     activeSubscriptions.set(subscriptionKey, true);
-    if (onToast) {
-      globalToastCallbacks.set(subscriptionKey, onToast);
+    if (onToastRef.current) {
+      globalToastCallbacks.set(subscriptionKey, onToastRef.current);
       logger.debug('Registered toast callback for new subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
     }
     logger.debug('Created new subscription for', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });
 
     // Set up new subscription with a stable channel name
-    logger.debug('Setting up Supabase subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
-    logger.debug('Subscription filter', { component: 'IncidentTable', action: 'subscriptionEffect', filter: `event_id=eq.${currentEventId}` });
+    logger.debug('Setting up Supabase subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
+    logger.debug('Subscription filter', { component: 'IncidentTable', action: 'subscriptionEffect', filter: `event_id=eq.${effectiveEventId}` });
     
     // Basic connectivity verification
-    logger.debug('Setting up real-time subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Setting up real-time subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
     
     subscriptionRef.current = supabase
-      .channel(`incident_logs_${currentEventId}`)
+      .channel(`incident_logs_${effectiveEventId}`)
       .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
           table: 'incident_logs',
-          filter: `event_id=eq.${currentEventId}`
+          filter: `event_id=eq.${effectiveEventId}`
         },
         (payload) => {
           logger.debug('Real-time event received', { component: 'IncidentTable', action: 'subscriptionEffect', eventType: payload.eventType, incidentLogNumber: (payload.new as any)?.log_number || (payload.old as any)?.log_number });
@@ -438,7 +459,7 @@ export default function IncidentTable({
                 });
 
                 // Trigger Best-Practice flow (non-blocking)
-                if (featureFlags.best_practice_enabled && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
+                if (featureFlags.best_practice_enabled && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep' && fetchBestPracticeRef.current) {
                   // show spinner toast
                   globalToastCallback({
                     type: 'info',
@@ -447,7 +468,7 @@ export default function IncidentTable({
                     duration: 3000
                   })
                   // async call
-                  fetchBestPractice({
+                  fetchBestPracticeRef.current({
                     incidentId: String(incident.id),
                     incidentType: incident.incident_type,
                     occurrence: incident.occurrence,
@@ -541,9 +562,9 @@ export default function IncidentTable({
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          logger.debug('Real-time subscription active for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+          logger.debug('Real-time subscription active for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error('Real-time subscription error', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+          logger.error('Real-time subscription error', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
         }
       });
 
@@ -557,40 +578,37 @@ export default function IncidentTable({
         }
     }, 5000);
 
+    // Fetch incidents when event ID is available
     fetchIncidents();
 
     return () => {
-      cleanup();
-      // Also clean up on unmount
-      if (currentEventId) {
-        const subscriptionKey = `incident_logs_${currentEventId}`;
-        activeSubscriptions.delete(subscriptionKey);
-        globalToastCallbacks.delete(subscriptionKey);
-      }
+      // Cleanup using stable callback with current eventId
+      performCleanup(effectiveEventId);
     };
-  }, [cleanup, currentEventId, fetchBestPractice, fetchIncidents, onToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveEventId]); // Only depend on effectiveEventId - fetchIncidents is stable relative to it
 
   // Separate useEffect for onDataLoaded callback to avoid stale closures
   useEffect(() => {
-    if (onDataLoaded && incidents.length > 0) {
-      onDataLoaded(incidents);
+    if (onDataLoadedRef.current && incidents.length > 0) {
+      onDataLoadedRef.current(incidents);
     }
-  }, [incidents, onDataLoaded]);
+  }, [incidents]);
 
   // Fetch callsign assignments for tooltips
   useEffect(() => {
-    if (!currentEventId) return;
+    if (!effectiveEventId) return;
     const fetchAssignments = async () => {
       // Get all roles
       const { data: roles } = await supabase
         .from<any, any>('callsign_positions')
         .select('id, short_code, callsign')
-        .eq('event_id', currentEventId);
+        .eq('event_id', effectiveEventId);
       // Get all assignments
       const { data: assignments } = await supabase
         .from<any, any>('callsign_assignments')
         .select('callsign_role_id, assigned_name')
-        .eq('event_id', currentEventId);
+        .eq('event_id', effectiveEventId);
       // Build mapping
       const idToShort: Record<string, string> = {};
       const idToCallsign: Record<string, string> = {};
@@ -612,7 +630,7 @@ export default function IncidentTable({
       setCallsignShortToName(shortToName);
     };
     fetchAssignments();
-  }, [currentEventId]);
+  }, [effectiveEventId]);
 
   const toggleIncidentStatus = async (incident: Incident, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1623,7 +1641,7 @@ export default function IncidentTable({
             {/* Board View */}
             <div className="card-depth h-[700px] p-6 shadow-3">
               <CollaborationBoard
-                eventId={propCurrentEventId || currentEventId || ''}
+                eventId={effectiveEventId || ''}
                 currentUser={currentUser}
                 searchQuery={searchQuery}
                 incidents={incidents}

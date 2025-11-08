@@ -1,25 +1,26 @@
 'use client'
 
 import React from 'react'
-import OfflineMode from '@/components/features/offline-mode'
+import VenueCalendar from '@/components/features/venue-calendar'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
-export default function OfflinePage() {
+export default function CalendarPage() {
   const userPlan = useUserPlan() || 'starter'
 
   return (
     <PageWrapper>
       <FeatureGate
-        feature="offline-mode"
+        feature="venue-calendar"
         plan={userPlan}
         showUpgradeCard={true}
-        upgradeCardVariant="banner"
-        upgradeCardDescription="Capture data offline and sync automatically when connection is restored. Perfect for field operations in areas with poor connectivity."
+        upgradeCardVariant="card"
+        upgradeCardDescription="View all your venue bookings in a visual calendar. See which dates are booked and which are available across all your venues."
       >
-        <OfflineMode />
+        <VenueCalendar />
       </FeatureGate>
     </PageWrapper>
   )
 }
+

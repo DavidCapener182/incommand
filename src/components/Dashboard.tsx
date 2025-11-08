@@ -78,6 +78,8 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useScreenReader } from '@/hooks/useScreenReader'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { FeatureGate } from '@/components/FeatureGate'
+import { useUserPlan } from '@/hooks/useUserPlan'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -595,6 +597,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   
   // Wait for EventContext to load before rendering event-specific content
   const isEventContextReady = !eventLoading && eventType !== null
@@ -1187,31 +1190,137 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchCompanyId = async () => {
-      if (!user) return;
-      console.log('Fetching company ID for user:', user.id);
+      if (!user) {
+        console.log('Dashboard: No user available yet');
+        return;
+      }
+      console.log('Dashboard: Fetching company ID for user:', user.id, 'email:', user.email);
       
-      const { data: profile, error: profileError } = await supabase
+      // First, check if profile exists
+      let { data: profile, error: profileError } = await supabase
         .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
-        .select('company_id')
+        .select('company_id, role, company')
         .eq('id', user.id)
         .single();
       
-      console.log('Profile fetch result:', { profile, profileError });
+      console.log('Dashboard: Profile fetch result:', { 
+        profile, 
+        profileError: profileError ? {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        } : null,
+        userId: user.id,
+        userEmail: user.email
+      });
       
-      if (profileError || !profile?.company_id) {
-        console.error('Profile error or missing company_id:', { profileError, profile });
-        setError('Could not determine your company. Please check your profile.');
+      // If profile doesn't exist, create it
+      if (profileError && profileError.code === 'PGRST116') {
+        console.log('Profile does not exist, creating one...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            company: user.user_metadata?.company || 'Default Company',
+            role: 'user',
+          })
+          .select('company_id, role, company')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          setError('Failed to create your profile. Please contact support.');
+          return;
+        }
+        
+        profile = newProfile;
+        profileError = null;
+      }
+      
+      // Handle profile fetch errors (other than "not found")
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Dashboard: Profile fetch error:', profileError);
+        setError(`Failed to load your profile: ${profileError.message || 'Unknown error'}`);
         return;
       }
       
-      console.log('Setting company ID:', profile.company_id);
-      setCompanyId(profile.company_id);
-      const { data: profileFull } = await supabase
-        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      setUserRole(profileFull?.role || null);
+      // If profile exists but no company_id, try to find or create a company
+      if (profile && !profile.company_id) {
+        console.log('Dashboard: Profile exists but no company_id, attempting to resolve...');
+        
+        // Try to find a company by the profile's company name
+        if (profile.company) {
+          const { data: existingCompany, error: companySearchError } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('name', profile.company)
+            .single();
+          
+          console.log('Dashboard: Company search result:', { existingCompany, companySearchError });
+          
+          if (existingCompany) {
+            // Update profile with found company_id
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ company_id: existingCompany.id })
+              .eq('id', user.id);
+            
+            if (!updateError) {
+              console.log('Dashboard: Found and linked existing company:', existingCompany.id);
+              setCompanyId(existingCompany.id);
+              setUserRole(profile?.role || null);
+              return;
+            } else {
+              console.error('Dashboard: Error updating profile with company_id:', updateError);
+            }
+          }
+        }
+        
+        // Create a default company for the user via API route
+        console.log('Dashboard: Creating default company for user via API...');
+        try {
+          const response = await fetch('/api/ensure-company', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Dashboard: Error creating company:', errorData);
+            setError('Could not create a company for your account. Please contact support.');
+            return;
+          }
+          
+          const { company_id } = await response.json();
+          
+          if (!company_id) {
+            console.error('Dashboard: No company_id returned from API');
+            setError('Could not create a company for your account. Please contact support.');
+            return;
+          }
+          
+          console.log('Dashboard: Created and linked new company:', company_id);
+          setCompanyId(company_id);
+          setUserRole(profile?.role || null);
+          return;
+        } catch (fetchError) {
+          console.error('Dashboard: Fetch error when creating company:', fetchError);
+          setError('Network error while creating company. Please try again.');
+          return;
+        }
+      }
+      
+      // Profile exists and has company_id
+      if (profile?.company_id) {
+        console.log('Dashboard: Setting company ID:', profile.company_id);
+        setCompanyId(profile.company_id);
+        setUserRole(profile.role || null);
+      } else {
+        console.error('Dashboard: Profile exists but company_id is null/undefined');
+        setError('Your profile is missing a company association. Please contact support.');
+      }
     };
     fetchCompanyId();
   }, [user]);
@@ -1383,9 +1492,10 @@ export default function Dashboard() {
   }
 
   return (
-    <PageWrapper>
-      {/* Accessibility: Skip Links */}
-      <SkipLinks />
+    <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
+      <PageWrapper>
+        {/* Accessibility: Skip Links */}
+        <SkipLinks />
       
       {/* Accessibility: Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp 
@@ -2212,5 +2322,6 @@ export default function Dashboard() {
         )}
 
     </PageWrapper>
+    </FeatureGate>
   )
 }

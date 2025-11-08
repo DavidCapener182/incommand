@@ -341,3 +341,5 @@ CREATE TRIGGER support_tickets_updated_at
 -- Grant execute permission on refresh function
 GRANT EXECUTE ON FUNCTION refresh_ai_usage_daily() TO authenticated, service_role;
 
+
+

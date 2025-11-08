@@ -89,16 +89,16 @@ export default function QuoteEditDialog({
           <div>
             <Label htmlFor="company_id">Company</Label>
             <Select
-              value={formData.company_id || ''}
+              value={formData.company_id || 'new_prospect'}
               onValueChange={(value) =>
-                setFormData({ ...formData, company_id: value || undefined })
+                setFormData({ ...formData, company_id: value === 'new_prospect' ? undefined : value })
               }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a company or leave blank for new prospect" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">New Prospect</SelectItem>
+                <SelectItem value="new_prospect">New Prospect</SelectItem>
                 {companies.map((company) => (
                   <SelectItem key={company.id} value={company.id}>
                     {company.name}
