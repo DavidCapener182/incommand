@@ -105,9 +105,7 @@ INSERT INTO subscription_plans (
     "features": [
       "Event dashboard",
       "Basic incident management",
-      "Staff scheduling",
       "Email notifications",
-      "Mobile app access",
       "Basic analytics",
       "Email support"
     ],
@@ -138,6 +136,8 @@ INSERT INTO subscription_plans (
     "maxStaff": 20,
     "features": [
       "Everything in Starter",
+      "Mobile app access",
+      "Staff scheduling",
       "Advanced reporting",
       "SMS alerts",
       "API access",

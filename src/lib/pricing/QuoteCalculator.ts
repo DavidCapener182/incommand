@@ -136,7 +136,7 @@ export const ADD_ON_PRICES: Record<string, AddOnPrice> = {
   'Event dashboard': { name: 'Event dashboard', price: 0, description: 'Core event management dashboard' },
   'Basic incident management': { name: 'Basic incident management', price: 0, description: 'Track and manage incidents' },
   'Email notifications': { name: 'Email notifications', price: 0, description: 'Automated email alerts' },
-  'Mobile app access': { name: 'Mobile app access', price: 0, description: 'Access via mobile application' },
+  'Mobile app access': { name: 'Mobile app access', price: 15, description: 'Access via mobile application' },
   'Basic analytics': { name: 'Basic analytics', price: 0, description: 'Basic reporting and insights' },
   'Email support': { name: 'Email support', price: 0, description: 'Email-based customer support' },
   
@@ -220,6 +220,33 @@ export function getAllPlanFeatures(planCode: PlanCode): string[] {
 }
 
 /**
+ * Get only the features that are included with a plan (excluding optional add-ons)
+ */
+export function getPlanIncludedFeatures(planCode: PlanCode): string[] {
+  const includedFeatures: string[] = []
+
+  const planHierarchy: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
+  const planIndex = planHierarchy.indexOf(planCode)
+
+  if (planIndex === -1) {
+    return includedFeatures
+  }
+
+  for (let i = 0; i <= planIndex; i++) {
+    const plan = PRICING_PLANS[planHierarchy[i]]
+    const planFeatures = plan.features.features || []
+
+    planFeatures.forEach((feature) => {
+      if (!feature.toLowerCase().includes('everything in') && !includedFeatures.includes(feature)) {
+        includedFeatures.push(feature)
+      }
+    })
+  }
+
+  return includedFeatures
+}
+
+/**
  * Get all available add-ons
  */
 export function getAllAddOns(): AddOnPrice[] {
@@ -262,9 +289,11 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
   // Add feature add-ons with individual pricing
   const addOnsBreakdown: Record<string, number> = {}
   let addOnsCost = 0
+  const includedFeatures = new Set(getPlanIncludedFeatures(basePlanCode))
+
   if (input.featureAddOns && input.featureAddOns.length > 0) {
     input.featureAddOns.forEach(addOnName => {
-      const addOnPrice = getAddOnPrice(addOnName)
+      const addOnPrice = includedFeatures.has(addOnName) ? 0 : getAddOnPrice(addOnName)
       addOnsBreakdown[addOnName] = addOnPrice
       addOnsCost += addOnPrice
     })

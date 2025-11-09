@@ -69,23 +69,26 @@ export async function GET(request: NextRequest) {
 
       if (!error && dbPlans && dbPlans.length > 0) {
         // Transform database plans
-        const plans = dbPlans.map((p: any) => ({
-          id: p.id,
-          code: p.code,
-          displayName: p.display_name,
-          version: p.version,
-          effectiveAt: p.effective_at,
-          currency: p.currency,
-          priceMonthly: p.price_monthly,
-          priceAnnual: p.price_annual,
-          billingCycles: p.billing_cycles,
-          features: p.features,
-          metadata: p.metadata,
-          isActive: p.is_active,
-          deprecated: p.deprecated,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-        }))
+        const plans = dbPlans.map((p: any) => {
+          const configPlan = getAllPlans().find((plan) => plan.code === p.code)
+          return {
+            id: p.id,
+            code: p.code,
+            displayName: p.display_name,
+            version: p.version,
+            effectiveAt: p.effective_at,
+            currency: p.currency,
+            priceMonthly: p.price_monthly,
+            priceAnnual: p.price_annual,
+            billingCycles: p.billing_cycles,
+            features: configPlan?.features ?? p.features,
+            metadata: { ...configPlan?.metadata, ...p.metadata },
+            isActive: p.is_active,
+            deprecated: p.deprecated,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at,
+          }
+        })
 
         return NextResponse.json({ plans })
       }

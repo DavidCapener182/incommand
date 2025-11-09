@@ -97,8 +97,11 @@ export const PRICING_PLANS: Record<PlanCode, Plan> = {
         'Staff scheduling',
         'Advanced reporting',
         'SMS alerts',
+        'API access',
+        'Custom branding',
         'Priority support',
-        'Advanced analytics'
+        'Advanced analytics',
+        'Multi-event management',
       ],
       addOns: ['AI-powered insights', 'Custom integrations', 'White-label options'],
     },

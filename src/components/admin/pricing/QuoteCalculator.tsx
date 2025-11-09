@@ -8,7 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { calculateQuote, formatCurrency, getAllAddOns, getAddOnPrice, getAllPlanFeatures, type QuoteInput, type QuoteResult } from '@/lib/pricing/QuoteCalculator'
+import {
+  calculateQuote,
+  formatCurrency,
+  getAllAddOns,
+  getAddOnPrice,
+  getPlanIncludedFeatures,
+  type QuoteInput,
+  type QuoteResult,
+} from '@/lib/pricing/QuoteCalculator'
 import { PRICING_PLANS, PlanCode, getDisplayPrice } from '@/config/PricingConfig'
 import {
   CalculatorIcon,
@@ -36,6 +44,12 @@ export default function QuoteCalculator() {
   const calculatedQuote = useMemo(() => {
     return calculateQuote(inputs)
   }, [inputs])
+
+  const basePlanCode = (inputs.basePlan || 'operational') as PlanCode
+  const includedFeatures = useMemo(
+    () => new Set(getPlanIncludedFeatures(basePlanCode)),
+    [basePlanCode],
+  )
 
   const handleCalculate = () => {
     // Recalculate quote from current inputs
@@ -89,7 +103,7 @@ export default function QuoteCalculator() {
       
       // Get all features including inherited ones from lower-tier plans
       // Inheritance: Operational includes Starter, Command includes Operational+Starter, Enterprise includes all
-      const allPlanFeatures = getAllPlanFeatures(planCode)
+      const allPlanFeatures = getPlanIncludedFeatures(planCode)
       
       // Match plan features with available add-ons (case-insensitive)
       // This ensures all key features from the plan are highlighted/selected
@@ -292,6 +306,7 @@ export default function QuoteCalculator() {
                 {AVAILABLE_ADD_ONS.map((addOn) => {
                   const isChecked = inputs.featureAddOns?.includes(addOn.name) || false
                   const price = getAddOnPrice(addOn.name)
+                  const isIncluded = includedFeatures.has(addOn.name)
                   
                   return (
                     <div
@@ -324,7 +339,7 @@ export default function QuoteCalculator() {
                         </div>
                       </div>
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 ml-3 whitespace-nowrap">
-                        {price === 0 ? 'Included' : `${formatCurrency(price)}/mo`}
+                        {isIncluded ? 'Included' : `${formatCurrency(price)}/mo`}
                       </span>
                     </div>
                   )
