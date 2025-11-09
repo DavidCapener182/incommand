@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
@@ -82,6 +82,70 @@ const clearCachedRole = (userId: string): void => {
   }
 }
 
+const SESSION_TIMEOUT_MS = 16 * 60 * 60 * 1000
+const SESSION_TIMEOUT_WARNING_OFFSET_MS = 30 * 60 * 1000
+const SESSION_TIMEOUT_REASON = 'session-timeout'
+const SESSION_START_STORAGE_PREFIX = 'incommand_session_start_'
+
+const getSessionStartKey = (userId: string) => `${SESSION_START_STORAGE_PREFIX}${userId}`
+
+const readSessionStartTimestamp = (userId: string): number | null => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return null
+    }
+
+    const raw = window.localStorage.getItem(getSessionStartKey(userId))
+    if (!raw) return null
+
+    const value = Number(raw)
+    return Number.isFinite(value) ? value : null
+  } catch (error) {
+    logger.error('Error reading session start timestamp', error, { component: 'AuthContext', action: 'readSessionStartTimestamp' });
+    return null
+  }
+}
+
+const writeSessionStartTimestamp = (userId: string, timestamp: number): void => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+    window.localStorage.setItem(getSessionStartKey(userId), String(timestamp))
+  } catch (error) {
+    logger.error('Error writing session start timestamp', error, { component: 'AuthContext', action: 'writeSessionStartTimestamp' });
+  }
+}
+
+const clearSessionStartTimestamp = (userId: string): void => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+    window.localStorage.removeItem(getSessionStartKey(userId))
+  } catch (error) {
+    logger.error('Error clearing session start timestamp', error, { component: 'AuthContext', action: 'clearSessionStartTimestamp' });
+  }
+}
+
+const getSessionStartFromUser = (session: Session): number => {
+  const userId = session?.user?.id
+  if (!userId) {
+    return Date.now()
+  }
+
+  const stored = readSessionStartTimestamp(userId)
+  if (stored !== null) {
+    return stored
+  }
+
+  const lastSignIn = session?.user?.last_sign_in_at ? Date.parse(session.user.last_sign_in_at) : NaN
+  const fallback = Number.isFinite(lastSignIn) ? lastSignIn : Date.now()
+
+  writeSessionStartTimestamp(userId, fallback)
+  return fallback
+}
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
@@ -97,11 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showStayLoggedIn, setShowStayLoggedIn] = useState(false)
+  const [showSessionTimeoutWarning, setShowSessionTimeoutWarning] = useState(false)
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null)
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+  const hasForcedLogoutRef = useRef(false)
 
   const loadSystemSettings = useCallback(async () => {
     try {
@@ -312,25 +377,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Define signOut before useEffect that uses it
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(async (options?: { reason?: string, redirectTo?: string }) => {
     try {
+      setShowSessionTimeoutWarning(false)
       // Clear cached role before signing out
       if (user?.id) {
         clearCachedRole(user.id)
+        clearSessionStartTimestamp(user.id)
       }
+      const redirectTarget = options?.redirectTo || (options?.reason ? `/login?reason=${options.reason}` : '/login')
       await supabase.auth.signOut()
       // Use window.location.href for immediate redirect to avoid route protection conflicts
-      window.location.href = '/login'
+      window.location.href = redirectTarget
     } catch (error) {
       logger.error('Error during sign out', error, { component: 'AuthContext', action: 'signOut' });
       // Fallback: redirect to login even if signOut fails
-      window.location.href = '/login'
+      const fallbackTarget = options?.redirectTo || (options?.reason ? `/login?reason=${options.reason}` : '/login')
+      window.location.href = fallbackTarget
     }
   }, [user?.id])
 
+  const forceLogoutDueToTimeout = useCallback(async () => {
+    if (hasForcedLogoutRef.current) {
+      return
+    }
+    hasForcedLogoutRef.current = true
+    try {
+      logger.info('Session timeout reached, signing user out', {
+        component: 'AuthContext',
+        action: 'forceLogoutDueToTimeout',
+        userId: user?.id
+      });
+      await signOut({ reason: SESSION_TIMEOUT_REASON })
+    } catch (error) {
+      logger.error('Error forcing logout after session timeout', error, {
+        component: 'AuthContext',
+        action: 'forceLogoutDueToTimeout'
+      });
+      window.location.href = `/login?reason=${SESSION_TIMEOUT_REASON}`
+    }
+  }, [signOut, user?.id])
+
   useEffect(() => {
     let logoutTimeout: NodeJS.Timeout | null = null;
-    let stayLoggedInTimeout: NodeJS.Timeout | null = null;
+    let warningTimeout: NodeJS.Timeout | null = null;
+
+    const clearSessionTimers = () => {
+      if (logoutTimeout) {
+        clearTimeout(logoutTimeout);
+        logoutTimeout = null;
+      }
+      if (warningTimeout) {
+        clearTimeout(warningTimeout);
+        warningTimeout = null;
+      }
+    }
+
+    const scheduleSessionTimers = (activeSession: Session) => {
+      if (!activeSession?.user?.id) {
+        return
+      }
+
+      clearSessionTimers()
+      setShowSessionTimeoutWarning(false)
+      hasForcedLogoutRef.current = false
+
+      const sessionStart = getSessionStartFromUser(activeSession)
+      const now = Date.now()
+      const elapsed = now - sessionStart
+
+      if (elapsed >= SESSION_TIMEOUT_MS) {
+        clearSessionTimers()
+        forceLogoutDueToTimeout().catch(error => {
+          logger.error('Failed to force logout after detecting expired session during scheduling', error, {
+            component: 'AuthContext',
+            action: 'scheduleSessionTimers'
+          });
+        })
+        return
+      }
+
+      const warningDelay = Math.max(SESSION_TIMEOUT_MS - SESSION_TIMEOUT_WARNING_OFFSET_MS - elapsed, 0)
+      const logoutDelay = Math.max(SESSION_TIMEOUT_MS - elapsed, 0)
+
+      if (warningDelay <= 0) {
+        setShowSessionTimeoutWarning(true)
+      } else {
+        warningTimeout = setTimeout(() => {
+          setShowSessionTimeoutWarning(true)
+        }, warningDelay)
+      }
+
+      logoutTimeout = setTimeout(() => {
+        clearSessionTimers()
+        forceLogoutDueToTimeout().catch(error => {
+          logger.error('Failed to force logout on session timeout', error, {
+            component: 'AuthContext',
+            action: 'logoutTimeout'
+          });
+        })
+      }, logoutDelay)
+    }
 
     // Check active sessions and sets the user
     const getInitialSession = async () => {
@@ -382,22 +529,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
         
         if (session) {
-          // Supabase session.expires_at is UNIX timestamp (seconds)
-          const expiresAt = session.expires_at ? session.expires_at * 1000 : Date.now() + 12 * 60 * 60 * 1000;
-          const sessionStart = expiresAt - 12 * 60 * 60 * 1000;
-          const now = Date.now();
-          const ms12Hours = 12 * 60 * 60 * 1000;
-          const ms11_5Hours = 11.5 * 60 * 60 * 1000;
-          const timeElapsed = now - sessionStart;
-          const timeToPrompt = ms11_5Hours - timeElapsed > 0 ? ms11_5Hours - timeElapsed : 0;
-          const timeToLogout = ms12Hours - timeElapsed > 0 ? ms12Hours - timeElapsed : 0;
-
-          if (timeToPrompt > 0) {
-            stayLoggedInTimeout = setTimeout(() => setShowStayLoggedIn(true), timeToPrompt);
-          }
-          if (timeToLogout > 0) {
-            logoutTimeout = setTimeout(() => signOut(), timeToLogout);
-          }
+          scheduleSessionTimers(session)
+        } else {
+          clearSessionTimers()
+          setShowSessionTimeoutWarning(false)
         }
       }
     }
@@ -430,14 +565,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('[AuthContext] Error loading user preferences:', err)
           })
         ])
+        scheduleSessionTimers(session)
       } else {
         console.log('[AuthContext] No session in auth state change, clearing user');
+        clearSessionTimers()
+        setShowSessionTimeoutWarning(false)
         setUser(null)
         setRole(null)
         setUserPreferences(null)
+        hasForcedLogoutRef.current = false
         // Clear cached role when user logs out
         if (user?.id) {
           clearCachedRole(user.id)
+          clearSessionStartTimestamp(user.id)
         }
       }
       setLoading(false)
@@ -445,10 +585,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
-      if (logoutTimeout) clearTimeout(logoutTimeout);
-      if (stayLoggedInTimeout) clearTimeout(stayLoggedInTimeout);
+      clearSessionTimers()
+      hasForcedLogoutRef.current = false
     }
-  }, [fetchUserRole, loadSystemSettings, loadUserPreferences, signOut, user?.id])
+  }, [fetchUserRole, loadSystemSettings, loadUserPreferences, forceLogoutDueToTimeout, user?.id])
 
   // Temporarily disable route protection
   /*
@@ -470,23 +610,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const handleStayLoggedIn = () => {
-    setShowStayLoggedIn(false);
-    window.location.reload(); // Refresh session
+  const handleSessionTimeoutAcknowledge = () => {
+    forceLogoutDueToTimeout().catch(error => {
+      logger.error('Failed to handle session timeout acknowledgement', error, {
+        component: 'AuthContext',
+        action: 'handleSessionTimeoutAcknowledge'
+      })
+      window.location.href = `/login?reason=${SESSION_TIMEOUT_REASON}`
+    })
   }
 
   return (
     <AuthContext.Provider value={{ user, role, loading, signOut, invalidateRoleCache, systemSettings, userPreferences, refreshSettings }}>
       <>
-        {showStayLoggedIn && (
+        {showSessionTimeoutWarning && (
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded shadow-lg flex flex-col items-center">
-              <p className="mb-4 text-lg font-semibold">Stay logged in?</p>
+            <div className="bg-white p-6 rounded shadow-lg flex flex-col items-center max-w-sm text-center space-y-4">
+              <p className="text-lg font-semibold">Session expiring soon</p>
+              <p className="text-sm text-gray-700">
+                For security, you&apos;ll be signed out after 16 hours of activity. Please save your work and sign in again to continue.
+              </p>
               <button
                 className="px-4 py-2 bg-[#2A3990] text-white rounded hover:bg-[#1e2a6a]"
-                onClick={handleStayLoggedIn}
+                onClick={handleSessionTimeoutAcknowledge}
               >
-                Yes, stay logged in
+                Sign in again
               </button>
             </div>
           </div>
@@ -507,9 +655,10 @@ export const useAuth = () => {
         user: null,
         role: null,
         loading: true,
-        signOut: async () => {
+        signOut: async (options?: { reason?: string, redirectTo?: string }) => {
           logger.warn('signOut called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
-          window.location.href = '/login'
+          const target = options?.redirectTo || (options?.reason ? `/login?reason=${options.reason}` : '/login')
+          window.location.href = target
         },
         invalidateRoleCache: () => {
           logger.warn('invalidateRoleCache called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
@@ -529,9 +678,10 @@ export const useAuth = () => {
       user: null,
       role: null,
       loading: true,
-      signOut: async () => {
+      signOut: async (options?: { reason?: string, redirectTo?: string }) => {
         logger.warn('signOut called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });
-        window.location.href = '/login'
+        const target = options?.redirectTo || (options?.reason ? `/login?reason=${options.reason}` : '/login')
+        window.location.href = target
       },
       invalidateRoleCache: () => {
         logger.warn('invalidateRoleCache called but AuthContext not available', { component: 'AuthContext', action: 'useAuth' });

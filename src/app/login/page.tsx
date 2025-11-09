@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [shouldShowMobileMessage, setShouldShowMobileMessage] = useState(false)
   const [isCheckingMobileSupport, setIsCheckingMobileSupport] = useState(true)
   const [forceDesktopUrl, setForceDesktopUrl] = useState('/login?force-desktop=1')
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -59,6 +60,21 @@ export default function LoginPage() {
     const currentUrl = new URL(window.location.href)
     currentUrl.searchParams.set('force-desktop', '1')
     setForceDesktopUrl(`${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const currentUrl = new URL(window.location.href)
+    const reason = currentUrl.searchParams.get('reason')
+
+    if (reason === 'session-timeout') {
+      setInfoMessage('For security, your session ended after 16 hours. Please sign in again to continue.')
+      currentUrl.searchParams.delete('reason')
+      window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`)
+    }
   }, [])
 
   useEffect(() => {
@@ -333,6 +349,16 @@ export default function LoginPage() {
               <h2 className="text-2xl font-bold text-gray-900">Sign in to your account</h2>
               <p className="text-sm text-gray-600">Welcome back! Please enter your details.</p>
             </div>
+
+            {infoMessage && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="text-sm text-blue-700 text-center bg-blue-50 border border-blue-200 rounded-lg py-2 px-3"
+              >
+                {infoMessage}
+              </div>
+            )}
 
             {error && (
               <div
