@@ -49,8 +49,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to cancel ingestion' }, { status: 500 })
       }
 
-      await recordAdminAudit(context.serviceClient, {
-        organizationId: knowledge.organization_id || null,
+        const organizationId =
+          knowledge.organization_id ??
+          context.defaultOrganizationId ??
+          context.organizationMemberships[0] ??
+          'unknown'
+
+        await recordAdminAudit(context.serviceClient, {
+          organizationId,
         actorId: context.user.id,
         action: 'cancel_ingest_knowledge',
         resourceType: 'knowledge_base',

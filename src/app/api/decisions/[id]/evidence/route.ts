@@ -39,15 +39,17 @@ export async function POST(
       .eq('id', decisionId)
       .single()
 
-    if (decisionError || !decision) {
+      if (decisionError || !decision) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
       )
     }
 
+      const decisionRecord = decision as { is_locked?: boolean; company_id?: string }
+
     // Check if decision is locked (evidence can only be added to unlocked decisions)
-    if (decision.is_locked) {
+      if (decisionRecord.is_locked) {
       return NextResponse.json(
         { error: 'Decision is locked', details: 'Evidence cannot be added to locked decisions.' },
         { status: 403 }
@@ -55,13 +57,15 @@ export async function POST(
     }
 
     // Verify company access
-    const { data: profile } = await supabase
+      const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.company_id !== decision.company_id) {
+      const profileRecord = profile as { company_id?: string } | null
+
+      if (!profileRecord?.company_id || profileRecord.company_id !== decisionRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Decision does not belong to your company' },
         { status: 403 }
@@ -75,13 +79,13 @@ export async function POST(
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
-      body = {
-        evidence_type: formData.get('evidence_type') as string,
-        title: formData.get('title') as string,
-        description: formData.get('description') as string || undefined,
-        external_reference: formData.get('external_reference') as string || undefined,
-        captured_at: formData.get('captured_at') as string || new Date().toISOString(),
-      }
+        body = {
+          evidence_type: (formData.get('evidence_type') as EvidenceUploadInput['evidence_type']) || 'other',
+          title: formData.get('title') as string,
+          description: (formData.get('description') as string) || undefined,
+          external_reference: (formData.get('external_reference') as string) || undefined,
+          captured_at: (formData.get('captured_at') as string) || new Date().toISOString(),
+        }
       file = formData.get('file') as File | null
     } else {
       body = await request.json()
@@ -138,7 +142,7 @@ export async function POST(
     // Create evidence record
     const evidenceData = {
       decision_id: decisionId,
-      company_id: profile.company_id,
+        company_id: profileRecord.company_id,
       evidence_type: body.evidence_type,
       title: body.title,
       description: body.description || null,
@@ -151,8 +155,8 @@ export async function POST(
       mime_type: mimeType,
     }
 
-    const { data: evidence, error: insertError } = await supabase
-      .from('decision_evidence')
+      const { data: evidence, error: insertError } = await (supabase as any)
+        .from('decision_evidence')
       .insert(evidenceData)
       .select()
       .single()

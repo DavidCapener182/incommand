@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import type { RadioMessage } from '@/types/radio'
 
 export interface IncidentTaskCreationResult {
   taskCreated: boolean
@@ -385,6 +386,106 @@ export async function processIncidentsForTasks(
     processed: incidents.length,
     tasksCreated,
     results,
+  }
+}
+
+/**
+ * Analyze a radio message and create a task if criteria are met.
+ * Returns metadata about whether a task was created to mirror the incident workflow.
+ */
+export async function processRadioMessageForTask(
+  message: RadioMessage,
+  eventId: string | null,
+  userId: string,
+  supabase: SupabaseClient<Database>,
+  autoCreateTask: boolean = true
+): Promise<{
+  analyzed: boolean
+  taskCreated: boolean
+  taskId?: string
+  reason?: string
+  error?: string
+}> {
+  try {
+    if (!autoCreateTask) {
+      return {
+        analyzed: true,
+        taskCreated: false,
+        reason: 'Auto task creation disabled',
+      }
+    }
+
+    if (!eventId) {
+      return {
+        analyzed: true,
+        taskCreated: false,
+        reason: 'No associated event',
+      }
+    }
+
+    if (message.task_id) {
+      return {
+        analyzed: true,
+        taskCreated: false,
+        reason: 'Task already linked to message',
+        taskId: message.task_id,
+      }
+    }
+
+    const pseudoIncident: Incident = {
+      id: Number(message.incident_id ?? Date.now()),
+      occurrence: message.message || message.transcription || '',
+      incident_type: message.category || 'Radio Message',
+      priority: message.priority || undefined,
+      location:
+        typeof message.metadata?.location === 'string'
+          ? message.metadata.location
+          : message.metadata?.location?.name || undefined,
+      callsign_from: message.from_callsign || undefined,
+      callsign_to: message.to_callsign || undefined,
+      event_id: eventId,
+      is_closed: false,
+      created_at: message.created_at || new Date().toISOString(),
+    }
+
+    // Use existing incident task heuristics
+    const shouldCreate = shouldCreateTaskFromIncident(pseudoIncident)
+    if (!shouldCreate) {
+      return {
+        analyzed: true,
+        taskCreated: false,
+        reason: 'No task indicators detected in radio message',
+      }
+    }
+
+    const result = await createTaskFromIncident(pseudoIncident, userId, supabase)
+
+    if (result.taskCreated && result.taskId) {
+      // Link task back to radio message
+      const { error: linkError } = await supabase
+        .from('radio_messages')
+        .update({ task_id: result.taskId })
+        .eq('id', message.id)
+
+      if (linkError) {
+        console.warn('Task created but failed to link to radio message:', linkError)
+      }
+    }
+
+    return {
+      analyzed: true,
+      taskCreated: result.taskCreated,
+      taskId: result.taskId,
+      reason: result.reason,
+      error: result.error,
+    }
+  } catch (error: any) {
+    console.error('Error processing radio message for task creation:', error)
+    return {
+      analyzed: false,
+      taskCreated: false,
+      error: error.message || 'Unknown error',
+    }
   }
 }
 

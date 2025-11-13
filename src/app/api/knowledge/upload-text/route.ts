@@ -63,8 +63,14 @@ export async function POST(request: NextRequest) {
         source: 'text-upload'
       })
 
+      const auditOrganizationId =
+        resolvedOrgId ??
+        context.defaultOrganizationId ??
+        context.organizationMemberships[0] ??
+        'unknown'
+
       await recordAdminAudit(context.serviceClient, {
-        organizationId: resolvedOrgId || null,
+        organizationId: auditOrganizationId,
         actorId: context.user.id,
         action: 'upload_text_knowledge',
         resourceType: 'knowledge_base',

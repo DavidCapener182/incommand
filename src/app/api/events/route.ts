@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile?.company_id) {
+    const profileRecord = profile as { company_id?: string } | null
+
+    if (profileError || !profileRecord?.company_id) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { data: events, error: eventsError } = await supabase
       .from('events')
       .select('id, event_name, event_date, event_type')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', profileRecord.company_id)
       .order('event_date', { ascending: false })
 
     if (eventsError) {

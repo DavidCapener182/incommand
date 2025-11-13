@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile) {
+    const profileRecord = profile as { company_id?: string } | null
+
+    if (profileError || !profileRecord?.company_id) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('decisions')
       .select('*', { count: 'exact' })
-      .eq('company_id', profile.company_id)
+      .eq('company_id', profileRecord.company_id)
 
     if (eventId) {
       query = query.eq('event_id', eventId)
@@ -132,7 +134,9 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile || !profile.company_id) {
+    const profileRecord = profile as { company_id?: string } | null
+
+    if (profileError || !profileRecord?.company_id) {
       return NextResponse.json(
         { error: 'Profile not found or company not assigned' },
         { status: 404 }
@@ -172,7 +176,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (event.company_id !== profile.company_id) {
+    const eventRecord = event as { company_id?: string }
+
+    if (eventRecord.company_id !== profileRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Event does not belong to your company' },
         { status: 403 }
@@ -181,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // Create decision
     const decisionData = {
-      company_id: profile.company_id,
+      company_id: profileRecord.company_id,
       event_id: body.event_id,
       trigger_issue: body.trigger_issue,
       options_considered: body.options_considered || [],
@@ -198,7 +204,7 @@ export async function POST(request: NextRequest) {
       created_by_user_id: user.id,
     }
 
-    const { data: decision, error: insertError } = await supabase
+    const { data: decision, error: insertError } = await (supabase as any)
       .from('decisions')
       .insert(decisionData)
       .select()

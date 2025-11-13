@@ -174,9 +174,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to delete failed items' }, { status: 500 })
     }
 
+    const auditOrganizationId =
+      organizationId ??
+      context.defaultOrganizationId ??
+      context.organizationMemberships[0] ??
+      (failedItems[0]?.organization_id as string | undefined) ??
+      'unknown'
+
     // Record audit log for bulk deletion
     await recordAdminAudit(context.serviceClient, {
-      organizationId: organizationId || null,
+      organizationId: auditOrganizationId,
       actorId: context.user.id,
       action: 'bulk_delete_content',
       resourceType: 'knowledge_base',

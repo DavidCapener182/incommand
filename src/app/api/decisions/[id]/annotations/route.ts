@@ -39,21 +39,25 @@ export async function POST(
       .eq('id', decisionId)
       .single()
 
-    if (decisionError || !decision) {
+      if (decisionError || !decision) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
       )
     }
 
+      const decisionRecord = decision as { company_id?: string }
+
     // Verify company access
-    const { data: profile } = await supabase
+      const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.company_id !== decision.company_id) {
+      const profileRecord = profile as { company_id?: string } | null
+
+      if (!profileRecord?.company_id || profileRecord.company_id !== decisionRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Decision does not belong to your company' },
         { status: 403 }
@@ -74,14 +78,14 @@ export async function POST(
     // Create annotation record
     const annotationData = {
       decision_id: decisionId,
-      company_id: profile.company_id,
+        company_id: profileRecord.company_id,
       annotation_text: body.annotation_text.trim(),
       annotation_type: body.annotation_type || 'note',
       created_by_user_id: user.id,
     }
 
-    const { data: annotation, error: insertError } = await supabase
-      .from('decision_annotations')
+      const { data: annotation, error: insertError } = await (supabase as any)
+        .from('decision_annotations')
       .insert(annotationData)
       .select()
       .single()

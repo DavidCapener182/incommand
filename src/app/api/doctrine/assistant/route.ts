@@ -39,13 +39,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's company
-    const { data: profile } = await supabase
+      const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.company_id) {
+      const profileRecord = profile as { company_id?: string } | null
+
+      if (!profileRecord?.company_id) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
@@ -56,11 +58,13 @@ export async function GET(request: NextRequest) {
       .eq('id', eventId)
       .single()
 
-    if (accessError || !eventAccess) {
+      if (accessError || !eventAccess) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    if (eventAccess.company_id !== profile.company_id) {
+      const eventRecord = eventAccess as { company_id?: string }
+
+      if (eventRecord.company_id !== profileRecord.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -77,7 +81,11 @@ export async function GET(request: NextRequest) {
 
     // Get assistant state
     try {
-      const assistant = new DoctrineAssistant(eventId, profile.company_id, supabase)
+        const assistant = new DoctrineAssistant(
+          eventId,
+          profileRecord.company_id,
+          supabase as any
+        )
       const state = await assistant.getState()
 
       // Cache the result

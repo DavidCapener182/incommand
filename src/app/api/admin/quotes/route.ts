@@ -17,12 +17,13 @@ export async function GET() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileRecord = profile as { role?: string } | null
+  if (profileRecord?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { data, error } = await supabase
-    .from('quotes')
+    .from('quotes' as any)
     .select(`
       *,
       companies (
@@ -58,7 +59,8 @@ export async function POST(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileRecord = profile as { role?: string } | null
+  if (profileRecord?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -86,7 +88,7 @@ export async function POST(req: Request) {
       expires_at,
     } = body
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('quotes')
       .insert({
         company_id: company_id || null,
@@ -140,7 +142,8 @@ export async function PATCH(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileRecord = profile as { role?: string } | null
+  if (profileRecord?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -152,7 +155,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Quote ID is required' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('quotes')
       .update(updates)
       .eq('id', id)
@@ -186,7 +189,8 @@ export async function DELETE(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileRecord = profile as { role?: string } | null
+  if (profileRecord?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -199,7 +203,7 @@ export async function DELETE(req: Request) {
     }
 
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes' as any)
       .delete()
       .eq('id', id)
 

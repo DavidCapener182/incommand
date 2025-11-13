@@ -26,18 +26,22 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || !profile.company_id) {
+    const profileRecord = profile as { company_id?: string } | null
+
+    if (!profileRecord?.company_id) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
 
     // Get all current events for this company
-    const { data: events } = await supabase
+      const { data: events } = await supabase
       .from('events')
       .select('id')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', profileRecord.company_id)
       .eq('is_current', true)
 
-    if (!events || events.length === 0) {
+      const eventList = (events || []) as Array<{ id: string }>
+
+      if (eventList.length === 0) {
       return NextResponse.json({ 
         success: true, 
         message: 'No current events found',
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
     const results: any[] = []
 
     // Process incidents for each event
-    for (const event of events) {
+      for (const event of eventList) {
       const { data: incidents, error: incidentsError } = await supabase
         .from('incident_logs')
         .select('id, occurrence, incident_type, priority, location, callsign_from, callsign_to, event_id, is_closed, created_at')
@@ -66,12 +70,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (incidents && incidents.length > 0) {
-        const result = await processIncidentsForTasks(
-          incidents as any[],
-          user.id,
-          supabase,
-          true
-        )
+          const result = await processIncidentsForTasks(
+            incidents as any[],
+            user.id,
+            supabase as any,
+            true
+          )
 
         totalProcessed += result.processed
         totalTasksCreated += result.tasksCreated
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
       success: true,
       processed: totalProcessed,
       tasksCreated: totalTasksCreated,
-      eventsProcessed: events.length,
+        eventsProcessed: eventList.length,
       results
     })
   } catch (error: any) {

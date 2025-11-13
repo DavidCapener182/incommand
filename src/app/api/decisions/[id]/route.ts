@@ -44,32 +44,38 @@ export async function GET(
       .eq('id', decisionId)
       .single()
 
-    if (decisionError || !decision) {
+      if (decisionError || !decision) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
       )
     }
 
+      const decisionRecord = decision as {
+        linked_incident_ids?: string[]
+        linked_staff_assignment_ids?: string[]
+        [key: string]: any
+      }
+
     // Get linked incidents if any
     let linkedIncidents: any[] = []
-    if (decision.linked_incident_ids && decision.linked_incident_ids.length > 0) {
+      if (decisionRecord.linked_incident_ids && decisionRecord.linked_incident_ids.length > 0) {
       const { data: incidents } = await supabase
         .from('incident_logs')
         .select('id, incident_type, priority, location, timestamp')
-        .in('id', decision.linked_incident_ids)
+          .in('id', decisionRecord.linked_incident_ids)
       
       linkedIncidents = incidents || []
     }
 
     // Get linked staff assignments if any
     let linkedStaffAssignments: any[] = []
-    if (decision.linked_staff_assignment_ids && decision.linked_staff_assignment_ids.length > 0) {
+      if (decisionRecord.linked_staff_assignment_ids && decisionRecord.linked_staff_assignment_ids.length > 0) {
       // Note: staff_assignments table structure may vary - adjust as needed
       const { data: assignments } = await supabase
         .from('staff_assignments')
         .select('*')
-        .in('id', decision.linked_staff_assignment_ids)
+          .in('id', decisionRecord.linked_staff_assignment_ids)
       
       linkedStaffAssignments = assignments || []
     }
@@ -77,7 +83,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       decision: {
-        ...decision,
+          ...decisionRecord,
         linked_incidents: linkedIncidents,
         linked_staff_assignments: linkedStaffAssignments,
       },
@@ -118,15 +124,17 @@ export async function PUT(
       .eq('id', decisionId)
       .single()
 
-    if (fetchError || !existingDecision) {
+      if (fetchError || !existingDecision) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
       )
     }
 
+      const existingDecisionRecord = existingDecision as { is_locked?: boolean; company_id?: string }
+
     // Check if decision is locked
-    if (existingDecision.is_locked) {
+      if (existingDecisionRecord.is_locked) {
       return NextResponse.json(
         { error: 'Decision is locked', details: 'Locked decisions cannot be edited. You can add annotations instead.' },
         { status: 403 }
@@ -134,13 +142,15 @@ export async function PUT(
     }
 
     // Verify company access
-    const { data: profile } = await supabase
+      const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.company_id !== existingDecision.company_id) {
+      const profileRecord = profile as { company_id?: string } | null
+
+      if (!profileRecord?.company_id || profileRecord.company_id !== existingDecisionRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Decision does not belong to your company' },
         { status: 403 }
@@ -166,8 +176,8 @@ export async function PUT(
     if (body.linked_staff_assignment_ids !== undefined) updateData.linked_staff_assignment_ids = body.linked_staff_assignment_ids
 
     // Update decision
-    const { data: decision, error: updateError } = await supabase
-      .from('decisions')
+      const { data: decision, error: updateError } = await (supabase as any)
+        .from('decisions')
       .update(updateData)
       .eq('id', decisionId)
       .select()

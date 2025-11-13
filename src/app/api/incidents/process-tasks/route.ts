@@ -37,13 +37,15 @@ export async function POST(request: NextRequest) {
     const incidentIds = body.incident_ids as number[] | undefined
 
     // Get user's company
-    const { data: profile } = await supabase
+  const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !profile.company_id) {
+  const profileRecord = profile as { company_id?: string } | null
+
+  if (!profileRecord?.company_id) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
 
@@ -59,36 +61,45 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Incident not found' }, { status: 404 })
       }
 
-      // Verify event belongs to user's company via RLS (already enforced, but double-check)
-      const { data: event } = await supabase
+        // Verify event belongs to user's company via RLS (already enforced, but double-check)
+        const incidentRecord = incident as { id?: number; event_id?: string | number; [key: string]: any }
+
+        const incidentEventId = incidentRecord.event_id
+        if (incidentEventId == null) {
+          return NextResponse.json({ error: 'Incident missing event reference' }, { status: 400 })
+        }
+
+        const { data: event } = await supabase
         .from('events')
         .select('company_id')
-        .eq('id', incident.event_id)
+          .eq('id', incidentEventId)
         .single()
 
-      if (!event || event.company_id !== profile.company_id) {
+        const eventRecord = event as { company_id?: string } | null
+
+        if (!eventRecord?.company_id || eventRecord.company_id !== profileRecord.company_id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
 
-      const result = await processIncidentForTask(
-        incident as any,
+        const result = await processIncidentForTask(
+          incidentRecord as any,
         user.id,
-        supabase,
+          supabase as any,
         autoCreate
       )
 
       // Add debug info
       console.log('Processing incident for task:', {
-        incidentId: incident.id,
-        occurrence: incident.occurrence?.substring(0, 50),
-        incident_type: incident.incident_type,
-        is_closed: incident.is_closed,
+          incidentId: incidentRecord.id,
+          occurrence: incidentRecord.occurrence?.substring(0, 50),
+          incident_type: incidentRecord.incident_type,
+          is_closed: incidentRecord.is_closed,
         result,
       })
 
       return NextResponse.json({
         success: true,
-        incidentId: incident.id,
+          incidentId: incidentRecord.id,
         ...result,
       })
     }
@@ -105,12 +116,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: incidentsError.message }, { status: 500 })
       }
 
-      const result = await processIncidentsForTasks(
-        incidents as any[],
-        user.id,
-        supabase,
-        autoCreate
-      )
+        const result = await processIncidentsForTasks(
+          incidents as any[],
+          user.id,
+          supabase as any,
+          autoCreate
+        )
 
       return NextResponse.json({
         success: true,
@@ -121,13 +132,15 @@ export async function POST(request: NextRequest) {
     // Process all open incidents for an event
     if (eventId) {
       // Verify event belongs to user's company
-      const { data: event } = await supabase
+        const { data: event } = await supabase
         .from('events')
         .select('company_id')
         .eq('id', eventId)
         .single()
 
-      if (!event || event.company_id !== profile.company_id) {
+        const eventRecord = event as { company_id?: string } | null
+
+        if (!eventRecord?.company_id || eventRecord.company_id !== profileRecord.company_id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
 
@@ -143,12 +156,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: incidentsError.message }, { status: 500 })
       }
 
-      const result = await processIncidentsForTasks(
-        incidents as any[],
-        user.id,
-        supabase,
-        autoCreate
-      )
+        const result = await processIncidentsForTasks(
+          incidents as any[],
+          user.id,
+          supabase as any,
+          autoCreate
+        )
 
       return NextResponse.json({
         success: true,
@@ -187,13 +200,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
     }
 
-    const { data: profile } = await supabase
+  const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !profile.company_id) {
+  const profileRecord = profile as { company_id?: string } | null
+
+  if (!profileRecord?.company_id) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
 
@@ -204,7 +219,9 @@ export async function GET(request: NextRequest) {
       .eq('id', eventId)
       .single()
 
-    if (!event || event.company_id !== profile.company_id) {
+  const eventRecord = event as { company_id?: string } | null
+
+  if (!eventRecord?.company_id || eventRecord.company_id !== profileRecord.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -224,9 +241,9 @@ export async function GET(request: NextRequest) {
     // Import the detection function
     const { shouldCreateTaskFromIncident } = await import('@/lib/radio/taskCreator')
 
-    const eligibleIncidents = incidents
-      ?.filter(incident => shouldCreateTaskFromIncident(incident as any))
-      .map(incident => ({
+      const eligibleIncidents = incidents
+        ?.filter((incident: any) => shouldCreateTaskFromIncident(incident as any))
+        .map((incident: any) => ({
         id: incident.id,
         incident_type: incident.incident_type,
         occurrence: incident.occurrence,

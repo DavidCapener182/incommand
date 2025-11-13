@@ -38,15 +38,21 @@ export async function POST(
       .eq('id', decisionId)
       .single()
 
-    if (fetchError || !decision) {
+      if (fetchError || !decision) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
       )
     }
 
+      const decisionRecord = decision as {
+        is_locked?: boolean
+        decision_owner_id?: string
+        company_id?: string
+      }
+
     // Check if already locked
-    if (decision.is_locked) {
+      if (decisionRecord.is_locked) {
       return NextResponse.json(
         { error: 'Decision already locked', details: 'This decision has already been locked and cannot be modified.' },
         { status: 400 }
@@ -54,13 +60,15 @@ export async function POST(
     }
 
     // Verify company access
-    const { data: profile } = await supabase
+      const { data: profile } = await supabase
       .from('profiles')
       .select('company_id, role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.company_id !== decision.company_id) {
+      const profileRecord = profile as { company_id?: string; role?: string } | null
+
+      if (!profileRecord?.company_id || profileRecord.company_id !== decisionRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Decision does not belong to your company' },
         { status: 403 }
@@ -68,8 +76,9 @@ export async function POST(
     }
 
     // Check if user is decision owner or admin
-    const isOwner = decision.decision_owner_id === user.id
-    const isAdmin = profile.role === 'admin' || profile.role === 'superadmin'
+      const isOwner = decisionRecord.decision_owner_id === user.id
+      const isAdmin =
+        profileRecord.role === 'admin' || profileRecord.role === 'superadmin'
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
@@ -79,8 +88,8 @@ export async function POST(
     }
 
     // Lock the decision
-    const { data: lockedDecision, error: lockError } = await supabase
-      .from('decisions')
+      const { data: lockedDecision, error: lockError } = await (supabase as any)
+        .from('decisions')
       .update({
         is_locked: true,
         locked_at: new Date().toISOString(),

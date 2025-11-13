@@ -7,6 +7,8 @@ import { processRadioMessage } from '@/lib/radio/incidentCreator'
 import { updateChannelHealth } from '@/lib/radio/channelHealth'
 import { processRadioMessageForTask } from '@/lib/radio/taskCreator'
 
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient<Database>({ cookies })
@@ -158,7 +160,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
+    const { data: createdMessage, error } = await supabase
       .from('radio_messages')
       .insert(messageData)
       .select()
@@ -177,13 +179,14 @@ export async function POST(request: NextRequest) {
     let incidentId: string | number | undefined
     let taskCreated = false
     let taskId: string | undefined
+    let messageRecord = createdMessage
     
-    if (data && messageData.event_id) {
+    if (messageRecord && messageData.event_id) {
       // Process incident creation
       if (autoCreateIncident) {
         try {
           const processed = await processRadioMessage(
-            data as RadioMessage,
+            messageRecord as RadioMessage,
             messageData.event_id,
             user.id,
             supabase,
@@ -204,7 +207,7 @@ export async function POST(request: NextRequest) {
       if (autoCreateTask && !incidentCreated) {
         try {
           const taskProcessed = await processRadioMessageForTask(
-            data as RadioMessage,
+            messageRecord as RadioMessage,
             messageData.event_id,
             user.id,
             supabase,
@@ -219,11 +222,11 @@ export async function POST(request: NextRequest) {
             const { data: updatedMessage } = await supabase
               .from('radio_messages')
               .select()
-              .eq('id', data.id)
+              .eq('id', messageRecord.id)
               .single()
 
             if (updatedMessage) {
-              data = updatedMessage
+              messageRecord = updatedMessage
             }
           }
         } catch (taskError: any) {
@@ -237,11 +240,11 @@ export async function POST(request: NextRequest) {
         const { data: updatedMessage } = await supabase
           .from('radio_messages')
           .select()
-          .eq('id', data.id)
+          .eq('id', messageRecord.id)
           .single()
 
         if (updatedMessage) {
-          data = updatedMessage
+          messageRecord = updatedMessage
         }
       }
     }
@@ -257,7 +260,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return response with creation status
-    const response: any = { data }
+    const response: any = { data: messageRecord }
     if (incidentCreated) {
       response.incidentCreated = true
       response.incidentId = incidentId

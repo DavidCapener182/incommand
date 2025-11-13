@@ -14,16 +14,16 @@ import { useToast } from '@/components/Toast'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  WifiIcon,
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  TrashIcon,
-  AlertCircleIcon,
-} from '@heroicons/react/24/outline'
+  import {
+    WifiIcon,
+    ArrowPathIcon,
+    ExclamationTriangleIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    ClockIcon,
+    TrashIcon,
+    ExclamationCircleIcon,
+  } from '@heroicons/react/24/outline'
 import {
   Table,
   TableBody,
@@ -428,8 +428,8 @@ export default function OfflineMode() {
       {failedOperations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircleIcon className="h-5 w-5 text-red-500" />
+              <CardTitle className="flex items-center gap-2">
+                <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
               Failed Operations
             </CardTitle>
             <CardDescription>

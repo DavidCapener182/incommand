@@ -11,6 +11,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { ReadinessEngine } from '@/lib/analytics/readinessEngine'
 import type { Database } from '@/types/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,16 +42,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
     }
 
-    // Get user's company
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
+      // Get user's company
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
 
-    if (!profile?.company_id) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-    }
+      const profileRecord = profile as { company_id?: string } | null
+
+      if (!profileRecord?.company_id) {
+        return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+      }
 
     // Check if user has access to this event
     const { data: eventAccess, error: accessError } = await supabase
@@ -59,13 +62,15 @@ export async function GET(request: NextRequest) {
       .eq('id', eventId)
       .single()
 
-    if (accessError || !eventAccess) {
-      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
-    }
+      if (accessError || !eventAccess) {
+        return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+      }
 
-    if (eventAccess.company_id !== profile.company_id) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
+      const eventRecord = eventAccess as { company_id?: string }
+
+      if (!eventRecord.company_id || eventRecord.company_id !== profileRecord.company_id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
 
     // Handle historical data request
     if (historical) {
@@ -104,31 +109,35 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Calculate current readiness
-    const engine = new ReadinessEngine(eventId, profile.company_id, supabase)
+      // Calculate current readiness
+      const engine = new ReadinessEngine(
+        eventId,
+        profileRecord.company_id,
+        supabase as unknown as SupabaseClient<Database>
+      )
     const readiness = await engine.calculateOverallReadiness()
 
-    // Store in database for historical tracking
-    try {
-      await supabase.from('operational_readiness').insert({
-        company_id: profile.company_id,
-        event_id: eventId,
-        overall_score: readiness.overall_score,
-        staffing_score: readiness.component_scores.staffing.score,
-        incident_pressure_score: readiness.component_scores.incident_pressure.score,
-        weather_score: readiness.component_scores.weather.score,
-        transport_score: readiness.component_scores.transport.score,
-        asset_status_score: readiness.component_scores.assets.score,
-        crowd_density_score: readiness.component_scores.crowd_density.score,
-        staffing_details: readiness.component_scores.staffing.details,
-        incident_details: readiness.component_scores.incident_pressure.details,
-        weather_details: readiness.component_scores.weather.details,
-        transport_details: readiness.component_scores.transport.details,
-        asset_details: readiness.component_scores.assets.details,
-        crowd_details: readiness.component_scores.crowd_density.details,
-        calculated_by_user_id: user.id,
-        calculation_version: '1.0',
-      })
+      // Store in database for historical tracking
+      try {
+        await (supabase as any).from('operational_readiness').insert({
+          company_id: profileRecord.company_id,
+          event_id: eventId,
+          overall_score: readiness.overall_score,
+          staffing_score: readiness.component_scores.staffing.score,
+          incident_pressure_score: readiness.component_scores.incident_pressure.score,
+          weather_score: readiness.component_scores.weather.score,
+          transport_score: readiness.component_scores.transport.score,
+          asset_status_score: readiness.component_scores.assets.score,
+          crowd_density_score: readiness.component_scores.crowd_density.score,
+          staffing_details: readiness.component_scores.staffing.details,
+          incident_details: readiness.component_scores.incident_pressure.details,
+          weather_details: readiness.component_scores.weather.details,
+          transport_details: readiness.component_scores.transport.details,
+          asset_details: readiness.component_scores.assets.details,
+          crowd_details: readiness.component_scores.crowd_density.details,
+          calculated_by_user_id: user.id,
+          calculation_version: '1.0',
+        })
     } catch (dbError) {
       // Log error but don't fail the request if DB insert fails
       console.error('Error storing readiness score:', dbError)

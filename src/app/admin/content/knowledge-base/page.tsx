@@ -116,6 +116,14 @@ export default function KnowledgeBasePage() {
     setUploadProgress('');
 
     for (const file of Array.from(files)) {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const cancelTimeout = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
+      };
+
       try {
         addUploadLog(`Uploading file: ${file.name}`);
         // Calculate file size and estimated processing time
@@ -153,16 +161,17 @@ export default function KnowledgeBasePage() {
 
         // Create an AbortController for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minute timeout
 
         try {
+          timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minute timeout
+
           const res = await fetch('/api/knowledge/upload', {
             method: 'POST',
             body: formData,
             signal: controller.signal
           });
 
-          clearTimeout(timeoutId);
+          cancelTimeout();
 
           if (!res.ok) {
             const error = await res.json();
@@ -183,7 +192,7 @@ export default function KnowledgeBasePage() {
             setUploadStartTime(null);
           }, 3000);
         } catch (fetchError: any) {
-          clearTimeout(timeoutId);
+          cancelTimeout();
           if (fetchError.name === 'AbortError') {
             throw new Error('Upload timed out after 5 minutes. Large documents may take longer to process. Please try again or check the documents list for processing status.');
           }
@@ -195,7 +204,7 @@ export default function KnowledgeBasePage() {
         addUploadLog(`Failed to upload ${file.name}: ${error.message}`);
         // Don't stop the loop - continue with other files
       } finally {
-        clearTimeout(timeoutId);
+        cancelTimeout();
       }
     }
 

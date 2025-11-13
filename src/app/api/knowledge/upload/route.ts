@@ -102,15 +102,21 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Create knowledge base record in pending state
-      const { data: kbEntry, error: kbError } = await supabase
-        .from('knowledge_base')
+        const organizationIdForInsert =
+          resolvedOrgId ??
+          context.defaultOrganizationId ??
+          context.organizationMemberships[0] ??
+          'unknown'
+
+        // Create knowledge base record in pending state
+        const { data: kbEntry, error: kbError } = await (supabase as any)
+          .from('knowledge_base')
         .insert({
           title: title.trim(),
           type: fileType,
           source: 'user-upload',
           uploader_id: context.user.id,
-          organization_id: resolvedOrgId || null,
+            organization_id: organizationIdForInsert,
           event_id: eventId || null,
           tags,
           status: 'pending',
@@ -151,8 +157,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Update record with storage path
-      await supabase
-        .from('knowledge_base')
+        await (supabase as any)
+          .from('knowledge_base')
         .update({
           storage_path: storagePath,
           status: 'pending',
@@ -160,8 +166,8 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', knowledgeId)
 
-      await recordAdminAudit(context.serviceClient, {
-        organizationId: resolvedOrgId,
+        await recordAdminAudit(context.serviceClient, {
+          organizationId: organizationIdForInsert,
         actorId: context.user.id,
         action: 'upload_knowledge',
         resourceType: 'knowledge_base',
