@@ -239,6 +239,47 @@ Additional details:
    npm run dev
    ```
 
+### Admin Backend
+
+The `/api/admin/**` namespace exposes secured administrative APIs that mirror the Supabase schema. Middleware ensures only the allowlisted email (default `david@incommand.uk`) can access these routes.
+
+1. Configure the following environment variables (also reflected in `.env.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `ALLOWED_ADMIN_EMAIL`
+   - Optional: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ALLOWED_ORIGINS`
+2. Authenticate in the browser as the allowlisted admin to obtain a Supabase session.
+3. Call the admin API using the session token in the `Authorization` header.
+
+#### Supporting Utilities
+
+- `lib/auth/onlyAdmin.ts` – allowlist enforcement for all admin routes.
+- `lib/security/rateLimit.ts` – lightweight rate limiting for sensitive endpoints.
+- `lib/audit/log.ts` – writes change events to the `audit_logs` table.
+- `lib/supabase/server.ts` – service role Supabase client for privileged operations.
+
+### Admin API Examples
+
+```bash
+# List organisations
+curl -X GET \
+  -H "Authorization: Bearer <session-token>" \
+  http://localhost:3000/api/admin/organizations
+
+# Create a draft invoice for an organisation
+curl -X POST \
+  -H "Authorization: Bearer <session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"organizationId":"org-123","periodStart":"2024-01-01","periodEnd":"2024-01-31"}' \
+  http://localhost:3000/api/admin/billing/invoices
+
+# Retrieve ledger summaries
+curl -X GET \
+  -H "Authorization: Bearer <session-token>" \
+  "http://localhost:3000/api/admin/accounting/ledger?page=1&pageSize=25"
+```
+
 4. **Build for production**
    ```sh
    npm run build
