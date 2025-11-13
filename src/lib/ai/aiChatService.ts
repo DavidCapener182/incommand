@@ -1,7 +1,7 @@
 // @ts-nocheck
 /**
  * AI Chat Service
- * Handles AI assistant conversations with Green Guide integration
+ * Handles AI assistant conversations with unified knowledge base integration
  */
 
 import { supabase } from '@/lib/supabase'
@@ -49,8 +49,8 @@ export class AIChatService {
     context: ConversationContext
   ): Promise<AIMessage | null> {
     try {
-      // Get Green Guide context if needed
-      const greenGuideContext = await this.searchGreenGuide(message, context.eventId)
+      // Get unified knowledge context if needed
+      const knowledgeContext = await this.searchKnowledgeBase(message, context.eventId, context.companyId)
       
       // Call OpenAI API
       const response = await fetch('/api/chat/ai', {
@@ -79,7 +79,7 @@ export class AIChatService {
         role: 'assistant',
         content: data.reply,
         timestamp: new Date().toISOString(),
-        citations: data.citations || greenGuideContext,
+        citations: data.citations || knowledgeContext,
         metadata: {
           conversationId,
           eventId: context.eventId,
@@ -188,16 +188,40 @@ export class AIChatService {
   }
 
   /**
-   * Search Green Guide for relevant context
+   * Search unified knowledge base (Green Guide + uploaded docs) for relevant context
+   * Uses API endpoint to avoid server-side imports in client code
    */
-  async searchGreenGuide(query: string, eventId: string): Promise<GreenGuideCitation[]> {
+  async searchKnowledgeBase(query: string, eventId: string, organizationId?: string): Promise<GreenGuideCitation[]> {
     try {
-      // Check if query needs Green Guide context
-      const needsGreenGuide = /best practice|procedure|how should|what should we do|safety|green guide|barrier|capacity|crowd|ingress|egress/i.test(query)
+      // Check if query needs knowledge context
+      const needsKnowledge = /best practice|procedure|how should|what should we do|safety|green guide|barrier|capacity|crowd|ingress|egress|briefing|document|manual|procedure|policy|guideline|what is|how many|how much|tell me about|explain|describe/i.test(query.toLowerCase())
       
-      if (!needsGreenGuide) return []
+      if (!needsKnowledge) return []
 
-      const response = await fetch('/api/green-guide-search', {
+      // Use API endpoint instead of direct import to avoid server-side code in client bundle
+      const response = await fetch('/api/knowledge/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          topK: 4,
+          organizationId,
+          eventId,
+          useHybrid: true
+        })
+      })
+
+      if (!response.ok) {
+        console.warn('Knowledge base search failed:', response.status)
+        return []
+      }
+
+      const data = await response.json()
+      
+      // Also try Green Guide search for backward compatibility
+      const ggResponse = await fetch('/api/green-guide-search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,23 +232,44 @@ export class AIChatService {
         })
       })
 
-      if (!response.ok) {
-        console.warn('Green Guide search failed:', response.status)
-        return []
-      }
-
-      const data = await response.json()
+      const results: GreenGuideCitation[] = []
       
-      return (data.results || []).map((result: any) => ({
-        page: result.page || 0,
-        content: result.content || '',
-        heading: result.heading || '',
-        similarity: result.similarity || 0
-      }))
+      // Add knowledge base results
+      if (data.results && Array.isArray(data.results)) {
+        results.push(...data.results.map((r: any) => ({
+          page: r.metadata?.chunkIndex || 0,
+          content: r.content || '',
+          heading: r.title || r.metadata?.title || '',
+          similarity: r.score || 0
+        })))
+      }
+      
+      // Add Green Guide results
+      if (ggResponse.ok) {
+        const ggData = await ggResponse.json()
+        if (ggData.results && Array.isArray(ggData.results)) {
+          results.push(...ggData.results.map((r: any) => ({
+            page: r.page || 0,
+            content: r.content || '',
+            heading: r.heading || '',
+            similarity: r.similarity || 0
+          })))
+        }
+      }
+      
+      return results
     } catch (error) {
-      console.error('Error searching Green Guide:', error)
+      console.error('Error searching knowledge base:', error)
       return []
     }
+  }
+
+  /**
+   * Search Green Guide for relevant context (backward compatibility)
+   * @deprecated Use searchKnowledgeBase instead
+   */
+  async searchGreenGuide(query: string, eventId: string): Promise<GreenGuideCitation[]> {
+    return this.searchKnowledgeBase(query, eventId)
   }
 
   /**
@@ -233,11 +278,11 @@ export class AIChatService {
   private buildAIPrompt(
     message: string,
     history: AIMessage[],
-    greenGuideContext: GreenGuideCitation[]
+    knowledgeContext: GreenGuideCitation[]
   ): string {
     let prompt = `You are the inCommand AI Assistant, helping with event operations and incident management.
 
-Context: You have access to the Green Guide for crowd management best practices.
+Context: You have access to the Green Guide for crowd management best practices and uploaded knowledge base documents.
 
 User's message: ${message}`
 
@@ -249,13 +294,16 @@ User's message: ${message}`
       })
     }
 
-    // Add Green Guide context
-    if (greenGuideContext.length > 0) {
-      prompt += '\n\nRelevant Green Guide information:\n'
-      greenGuideContext.forEach((citation, index) => {
-        prompt += `(${index + 1}) Page ${citation.page}: ${citation.content}\n`
+    // Add unified knowledge context
+    if (knowledgeContext.length > 0) {
+      prompt += '\n\nRelevant Knowledge Base information:\n'
+      knowledgeContext.forEach((citation, index) => {
+        const source = citation.heading?.includes('Green Guide') ? 'GG' : 'KB'
+        const page = citation.page ? ` p.${citation.page}` : ''
+        prompt += `(${index + 1}) [${source}${page}]: ${citation.content}\n`
       })
       prompt += '\nWhen referencing Green Guide information, cite using [GG p.<page>] format.'
+      prompt += '\nWhen referencing uploaded documents, cite using the document title.'
     }
 
     prompt += '\n\nProvide a helpful, accurate response based on the context above.'

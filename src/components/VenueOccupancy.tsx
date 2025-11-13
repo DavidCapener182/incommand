@@ -4,9 +4,10 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '@/types/supabase'
-import { BuildingOffice2Icon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { useToast } from '../contexts/ToastContext'
+import { predictCrowdFlow, type CrowdFlowPrediction } from '@/lib/analytics/crowdFlowPrediction'
 
 interface Props {
   currentEventId: string | null
@@ -22,6 +23,8 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   const lastAlertTimeRef = useRef<number>(0)
   const isCreatingToastRef = useRef<boolean>(false)
   const { addToast, removeToast, clearAll } = useToast()
+  const [prediction, setPrediction] = useState<CrowdFlowPrediction | null>(null)
+  const [showPrediction, setShowPrediction] = useState(false)
 
   // Function to handle capacity alerts
   const handleCapacityAlert = useCallback((percentage: number, count: number, expected: number) => {
@@ -133,6 +136,14 @@ export default function VenueOccupancy({ currentEventId }: Props) {
           if (newExpected > 0) {
             const initialPercentage = Math.min((attendanceData.count / newExpected) * 100, 100);
             handleCapacityAlert(initialPercentage, attendanceData.count, newExpected);
+            
+            // Fetch predictions
+            try {
+              const flowPrediction = await predictCrowdFlow(supabase, currentEventId, newExpected, 60)
+              setPrediction(flowPrediction)
+            } catch (predError) {
+              console.warn('Could not generate crowd flow prediction:', predError)
+            }
           }
         } else {
           setCurrentCount(0) // Start with 0 actual attendance
@@ -170,6 +181,14 @@ export default function VenueOccupancy({ currentEventId }: Props) {
                 setExpectedAttendance(currentExpected => {
                   const newPercentage = currentExpected > 0 ? Math.min((newRecord.count / currentExpected) * 100, 100) : 0;
                   handleCapacityAlert(newPercentage, newRecord.count, currentExpected);
+                  
+                  // Update predictions when count changes
+                  if (currentExpected > 0) {
+                    predictCrowdFlow(supabase, currentEventId, currentExpected, 60)
+                      .then(setPrediction)
+                      .catch(err => console.warn('Prediction update failed:', err))
+                  }
+                  
                   return currentExpected;
                 });
                 return newRecord.count;
@@ -285,6 +304,11 @@ export default function VenueOccupancy({ currentEventId }: Props) {
   // Check if at critical capacity (100%)
   const isCriticalCapacity = percentage >= 100;
 
+  // Get next prediction (10 minutes ahead)
+  const nextPrediction = prediction?.predictedCounts.find(p => p.minutesAhead === 10)
+  const peakPrediction = prediction?.peakPrediction
+  const hasHighRisk = prediction?.predictedCounts.some(p => p.riskLevel === 'high' || p.riskLevel === 'critical')
+
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center space-y-1 w-full">
@@ -294,9 +318,14 @@ export default function VenueOccupancy({ currentEventId }: Props) {
             {displayCount}
             <span className="text-xs md:text-base text-gray-500 dark:text-gray-100 ml-1">/ {displayExpected}</span>
           </p>
-          <p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-100 mt-0.5">
-            Venue Occupancy
-          </p>
+          <div className="flex items-center justify-center gap-1 mt-0.5">
+            <p className="text-[10px] md:text-xs font-medium text-gray-500 dark:text-gray-100">
+              Venue Occupancy
+            </p>
+            {hasHighRisk && (
+              <ExclamationTriangleIcon className="h-3 w-3 text-amber-500" title="High risk predicted" />
+            )}
+          </div>
           {loading && (
             <div className="mt-1">
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -323,6 +352,60 @@ export default function VenueOccupancy({ currentEventId }: Props) {
                 style={{ width: `${displayPercentage}%` }}
               />
             </div>
+            
+            {/* Next 60 Minutes Prediction */}
+            {nextPrediction && !loading && (
+              <div className="mt-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowPrediction(!showPrediction)}
+                  className="w-full flex items-center justify-between text-[10px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <ClockIcon className="h-3 w-3" />
+                    <span>
+                      {nextPrediction.minutesAhead}m: ~{nextPrediction.predictedCount.toLocaleString()}
+                    </span>
+                    {nextPrediction.riskLevel === 'critical' && (
+                      <span className="text-red-500 font-semibold">⚠️</span>
+                    )}
+                    {nextPrediction.riskLevel === 'high' && (
+                      <span className="text-amber-500">!</span>
+                    )}
+                  </div>
+                  <span className="text-[9px]">
+                    {showPrediction ? '▼' : '▶'}
+                  </span>
+                </button>
+                
+                {showPrediction && prediction && (
+                  <div className="mt-1.5 space-y-1 text-[9px] text-gray-600 dark:text-gray-400">
+                    {prediction.predictedCounts.slice(0, 6).map((pred) => (
+                      <div key={pred.minutesAhead} className="flex items-center justify-between">
+                        <span>{pred.minutesAhead}m:</span>
+                        <span className={`
+                          ${pred.riskLevel === 'critical' ? 'text-red-600 font-semibold' : ''}
+                          ${pred.riskLevel === 'high' ? 'text-amber-600' : ''}
+                          ${pred.riskLevel === 'medium' ? 'text-yellow-600' : ''}
+                          ${pred.riskLevel === 'low' ? 'text-green-600' : ''}
+                        `}>
+                          {pred.predictedCount.toLocaleString()} ({Math.round((pred.predictedCount / expectedAttendance) * 100)}%)
+                        </span>
+                      </div>
+                    ))}
+                    {peakPrediction && (
+                      <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between font-semibold">
+                          <span>Peak:</span>
+                          <span className="text-amber-600">
+                            {peakPrediction.count.toLocaleString()} at {new Date(peakPrediction.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         

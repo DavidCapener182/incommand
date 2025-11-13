@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData, StandOccupancyMap } from '@/types/football'
-import { RefreshCw, Download, Settings } from 'lucide-react'
+import { RefreshCw, Download, Settings, Clock } from 'lucide-react'
 import QuickSettingsDropdown, { QuickSettingItem } from '@/components/football/QuickSettingsDropdown'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import {
@@ -12,6 +12,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useEventContext } from '@/contexts/EventContext'
+import { supabase } from '@/lib/supabase'
+import { predictStandFlow, type StandFlowPrediction } from '@/lib/analytics/crowdFlowPrediction'
 
 
 interface FootballCard_StandOccupancyProps {
@@ -20,6 +23,7 @@ interface FootballCard_StandOccupancyProps {
 }
 
 export default function FootballCard_StandOccupancy({ className, onOpenModal }: FootballCard_StandOccupancyProps) {
+  const { eventId } = useEventContext()
   const [data, setData] = useState<FootballData | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [thresholds, setThresholds] = useState({
@@ -28,6 +32,8 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
     default_red_threshold: 100,
     stand_overrides: {} as Record<string, { amber?: number; red?: number }>
   })
+  const [standPredictions, setStandPredictions] = useState<Record<string, StandFlowPrediction>>({})
+  const [expandedStand, setExpandedStand] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -35,7 +41,30 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
       const res = await fetch('/api/football/data')
       if (!res.ok) return
       const json = await res.json()
-      if (mounted) setData(json.data)
+      if (mounted) {
+        setData(json.data)
+        
+        // Load predictions for each stand
+        if (eventId && json.data?.occupancy) {
+          const predictions: Record<string, StandFlowPrediction> = {}
+          for (const [standName, standData] of Object.entries(json.data.occupancy)) {
+            try {
+              const prediction = await predictStandFlow(
+                supabase,
+                eventId,
+                '', // standId - will be resolved by name
+                standName,
+                standData.capacity,
+                60
+              )
+              predictions[standName] = prediction
+            } catch (err) {
+              console.warn(`Failed to predict flow for stand ${standName}:`, err)
+            }
+          }
+          if (mounted) setStandPredictions(predictions)
+        }
+      }
     }
     load()
     if (autoRefresh) {
@@ -43,7 +72,7 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
       return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
-  }, [autoRefresh])
+  }, [autoRefresh, eventId])
 
   useEffect(() => {
     const loadThresholds = async () => {
@@ -219,18 +248,84 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
                   const percent = val.capacity ? Math.min(100, (val.current / val.capacity) * 100) : 0
                   const colour = getColorForStand(name, percent)
                   const truncatedName = name.length > 12 ? name.substring(0, 10) + '…' : name
+                  const prediction = standPredictions[name]
+                  const nextPrediction = prediction?.predictedOccupancy.find(p => p.minutesAhead === 10)
+                  const hasHighRisk = prediction?.predictedOccupancy.some(p => p.riskLevel === 'high' || p.riskLevel === 'critical')
+                  const isExpanded = expandedStand === name
+                  
                   return (
-                    <div key={name} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700 flex-1 min-w-0 truncate">{truncatedName}</span>
-                      <div className="flex items-center gap-2 flex-1 max-w-32 mx-2">
-                        <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden flex-1">
-                          <div
-                            className={`h-2 ${colour} rounded-full transition-all duration-700`}
-                            style={{ width: `${percent}%` }}
-                          />
+                    <div key={name} className="space-y-1">
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                          <span className="text-gray-700 truncate">{truncatedName}</span>
+                          {hasHighRisk && (
+                            <span className="text-amber-500 text-xs">⚠</span>
+                          )}
                         </div>
-                        <span className="font-medium text-gray-900 text-xs min-w-[35px] text-right">{percent.toFixed(0)}%</span>
+                        <div className="flex items-center gap-2 flex-1 max-w-32 mx-2">
+                          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden flex-1">
+                            <div
+                              className={`h-2 ${colour} rounded-full transition-all duration-700`}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                          <span className="font-medium text-gray-900 text-xs min-w-[35px] text-right">{percent.toFixed(0)}%</span>
+                        </div>
                       </div>
+                      
+                      {/* Prediction display */}
+                      {nextPrediction && (
+                        <div className="ml-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+                          <button
+                            onClick={() => setExpandedStand(isExpanded ? null : name)}
+                            className="w-full flex items-center justify-between text-[10px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                          >
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {nextPrediction.minutesAhead}m: ~{nextPrediction.predictedOccupancy} ({nextPrediction.percentage}%)
+                              </span>
+                              {nextPrediction.riskLevel === 'critical' && (
+                                <span className="text-red-500 font-semibold">⚠️</span>
+                              )}
+                              {nextPrediction.riskLevel === 'high' && (
+                                <span className="text-amber-500">!</span>
+                              )}
+                            </div>
+                            <span className="text-[9px]">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                          </button>
+                          
+                          {isExpanded && prediction && (
+                            <div className="mt-1.5 space-y-1 text-[9px] text-gray-600 dark:text-gray-400">
+                              {prediction.predictedOccupancy.slice(0, 6).map((pred) => (
+                                <div key={pred.minutesAhead} className="flex items-center justify-between">
+                                  <span>{pred.minutesAhead}m:</span>
+                                  <span className={`
+                                    ${pred.riskLevel === 'critical' ? 'text-red-600 font-semibold' : ''}
+                                    ${pred.riskLevel === 'high' ? 'text-amber-600' : ''}
+                                    ${pred.riskLevel === 'medium' ? 'text-yellow-600' : ''}
+                                    ${pred.riskLevel === 'low' ? 'text-green-600' : ''}
+                                  `}>
+                                    {pred.predictedOccupancy} ({pred.percentage}%)
+                                  </span>
+                                </div>
+                              ))}
+                              {prediction.peakPrediction && (
+                                <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center justify-between font-semibold">
+                                    <span>Peak:</span>
+                                    <span className="text-amber-600">
+                                      {prediction.peakPrediction.occupancy} ({prediction.peakPrediction.percentage}%) at {new Date(prediction.peakPrediction.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

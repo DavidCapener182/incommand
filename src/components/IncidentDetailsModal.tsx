@@ -41,6 +41,14 @@ import {
   getAmendmentBadgeConfig 
 } from '@/lib/auditableLogging'
 import { AuditableIncidentLog } from '@/types/auditableLog'
+import dynamic from 'next/dynamic'
+import IncidentRadioMessages from './incidents/IncidentRadioMessages'
+
+// Dynamically import DecisionLogger to avoid initialization issues
+const DecisionLogger = dynamic(() => import('./decisions/DecisionLogger'), {
+  ssr: false,
+  loading: () => null,
+})
 
 interface Props {
   isOpen: boolean
@@ -110,6 +118,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false)
   const [revisionCount, setRevisionCount] = useState(0)
   const [currentUserName, setCurrentUserName] = useState('Event Control')
+  const [showDecisionLogger, setShowDecisionLogger] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -175,62 +184,6 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       subscriptionRef.current = null;
     }
   };
-
-  useEffect(() => {
-    if (isOpen && incidentId) {
-      fetchIncidentDetails();
-
-      // Clean up any existing subscription
-      cleanup();
-
-      // Set up new subscription for both incident updates and log changes
-      subscriptionRef.current = supabase
-        .channel(`incident_${incidentId}_${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'incident_updates',
-            filter: `incident_id=eq.${incidentId}`
-          },
-          () => {
-            console.log('Incident update detected, refreshing...');
-            fetchIncidentDetails();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'incident_logs',
-            filter: `id=eq.${incidentId}`
-          },
-          (payload) => {
-            console.log('Incident log updated, refreshing...', payload);
-            fetchIncidentDetails();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'incident_log_revisions',
-            filter: `incident_log_id=eq.${incidentId}`
-          },
-          (payload) => {
-            console.log('New revision created, refreshing...', payload);
-            fetchIncidentDetails();
-          }
-        )
-        .subscribe();
-    }
-
-    // Cleanup on unmount or when modal closes
-    return cleanup;
-  }, [isOpen, incidentId, fetchIncidentDetails]);
 
   useEffect(() => {
     // Fetch current event id
@@ -344,6 +297,62 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       setLoading(false);
     }
   }, [incidentId, fetchAssignments, getSignedUrl]);
+
+  useEffect(() => {
+    if (isOpen && incidentId) {
+      fetchIncidentDetails();
+
+      // Clean up any existing subscription
+      cleanup();
+
+      // Set up new subscription for both incident updates and log changes
+      subscriptionRef.current = supabase
+        .channel(`incident_${incidentId}_${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'incident_updates',
+            filter: `incident_id=eq.${incidentId}`
+          },
+          () => {
+            console.log('Incident update detected, refreshing...');
+            fetchIncidentDetails();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'incident_logs',
+            filter: `id=eq.${incidentId}`
+          },
+          (payload) => {
+            console.log('Incident log updated, refreshing...', payload);
+            fetchIncidentDetails();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'incident_log_revisions',
+            filter: `incident_log_id=eq.${incidentId}`
+          },
+          (payload) => {
+            console.log('New revision created, refreshing...', payload);
+            fetchIncidentDetails();
+          }
+        )
+        .subscribe();
+    }
+
+    // Cleanup on unmount or when modal closes
+    return cleanup;
+  }, [isOpen, incidentId, fetchIncidentDetails]);
 
   const handleEscalationSuccess = (_escalation: EscalationResponse) => {
     setIncident((prev) => {
@@ -584,6 +593,16 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {incident && (
+              <button
+                onClick={() => setShowDecisionLogger(true)}
+                className="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+                title="Log Decision"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                <span>Log Decision</span>
+              </button>
+            )}
             {incident && incident.incident_type !== 'Sit Rep' && (
               <button
                 onClick={handleStatusChange}
@@ -621,6 +640,14 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Radio Messages Section */}
+                {incident && (
+                  <IncidentRadioMessages 
+                    incidentId={incident.id} 
+                    eventId={currentEventId}
+                  />
+                )}
+
                 {/* Incident Type & Priority */}
                 <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
                      style={{
@@ -1113,6 +1140,19 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
               // Refresh incident data
               fetchIncidentDetails()
             }}
+          />
+        )}
+
+        {/* Decision Logger Modal */}
+        {incident && currentEventId && (
+          <DecisionLogger
+            eventId={currentEventId}
+            isOpen={showDecisionLogger}
+            onClose={() => setShowDecisionLogger(false)}
+            onDecisionCreated={() => {
+              setShowDecisionLogger(false)
+            }}
+            linkedIncidentIds={[Number(incident.id)]}
           />
         )}
       </motion.div>

@@ -19,6 +19,7 @@ import { TypingIndicator } from '@/components/ui/TypingIndicator'
 import QuickAddInput, { ParsedIncidentData } from '@/components/ui/QuickAddInput'
 import VoiceInputButton, { VoiceInputCompact } from '@/components/VoiceInputButton'
 import VoiceInputField from '@/components/VoiceInputField'
+import RecentRadioMessages from './incidents/RecentRadioMessages'
 import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
 import { detectIncidentFromText } from '@/utils/incidentLogic'
@@ -3623,6 +3624,7 @@ export default function IncidentCreationModal({
         is_closed: shouldBeLogged,
         event_id: effectiveEvent.id,
         status: shouldBeLogged ? 'logged' : (formData.status || 'open'),
+        priority: isMatchFlowLog ? 'low' : (formData.priority || 'medium'),
         ai_input: formData.ai_input || null,
         location: formData.location || '',
         created_at: now,
@@ -3640,7 +3642,6 @@ export default function IncidentCreationModal({
         ...(isMatchFlowLog && {
           type: 'match_log',
           category: 'football',
-          priority: 'low',
         }),
         // Add GPS coordinates if map coordinates are available
         ...(resolvedCoordinates && {
@@ -3818,6 +3819,37 @@ export default function IncidentCreationModal({
       } catch (broadcastError) {
         console.warn('Failed to broadcast incident summary update:', broadcastError)
         // Don't fail the incident creation if broadcast fails
+      }
+
+      // Auto-create task if incident contains task keywords
+      if (insertedIncident?.id && !shouldBeLogged && !formData.is_closed) {
+        try {
+          const { processIncidentForTask } = await import('@/lib/radio/taskCreator')
+          const result = await processIncidentForTask(
+            {
+              id: insertedIncident.id,
+              occurrence: resolvedOccurrence,
+              incident_type: resolvedType,
+              priority: formData.priority || 'medium',
+              location: formData.location || '',
+              callsign_from: formData.callsign_from,
+              callsign_to: formData.callsign_to || 'Event Control',
+              event_id: effectiveEvent.id,
+              is_closed: false,
+              created_at: now,
+            },
+            user.id,
+            supabase,
+            true
+          )
+          
+          if (result.taskCreated) {
+            console.log('✅ Auto-created task from incident:', result.taskId)
+          }
+        } catch (taskError) {
+          // Don't fail incident creation if task creation fails
+          console.warn('Could not auto-create task from incident:', taskError)
+        }
       }
 
       // Call onIncidentCreated callback with the created incident and close modal
@@ -4397,6 +4429,33 @@ export default function IncidentCreationModal({
 
                 {/* Quick Add Bar - Full Width */}
         <div className="px-6 py-4 sm:px-8 border-b bg-gray-50 dark:bg-slate-800 space-y-3">
+          {/* Recent Radio Messages - Show at top */}
+          <RecentRadioMessages 
+            eventId={selectedEventId || currentEventFallback?.id}
+            onSelectMessage={(incident) => {
+              // Auto-fill form from incident
+              if (incident.occurrence) {
+                // Trigger QuickAddInput with the incident occurrence text
+                handleQuickAdd(incident.occurrence)
+              }
+              if (incident.callsign_from) {
+                setFormData(prev => ({ ...prev, callsign_from: incident.callsign_from || prev.callsign_from }))
+              }
+              if (incident.callsign_to) {
+                setFormData(prev => ({ ...prev, callsign_to: incident.callsign_to || prev.callsign_to }))
+              }
+              if (incident.source) {
+                setFormData(prev => ({ 
+                  ...prev, 
+                  source: prev.source 
+                    ? `${prev.source}, ${incident.source}` 
+                    : incident.source 
+                }))
+              }
+            }}
+            className="mb-3"
+          />
+          
           {/* Divider */}
           <div className="flex items-center gap-4">
             <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>

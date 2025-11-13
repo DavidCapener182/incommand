@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
+import { retrieveContext, formatContextForPrompt, needsKnowledgeContext, needsGreenGuideContext } from '@/lib/ai/retrieveContext'
 
 const supabase = getServiceSupabaseClient()
 
@@ -44,9 +45,9 @@ export async function POST(request: NextRequest) {
     const lastMessage = messages[messages.length - 1]
     const userMessageContentLower = lastMessage.content.toLowerCase()
     
-    // Check if user wants Green Guide context
-    const wantsGreenGuide = /green guide|procedure|best practice|safety|regulation|guideline|what should i do/.test(userMessageContentLower)
-    let greenGuideContext = ''
+    // Check if user wants knowledge context (Green Guide or Knowledge Base)
+    const wantsKnowledgeContext = needsGreenGuideContext(userMessageContent) || needsKnowledgeContext(userMessageContent)
+    let knowledgeContext = ''
     let citations: { text: string; page: number }[] = []
 
     // Check if user wants incident data
@@ -54,47 +55,50 @@ export async function POST(request: NextRequest) {
     let incidentContext = ''
     
     console.log('User message:', userMessageContent)
+    console.log('Wants knowledge context:', wantsKnowledgeContext)
     console.log('Wants incident data:', wantsIncidentData)
     
     // Diagnostic logging for debugging
     console.log('Detection results:', {
       userMessage: userMessageContent,
-      wantsGreenGuide,
+      wantsKnowledgeContext,
       wantsIncidentData,
       eventId,
       companyId
     })
 
-    if (wantsGreenGuide) {
+    if (wantsKnowledgeContext) {
       try {
-        console.log('Attempting Green Guide search for:', userMessageContent)
-        const greenGuideResponse = await fetch(`${request.nextUrl.origin}/api/green-guide-search`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: userMessageContent, topK: 3 })
+        console.log('Retrieving unified knowledge context for:', userMessageContent)
+        const contexts = await retrieveContext(userMessageContent, {
+          organizationId: companyId,
+          eventId: eventId,
+          topK: 5,
+          useHybrid: true
         })
 
-        if (greenGuideResponse.ok) {
-          const { results } = await greenGuideResponse.json()
-          console.log('Green Guide results:', results)
-          if (Array.isArray(results) && results.length) {
-            try {
-              greenGuideContext = results.map((r: any, i: number) => {
-                const content = r.content || r.text || 'No content available'
-                const page = r.page || '?'
-                citations.push({ text: `Green Guide, p.${page}`, page: page })
-                return `(${i + 1}) p.${page}: ${content.slice(0, 400)}`
-              }).join('\n')
-            } catch (mapError) {
-              console.error('Error processing Green Guide results:', mapError)
-              greenGuideContext = 'Green Guide context available but could not be processed'
+        if (contexts.length > 0) {
+          knowledgeContext = formatContextForPrompt(contexts)
+          
+          // Extract citations
+          contexts.forEach(ctx => {
+            if (ctx.source === 'green-guide' && ctx.metadata.page) {
+              citations.push({ 
+                text: `Green Guide, p.${ctx.metadata.page}`, 
+                page: ctx.metadata.page 
+              })
+            } else if (ctx.source === 'knowledge-base' && ctx.metadata.title) {
+              citations.push({ 
+                text: ctx.metadata.title, 
+                page: ctx.metadata.chunkIndex || 0 
+              })
             }
-          }
-        } else {
-          console.log('Green Guide search failed:', greenGuideResponse.status)
+          })
+          
+          console.log(`Retrieved ${contexts.length} knowledge contexts`)
         }
-      } catch (ggError) {
-        console.error('Error fetching Green Guide context:', ggError)
+      } catch (kbError) {
+        console.error('Error retrieving knowledge context:', kbError)
       }
     }
 
@@ -185,11 +189,12 @@ export async function POST(request: NextRequest) {
     If the user asks about "last incident", use the most recent entry in the ACTUAL INCIDENTS list.
 
     For Green Guide procedures and safety questions, refer to the provided Green Guide context and cite sections using [GG p.<page number>].
+    For uploaded knowledge base documents, cite using the document title (e.g., [Creamfields Briefing.pdf]).
     
     Current User ID: ${userId}
     ${eventId ? `Current Event ID: ${eventId}` : ''}
     ${companyId ? `Current Company ID: ${companyId}` : ''}
-    ${greenGuideContext ? `\nGreen Guide Context:\n${greenGuideContext}` : ''}
+    ${knowledgeContext ? `\nKnowledge Context:\n${knowledgeContext}` : ''}
     ${incidentContext ? `\nLive Incident Data:\n${incidentContext}` : ''}`
 
     // Call OpenAI API

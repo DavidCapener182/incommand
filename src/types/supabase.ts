@@ -3595,12 +3595,20 @@ export type Database = {
         Row: {
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
         organization_id: string // format: uuid
+        event_id: string | null // format: uuid
         title: string // format: text
         body: string // format: text
         status: string // format: text
+        type: string | null // format: text
+        source: string // format: text
         author_id: string | null // format: uuid
+        uploader_id: string | null // format: uuid
         tags: string[] // format: text[]
         version: number // format: integer
+        bytes: number | null // format: integer
+        error: string | null // format: text
+        storage_path: string | null // format: text
+        original_filename: string | null // format: text
         published_at: string | null // format: timestamp with time zone
         created_at: string // format: timestamp with time zone
         updated_at: string // format: timestamp with time zone
@@ -3608,12 +3616,20 @@ export type Database = {
         Insert: {
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         organization_id: string // format: uuid
+        event_id?: string | null // format: uuid
         title: string // format: text
         body: string // format: text
         status?: string // format: text
+        type?: string | null // format: text
+        source?: string // format: text
         author_id?: string | null // format: uuid
+        uploader_id?: string | null // format: uuid
         tags?: string[] // format: text[]
         version?: number // format: integer
+        bytes?: number | null // format: integer
+        error?: string | null // format: text
+        storage_path?: string | null // format: text
+        original_filename?: string | null // format: text
         published_at?: string | null // format: timestamp with time zone
         created_at?: string // format: timestamp with time zone
         updated_at?: string // format: timestamp with time zone
@@ -3621,17 +3637,63 @@ export type Database = {
         Update: {
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
         organization_id?: string // format: uuid
+        event_id?: string | null // format: uuid
         title?: string // format: text
         body?: string // format: text
         status?: string // format: text
+        type?: string | null // format: text
+        source?: string | null // format: text
         author_id?: string | null // format: uuid
+        uploader_id?: string | null // format: uuid
         tags?: string[] // format: text[]
         version?: number // format: integer
+        bytes?: number | null // format: integer
+        error?: string | null // format: text
+        storage_path?: string | null // format: text
+        original_filename?: string | null // format: text
         published_at?: string | null // format: timestamp with time zone
         created_at?: string // format: timestamp with time zone
         updated_at?: string // format: timestamp with time zone
         }
         Relationships: []
+      }
+      knowledge_embeddings: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        knowledge_id: string // format: uuid
+        chunk_index: number // format: integer
+        content: string // format: text
+        embedding: number[] // format: vector(1536)
+        metadata: Record<string, any> // format: jsonb
+        created_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        knowledge_id: string // format: uuid
+        chunk_index: number // format: integer
+        content: string // format: text
+        embedding: number[] // format: vector(1536)
+        metadata?: Record<string, any> // format: jsonb
+        created_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        knowledge_id?: string // format: uuid
+        chunk_index?: number // format: integer
+        content?: string // format: text
+        embedding?: number[] // format: vector(1536)
+        metadata?: Record<string, any> // format: jsonb
+        created_at?: string // format: timestamp with time zone
+        }
+        Relationships: [
+        {
+        foreignKeyName: "knowledge_embeddings_knowledge_id_fkey"
+        columns: ["knowledge_id"]
+        isOneToOne: false
+        referencedRelation: "knowledge_base"
+        referencedColumns: ["id"]
+        }
+        ]
       }
       inquest_organizations: {
         Row: {

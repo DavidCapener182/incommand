@@ -5,6 +5,8 @@ import type { SupabaseClient, Session, User } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { ADMIN_ROLES, AdminRole, derivePermissions, getHighestRole, hasRequiredRole, normalizeRole } from '@/lib/security/roles'
 import { logger } from '@/lib/logger'
+import { cookies } from 'next/headers'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export interface AdminContext {
   request: NextRequest
@@ -125,7 +127,9 @@ async function loadAdminRoles(
 
 async function createAdminContext(request: NextRequest): Promise<AdminContextResult> {
   try {
-    const supabase = createRlsServerClient(request.headers)
+    // Use Next.js cookies() for proper cookie handling in API routes
+    const cookieStore = cookies()
+    const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore })
     const serviceClient = getServiceSupabaseClient()
 
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
@@ -137,12 +141,18 @@ async function createAdminContext(request: NextRequest): Promise<AdminContextRes
     const session = sessionData.session
     const user = session.user
 
+    // Load admin roles early to check for super_admin
+    const { roles, memberships } = await loadAdminRoles(serviceClient, user.id)
+    const isSuperAdmin = roles.includes('super_admin')
+
     // Restrict back office access to specific email only (company admins use /settings)
+    // Super admins bypass this restriction
     const allowedBackOfficeEmail = 'david@incommand.uk'
-    if (user.email !== allowedBackOfficeEmail) {
+    if (!isSuperAdmin && user.email !== allowedBackOfficeEmail) {
       logger.warn('Back office access denied - unauthorized email', { 
         attemptedEmail: user.email, 
-        allowedEmail: allowedBackOfficeEmail 
+        allowedEmail: allowedBackOfficeEmail,
+        isSuperAdmin
       })
       return { response: NextResponse.json({ error: 'Access denied. Back office access is restricted to system administrators.' }, { status: 403 }) }
     }
@@ -152,19 +162,19 @@ async function createAdminContext(request: NextRequest): Promise<AdminContextRes
       return { response: NextResponse.json({ error: 'Session revoked. Please sign in again.' }, { status: 401 }) }
     }
 
+    // MFA check - super admins can bypass if needed, but it's still recommended
     const mfaEnabled = Boolean(
       user.user_metadata?.mfa_enrolled ||
       user.user_metadata?.mfa_verified ||
       user.user_metadata?.mfa_enabled
     )
 
-    if (!mfaEnabled) {
+    if (!mfaEnabled && !isSuperAdmin) {
       return forbidden('Multi-factor authentication is required for admin access')
     }
 
-    const { roles, memberships } = await loadAdminRoles(serviceClient, user.id)
-
-    if (roles.length === 0) {
+    // If no roles found and not super admin, deny access
+    if (roles.length === 0 && !isSuperAdmin) {
       return forbidden('Admin role required')
     }
 
@@ -197,6 +207,11 @@ export async function withAdminAuth(
 
   if ('response' in contextResult) {
     return contextResult.response
+  }
+
+  // Super admins bypass all role requirements
+  if (contextResult.highestRole === 'super_admin') {
+    return handler(contextResult)
   }
 
   if (!hasRequiredRole(contextResult.adminRoles, requiredRole)) {

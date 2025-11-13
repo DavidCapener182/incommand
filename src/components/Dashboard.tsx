@@ -71,6 +71,8 @@ import MiniTrendChart from './MiniTrendChart'
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
+import ReadinessIndexCard from './analytics/ReadinessIndexCard'
+import RadioAlertsWidget from './monitoring/RadioAlertsWidget'
 // Accessibility imports
 import SkipLinks from './SkipLinks'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
@@ -1507,7 +1509,7 @@ export default function Dashboard() {
       <div>
         {/* Desktop view */}
         <section className="hidden md:block rounded-2xl p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
             <div className="flex flex-col h-full">
               <CurrentEvent
                 currentTime={currentTime}
@@ -1541,6 +1543,10 @@ export default function Dashboard() {
                 activeStatus={activeSummaryStatus}
                 className="h-full"
               />
+            </div>
+
+            <div className="flex flex-col h-full">
+              <ReadinessIndexCard eventId={currentEventId} className="h-full" />
             </div>
           </div>
         </section>
@@ -1642,6 +1648,13 @@ export default function Dashboard() {
           onClearAll={realtimeAnalytics.clearAlerts}
         />
       </div>
+    </div>
+  )}
+
+  {/* Radio Alerts Widget */}
+  {currentEvent && (
+    <div className="mt-4">
+      <RadioAlertsWidget eventId={currentEvent.id} />
     </div>
   )}
 
@@ -1863,9 +1876,9 @@ export default function Dashboard() {
       <div>
 
         {/* Desktop Grid - Event-Specific Dashboard */}
-        <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
+        <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6 pt-2">
           {!isFullyReady ? (
-            Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
+            Array.from({ length: 5 }).map((_, index) => <CardSkeleton key={index} />)
           ) : eventType === 'concert' ? (
             /* 
               ⚠️  CONCERT DASHBOARD - PERMANENTLY LOCKED ⚠️
@@ -1955,9 +1968,12 @@ export default function Dashboard() {
             <>
               {/* Football Event Cards */}
               {eventType === 'football' && (
-                <div className="col-span-full">
-                  <SupportToolsFootball />
-                </div>
+                <>
+                  <div className="col-span-full">
+                    <SupportToolsFootball />
+                  </div>
+                  
+                </>
               )}
 
               {/* Festival Event Cards */}
@@ -2240,7 +2256,7 @@ export default function Dashboard() {
                       }}
                       selectedType={safeFilters.types[0] || null}
                     />
-                  </motion.div>
+                    </motion.div>
                 </>
               )}
             </>

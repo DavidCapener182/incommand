@@ -42,8 +42,20 @@ const nextConfig = {
   
   // Bundle optimization - let Next.js handle vendor chunking by default
   webpack: (config, { dev, isServer }) => {
-    // Don't override Next.js's default vendor chunking in development
-    // Next.js handles vendor chunks automatically
+    // Mark optional DOCX parsing dependencies as externals to prevent build errors
+    // These are only needed if DOCX support is required
+    if (isServer) {
+      // Always mark these as externals - they'll be required at runtime if available
+      // This prevents webpack from trying to bundle them at build time
+      config.externals = config.externals || []
+      if (Array.isArray(config.externals)) {
+        config.externals.push({
+          'pizzip': 'commonjs pizzip',
+          'docxtemplater': 'commonjs docxtemplater',
+        })
+      }
+      
+    }
     return config;
   },
   

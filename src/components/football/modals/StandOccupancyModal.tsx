@@ -4,7 +4,10 @@ import React, { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { StandsSetup, StandConfig } from '@/types/football'
-import { Plus, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Clock } from 'lucide-react'
+import { useEventContext } from '@/contexts/EventContext'
+import { supabase } from '@/lib/supabase'
+import { predictStandFlow, type StandFlowPrediction } from '@/lib/analytics/crowdFlowPrediction'
 
 interface StandOccupancyModalProps {
   onSave?: () => void
@@ -12,6 +15,7 @@ interface StandOccupancyModalProps {
 
 // Current Tab Component
 export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
+  const { eventId } = useEventContext()
   const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -23,11 +27,13 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     default_red_threshold: 100,
     stand_overrides: {} as Record<string, { amber?: number; red?: number }>
   })
+  const [standPredictions, setStandPredictions] = useState<Record<string, StandFlowPrediction>>({})
+  const [expandedStand, setExpandedStand] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
     loadThresholds()
-  }, [])
+  }, [eventId])
 
   const loadData = async () => {
     try {
@@ -35,6 +41,70 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       if (res.ok) {
         const data = await res.json()
         setStandsSetup(data.standsSetup)
+        
+        // Load predictions for each stand
+        if (eventId && data.standsSetup?.stands) {
+          const predictions: Record<string, StandFlowPrediction> = {}
+          for (const stand of data.standsSetup.stands) {
+            try {
+              console.log(`Loading prediction for stand: ${stand.name}, current: ${stand.current || 0}, capacity: ${stand.capacity}`)
+              const prediction = await predictStandFlow(
+                supabase,
+                eventId,
+                stand.id,
+                stand.name,
+                stand.capacity,
+                60,
+                stand.current || 0 // Pass current occupancy directly
+              )
+              console.log(`Prediction loaded for ${stand.name}:`, prediction)
+              predictions[stand.name] = prediction
+            } catch (err) {
+              console.error(`Failed to predict flow for stand ${stand.name}:`, err)
+              // Create a fallback prediction using current occupancy
+              const current = stand.current || 0
+              const now = new Date()
+              const estimatedRate = stand.capacity > 0 ? (stand.capacity - current) / 120 : 0
+              const fallbackPredictions: StandFlowPrediction['predictedOccupancy'] = []
+              
+              for (let minutesAhead = 10; minutesAhead <= 60; minutesAhead += 10) {
+                const predictedTime = new Date(now.getTime() + minutesAhead * 60000)
+                const predicted = Math.min(stand.capacity * 1.05, current + (estimatedRate * minutesAhead))
+                const percentage = (predicted / stand.capacity) * 100
+                
+                let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
+                if (percentage >= 100) riskLevel = 'critical'
+                else if (percentage >= 90) riskLevel = 'high'
+                else if (percentage >= 75) riskLevel = 'medium'
+                
+                fallbackPredictions.push({
+                  time: predictedTime.toISOString(),
+                  minutesAhead,
+                  predictedOccupancy: Math.round(predicted),
+                  percentage: Math.round(percentage),
+                  riskLevel
+                })
+              }
+              
+              predictions[stand.name] = {
+                standId: stand.id,
+                standName: stand.name,
+                currentOccupancy: current,
+                capacity: stand.capacity,
+                predictedOccupancy: fallbackPredictions,
+                peakPrediction: fallbackPredictions.length > 0 ? {
+                  time: fallbackPredictions[fallbackPredictions.length - 1].time,
+                  occupancy: fallbackPredictions[fallbackPredictions.length - 1].predictedOccupancy,
+                  percentage: fallbackPredictions[fallbackPredictions.length - 1].percentage
+                } : null
+              }
+            }
+          }
+          console.log('All predictions loaded:', predictions)
+          setStandPredictions(predictions)
+        } else {
+          console.warn('Cannot load predictions - eventId:', eventId, 'stands:', data.standsSetup?.stands)
+        }
       }
     } catch (error) {
       console.error('Failed to load stands data:', error)
@@ -178,11 +248,20 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       {standsSetup.stands.map((stand) => {
         const percent = stand.capacity ? Math.min(100, ((stand.current || 0) / stand.capacity) * 100) : 0
         const colorClass = getColorForStand(stand.name, percent)
+        const prediction = standPredictions[stand.name]
+        const nextPrediction = prediction?.predictedOccupancy.find(p => p.minutesAhead === 10)
+        const hasHighRisk = prediction?.predictedOccupancy.some(p => p.riskLevel === 'high' || p.riskLevel === 'critical')
+        const isExpanded = expandedStand === stand.id
         
         return (
           <div key={stand.id} className="border rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="font-medium">{stand.name}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium">{stand.name}</h4>
+                {hasHighRisk && (
+                  <span className="text-amber-500 text-xs">⚠</span>
+                )}
+              </div>
               <span className="text-sm text-muted-foreground">
                 {stand.current || 0} / {stand.capacity.toLocaleString()}
               </span>
@@ -211,6 +290,60 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
               <div className="text-xs text-muted-foreground">
                 {percent.toFixed(1)}% occupied
               </div>
+              
+              {/* Prediction display */}
+              {nextPrediction && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setExpandedStand(isExpanded ? null : stand.id)}
+                    className="w-full flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        {nextPrediction.minutesAhead}m: ~{nextPrediction.predictedOccupancy.toLocaleString()} ({nextPrediction.percentage}%)
+                      </span>
+                      {nextPrediction.riskLevel === 'critical' && (
+                        <span className="text-red-500 font-semibold">⚠️</span>
+                      )}
+                      {nextPrediction.riskLevel === 'high' && (
+                        <span className="text-amber-500">!</span>
+                      )}
+                    </div>
+                    <span className="text-[10px]">
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                  </button>
+                  
+                  {isExpanded && prediction && (
+                    <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                      {prediction.predictedOccupancy.slice(0, 6).map((pred) => (
+                        <div key={pred.minutesAhead} className="flex items-center justify-between">
+                          <span>{pred.minutesAhead}m:</span>
+                          <span className={`
+                            ${pred.riskLevel === 'critical' ? 'text-red-600 font-semibold' : ''}
+                            ${pred.riskLevel === 'high' ? 'text-amber-600' : ''}
+                            ${pred.riskLevel === 'medium' ? 'text-yellow-600' : ''}
+                            ${pred.riskLevel === 'low' ? 'text-green-600' : ''}
+                          `}>
+                            {pred.predictedOccupancy.toLocaleString()} ({pred.percentage}%)
+                          </span>
+                        </div>
+                      ))}
+                      {prediction.peakPrediction && (
+                        <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span>Peak:</span>
+                            <span className="text-amber-600">
+                              {prediction.peakPrediction.occupancy.toLocaleString()} ({prediction.peakPrediction.percentage}%) at {new Date(prediction.peakPrediction.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )

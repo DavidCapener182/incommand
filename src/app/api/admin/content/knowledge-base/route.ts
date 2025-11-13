@@ -108,3 +108,89 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ article: data })
   })
 }
+
+export async function DELETE(request: NextRequest) {
+  return withAdminAuth(request, 'content_editor', async (context) => {
+    const url = new URL(request.url)
+    const clearFailed = url.searchParams.get('clearFailed') === 'true'
+    const organizationId = url.searchParams.get('organizationId')
+
+    if (!clearFailed) {
+      return NextResponse.json({ error: 'Invalid delete request. Use ?clearFailed=true to clear failed uploads' }, { status: 400 })
+    }
+
+    // Build query to find failed items
+    let query = context.serviceClient
+      .from('knowledge_base')
+      .select('id, organization_id, storage_path')
+      .eq('status', 'failed')
+
+    // Apply organization filter
+    if (organizationId) {
+      const resolvedOrg = await requireOrganizationAccess(context, organizationId)
+      if (resolvedOrg instanceof NextResponse) {
+        return resolvedOrg
+      }
+      query = query.eq('organization_id', resolvedOrg)
+    } else if (context.highestRole !== 'super_admin') {
+      // Non-super-admins can only clear failed items from their organizations
+      query = query.in('organization_id', context.organizationMemberships)
+    }
+
+    // Get all failed items first for audit logging
+    const { data: failedItems, error: fetchError } = await query
+
+    if (fetchError) {
+      return NextResponse.json({ error: 'Failed to fetch failed items' }, { status: 500 })
+    }
+
+    if (!failedItems || failedItems.length === 0) {
+      return NextResponse.json({ deleted: 0, message: 'No failed uploads to clear' })
+    }
+
+    // Remove stored files if present
+    const storagePaths = failedItems
+      .map(item => item.storage_path as string | null)
+      .filter((path): path is string => Boolean(path))
+
+    if (storagePaths.length > 0) {
+      const { error: removeError } = await context.serviceClient.storage
+        .from('knowledge-uploads')
+        .remove(storagePaths)
+
+      if (removeError) {
+        console.warn('Failed to remove some storage files for failed knowledge uploads:', removeError)
+      }
+    }
+
+    // Delete failed items (cascade will handle knowledge_embeddings)
+    const idsToDelete = failedItems.map(item => item.id)
+    const { error: deleteError } = await context.serviceClient
+      .from('knowledge_base')
+      .delete()
+      .in('id', idsToDelete)
+
+    if (deleteError) {
+      return NextResponse.json({ error: 'Failed to delete failed items' }, { status: 500 })
+    }
+
+    // Record audit log for bulk deletion
+    await recordAdminAudit(context.serviceClient, {
+      organizationId: organizationId || null,
+      actorId: context.user.id,
+      action: 'bulk_delete_content',
+      resourceType: 'knowledge_base',
+      resourceId: null,
+      changes: { 
+        deletedCount: idsToDelete.length,
+        deletedIds: idsToDelete,
+        reason: 'Clear failed uploads'
+      },
+    })
+
+    return NextResponse.json({ 
+      deleted: idsToDelete.length,
+      message: `Successfully cleared ${idsToDelete.length} failed upload${idsToDelete.length !== 1 ? 's' : ''}`
+    })
+  })
+}
