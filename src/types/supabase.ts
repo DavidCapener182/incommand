@@ -4934,27 +4934,51 @@ export type Database = {
       }
       radio_messages: {
         Row: {
+        attachments: Json | null // format: jsonb
         channel: string // format: text
+        created_by: string | null // format: uuid
+        event_id: string | null // format: uuid
         from_callsign: string // format: text
         id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id: string | null // format: uuid
         message: string // format: text
+        metadata: Json | null // format: jsonb
         priority: string | null // format: text
+        status: string | null // format: text
+        task_id: string | null // format: uuid
+        to_callsign: string | null // format: text
         transmitted_at: string | null // format: timestamp with time zone
         }
         Insert: {
+        attachments?: Json | null // format: jsonb
         channel: string // format: text
+        created_by?: string | null // format: uuid
+        event_id?: string | null // format: uuid
         from_callsign: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id?: string | null // format: uuid
         message: string // format: text
+        metadata?: Json | null // format: jsonb
         priority?: string | null // format: text
+        status?: string | null // format: text
+        task_id?: string | null // format: uuid
+        to_callsign?: string | null // format: text
         transmitted_at?: string | null // format: timestamp with time zone
         }
         Update: {
+        attachments?: Json | null // format: jsonb
         channel?: string // format: text
+        created_by?: string | null // format: uuid
+        event_id?: string | null // format: uuid
         from_callsign?: string // format: text
         id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        incident_id?: string | null // format: uuid
         message?: string // format: text
+        metadata?: Json | null // format: jsonb
         priority?: string | null // format: text
+        status?: string | null // format: text
+        task_id?: string | null // format: uuid
+        to_callsign?: string | null // format: text
         transmitted_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
