@@ -561,6 +561,63 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_transactions: {
+        Row: {
+        amount: number // format: numeric
+        company_id: string // format: uuid
+        created_at: string | null // format: timestamp with time zone
+        currency: string | null // format: text
+        description: string | null // format: text
+        failure_reason: string | null // format: text
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id: string | null // format: uuid
+        metadata: Json | null // format: jsonb
+        payment_method: string | null // format: text
+        processor: string | null // format: text
+        processor_reference: string | null // format: text
+        status: string // format: text
+        transaction_type: string // format: text
+        updated_at: string | null // format: timestamp with time zone
+        processed_at: string | null // format: timestamp with time zone
+        }
+        Insert: {
+        amount: number // format: numeric
+        company_id: string // format: uuid
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: text
+        description?: string | null // format: text
+        failure_reason?: string | null // format: text
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id?: string | null // format: uuid
+        metadata?: Json | null // format: jsonb
+        payment_method?: string | null // format: text
+        processor?: string | null // format: text
+        processor_reference?: string | null // format: text
+        status: string // format: text
+        transaction_type: string // format: text
+        updated_at?: string | null // format: timestamp with time zone
+        processed_at?: string | null // format: timestamp with time zone
+        }
+        Update: {
+        amount?: number // format: numeric
+        company_id?: string // format: uuid
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: text
+        description?: string | null // format: text
+        failure_reason?: string | null // format: text
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_id?: string | null // format: uuid
+        metadata?: Json | null // format: jsonb
+        payment_method?: string | null // format: text
+        processor?: string | null // format: text
+        processor_reference?: string | null // format: text
+        status?: string // format: text
+        transaction_type?: string // format: text
+        updated_at?: string | null // format: timestamp with time zone
+        processed_at?: string | null // format: timestamp with time zone
+        }
+        Relationships: []
+      }
       blockchain_audit: {
         Row: {
         block_index: number // format: integer
@@ -2612,6 +2669,78 @@ export type Database = {
         priority?: string // format: text
         status?: string // format: text
         title?: string | null // format: text
+        updated_at?: string | null // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+        amount_due: number | null // format: numeric
+        amount_paid: number | null // format: numeric
+        amount_remaining: number | null // format: numeric
+        billing_period_end: string | null // format: date
+        billing_period_start: string | null // format: date
+        company_id: string // format: uuid
+        created_at: string | null // format: timestamp with time zone
+        currency: string | null // format: text
+        due_date: string | null // format: date
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_number: string // format: text
+        issued_at: string | null // format: timestamp with time zone
+        metadata: Json | null // format: jsonb
+        notes: string | null // format: text
+        pdf_url: string | null // format: text
+        status: string // format: text
+        subtotal_amount: number | null // format: numeric
+        tax_amount: number | null // format: numeric
+        tax_rate: number | null // format: numeric
+        total_amount: number // format: numeric
+        updated_at: string | null // format: timestamp with time zone
+        }
+        Insert: {
+        amount_due?: number | null // format: numeric
+        amount_paid?: number | null // format: numeric
+        amount_remaining?: number | null // format: numeric
+        billing_period_end?: string | null // format: date
+        billing_period_start?: string | null // format: date
+        company_id: string // format: uuid
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: text
+        due_date?: string | null // format: date
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_number: string // format: text
+        issued_at?: string | null // format: timestamp with time zone
+        metadata?: Json | null // format: jsonb
+        notes?: string | null // format: text
+        pdf_url?: string | null // format: text
+        status?: string // format: text
+        subtotal_amount?: number | null // format: numeric
+        tax_amount?: number | null // format: numeric
+        tax_rate?: number | null // format: numeric
+        total_amount: number // format: numeric
+        updated_at?: string | null // format: timestamp with time zone
+        }
+        Update: {
+        amount_due?: number | null // format: numeric
+        amount_paid?: number | null // format: numeric
+        amount_remaining?: number | null // format: numeric
+        billing_period_end?: string | null // format: date
+        billing_period_start?: string | null // format: date
+        company_id?: string // format: uuid
+        created_at?: string | null // format: timestamp with time zone
+        currency?: string | null // format: text
+        due_date?: string | null // format: date
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        invoice_number?: string // format: text
+        issued_at?: string | null // format: timestamp with time zone
+        metadata?: Json | null // format: jsonb
+        notes?: string | null // format: text
+        pdf_url?: string | null // format: text
+        status?: string // format: text
+        subtotal_amount?: number | null // format: numeric
+        tax_amount?: number | null // format: numeric
+        tax_rate?: number | null // format: numeric
+        total_amount?: number // format: numeric
         updated_at?: string | null // format: timestamp with time zone
         }
         Relationships: []
