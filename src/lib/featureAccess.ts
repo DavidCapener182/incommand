@@ -13,7 +13,7 @@ import { FEATURE_MATRIX, FeatureKey, getMinimumTierForFeature } from '@/config/F
 export function isFeatureEnabled(plan: PlanCode, featureKey: FeatureKey): boolean {
   const feature = FEATURE_MATRIX[featureKey]
   if (!feature) return false
-  return feature.tiers.includes(plan)
+  return (feature.tiers as ReadonlyArray<PlanCode>).includes(plan)
 }
 
 /**

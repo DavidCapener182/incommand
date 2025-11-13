@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
 
     // Check authentication
     const {
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
 
     // Check authentication
     const {

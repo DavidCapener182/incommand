@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {

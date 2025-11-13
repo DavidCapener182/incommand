@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/auth/getServerUser'
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout'
-import CRMQuotesTable from '@/components/admin/crm/CRMQuotesTable'
+import CRMQuotesTable, { type Quote } from '@/components/admin/crm/CRMQuotesTable'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,13 +33,16 @@ export default async function CRMPage() {
     console.error('Error fetching quotes:', quotesError)
   }
 
-  const quotes = (quotesData || []).map((quote) => ({
-    ...quote,
-    monthly_estimate: Number((quote as any).monthly_estimate ?? 0),
-    annual_estimate: Number((quote as any).annual_estimate ?? 0),
-    feature_add_ons: (quote as any).feature_add_ons ?? [],
-    breakdown: (quote as any).breakdown ?? {},
-  }))
+  const quotes: Quote[] = (quotesData || []).map((quote) => {
+    const castQuote = (quote ?? {}) as Record<string, any>
+    return {
+      ...castQuote,
+      monthly_estimate: Number(castQuote.monthly_estimate ?? 0),
+      annual_estimate: Number(castQuote.annual_estimate ?? 0),
+      feature_add_ons: castQuote.feature_add_ons ?? [],
+      breakdown: castQuote.breakdown ?? {},
+    } as Quote
+  })
 
   return (
     <SuperAdminLayout>

@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
         storagePath: knowledge.storage_path || undefined
       })
 
-      await recordAdminAudit(context.serviceClient, {
-        organizationId: knowledge.organization_id || null,
+        await recordAdminAudit(context.serviceClient, {
+          organizationId: knowledge.organization_id ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
         action: 'ingest_knowledge',
         resourceType: 'knowledge_base',

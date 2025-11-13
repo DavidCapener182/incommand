@@ -9,7 +9,7 @@ import { processRadioMessageForTask } from '@/lib/radio/taskCreator'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
+    const { data: insertedMessage, error } = await supabase
       .from('radio_messages')
       .insert(messageData)
       .select()
@@ -169,6 +169,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    let message = insertedMessage
+
     // Auto-analyze and create incident if enabled (default: true)
     const autoCreateIncident = body.auto_create_incident !== false // Default to true unless explicitly false
     const autoCreateTask = body.auto_create_task !== false // Default to true unless explicitly false
@@ -178,12 +180,12 @@ export async function POST(request: NextRequest) {
     let taskCreated = false
     let taskId: string | undefined
     
-    if (data && messageData.event_id) {
+    if (message && messageData.event_id) {
       // Process incident creation
       if (autoCreateIncident) {
         try {
           const processed = await processRadioMessage(
-            data as RadioMessage,
+            message as RadioMessage,
             messageData.event_id,
             user.id,
             supabase,
@@ -200,51 +202,51 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Process task creation (only if not already an incident)
-      if (autoCreateTask && !incidentCreated) {
-        try {
-          const taskProcessed = await processRadioMessageForTask(
-            data as RadioMessage,
-            messageData.event_id,
-            user.id,
-            supabase,
-            autoCreateTask
-          )
+        // Process task creation (only if not already an incident)
+        if (autoCreateTask && !incidentCreated) {
+          try {
+            const taskProcessed = await processRadioMessageForTask(
+              message as RadioMessage,
+              messageData.event_id,
+              user.id,
+              supabase,
+              autoCreateTask
+            )
 
-          if (taskProcessed.taskCreated && taskProcessed.taskId) {
-            taskCreated = true
-            taskId = taskProcessed.taskId
+            if (taskProcessed.taskCreated && taskProcessed.taskId) {
+              taskCreated = true
+              taskId = taskProcessed.taskId
 
-            // Refresh message data to include task_id
-            const { data: updatedMessage } = await supabase
-              .from('radio_messages')
-              .select()
-              .eq('id', data.id)
-              .single()
+              // Refresh message data to include task_id
+              const { data: updatedMessage } = await supabase
+                .from('radio_messages')
+                .select()
+                .eq('id', message.id)
+                .single()
 
-            if (updatedMessage) {
-              data = updatedMessage
+              if (updatedMessage) {
+                message = updatedMessage
+              }
             }
+          } catch (taskError: any) {
+            // Log error but don't fail the request - message was created successfully
+            console.error('Error processing radio message for auto-task creation:', taskError)
           }
-        } catch (taskError: any) {
-          // Log error but don't fail the request - message was created successfully
-          console.error('Error processing radio message for auto-task creation:', taskError)
+        }
+
+        // Refresh message data if incident was created
+        if (incidentCreated && incidentId) {
+          const { data: updatedMessage } = await supabase
+            .from('radio_messages')
+            .select()
+            .eq('id', message.id)
+            .single()
+
+          if (updatedMessage) {
+            message = updatedMessage
+          }
         }
       }
-
-      // Refresh message data if incident was created
-      if (incidentCreated && incidentId) {
-        const { data: updatedMessage } = await supabase
-          .from('radio_messages')
-          .select()
-          .eq('id', data.id)
-          .single()
-
-        if (updatedMessage) {
-          data = updatedMessage
-        }
-      }
-    }
 
     // Update channel health asynchronously (don't wait for it)
     if (messageData.event_id && messageData.channel) {
@@ -257,7 +259,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return response with creation status
-    const response: any = { data }
+    const response: any = { data: message }
     if (incidentCreated) {
       response.incidentCreated = true
       response.incidentId = incidentId

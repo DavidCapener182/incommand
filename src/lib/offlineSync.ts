@@ -323,6 +323,24 @@ class OfflineSyncManager {
     };
   }
 
+  async getOperationsByStatus(status: OfflineOperation['status']): Promise<OfflineOperation[]> {
+    if (!this.db) return []
+    return this.db.offlineQueue
+      .where('status')
+      .equals(status)
+      .toArray()
+  }
+
+  async updateOperation(id: number, changes: Partial<OfflineOperation>): Promise<void> {
+    if (!this.db) return
+    await this.db.offlineQueue.update(id, changes)
+  }
+
+  async deleteOperation(id: number): Promise<void> {
+    if (!this.db) return
+    await this.db.offlineQueue.delete(id)
+  }
+
   // Clear completed operations
   async clearCompletedOperations(): Promise<void> {
     await this.db!.offlineQueue

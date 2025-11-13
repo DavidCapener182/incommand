@@ -314,25 +314,28 @@ export async function predictStandFlow(
   currentOccupancy?: number // Allow passing current occupancy directly
 ): Promise<StandFlowPrediction> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Get stand occupancy history from the last 2 hours
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
     
     let current = currentOccupancy ?? 0
+    let resolvedStandId = standId
     
     // Try to get current occupancy from database if not provided
     if (currentOccupancy === undefined) {
       // First try to get the stand_id from stand name or use provided standId
-      const { data: stand } = await supabase
-        .from('stands')
+      const { data: stand } = await supabaseClient
+        .from('stands' as any)
         .select('id')
         .eq('event_id', eventId)
         .or(`id.eq.${standId},name.eq.${standName}`)
         .maybeSingle()
 
       if (stand) {
+        resolvedStandId = stand.id
         // Get occupancy history (if we have timestamped records)
-        const { data: occupancyData } = await supabase
-          .from('stand_occupancy')
+        const { data: occupancyData } = await supabaseClient
+          .from('stand_occupancy' as any)
           .select('current_occupancy, recorded_at')
           .eq('event_id', eventId)
           .eq('stand_id', stand.id)
@@ -344,8 +347,8 @@ export async function predictStandFlow(
 
     // For stands, we'll use venue-level attendance trend as proxy
     // (assuming stands fill proportionally to venue)
-    const { data: venueRecords } = await supabase
-      .from('attendance_records')
+    const { data: venueRecords } = await supabaseClient
+      .from('attendance_records' as any)
       .select('count, timestamp')
       .eq('event_id', eventId)
       .gte('timestamp', twoHoursAgo)
@@ -426,7 +429,7 @@ export async function predictStandFlow(
       : null
 
     return {
-      standId: stand.id,
+      standId: resolvedStandId,
       standName,
       currentOccupancy: current,
       capacity,

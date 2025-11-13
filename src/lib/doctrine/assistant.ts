@@ -12,13 +12,14 @@ import type {
   SOPSuggestion,
   DoctrineAssistantState,
   SOP,
+  SOPAdjustment,
   SOPAdjustmentCreateInput,
 } from '@/types/sops'
 
 export class DoctrineAssistant {
   private eventId: string
   private companyId: string
-  private supabase: SupabaseClient<Database>
+  private supabase: SupabaseClient<any>
 
   constructor(
     eventId: string,
@@ -27,7 +28,7 @@ export class DoctrineAssistant {
   ) {
     this.eventId = eventId
     this.companyId = companyId
-    this.supabase = supabaseClient
+    this.supabase = supabaseClient as SupabaseClient<any>
   }
 
   /**
@@ -87,7 +88,7 @@ export class DoctrineAssistant {
   /**
    * Get pending adjustments for active SOPs
    */
-  private async getPendingAdjustments() {
+  private async getPendingAdjustments(): Promise<SOPAdjustment[]> {
     try {
       const { data: sops, error: sopsError } = await this.supabase
         .from('sops')
@@ -122,7 +123,7 @@ export class DoctrineAssistant {
         return []
       }
 
-      return adjustments || []
+      return (adjustments as SOPAdjustment[]) || []
     } catch (error: any) {
       // If table doesn't exist, return empty array
       if (error?.message?.includes('does not exist') || error?.code === '42P01') {

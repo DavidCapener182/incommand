@@ -134,20 +134,20 @@ export default function SOPsPage() {
 
       {/* Filters */}
       <div className="flex space-x-2">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          onClick={() => setFilter('all')}
-        >
+          <Button
+            variant={filter === 'all' ? 'primary' : 'outline'}
+            onClick={() => setFilter('all')}
+          >
           All SOPs
         </Button>
         <Button
-          variant={filter === 'templates' ? 'default' : 'outline'}
+            variant={filter === 'templates' ? 'primary' : 'outline'}
           onClick={() => setFilter('templates')}
         >
           Templates
         </Button>
         <Button
-          variant={filter === 'active' ? 'default' : 'outline'}
+            variant={filter === 'active' ? 'primary' : 'outline'}
           onClick={() => setFilter('active')}
         >
           Active

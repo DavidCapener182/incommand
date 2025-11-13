@@ -188,51 +188,53 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
 async function semanticSearch(
   queryEmbedding: number[],
   options: SearchOptions
-): Promise<SearchHit[]> {
-  const supabase = getServiceSupabaseClient()
-  const topK = Math.min(options.topK || 5, 20)
-  
-  try {
-    // Try RPC function first (faster)
-    // Note: When organizationId is undefined, we want to search ALL documents (for super admins)
-    // The RPC function with null filter only returns documents with null org_id, so we skip RPC in that case
-    // and use the fallback in-memory search which handles undefined correctly
-    if (options.organizationId !== undefined) {
-      const { data: rpcResults, error: rpcError } = await supabase.rpc(
-        'match_knowledge_embeddings',
-        {
-          query_embedding: queryEmbedding,
-          match_count: options.useHybrid ? topK * 2 : topK,
-          organization_filter: options.organizationId || null, // null = documents available to all companies
-          event_filter: options.eventId || null
+  ): Promise<SearchHit[]> {
+    const supabase = getServiceSupabaseClient()
+    const topK = Math.min(options.topK || 5, 20)
+    
+    try {
+      // Try RPC function first (faster)
+      // Note: When organizationId is undefined, we want to search ALL documents (for super admins)
+      // The RPC function with null filter only returns documents with null org_id, so we skip RPC in that case
+      // and use the fallback in-memory search which handles undefined correctly
+      if (options.organizationId !== undefined) {
+        const { data: rpcResults, error: rpcError } = await (supabase as any).rpc(
+          'match_knowledge_embeddings',
+          {
+            query_embedding: queryEmbedding,
+            match_count: options.useHybrid ? topK * 2 : topK,
+            organization_filter: options.organizationId || null, // null = documents available to all companies
+            event_filter: options.eventId || null,
+          }
+        )
+        
+        if (!rpcError && rpcResults && rpcResults.length > 0) {
+          // Fetch knowledge_base metadata for results
+          const knowledgeIds = Array.from(
+            new Set(rpcResults.map((r: any) => String(r.knowledge_id)))
+          ) as string[]
+          const { data: kbEntries } = await supabase
+            .from('knowledge_base')
+            .select('id, title, organization_id, event_id')
+            .in('id', knowledgeIds)
+          
+          const kbMap = new Map((kbEntries || []).map(kb => [kb.id, kb]))
+          
+          return rpcResults.map((r: any) => ({
+            knowledgeId: r.knowledge_id,
+            title: kbMap.get(r.knowledge_id)?.title || 'Unknown',
+            content: r.content,
+            score: r.similarity || 0,
+            metadata: {
+              chunkIndex: r.chunk_index,
+              documentTitle: kbMap.get(r.knowledge_id)?.title || 'Unknown',
+              organizationId: kbMap.get(r.knowledge_id)?.organization_id,
+              eventId: kbMap.get(r.knowledge_id)?.event_id,
+              ...(r.metadata || {}),
+            },
+            source: 'knowledge-base' as const,
+          }))
         }
-      )
-      
-      if (!rpcError && rpcResults && rpcResults.length > 0) {
-        // Fetch knowledge_base metadata for results
-        const knowledgeIds = [...new Set(rpcResults.map((r: any) => r.knowledge_id))]
-        const { data: kbEntries } = await supabase
-          .from('knowledge_base')
-          .select('id, title, organization_id, event_id')
-          .in('id', knowledgeIds)
-        
-        const kbMap = new Map((kbEntries || []).map(kb => [kb.id, kb]))
-        
-        return rpcResults.map((r: any) => ({
-          knowledgeId: r.knowledge_id,
-          title: kbMap.get(r.knowledge_id)?.title || 'Unknown',
-          content: r.content,
-          score: r.similarity || 0,
-          metadata: {
-            chunkIndex: r.chunk_index,
-            documentTitle: kbMap.get(r.knowledge_id)?.title || 'Unknown',
-            organizationId: kbMap.get(r.knowledge_id)?.organization_id,
-            eventId: kbMap.get(r.knowledge_id)?.event_id,
-            ...(r.metadata || {})
-          },
-          source: 'knowledge-base' as const
-        }))
-      }
     }
   } catch (error) {
     console.warn('RPC search failed, falling back to in-memory ranking:', error)
@@ -355,25 +357,25 @@ async function keywordSearch(options: SearchOptions): Promise<SearchHit[]> {
       if (!kb) return null
       // If organizationId is specified, only include matching documents
       // If organizationId is undefined, include all documents (including null org_id)
-      if (options.organizationId !== undefined && kb.organization_id !== options.organizationId) return null
-      if (options.eventId && kb.event_id !== options.eventId) return null
-      
-      const keywordScore = scoreKeywordMatch(r.content, keyTerms)
-      
-      return {
-        knowledgeId: r.knowledge_id,
-        title: kb.title,
-        content: extractSnippet(r.content, keyTerms),
-        score: keywordScore,
-        metadata: {
-          chunkIndex: r.chunk_index,
-          documentTitle: kb.title,
-          organizationId: kb.organization_id,
-          eventId: kb.event_id,
-          ...(r.metadata || {})
-        },
-        source: 'knowledge-base' as const
-      }
+        if (options.organizationId !== undefined && kb.organization_id !== options.organizationId) return null
+        if (options.eventId && kb.event_id !== options.eventId) return null
+        
+        const keywordScore = scoreKeywordMatch(r.content, keyTerms)
+        
+        return {
+          knowledgeId: r.knowledge_id,
+          title: kb.title,
+          content: extractSnippet(r.content, keyTerms),
+          score: keywordScore,
+          metadata: {
+            chunkIndex: r.chunk_index,
+            documentTitle: kb.title,
+            organizationId: kb.organization_id,
+            eventId: kb.event_id,
+            ...(r.metadata || {}),
+          },
+          source: 'knowledge-base' as const,
+        } as SearchHit
     })
     .filter((r): r is SearchHit => r !== null)
     .sort((a, b) => b.score - a.score)

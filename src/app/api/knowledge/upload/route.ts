@@ -103,21 +103,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Create knowledge base record in pending state
-      const { data: kbEntry, error: kbError } = await supabase
-        .from('knowledge_base')
-        .insert({
-          title: title.trim(),
-          type: fileType,
-          source: 'user-upload',
-          uploader_id: context.user.id,
-          organization_id: resolvedOrgId || null,
-          event_id: eventId || null,
-          tags,
-          status: 'pending',
-          bytes: file.size,
-          original_filename: file.name,
-          body: ''
-        })
+        const { data: kbEntry, error: kbError } = await supabase
+          .from('knowledge_base' as any)
+          .insert({
+            title: title.trim(),
+            type: fileType,
+            source: 'user-upload',
+            uploader_id: context.user.id,
+            organization_id: resolvedOrgId ?? context.defaultOrganizationId ?? null,
+            event_id: eventId || null,
+            tags,
+            status: 'pending',
+            bytes: file.size,
+            original_filename: file.name,
+            body: ''
+          } as any)
         .select('id')
         .single()
 
@@ -129,7 +129,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const knowledgeId = kbEntry.id
+        const knowledgeRecord = kbEntry as Record<string, any>
+        const knowledgeId = knowledgeRecord.id
       const sanitizedFilename = file.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '') || 'document'
       const storagePath = `${knowledgeId}/${Date.now()}-${sanitizedFilename}`
       
@@ -151,8 +152,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Update record with storage path
-      await supabase
-        .from('knowledge_base')
+        await supabase
+          .from('knowledge_base' as any)
         .update({
           storage_path: storagePath,
           status: 'pending',
@@ -160,8 +161,8 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', knowledgeId)
 
-      await recordAdminAudit(context.serviceClient, {
-        organizationId: resolvedOrgId,
+        await recordAdminAudit(context.serviceClient, {
+          organizationId: resolvedOrgId ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
         action: 'upload_knowledge',
         resourceType: 'knowledge_base',

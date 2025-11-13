@@ -19,7 +19,7 @@ const CACHE_DURATION = 30 * 1000 // 30 seconds
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
 
     // Check authentication
     const {

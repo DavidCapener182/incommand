@@ -60,8 +60,8 @@ export default function RecentRadioMessages({
       setError(null)
 
       // Fetch open incidents directly from Supabase
-      const { data: incidentsData, error: incidentsError } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row']>('incident_logs')
+    const { data: incidentsData, error: incidentsError } = await supabase
+          .from('incident_logs')
         .select('id, occurrence, incident_type, priority, callsign_from, callsign_to, created_at, time_of_occurrence, source')
         .eq('event_id', eventId)
         .eq('is_closed', false)

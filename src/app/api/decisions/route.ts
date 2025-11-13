@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 // GET /api/decisions - List decisions
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 // POST /api/decisions - Create decision
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()

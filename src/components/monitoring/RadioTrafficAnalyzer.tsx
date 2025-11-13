@@ -58,7 +58,7 @@ export default function RadioTrafficAnalyzer({ eventId, className }: RadioTraffi
 
       // Build query
       let query = supabase
-        .from<Database['public']['Tables']['radio_messages']['Row']>('radio_messages')
+        .from('radio_messages' as any)
         .select('*')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
@@ -87,7 +87,8 @@ export default function RadioTrafficAnalyzer({ eventId, className }: RadioTraffi
         throw queryError
       }
 
-      let filteredMessages = (data || []) as RadioMessage[]
+      const messageRows = Array.isArray(data) ? (data as unknown as RadioMessage[]) : []
+      let filteredMessages = messageRows
 
       // Apply search filter
       if (searchQuery.trim()) {

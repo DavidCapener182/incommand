@@ -11,7 +11,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useEventContext } from '@/contexts/EventContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { RealtimeChannel } from '@supabase/supabase-js'
+import { RealtimeChannel, type RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { useToast } from '@/components/Toast'
 import Toast from '@/components/Toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,6 +71,7 @@ interface StaffMember {
 export default function TaskDispatch() {
   const { user } = useAuth()
   const { eventData } = useEventContext()
+  const supabaseClient = supabase as any
   const { addToast, messages, removeToast } = useToast()
   const [tasks, setTasks] = useState<Task[]>([])
   const [staff, setStaff] = useState<StaffMember[]>([])
@@ -97,7 +98,7 @@ export default function TaskDispatch() {
     if (!eventData?.id) return
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tasks')
         .select(`
           *,
@@ -131,7 +132,7 @@ export default function TaskDispatch() {
     if (!eventData?.id) return
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('staff')
         .select('id, full_name, callsign')
         .eq('event_id', eventData.id)
@@ -151,11 +152,11 @@ export default function TaskDispatch() {
 
     // Cleanup existing subscription
     if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current)
+      supabaseClient.removeChannel(subscriptionRef.current)
     }
 
-    const channel = supabase
-      .channel('tasks-changes')
+    const channel = supabaseClient
+        .channel('tasks-changes')
       .on(
         'postgres_changes',
         {
@@ -164,7 +165,7 @@ export default function TaskDispatch() {
           table: 'tasks',
           filter: `event_id=eq.${eventData.id}`,
         },
-        (payload) => {
+          (payload: RealtimePostgresChangesPayload<Task>) => {
           console.log('Task change received:', payload)
           
           // Show toast notifications for real-time updates
@@ -219,10 +220,10 @@ export default function TaskDispatch() {
 
     return () => {
       if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current)
+        supabaseClient.removeChannel(subscriptionRef.current)
       }
     }
-  }, [eventData?.id, fetchTasks, addToast])
+    }, [eventData?.id, fetchTasks, addToast, supabaseClient])
 
   useEffect(() => {
     fetchTasks()
@@ -235,7 +236,7 @@ export default function TaskDispatch() {
 
     try {
       // Get company_id from user profile
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseClient
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
@@ -245,7 +246,7 @@ export default function TaskDispatch() {
         throw new Error('Company not found')
       }
 
-      const { error } = await supabase.from('tasks').insert({
+      const { error } = await supabaseClient.from('tasks').insert({
         company_id: profile.company_id,
         event_id: eventData.id,
         title: formData.title,
@@ -262,19 +263,19 @@ export default function TaskDispatch() {
       if (error) throw error
 
       // Send notification to assigned staff member if task was assigned
-      if (formData.assigned_to && formData.assigned_to !== 'unassigned') {
-        try {
-          const assignedStaff = staff.find(s => s.id === formData.assigned_to)
-          if (assignedStaff?.email) {
+        if (formData.assigned_to && formData.assigned_to !== 'unassigned') {
+          try {
+            const assignedStaff = staff.find(s => s.id === formData.assigned_to) as (StaffMember & { email?: string }) | undefined
+            if (assignedStaff?.email) {
             // Find user profile by email
-            const { data: profile } = await supabase
+            const { data: profile } = await supabaseClient
               .from('profiles')
               .select('id')
               .eq('email', assignedStaff.email)
               .single()
 
             if (profile?.id) {
-              await supabase
+              await supabaseClient
                 .from('notifications')
                 .insert({
                   user_id: profile.id,
@@ -329,7 +330,7 @@ export default function TaskDispatch() {
     if (!selectedTask || !formData.title.trim()) return
 
     try {
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('tasks')
         .update({
           title: formData.title,
@@ -403,14 +404,14 @@ export default function TaskDispatch() {
         // Uncomment the code below if you want tasks to create incident log entries when completed
         /*
         try {
-          const { data: profile } = await supabase
+          const { data: profile } = await supabaseClient
             .from('profiles')
             .select('company_id')
             .eq('id', user?.id)
             .single()
 
           if (profile?.company_id && eventData?.id) {
-            await supabase.from('incident_logs').insert({
+            await supabaseClient.from('incident_logs').insert({
               company_id: profile.company_id,
               event_id: eventData.id,
               incident_type: 'Task Completion',
@@ -428,7 +429,7 @@ export default function TaskDispatch() {
         */
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('tasks')
         .update(updateData)
         .eq('id', taskId)
@@ -458,7 +459,7 @@ export default function TaskDispatch() {
       const task = tasks.find(t => t.id === taskId)
       if (!task) return
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('tasks')
         .update({
           assigned_to: staffId,
@@ -471,17 +472,17 @@ export default function TaskDispatch() {
       // Send notification to assigned staff member
       if (staffId) {
         try {
-          const assignedStaff = staff.find(s => s.id === staffId)
-          if (assignedStaff?.email) {
+            const assignedStaff = staff.find(s => s.id === staffId) as (StaffMember & { email?: string }) | undefined
+              if (assignedStaff?.email) {
             // Find user profile by email
-            const { data: profile } = await supabase
+            const { data: profile } = await supabaseClient
               .from('profiles')
               .select('id')
               .eq('email', assignedStaff.email)
               .single()
 
             if (profile?.id) {
-              await supabase
+              await supabaseClient
                 .from('notifications')
                 .insert({
                   user_id: profile.id,
@@ -527,7 +528,7 @@ export default function TaskDispatch() {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskId)
+      const { error } = await supabaseClient.from('tasks').delete().eq('id', taskId)
 
       if (error) throw error
 
@@ -725,14 +726,16 @@ export default function TaskDispatch() {
 
                     {/* Status-specific actions */}
                     {task.status === 'open' && (
-                      <Select
-                        value={task.assigned_to || 'unassigned'}
-                        onValueChange={(value) => {
-                          handleAssignTask(task.id, value === 'unassigned' ? null : value)
-                        }}
+                    <Select
+                      value={task.assigned_to || 'unassigned'}
+                      onValueChange={(value) => {
+                        handleAssignTask(task.id, value === 'unassigned' ? null : value)
+                      }}
+                    >
+                      <SelectTrigger
+                        className="w-[180px]"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <SelectTrigger className="w-[180px]" onClick={(e) => e.stopPropagation()}>
                           <SelectValue placeholder="Assign to..." />
                         </SelectTrigger>
                         <SelectContent>

@@ -78,13 +78,10 @@ export async function retrieveContext(
       content: hit.content,
       source: 'knowledge-base' as const,
       metadata: {
+        ...hit.metadata,
         title: hit.title,
         knowledgeId: hit.knowledgeId,
-        chunkIndex: hit.metadata.chunkIndex,
-        score: hit.score,
-        organizationId: hit.metadata.organizationId,
-        eventId: hit.metadata.eventId,
-        ...hit.metadata
+        score: hit.score
       }
     }))
 

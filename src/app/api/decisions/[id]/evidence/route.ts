@@ -19,7 +19,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+      const supabase = createRouteHandlerClient<any>({ cookies }) as any
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -33,13 +33,15 @@ export async function POST(
     const decisionId = params.id
 
     // Get decision to verify access and lock status
-    const { data: decision, error: decisionError } = await supabase
-      .from('decisions')
+      const { data: decision, error: decisionError } = await supabase
+        .from('decisions' as any)
       .select('id, is_locked, company_id')
       .eq('id', decisionId)
       .single()
 
-    if (decisionError || !decision) {
+      const decisionRecord = (decision ?? null) as { is_locked?: boolean; company_id?: string } | null
+
+      if (decisionError || !decisionRecord) {
       return NextResponse.json(
         { error: 'Decision not found' },
         { status: 404 }
@@ -47,7 +49,7 @@ export async function POST(
     }
 
     // Check if decision is locked (evidence can only be added to unlocked decisions)
-    if (decision.is_locked) {
+      if (decisionRecord.is_locked) {
       return NextResponse.json(
         { error: 'Decision is locked', details: 'Evidence cannot be added to locked decisions.' },
         { status: 403 }
@@ -55,13 +57,15 @@ export async function POST(
     }
 
     // Verify company access
-    const { data: profile } = await supabase
-      .from('profiles')
+      const { data: profile } = await supabase
+        .from('profiles' as any)
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.company_id !== decision.company_id) {
+      const profileRecord = (profile ?? null) as { company_id?: string } | null
+
+      if (!profileRecord || profileRecord.company_id !== decisionRecord.company_id) {
       return NextResponse.json(
         { error: 'Unauthorized', details: 'Decision does not belong to your company' },
         { status: 403 }
@@ -73,18 +77,21 @@ export async function POST(
     let body: EvidenceUploadInput
     let file: File | null = null
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData()
-      body = {
-        evidence_type: formData.get('evidence_type') as string,
-        title: formData.get('title') as string,
-        description: formData.get('description') as string || undefined,
-        external_reference: formData.get('external_reference') as string || undefined,
-        captured_at: formData.get('captured_at') as string || new Date().toISOString(),
-      }
-      file = formData.get('file') as File | null
-    } else {
-      body = await request.json()
+      if (contentType.includes('multipart/form-data')) {
+        const formData = await request.formData()
+        const evidenceType =
+          (formData.get('evidence_type') as string | null) ?? 'other'
+
+        body = {
+          evidence_type: evidenceType as EvidenceUploadInput['evidence_type'],
+          title: (formData.get('title') as string | null) ?? '',
+          description: (formData.get('description') as string | null) || undefined,
+          external_reference: (formData.get('external_reference') as string | null) || undefined,
+          captured_at: (formData.get('captured_at') as string | null) || new Date().toISOString(),
+        }
+        file = (formData.get('file') as File | null) ?? null
+      } else {
+        body = (await request.json()) as EvidenceUploadInput
     }
 
     // Validate required fields
@@ -136,9 +143,9 @@ export async function POST(
     }
 
     // Create evidence record
-    const evidenceData = {
+      const evidenceData = {
       decision_id: decisionId,
-      company_id: profile.company_id,
+        company_id: profileRecord.company_id,
       evidence_type: body.evidence_type,
       title: body.title,
       description: body.description || null,
@@ -151,9 +158,9 @@ export async function POST(
       mime_type: mimeType,
     }
 
-    const { data: evidence, error: insertError } = await supabase
-      .from('decision_evidence')
-      .insert(evidenceData)
+      const { data: evidence, error: insertError } = await supabase
+        .from('decision_evidence' as any)
+        .insert(evidenceData as any)
       .select()
       .single()
 

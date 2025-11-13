@@ -45,16 +45,17 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
         setData(json.data)
         
         // Load predictions for each stand
-        if (eventId && json.data?.occupancy) {
+          if (eventId && json.data?.occupancy) {
           const predictions: Record<string, StandFlowPrediction> = {}
-          for (const [standName, standData] of Object.entries(json.data.occupancy)) {
+            const occupancy = json.data.occupancy as StandOccupancyMap
+            for (const [standName, standData] of Object.entries(occupancy)) {
             try {
               const prediction = await predictStandFlow(
                 supabase,
                 eventId,
                 '', // standId - will be resolved by name
                 standName,
-                standData.capacity,
+                  standData.capacity,
                 60
               )
               predictions[standName] = prediction

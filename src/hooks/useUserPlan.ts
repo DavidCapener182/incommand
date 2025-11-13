@@ -52,12 +52,13 @@ export function useUserPlan(): PlanCode | null {
         }
 
         // Map legacy plan codes to new ones
-        let planCode = company.subscription_plan
+        let planCode = (company as any)?.subscription_plan as string | undefined
         if (planCode === 'trial' || planCode === 'basic') planCode = 'starter'
         if (planCode === 'premium' || planCode === 'professional') planCode = 'operational'
 
         // Validate plan code
-        if (['starter', 'operational', 'command', 'enterprise'].includes(planCode)) {
+        const validPlanCodes: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
+        if (planCode && validPlanCodes.includes(planCode as PlanCode)) {
           setPlan(planCode as PlanCode)
         } else {
           setPlan('starter') // Default fallback

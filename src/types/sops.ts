@@ -7,12 +7,8 @@ import type { Database } from './supabase'
 
 // Check if tables exist in Database type
 type Tables = Database['public']['Tables']
-type HasSopsTable = 'sops' extends keyof Tables ? true : false
-type HasAdjustmentsTable = 'sop_adjustments' extends keyof Tables ? true : false
-
-// Safely access table types with fallbacks
-type SopsTable = HasSopsTable extends true ? Tables['sops'] : never
-type AdjustmentsTable = HasAdjustmentsTable extends true ? Tables['sop_adjustments'] : never
+type SopsTable = Tables extends { sops: infer T } ? T : never
+type AdjustmentsTable = Tables extends { sop_adjustments: infer T } ? T : never
 
 // Fallback types if tables don't exist in generated types yet
 export type SOP = SopsTable extends never

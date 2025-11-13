@@ -7,14 +7,11 @@ import type { Database } from './supabase'
 
 // Check if tables exist in Database type
 type Tables = Database['public']['Tables']
-type HasDecisionsTable = 'decisions' extends keyof Tables ? true : false
-type HasEvidenceTable = 'decision_evidence' extends keyof Tables ? true : false
-type HasAnnotationsTable = 'decision_annotations' extends keyof Tables ? true : false
 
 // Safely access table types with fallbacks
-type DecisionsTable = HasDecisionsTable extends true ? Tables['decisions'] : never
-type EvidenceTable = HasEvidenceTable extends true ? Tables['decision_evidence'] : never
-type AnnotationsTable = HasAnnotationsTable extends true ? Tables['decision_annotations'] : never
+type DecisionsTable = Tables extends { decisions: infer T } ? T : never
+type EvidenceTable = Tables extends { decision_evidence: infer T } ? T : never
+type AnnotationsTable = Tables extends { decision_annotations: infer T } ? T : never
 
 // Fallback types if tables don't exist in generated types yet
 export type Decision = DecisionsTable extends never ? {

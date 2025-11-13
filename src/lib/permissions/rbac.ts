@@ -72,7 +72,7 @@ export interface Organization {
   id: string
   name: string
   slug: string
-  tier: 'free' | 'professional' | 'enterprise'
+  tier: 'free' | 'professional' | 'starter' | 'operational' | 'command' | 'enterprise'
   settings: OrganizationSettings
   createdAt: string
   isActive: boolean

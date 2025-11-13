@@ -59,7 +59,10 @@ const MAX_TOKENS_PER_CHUNK = 7000 // Safety limit: well under 8192 token limit
  * Detect file type from file name or MIME type
  */
 export function detectFileType(file: File | { name?: string; type?: string }): FileType {
-  const name = 'name' in file ? file.name : ''
+  const name =
+    typeof file === 'object' && 'name' in file && typeof file.name === 'string'
+      ? file.name
+      : ''
   const mimeType = 'type' in file ? file.type : ''
   
   const ext = name.split('.').pop()?.toLowerCase() || ''
@@ -79,7 +82,7 @@ export function detectFileType(file: File | { name?: string; type?: string }): F
 async function extractPdfText(file: File | Buffer): Promise<string> {
   try {
     const pdfParse = await import('pdf-parse')
-    const pdf = pdfParse.default || pdfParse
+    const pdf: any = (pdfParse as any).default ?? pdfParse
     
     let buffer: Buffer
     if (file instanceof File) {
@@ -440,6 +443,8 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 export async function ingestDocument(input: IngestInput): Promise<IngestResult> {
   const supabase = getServiceSupabaseClient()
   const startTime = Date.now()
+  const fallbackOrgId = '00000000-0000-0000-0000-000000000000'
+  const organizationId = input.organizationId ?? fallbackOrgId
   
   // Validate file size
   let fileSize = 0
@@ -481,16 +486,16 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
         type: detectedType,
         title: input.title,
         uploader_id: input.uploaderId,
-        organization_id: input.organizationId || null,
+        organization_id: organizationId,
         event_id: input.eventId || null,
         tags: input.tags || [],
         body: '',
         updated_at: new Date().toISOString(),
         ...(input.storagePath !== undefined ? { storage_path: input.storagePath } : {}),
-        ...(input.originalFilename !== undefined ? { original_filename: input.originalFilename } : {})
+        ...(input.originalFilename !== undefined ? { original_filename: input.originalFilename } : {}),
       })
       .eq('id', knowledgeId)
-    
+
     if (updateExistingError) {
       throw new Error(`Failed to prepare knowledge record for ingestion: ${updateExistingError.message}`)
     }
@@ -502,24 +507,24 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
         type: detectedType,
         source: input.source || (input.textContent ? 'text-upload' : 'user-upload'),
         uploader_id: input.uploaderId,
-        organization_id: input.organizationId || null,
+        organization_id: organizationId,
         event_id: input.eventId || null,
         tags: input.tags || [],
         status: 'ingesting',
         bytes: fileSize,
         body: '',
         storage_path: input.storagePath ?? null,
-        original_filename: input.originalFilename ?? null
+        original_filename: input.originalFilename ?? null,
       })
       .select('id')
       .single()
-    
+
     if (kbError || !kbEntry) {
       throw new Error(`Failed to create knowledge_base entry: ${kbError?.message || 'Unknown error'}`)
     }
     knowledgeId = kbEntry.id
   }
-  
+
   if (!knowledgeId) {
     throw new Error('Knowledge ID could not be determined for ingestion')
   }

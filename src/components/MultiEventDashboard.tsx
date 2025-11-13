@@ -48,7 +48,7 @@ export default function MultiEventDashboard({
   className = ''
 }: MultiEventDashboardProps) {
   const { user } = useAuth()
-  const { showToast } = useToast()
+  const { addToast } = useToast()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | 'upcoming'>('all')
@@ -146,7 +146,7 @@ export default function MultiEventDashboard({
       setEvents(eventsWithMetrics)
     } catch (error) {
       console.error('Error loading events:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to load events',
@@ -154,7 +154,7 @@ export default function MultiEventDashboard({
     } finally {
       setLoading(false)
     }
-  }, [user?.id, showToast])
+    }, [user?.id, addToast])
 
   useEffect(() => {
     loadEvents()

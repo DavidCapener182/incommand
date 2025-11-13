@@ -30,8 +30,9 @@ export async function calculateChannelHealth(
   timeWindowMinutes: number = 5
 ): Promise<ChannelHealthMetrics> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Fetch recent messages for this channel
-    let query = supabase
+    let query = supabaseClient
       .from('radio_messages')
       .select('*')
       .eq('channel', channel)
@@ -43,14 +44,16 @@ export async function calculateChannelHealth(
       query = query.eq('event_id', eventId)
     }
 
-    const { data: messages, error } = await query
+      const { data: messages, error } = await query
 
     if (error) {
       console.error('Error fetching messages for health calculation:', error)
       throw error
     }
 
-    const radioMessages = (messages || []) as RadioMessage[]
+    const radioMessages = Array.isArray(messages)
+      ? (messages as unknown as RadioMessage[])
+      : []
 
     // Calculate overload pattern
     const overloadPattern = detectOverloadPattern(radioMessages, timeWindowMinutes)
@@ -112,6 +115,7 @@ export async function storeChannelHealth(
   metrics: ChannelHealthMetrics
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     const healthData: RadioChannelHealthInsert = {
       company_id: companyId,
       event_id: eventId,
@@ -123,7 +127,7 @@ export async function storeChannelHealth(
       metadata: metrics.metadata || {},
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('radio_channel_health')
       .insert(healthData)
       .select()
@@ -209,8 +213,9 @@ export async function updateAllChannelHealth(
   timeWindowMinutes: number = 5
 ): Promise<{ success: boolean; updated: number; errors: string[] }> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Get all unique channels for this event/company
-    let query = supabase
+    let query = supabaseClient
       .from('radio_messages')
       .select('channel')
       .eq('company_id', companyId)

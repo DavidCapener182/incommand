@@ -176,7 +176,7 @@ export async function DELETE(request: NextRequest) {
 
     // Record audit log for bulk deletion
     await recordAdminAudit(context.serviceClient, {
-      organizationId: organizationId || null,
+      organizationId: organizationId!,
       actorId: context.user.id,
       action: 'bulk_delete_content',
       resourceType: 'knowledge_base',

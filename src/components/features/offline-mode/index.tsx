@@ -22,7 +22,7 @@ import {
   XCircleIcon,
   ClockIcon,
   TrashIcon,
-  AlertCircleIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline'
 import {
   Table,
@@ -43,7 +43,7 @@ export default function OfflineMode() {
     triggerSync,
     getPendingSyncCount,
   } = useOffline()
-  const { showToast } = useToast()
+  const { addToast } = useToast()
 
   const [queueStatus, setQueueStatus] = useState({
     pending: 0,
@@ -65,18 +65,12 @@ export default function OfflineMode() {
       setQueueStatus(status)
 
       // Get pending operations
-      const pending = await offlineSyncManager.db!.offlineQueue
-        .where('status')
-        .equals('pending')
-        .toArray()
-      setPendingOperations(pending as OfflineOperation[])
+        const pending = await offlineSyncManager.getOperationsByStatus('pending')
+        setPendingOperations(pending)
 
-      // Get failed operations
-      const failed = await offlineSyncManager.db!.offlineQueue
-        .where('status')
-        .equals('failed')
-        .toArray()
-      setFailedOperations(failed as OfflineOperation[])
+        // Get failed operations
+        const failed = await offlineSyncManager.getOperationsByStatus('failed')
+        setFailedOperations(failed)
     } catch (error) {
       console.error('Error fetching queue status:', error)
     } finally {
@@ -93,7 +87,7 @@ export default function OfflineMode() {
   // Manual sync
   const handleManualSync = async () => {
     if (!isOnline) {
-      showToast({
+      addToast({
         type: 'error',
         title: 'Offline',
         message: 'Cannot sync while offline',
@@ -105,7 +99,7 @@ export default function OfflineMode() {
     try {
       if (offlineSyncManager) {
         await offlineSyncManager.triggerManualSync()
-        showToast({
+        addToast({
           type: 'success',
           title: 'Sync Started',
           message: 'Syncing offline data...',
@@ -120,7 +114,7 @@ export default function OfflineMode() {
       }
     } catch (error) {
       console.error('Sync failed:', error)
-      showToast({
+          addToast({
         type: 'error',
         title: 'Sync Failed',
         message: 'Failed to sync offline data',
@@ -134,12 +128,12 @@ export default function OfflineMode() {
     if (!offlineSyncManager) return
 
     try {
-      await offlineSyncManager.db!.offlineQueue.update(operationId, {
+        await offlineSyncManager.updateOperation(operationId, {
         status: 'pending',
         retryCount: 0,
         error: undefined,
       })
-      showToast({
+        addToast({
         type: 'success',
         title: 'Operation Queued',
         message: 'Operation will be retried on next sync',
@@ -147,7 +141,7 @@ export default function OfflineMode() {
       fetchQueueStatus()
     } catch (error) {
       console.error('Error retrying operation:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to retry operation',
@@ -162,8 +156,8 @@ export default function OfflineMode() {
     if (!offlineSyncManager) return
 
     try {
-      await offlineSyncManager.db!.offlineQueue.delete(operationId)
-      showToast({
+        await offlineSyncManager.deleteOperation(operationId)
+        addToast({
         type: 'success',
         title: 'Operation Deleted',
         message: 'Operation has been removed from queue',
@@ -171,7 +165,7 @@ export default function OfflineMode() {
       fetchQueueStatus()
     } catch (error) {
       console.error('Error deleting operation:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to delete operation',
@@ -185,7 +179,7 @@ export default function OfflineMode() {
 
     try {
       await offlineSyncManager.clearCompletedOperations()
-      showToast({
+        addToast({
         type: 'success',
         title: 'Cleared',
         message: 'Completed operations cleared',
@@ -429,7 +423,7 @@ export default function OfflineMode() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircleIcon className="h-5 w-5 text-red-500" />
+              <InformationCircleIcon className="h-5 w-5 text-red-500" />
               Failed Operations
             </CardTitle>
             <CardDescription>

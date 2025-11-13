@@ -54,7 +54,8 @@ interface SSOProvider {
 
 export default function SSOIntegration() {
   const { user } = useAuth()
-  const { showToast } = useToast()
+  const { addToast } = useToast()
+  const supabaseClient = supabase as any
   const [providers, setProviders] = useState<SSOProvider[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -76,8 +77,8 @@ export default function SSOIntegration() {
     try {
       // In a real implementation, this would fetch from a database table
       // For now, we'll use a settings/configuration approach
-      const { data, error } = await supabase
-        .from('company_settings')
+        const { data, error } = await supabaseClient
+          .from('company_settings')
         .select('*')
         .eq('key', 'sso_providers')
         .single()
@@ -99,9 +100,9 @@ export default function SSOIntegration() {
     }
   }
 
-  const handleSaveProvider = async () => {
+    const handleSaveProvider = async () => {
     if (!formData.name || !formData.type) {
-      showToast({
+        addToast({
         type: 'error',
         title: 'Validation Error',
         message: 'Please fill in all required fields',
@@ -131,19 +132,19 @@ export default function SSOIntegration() {
         : [...providers, newProvider]
 
       // Save to database (company_settings table)
-      const { error } = await supabase
-        .from('company_settings')
+        const { error } = await supabaseClient
+          .from('company_settings')
         .upsert({
           key: 'sso_providers',
           value: JSON.stringify(updatedProviders),
-        })
+          })
 
       if (error) throw error
 
       setProviders(updatedProviders)
       setIsDialogOpen(false)
       setEditingProvider(null)
-      setFormData({
+        setFormData({
         name: '',
         type: 'azure_ad',
         client_id: '',
@@ -152,14 +153,14 @@ export default function SSOIntegration() {
         metadata_url: '',
       })
 
-      showToast({
+        addToast({
         type: 'success',
         title: 'SSO Provider Saved',
         message: `${editingProvider ? 'Updated' : 'Added'} SSO provider successfully`,
       })
     } catch (error) {
       console.error('Error saving SSO provider:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to save SSO provider',
@@ -173,24 +174,24 @@ export default function SSOIntegration() {
         p.id === providerId ? { ...p, enabled: !p.enabled } : p
       )
 
-      const { error } = await supabase
-        .from('company_settings')
+        const { error } = await supabaseClient
+          .from('company_settings')
         .upsert({
           key: 'sso_providers',
           value: JSON.stringify(updatedProviders),
-        })
+          })
 
       if (error) throw error
 
-      setProviders(updatedProviders)
-      showToast({
+        setProviders(updatedProviders)
+        addToast({
         type: 'success',
         title: 'Provider Updated',
         message: 'SSO provider status updated',
       })
     } catch (error) {
       console.error('Error toggling provider:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to update provider',
@@ -204,24 +205,24 @@ export default function SSOIntegration() {
     try {
       const updatedProviders = providers.filter((p) => p.id !== providerId)
 
-      const { error } = await supabase
-        .from('company_settings')
+        const { error } = await supabaseClient
+          .from('company_settings')
         .upsert({
           key: 'sso_providers',
           value: JSON.stringify(updatedProviders),
-        })
+          })
 
       if (error) throw error
 
-      setProviders(updatedProviders)
-      showToast({
+        setProviders(updatedProviders)
+        addToast({
         type: 'success',
         title: 'Provider Deleted',
         message: 'SSO provider has been removed',
       })
     } catch (error) {
       console.error('Error deleting provider:', error)
-      showToast({
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to delete provider',

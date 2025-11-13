@@ -48,12 +48,12 @@ const COMPONENT_WEIGHTS = {
 export class ReadinessEngine {
   private eventId: string
   private companyId: string
-  private supabase: SupabaseClient<Database>
+  private supabase: SupabaseClient<any>
 
   constructor(eventId: string, companyId: string, supabaseClient: SupabaseClient<Database>) {
     this.eventId = eventId
     this.companyId = companyId
-    this.supabase = supabaseClient
+    this.supabase = supabaseClient as SupabaseClient<any>
   }
 
   /**
@@ -144,8 +144,9 @@ export class ReadinessEngine {
         .select('*', { count: 'exact', head: true })
         .eq('company_id', this.companyId)
 
+      const eventData = (event ?? null) as { expected_staff_count?: number } | null
       const staffOnPost = assignments?.length || 0
-      const plannedStaff = event?.expected_staff_count || totalStaff || 1
+      const plannedStaff = eventData?.expected_staff_count || totalStaff || 1
       const coverageRatio = Math.min(staffOnPost / plannedStaff, 1.2) // Cap at 120% to avoid over-staffing bonus
 
       // Base score from coverage ratio (0-80 points)

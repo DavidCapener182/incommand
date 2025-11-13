@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 import QuoteEditDialog from './QuoteEditDialog'
 
-interface Quote {
+export interface Quote {
   id: string
   company_id?: string
   company_name: string
@@ -321,7 +321,7 @@ export default function CRMQuotesTable({ initialQuotes, companies }: CRMQuotesTa
             setSelectedQuote(null)
           }}
           onSave={(updatedQuote) => {
-            setQuotes(quotes.map((q) => (q.id === updatedQuote.id ? updatedQuote : q)))
+            setQuotes(quotes.map((q) => (q.id === updatedQuote.id ? (updatedQuote as Quote) : q)))
             setIsEditDialogOpen(false)
             setSelectedQuote(null)
           }}

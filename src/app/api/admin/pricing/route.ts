@@ -197,41 +197,43 @@ export async function PATCH(request: NextRequest) {
           .limit(1)
           .single()
 
-        if (currentPlan) {
-          const { data: newVersion, error: insertError } = await context.serviceClient
-            .from('subscription_plans' as any)
-            .insert({
-              code,
-              display_name: currentPlan.display_name,
-              version: updates.metadata?.version || currentPlan.version,
-              effective_at: effectiveAt,
-              currency: updates.currency || currentPlan.currency,
-              price_monthly: updates.priceMonthly ?? currentPlan.price_monthly,
-              price_annual: updates.priceAnnual ?? currentPlan.price_annual,
-              billing_cycles: updates.billingCycles || currentPlan.billing_cycles,
-              features: updates.features || currentPlan.features,
-              metadata: { ...currentPlan.metadata, ...updates.metadata },
-              is_active: updates.isActive ?? true,
-              deprecated: false,
+          if (currentPlan) {
+            const currentPlanRecord = currentPlan as Record<string, any>
+            const { data: newVersion, error: insertError } = await context.serviceClient
+              .from('subscription_plans' as any)
+              .insert({
+                code,
+                display_name: currentPlanRecord.display_name,
+                version: updates.metadata?.version || currentPlanRecord.version,
+                effective_at: effectiveAt,
+                currency: updates.currency || currentPlanRecord.currency,
+                price_monthly: updates.priceMonthly ?? currentPlanRecord.price_monthly,
+                price_annual: updates.priceAnnual ?? currentPlanRecord.price_annual,
+                billing_cycles: updates.billingCycles || currentPlanRecord.billing_cycles,
+                features: updates.features || currentPlanRecord.features,
+                metadata: { ...currentPlanRecord.metadata, ...updates.metadata },
+                is_active: updates.isActive ?? true,
+                deprecated: false,
+              })
+              .select('*')
+              .single()
+
+            if (insertError) {
+              return NextResponse.json({ error: 'Failed to create plan version' }, { status: 500 })
+            }
+
+            const newVersionRecord = newVersion as Record<string, any>
+            await recordAdminAudit(context.serviceClient, {
+              organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
+              actorId: context.user.id,
+              action: 'create_plan_version',
+              resourceType: 'subscription_plans',
+              resourceId: newVersionRecord.id,
+              changes: newVersionRecord,
             })
-            .select('*')
-            .single()
 
-          if (insertError) {
-            return NextResponse.json({ error: 'Failed to create plan version' }, { status: 500 })
+            return NextResponse.json({ plan: newVersionRecord })
           }
-
-          await recordAdminAudit(context.serviceClient, {
-            organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
-            actorId: context.user.id,
-            action: 'create_plan_version',
-            resourceType: 'subscription_plans',
-            resourceId: newVersion.id,
-            changes: newVersion,
-          })
-
-          return NextResponse.json({ plan: newVersion })
-        }
       }
     }
 
@@ -251,16 +253,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 })
     }
 
+    const updatedPlanRecord = updatedPlan as Record<string, any>
     await recordAdminAudit(context.serviceClient, {
       organizationId: context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
       actorId: context.user.id,
       action: 'update_plan',
       resourceType: 'subscription_plans',
-      resourceId: updatedPlan.id,
+      resourceId: updatedPlanRecord.id,
       changes: updatePayload,
     })
 
-    return NextResponse.json({ plan: updatedPlan })
+    return NextResponse.json({ plan: updatedPlanRecord })
   })
 }
 

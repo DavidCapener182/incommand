@@ -15,20 +15,20 @@ import { Badge } from '@/components/ui/badge'
 interface ReadinessDetailsModalProps {
   isOpen: boolean
   onClose: () => void
-  readiness: {
-    overall_score: number
-    component_scores: {
-      staffing: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
-      incident_pressure: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
-      weather: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
-      transport: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
-      assets: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
-      crowd_density: { score: number; details: any; factors: Array<{ factor: string; impact: number; description: string }> }
+    readiness: {
+      overall_score: number
+      component_scores: {
+        staffing: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+        incident_pressure: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+        weather: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+        transport: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+        assets: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+        crowd_density: { score: number; details: any; factors?: Array<{ factor: string; impact: number; description: string }> }
+      }
+      trend: 'improving' | 'stable' | 'declining'
+      alerts: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>
+      calculated_at: string
     }
-    trend: 'improving' | 'stable' | 'declining'
-    alerts: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>
-    calculated_at: string
-  }
   eventId: string | null
 }
 

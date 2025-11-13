@@ -60,8 +60,8 @@ export default function RadioAlertsWidget({
       // Fetch critical/high priority incidents from incident_logs (last hour)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
       
-      const { data: highPriorityIncidents, error: incidentsError } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row']>('incident_logs')
+    const { data: highPriorityIncidents, error: incidentsError } = await supabase
+          .from('incident_logs')
         .select('id, occurrence, incident_type, priority, callsign_from, callsign_to, created_at, time_of_occurrence, source, is_closed')
         .eq('event_id', eventId)
         .eq('is_closed', false)
@@ -99,8 +99,8 @@ export default function RadioAlertsWidget({
       }
 
       // Also fetch critical/high priority radio messages from radio_messages table (if it exists)
-      const { data: criticalMessages, error: messagesError } = await supabase
-        .from<Database['public']['Tables']['radio_messages']['Row']>('radio_messages')
+        const { data: criticalMessages, error: messagesError } = await supabase
+        .from('radio_messages' as any)
         .select('id, channel, from_callsign, to_callsign, message, priority, category, created_at')
         .eq('event_id', eventId)
         .in('priority', ['critical', 'high'])
@@ -109,8 +109,12 @@ export default function RadioAlertsWidget({
         .limit(10)
 
       // Don't throw error if table doesn't exist - graceful degradation
-      if (criticalMessages && criticalMessages.length > 0) {
-        criticalMessages.forEach((msg) => {
+        const messageRows = Array.isArray(criticalMessages)
+          ? (criticalMessages as Array<any>)
+          : []
+
+        if (messageRows.length > 0) {
+          messageRows.forEach((msg) => {
           const priority = (msg.priority || '').toLowerCase()
           if (priority === 'critical' || priority === 'high') {
             alertsList.push({
@@ -128,8 +132,8 @@ export default function RadioAlertsWidget({
       }
 
       // Fetch channel health overload indicators
-      const { data: healthData, error: healthError } = await supabase
-        .from<Database['public']['Tables']['radio_channel_health']['Row']>('radio_channel_health')
+    const { data: healthData, error: healthError } = await supabase
+          .from('radio_channel_health' as any)
         .select('id, channel, overload_indicator, health_score, metadata, timestamp')
         .eq('event_id', eventId)
         .eq('overload_indicator', true)
@@ -141,8 +145,10 @@ export default function RadioAlertsWidget({
         throw healthError
       }
 
-      if (healthData && healthData.length > 0) {
-        healthData.forEach((health) => {
+        const healthRows = Array.isArray(healthData) ? (healthData as Array<any>) : []
+
+        if (healthRows.length > 0) {
+          healthRows.forEach((health) => {
           const overloadReason = health.metadata?.overloadReason || 'High message volume detected'
           alertsList.push({
             id: `health-${health.id}`,

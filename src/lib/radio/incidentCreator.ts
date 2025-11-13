@@ -23,11 +23,12 @@ async function checkForDuplicateIncident(
   timeWindowMinutes: number = 5
 ): Promise<{ isDuplicate: boolean; existingIncidentId?: number }> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     const timeWindow = new Date()
     timeWindow.setMinutes(timeWindow.getMinutes() - timeWindowMinutes)
 
     // Search for recent incidents with similar text
-    const { data: recentIncidents, error } = await supabase
+    const { data: recentIncidents, error } = await supabaseClient
       .from('incident_logs')
       .select('id, occurrence, created_at')
       .eq('event_id', eventId)
@@ -45,14 +46,15 @@ async function checkForDuplicateIncident(
     }
 
     // Check for similar content (simple keyword matching)
-    const messageKeywords = messageText.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+    const messageKeywords = messageText.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
     
     for (const incident of recentIncidents) {
-      const incidentKeywords = incident.occurrence?.toLowerCase().split(/\s+/).filter(w => w.length > 3) || []
+      const incidentKeywords =
+        incident.occurrence?.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3) || []
       
       // If 50% or more keywords match, consider it a duplicate
-      const matchingKeywords = messageKeywords.filter(kw => 
-        incidentKeywords.some(ikw => ikw.includes(kw) || kw.includes(ikw))
+      const matchingKeywords = messageKeywords.filter((kw: string) => 
+        incidentKeywords.some((ikw: string) => ikw.includes(kw) || kw.includes(ikw))
       )
       
       if (matchingKeywords.length >= Math.ceil(messageKeywords.length * 0.5)) {
@@ -80,6 +82,7 @@ export async function createIncidentFromRadioMessage(
   supabase: SupabaseClient<Database>
 ): Promise<RadioIncidentCreationResult> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Check if incident should be created
     if (!shouldCreateIncident(message)) {
       return {
@@ -93,7 +96,7 @@ export async function createIncidentFromRadioMessage(
       return {
         incidentCreated: false,
         reason: 'Incident already linked to this message',
-        incidentId: message.incident_id as number,
+        incidentId: Number(message.incident_id),
       }
     }
 
@@ -106,7 +109,7 @@ export async function createIncidentFromRadioMessage(
 
     if (duplicateCheck.isDuplicate && duplicateCheck.existingIncidentId) {
       // Link the radio message to the existing incident
-      await supabase
+        await supabaseClient
         .from('radio_messages')
         .update({ incident_id: duplicateCheck.existingIncidentId })
         .eq('id', message.id)
@@ -122,7 +125,7 @@ export async function createIncidentFromRadioMessage(
     const incidentDetails = extractIncidentDetails(message)
 
     // Get event data for log number generation
-    const { data: eventData } = await supabase
+      const { data: eventData } = await supabaseClient
       .from('events')
       .select('event_name, name, event_date, date')
       .eq('id', eventId)
@@ -136,7 +139,7 @@ export async function createIncidentFromRadioMessage(
       : new Date().toISOString().split('T')[0].replace(/-/g, '')
 
     // Get count for log number
-    const { count } = await supabase
+      const { count } = await supabaseClient
       .from('incident_logs')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId)
@@ -144,13 +147,13 @@ export async function createIncidentFromRadioMessage(
     const logNumber = `${eventPrefix}-${eventDate}-${String((count || 0) + 1).padStart(4, '0')}`
 
     // Get user callsign from profile or assignment
-    const { data: profile } = await supabase
+      const { data: profile } = await supabaseClient
       .from('profiles')
       .select('first_name, last_name')
       .eq('id', userId)
       .single()
 
-    const { data: assignment } = await supabase
+      const { data: assignment } = await supabaseClient
       .from('callsign_assignments')
       .select('callsign_positions(callsign, short_code)')
       .eq('user_id', userId)
@@ -200,7 +203,7 @@ export async function createIncidentFromRadioMessage(
     }
 
     // Update radio message to link incident
-    const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
       .from('radio_messages')
       .update({
         incident_id: result.log.id,
@@ -244,12 +247,13 @@ export async function processRadioMessage(
   incidentId?: string | number
 }> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Analyze message if not already analyzed
     if (!message.category || !message.priority) {
       const analysis = analyzeRadioMessage(message.message || message.transcription || '')
 
       // Update message with analysis
-      const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
         .from('radio_messages')
         .update({
           category: analysis.category,

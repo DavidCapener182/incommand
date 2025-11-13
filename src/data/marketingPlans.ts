@@ -3,7 +3,7 @@ import { getAllPlans, type Plan } from '@/config/PricingConfig'
 export type MarketingPlan = {
 	name: string
 	priceMonthly: number
-	currency: 'GBP'
+	currency: Plan['pricing']['currency']
 	features: string[]
 	code: string
 }

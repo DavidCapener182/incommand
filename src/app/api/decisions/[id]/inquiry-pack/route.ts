@@ -19,7 +19,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const supabase = createRouteHandlerClient<any>({ cookies })
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -177,7 +177,7 @@ export async function GET(
     <p><strong>Generated:</strong> ${inquiryPack.generated_at}</p>
     <p><strong>Decisions:</strong> ${inquiryPack.decision_count}</p>
   </div>
-  ${inquiryPack.decisions.map((d, i) => `
+    ${inquiryPack.decisions.map((d: any, i: number) => `
     <div class="decision">
       <h2>Decision ${i + 1}</h2>
       <p><strong>Time:</strong> ${d.timestamp}</p>
@@ -185,9 +185,9 @@ export async function GET(
       <p><strong>Decision:</strong> ${d.decision_taken}</p>
       <p><strong>Rationale:</strong> ${d.rationale}</p>
       ${d.evidence.length > 0 ? `<h3>Evidence (${d.evidence.length})</h3>` : ''}
-      ${d.evidence.map(e => `<div class="evidence-item">${e.title}: ${e.description || ''}</div>`).join('')}
+        ${d.evidence.map((e: any) => `<div class="evidence-item">${e.title}: ${e.description || ''}</div>`).join('')}
       ${d.annotations.length > 0 ? `<h3>Annotations (${d.annotations.length})</h3>` : ''}
-      ${d.annotations.map(a => `<div class="evidence-item">${a.annotation_text}</div>`).join('')}
+        ${d.annotations.map((a: any) => `<div class="evidence-item">${a.annotation_text}</div>`).join('')}
     </div>
   `).join('')}
 </body>

@@ -53,7 +53,7 @@ interface Event {
 
 export default function VenueCalendar() {
   const { user } = useAuth()
-  const { showToast } = useToast()
+  const { addToast } = useToast()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,17 +77,22 @@ export default function VenueCalendar() {
         return
       }
 
-      const { data, error } = await supabase
+        const { data, error } = await supabase
         .from('events')
         .select('id, event_name, venue_name, start_datetime, end_datetime, event_type')
         .eq('company_id', profile.company_id)
         .order('start_datetime', { ascending: true })
 
-      if (error) throw error
-      setEvents(data || [])
-    } catch (error) {
-      console.error('Error fetching events:', error)
-      showToast({
+        if (error) throw error
+        const normalized = (data || []).map((event) => ({
+          ...event,
+          start_datetime: event.start_datetime || new Date().toISOString(),
+          end_datetime: event.end_datetime || event.start_datetime || new Date().toISOString(),
+        })) as Event[]
+        setEvents(normalized)
+      } catch (error) {
+        console.error('Error fetching events:', error)
+        addToast({
         type: 'error',
         title: 'Error',
         message: 'Failed to load events',
@@ -95,7 +100,7 @@ export default function VenueCalendar() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id, showToast])
+    }, [user?.id, addToast])
 
   useEffect(() => {
     fetchEvents()

@@ -20,7 +20,7 @@ const CACHE_DURATION = 30 * 1000 // 30 seconds (real-time updates)
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies })
+      const supabase = createRouteHandlerClient<any>({ cookies }) as any
 
     // Check authentication
     const {
@@ -41,14 +41,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'event_id is required' }, { status: 400 })
     }
 
-    // Get user's company
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
+      // Get user's company
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
 
-    if (!profile?.company_id) {
+      const profileData = (profile ?? null) as { company_id?: string } | null
+
+      if (!profileData?.company_id) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
@@ -63,7 +65,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    if (eventAccess.company_id !== profile.company_id) {
+      const eventAccessRecord = (eventAccess ?? null) as { company_id?: string } | null
+
+      if (eventAccessRecord?.company_id !== profileData.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -105,13 +109,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate current readiness
-    const engine = new ReadinessEngine(eventId, profile.company_id, supabase)
+      const engine = new ReadinessEngine(eventId, profileData.company_id, supabase)
     const readiness = await engine.calculateOverallReadiness()
 
     // Store in database for historical tracking
     try {
-      await supabase.from('operational_readiness').insert({
-        company_id: profile.company_id,
+        await supabase.from('operational_readiness').insert({
+          company_id: profileData.company_id,
         event_id: eventId,
         overall_score: readiness.overall_score,
         staffing_score: readiness.component_scores.staffing.score,

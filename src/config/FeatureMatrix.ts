@@ -11,7 +11,7 @@ export type FeatureKey = keyof typeof FEATURE_MATRIX
 export interface FeatureDefinition {
   name: string
   description: string
-  tiers: PlanCode[]
+  tiers: ReadonlyArray<PlanCode>
   category: string
 }
 
@@ -177,8 +177,12 @@ export const FEATURE_MATRIX = {
  * Get all feature keys for a given plan
  */
 export function getPlanFeatures(plan: PlanCode): FeatureKey[] {
+  const eligiblePlan = plan === 'command' || plan === 'enterprise' ? plan : undefined
+  if (!eligiblePlan) {
+    return []
+  }
   return Object.entries(FEATURE_MATRIX)
-    .filter(([_, feature]) => feature.tiers.includes(plan))
+    .filter(([_, feature]) => feature.tiers.includes(eligiblePlan))
     .map(([key]) => key as FeatureKey)
 }
 
@@ -206,8 +210,9 @@ export function getMinimumTierForFeature(featureKey: FeatureKey): PlanCode | nul
   if (!feature) return null
   
   const tierOrder: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
+  const featureTiers = [...feature.tiers] as PlanCode[]
   for (const tier of tierOrder) {
-    if (feature.tiers.includes(tier)) {
+    if (featureTiers.includes(tier)) {
       return tier
     }
   }

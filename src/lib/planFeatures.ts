@@ -10,7 +10,7 @@ import { getPlan, getPlanFeatures, canCreateEvent, canCreateUser, canCreateStaff
  * Get plan code from company or organization
  */
 export async function getPlanCodeFromCompany(companyId: string): Promise<PlanCode | null> {
-  const supabase = getServiceSupabaseClient()
+  const supabase = getServiceSupabaseClient() as any
   
   const { data: company, error } = await supabase
     .from('companies')
@@ -20,7 +20,8 @@ export async function getPlanCodeFromCompany(companyId: string): Promise<PlanCod
 
   if (error || !company) return null
 
-  const planCode = company.subscription_plan
+  const planCode = (company as { subscription_plan?: string } | null)?.subscription_plan
+  if (!planCode) return 'starter'
   // Map legacy plan codes to new ones
   if (planCode === 'trial' || planCode === 'basic') return 'starter'
   if (planCode === 'premium' || planCode === 'professional') return 'operational'
@@ -37,7 +38,7 @@ export async function getPlanCodeFromCompany(companyId: string): Promise<PlanCod
  * Get plan code from organization
  */
 export async function getPlanCodeFromOrganization(organizationId: string): Promise<PlanCode | null> {
-  const supabase = getServiceSupabaseClient()
+  const supabase = getServiceSupabaseClient() as any
   
   const { data: org, error } = await supabase
     .from('organizations')

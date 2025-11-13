@@ -23,26 +23,38 @@ export default function RadioMessageInput({
   onMessageCreated,
   className,
 }: RadioMessageInputProps) {
-  const { addToast } = useToast()
+    const { addToast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [channel, setChannel] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!eventId) {
-      addToast('Please select an event first', 'error')
+        addToast({
+          type: 'error',
+          title: 'No Event Selected',
+          message: 'Please select an event first',
+        })
       return
     }
 
     if (!channel) {
-      addToast('Channel is required', 'error')
+        addToast({
+          type: 'error',
+          title: 'Channel Required',
+          message: 'Channel is required',
+        })
       return
     }
 
     if (!occurrence || !occurrence.trim()) {
-      addToast('Please enter incident details first', 'error')
+        addToast({
+          type: 'error',
+          title: 'Incident Details Needed',
+          message: 'Please enter incident details first',
+        })
       return
     }
 
@@ -75,7 +87,11 @@ export default function RadioMessageInput({
 
       const { data } = await response.json()
       
-      addToast('Radio message recorded successfully', 'success')
+        addToast({
+          type: 'success',
+          title: 'Message Recorded',
+          message: 'Radio message recorded successfully',
+        })
       
       // Reset channel only
       setChannel('')
@@ -85,9 +101,13 @@ export default function RadioMessageInput({
       if (onMessageCreated) {
         onMessageCreated(data)
       }
-    } catch (error: any) {
-      console.error('Error creating radio message:', error)
-      addToast(error.message || 'Failed to record radio message', 'error')
+      } catch (error: any) {
+        console.error('Error creating radio message:', error)
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: error.message || 'Failed to record radio message',
+        })
     } finally {
       setIsSubmitting(false)
     }

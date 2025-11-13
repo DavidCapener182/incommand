@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
+import type { RadioMessage } from '@/types/radio'
 
 export interface IncidentTaskCreationResult {
   taskCreated: boolean
@@ -172,11 +173,12 @@ async function checkForDuplicateTask(
   timeWindowMinutes: number = 10
 ): Promise<{ isDuplicate: boolean; existingTaskId?: string }> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     const timeWindow = new Date()
     timeWindow.setMinutes(timeWindow.getMinutes() - timeWindowMinutes)
 
     // Search for recent tasks with similar titles
-    const { data: recentTasks, error } = await supabase
+    const { data: recentTasks, error } = await supabaseClient
       .from('tasks')
       .select('id, title, created_at')
       .eq('event_id', eventId)
@@ -194,13 +196,13 @@ async function checkForDuplicateTask(
     }
 
     // Check for similar content (simple keyword matching)
-    const titleKeywords = taskTitle.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+    const titleKeywords = taskTitle.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
     
     for (const task of recentTasks) {
-      const taskKeywords = (task.title || '').toLowerCase().split(/\s+/).filter(w => w.length > 3)
+      const taskKeywords = (task.title || '').toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
       
       // If more than 50% of keywords match, consider it a duplicate
-      const matchingKeywords = titleKeywords.filter(kw => taskKeywords.includes(kw)).length
+      const matchingKeywords = titleKeywords.filter((kw: string) => taskKeywords.includes(kw)).length
       const similarity = matchingKeywords / Math.max(titleKeywords.length, taskKeywords.length)
       
       if (similarity > 0.5) {
@@ -224,6 +226,7 @@ export async function createTaskFromIncident(
   supabase: SupabaseClient<Database>
 ): Promise<IncidentTaskCreationResult> {
   try {
+    const supabaseClient = supabase as SupabaseClient<any>
     // Check if task should be created
     if (!shouldCreateTaskFromIncident(incident)) {
       return {
@@ -235,12 +238,12 @@ export async function createTaskFromIncident(
     // Extract task details
     const taskDetails = extractTaskDetailsFromIncident(incident)
 
-    // Check for duplicates
-    const duplicateCheck = await checkForDuplicateTask(
-      supabase,
-      incident.event_id,
-      taskDetails.title
-    )
+      // Check for duplicates
+      const duplicateCheck = await checkForDuplicateTask(
+        supabase,
+        incident.event_id,
+        taskDetails.title
+      )
 
     if (duplicateCheck.isDuplicate) {
       return {
@@ -250,12 +253,12 @@ export async function createTaskFromIncident(
       }
     }
 
-    // Get company_id from user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', userId)
-      .single()
+      // Get company_id from user profile
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('company_id')
+        .eq('id', userId)
+        .single()
 
     if (profileError || !profile?.company_id) {
       return {
@@ -264,22 +267,22 @@ export async function createTaskFromIncident(
       }
     }
 
-    // Create the task
-    const { data: taskData, error: taskError } = await supabase
-      .from('tasks')
-      .insert({
-        company_id: profile.company_id,
-        event_id: incident.event_id,
-        title: taskDetails.title,
-        description: taskDetails.description,
-        priority: taskDetails.priority,
-        location: taskDetails.location ? JSON.stringify({ address: taskDetails.location }) : null,
-        notes: `Auto-created from incident log #${incident.id} (${incident.incident_type})`,
-        created_by: userId,
-        status: 'open',
-      })
-      .select()
-      .single()
+      // Create the task
+      const { data: taskData, error: taskError } = await supabaseClient
+        .from('tasks')
+        .insert({
+          company_id: profile.company_id,
+          event_id: incident.event_id,
+          title: taskDetails.title,
+          description: taskDetails.description,
+          priority: taskDetails.priority,
+          location: taskDetails.location ? JSON.stringify({ address: taskDetails.location }) : null,
+          notes: `Auto-created from incident log #${incident.id} (${incident.incident_type})`,
+          created_by: userId,
+          status: 'open',
+        })
+        .select()
+        .single()
 
     if (taskError) {
       console.error('Error creating task:', taskError)
@@ -385,6 +388,85 @@ export async function processIncidentsForTasks(
     processed: incidents.length,
     tasksCreated,
     results,
+  }
+}
+
+/**
+ * Process a radio message and create a task if appropriate.
+ * Reuses the incident-based task creation heuristics by mapping radio data to an incident shape.
+ */
+export async function processRadioMessageForTask(
+  message: RadioMessage,
+  eventId: string,
+  userId: string,
+  supabase: SupabaseClient<Database>,
+  autoCreateTask: boolean = true
+): Promise<IncidentTaskCreationResult> {
+  try {
+    const supabaseClient = supabase as SupabaseClient<any>
+    if (!autoCreateTask) {
+      return {
+        taskCreated: false,
+        reason: 'Auto task creation disabled',
+      }
+    }
+
+    if (!eventId) {
+      return {
+        taskCreated: false,
+        error: 'Event ID is required for task creation',
+      }
+    }
+
+    if (message.task_id) {
+      return {
+        taskCreated: false,
+        reason: 'Task already linked to this message',
+        taskId: message.task_id,
+      }
+    }
+
+    const syntheticIncident: Incident = {
+      id: Number(message.incident_id ?? message.id) || Date.now(),
+      occurrence: message.message || message.transcription || '',
+      incident_type: message.category || 'Radio Task',
+      priority: message.priority || undefined,
+      location:
+        (typeof message.metadata?.location === 'string'
+          ? message.metadata.location
+          : message.metadata?.location?.address) ||
+        undefined,
+      callsign_from: message.from_callsign || undefined,
+      callsign_to: message.to_callsign || undefined,
+      event_id: eventId,
+      is_closed: false,
+      created_at: message.created_at || new Date().toISOString(),
+    }
+
+    // Ensure we only attempt creation when heuristics suggest it's needed
+    if (!shouldCreateTaskFromIncident(syntheticIncident)) {
+      return {
+        taskCreated: false,
+        reason: 'Radio message does not contain task-related keywords',
+      }
+    }
+
+    const result = await createTaskFromIncident(syntheticIncident, userId, supabase)
+
+    if (result.taskCreated && result.taskId) {
+      await supabaseClient
+        .from('radio_messages')
+        .update({ task_id: result.taskId })
+        .eq('id', message.id)
+    }
+
+    return result
+  } catch (error: any) {
+    console.error('Error processing radio message for task creation:', error)
+    return {
+      taskCreated: false,
+      error: error.message || 'Unknown error',
+    }
   }
 }
 

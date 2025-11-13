@@ -6,7 +6,7 @@ import type { Database } from '@/types/supabase'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const supabase = createRouteHandlerClient<Database>({ cookies })
+  const supabase = createRouteHandlerClient<any>({ cookies }) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -17,12 +17,14 @@ export async function GET() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileData = (profile ?? null) as { role?: string } | null
+
+  if (profileData?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { data, error } = await supabase
-    .from('quotes')
+    .from('quotes' as any)
     .select(`
       *,
       companies (
@@ -47,7 +49,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = createRouteHandlerClient<Database>({ cookies })
+  const supabase = createRouteHandlerClient<any>({ cookies }) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -58,7 +60,9 @@ export async function POST(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileData = (profile ?? null) as { role?: string } | null
+
+  if (profileData?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -87,7 +91,7 @@ export async function POST(req: Request) {
     } = body
 
     const { data, error } = await supabase
-      .from('quotes')
+      .from('quotes' as any)
       .insert({
         company_id: company_id || null,
         company_name,
@@ -109,7 +113,7 @@ export async function POST(req: Request) {
         assigned_to: assigned_to || null,
         expires_at: expires_at || null,
         status: 'draft',
-      })
+      } as any)
       .select()
       .single()
 
@@ -129,7 +133,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const supabase = createRouteHandlerClient<Database>({ cookies })
+  const supabase = createRouteHandlerClient<any>({ cookies }) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -140,7 +144,9 @@ export async function PATCH(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileData = (profile ?? null) as { role?: string } | null
+
+  if (profileData?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -152,12 +158,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Quote ID is required' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from('quotes')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+      const { data, error } = await supabase
+        .from('quotes' as any)
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single()
 
     if (error) {
       console.error('Error updating quote:', error)
@@ -175,7 +181,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const supabase = createRouteHandlerClient<Database>({ cookies })
+  const supabase = createRouteHandlerClient<any>({ cookies }) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -186,7 +192,9 @@ export async function DELETE(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'superadmin') {
+  const profileData = (profile ?? null) as { role?: string } | null
+
+  if (profileData?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -198,10 +206,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Quote ID is required' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('quotes')
-      .delete()
-      .eq('id', id)
+      const { error } = await supabase
+        .from('quotes' as any)
+        .delete()
+        .eq('id', id)
 
     if (error) {
       console.error('Error deleting quote:', error)
