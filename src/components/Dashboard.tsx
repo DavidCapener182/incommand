@@ -593,7 +593,7 @@ function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncid
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { updateCounts } = useIncidentSummary()
+  const { counts: incidentCounts, updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
   
   // Wait for EventContext to load before rendering event-specific content
