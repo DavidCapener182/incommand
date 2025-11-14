@@ -195,6 +195,17 @@ export default function IncidentTable({
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [showMatchFlowLogs, setShowMatchFlowLogs] = useState(true) // Show match flow logs by default
+  const tableColumnWidths = useMemo(
+    () => ({
+      log: 'w-20 sm:w-24 lg:w-28',
+      callsign: 'w-24 sm:w-28 lg:w-32',
+      type: 'w-28 sm:w-32 lg:w-36',
+      status: 'w-28 sm:w-32',
+      occurrence: 'min-w-[220px] sm:min-w-[260px] lg:min-w-[360px]',
+      action: 'min-w-[200px] sm:min-w-[240px] lg:min-w-[320px]',
+    }),
+    []
+  )
   
   // Performance monitoring
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
@@ -1399,16 +1410,16 @@ export default function IncidentTable({
                 height: '100%'
               }}
             >
-              <table className="w-full caption-bottom text-sm table-fixed">
+              <table className="w-full min-w-[960px] caption-bottom text-sm table-auto">
                 <thead className="sticky top-0 z-30 bg-[#f8f9fb] dark:bg-[#1a1f2d] shadow-sm border-b border-border/60">
                   <tr className="hover:bg-transparent border-none">
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[3%] border-b border-border/60 border-r border-border/30">LOG</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">From</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">To</th>
-                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[48%] xl:flex-grow border-b border-border/60 border-r border-border/30">Occurrence</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60 border-r border-border/30">Type</th>
-                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[23%] xl:flex-grow border-b border-border/60 border-r border-border/30">Action</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60">Status</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.log}`}>Log</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.callsign}`}>From</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.callsign}`}>To</th>
+                    <th className={`h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.occurrence}`}>Occurrence</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.type}`}>Type</th>
+                    <th className={`h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.action}`}>Action</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 ${tableColumnWidths.status}`}>Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
@@ -1441,7 +1452,7 @@ export default function IncidentTable({
                         }
                       }}
                     >
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30">
+                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
@@ -1468,7 +1479,7 @@ export default function IncidentTable({
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
@@ -1488,7 +1499,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
@@ -1508,7 +1519,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs leading-relaxed border-r border-border/30 ${
+                      <td className={`p-4 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
                         isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
                       }`} style={{
                         lineHeight: '1.3',
@@ -1526,7 +1537,7 @@ export default function IncidentTable({
                           {incident.occurrence}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
                         <div className="flex items-center justify-center">
                           {isMatchFlowLog ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
@@ -1541,7 +1552,7 @@ export default function IncidentTable({
                           )}
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{
+                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1557,7 +1568,7 @@ export default function IncidentTable({
                           {incident.action_taken}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-center">
+                      <td className={`p-4 align-middle text-center ${tableColumnWidths.status}`}>
                         <div className="flex flex-col items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                           <div className="flex flex-wrap gap-1.5 items-center justify-center">
                             <PriorityBadge priority={incident.priority} />

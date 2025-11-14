@@ -50,6 +50,12 @@ import { Card } from '@/components/ui/card'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
+import { CrowdBehaviorMonitor } from '@/components/analytics/CrowdBehaviorMonitor'
+import { WelfareSentimentPanel } from '@/components/analytics/WelfareSentimentPanel'
+import { CrowdAlertsList } from '@/components/analytics/CrowdAlertsList'
+import { CrowdIntelligenceOverview } from '@/components/analytics/CrowdIntelligenceOverview'
+import { CrowdRiskMatrix } from '@/components/analytics/CrowdRiskMatrix'
+import { CrowdIntelligenceSummary } from '@/types/crowdIntelligence'
 
 interface IncidentRecord {
   id: string
@@ -79,6 +85,113 @@ interface EventData {
   company?: string | null
 }
 
+const analyticsTabKeys = [
+  'operational',
+  'quality',
+  'compliance',
+  'staff',
+  'ai-insights',
+  'custom-metrics',
+  'custom-dashboards',
+  'benchmarking',
+  'real-time',
+  'crowd-intelligence',
+  'end-of-event',
+] as const
+
+type AnalyticsTabKey = typeof analyticsTabKeys[number]
+
+interface AnalyticsTabDefinition {
+  key: AnalyticsTabKey
+  label: string
+  shortLabel: string
+  icon: React.ComponentType<{ className?: string }>
+  activeClass: string
+}
+
+const inactiveTabClass =
+  'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+
+const analyticsTabs: AnalyticsTabDefinition[] = [
+  {
+    key: 'operational',
+    label: 'Operational Metrics',
+    shortLabel: 'Operational',
+    icon: BarChart3,
+    activeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500',
+  },
+  {
+    key: 'quality',
+    label: 'Quality',
+    shortLabel: 'Quality',
+    icon: Sparkles,
+    activeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500',
+  },
+  {
+    key: 'compliance',
+    label: 'JESIP/JDM Compliance',
+    shortLabel: 'Compliance',
+    icon: CheckCircle,
+    activeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500',
+  },
+  {
+    key: 'staff',
+    label: 'Staff',
+    shortLabel: 'Staff',
+    icon: Users,
+    activeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500',
+  },
+  {
+    key: 'ai-insights',
+    label: 'AI Insights',
+    shortLabel: 'AI',
+    icon: Lightbulb,
+    activeClass: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-500',
+  },
+  {
+    key: 'custom-metrics',
+    label: 'Custom Metrics',
+    shortLabel: 'Metrics',
+    icon: Target,
+    activeClass: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500',
+  },
+  {
+    key: 'custom-dashboards',
+    label: 'Custom Dashboards',
+    shortLabel: 'Dashboards',
+    icon: PieChart,
+    activeClass: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500',
+  },
+  {
+    key: 'benchmarking',
+    label: 'Benchmarking',
+    shortLabel: 'Benchmark',
+    icon: TrendingUp,
+    activeClass: 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-500',
+  },
+  {
+    key: 'real-time',
+    label: 'Real-Time',
+    shortLabel: 'Live',
+    icon: Zap,
+    activeClass: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500',
+  },
+  {
+    key: 'crowd-intelligence',
+    label: 'Crowd Intelligence',
+    shortLabel: 'Crowd',
+    icon: Eye,
+    activeClass: 'bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300 border-rose-500',
+  },
+  {
+    key: 'end-of-event',
+    label: 'End-of-Event Report',
+    shortLabel: 'Report',
+    icon: Calendar,
+    activeClass: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500',
+  },
+]
+
 export default function AnalyticsPage() {
   const [incidentData, setIncidentData] = useState<IncidentRecord[]>([])
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
@@ -88,11 +201,14 @@ export default function AnalyticsPage() {
   const [aiSummary, setAiSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
-  const [activeTab, setActiveTab] = useState<'operational' | 'quality' | 'compliance' | 'staff' | 'ai-insights' | 'custom-metrics' | 'custom-dashboards' | 'benchmarking' | 'end-of-event' | 'real-time'>('operational')
+  const [activeTab, setActiveTab] = useState<AnalyticsTabKey>('operational')
   const searchParams = useSearchParams()
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
+  const [crowdSummary, setCrowdSummary] = useState<CrowdIntelligenceSummary | null>(null)
+  const [crowdLoading, setCrowdLoading] = useState(false)
+  const [crowdError, setCrowdError] = useState<string | null>(null)
   
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
@@ -104,6 +220,9 @@ export default function AnalyticsPage() {
     { value: 'realtime', label: 'Live' }
   ]
 
+  const tabButtonBaseClasses =
+    'touch-target whitespace-nowrap rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200'
+
   const openIncidentsCount = useMemo(
     () => incidentData.filter((incident) => incident.status !== 'closed').length,
     [incidentData]
@@ -112,11 +231,35 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!searchParams) return
     const tabParam = searchParams.get('tab')
-    const allowed = ['operational','quality','compliance','staff','ai-insights','custom-metrics','custom-dashboards','benchmarking','end-of-event'] as const
-    if (tabParam && (allowed as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam as typeof allowed[number])
+    if (tabParam && (analyticsTabKeys as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam as AnalyticsTabKey)
     }
   }, [searchParams, activeTab])
+
+  useEffect(() => {
+    if (activeTab !== 'crowd-intelligence') return
+    if (!eventData?.id) return
+
+    let cancelled = false
+    async function loadCrowdSummary() {
+      setCrowdLoading(true)
+      setCrowdError(null)
+      try {
+        const res = await fetch(`/api/crowd-intelligence?eventId=${eventData.id}`)
+        if (!res.ok) throw new Error('Failed to load crowd intelligence')
+        const payload = await res.json()
+        if (!cancelled) setCrowdSummary(payload.data)
+      } catch (err: any) {
+        if (!cancelled) setCrowdError(err?.message ?? 'Unable to load crowd intelligence')
+      } finally {
+        if (!cancelled) setCrowdLoading(false)
+      }
+    }
+    loadCrowdSummary()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, eventData?.id])
 
   const closedIncidentsCount = useMemo(
     () => incidentData.filter((incident) => incident.status === 'closed').length,
@@ -282,17 +425,68 @@ export default function AnalyticsPage() {
     endDate: new Date()
   })
 
+  const resolveCurrentEvent = useCallback(async (): Promise<EventData | null> => {
+    try {
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('is_current', true)
+        .single()
+
+      if (!eventError && event) {
+        console.log('Found current event:', event)
+        return event
+      }
+
+      console.warn('No current event found, trying most recent event:', eventError)
+      const { data: recentEvent, error: recentError } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!recentError && recentEvent) {
+        console.log('Found recent event:', recentEvent)
+        return recentEvent
+      }
+
+      console.warn('No events found via Supabase, trying get-current-event API:', recentError)
+      const response = await fetch('/api/get-current-event')
+      if (response.ok) {
+        const apiEvent = await response.json()
+        console.log('Found event via API:', apiEvent)
+        return apiEvent
+      }
+
+      console.warn('No events found via API either')
+      return null
+    } catch (apiError) {
+      console.warn('Event lookup failed:', apiError)
+      return null
+    }
+  }, [])
+
   // Fetch all analytics data
   const fetchAnalyticsData = useCallback(async () => {
     try {
       setLoading(true)
+
+      const activeEvent = await resolveCurrentEvent()
+      setEventData(activeEvent)
       
-      // Fetch incidents
-      const { data: incidents, error: incidentError } = await supabase
+      // Fetch incidents scoped to the active event when available
+      const incidentsQuery = supabase
         .from('incident_logs')
-        .select('id, incident_type, priority, status, created_at, updated_at')
+        .select('id, incident_type, priority, status, created_at, updated_at, event_id')
         .order('created_at', { ascending: false })
         .limit(100)
+
+      if (activeEvent?.id) {
+        incidentsQuery.eq('event_id', activeEvent.id)
+      }
+
+      const { data: incidents, error: incidentError } = await incidentsQuery
 
       if (incidentError) throw incidentError
 
@@ -314,56 +508,13 @@ export default function AnalyticsPage() {
       if (attendanceError) console.warn('Attendance data error:', attendanceError)
       setAttendanceData(attendance || [])
 
-      // Fetch current event (try is_current first, then fallback to most recent)
-      let { data: event, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('is_current', true)
-        .single()
-
-      if (eventError) {
-        console.warn('No current event found, trying most recent event:', eventError)
-        // Fallback to most recent event if no current event
-        const { data: recentEvent, error: recentError } = await supabase
-          .from('events')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
-        
-        if (recentError) {
-          console.warn('No events found via Supabase, trying get-current-event API:', recentError)
-          // Final fallback: use the get-current-event API
-          try {
-            const response = await fetch('/api/get-current-event')
-            if (response.ok) {
-              const apiEvent = await response.json()
-              console.log('Found event via API:', apiEvent)
-              setEventData(apiEvent)
-            } else {
-              console.warn('No events found via API either')
-              setEventData(null)
-            }
-          } catch (apiError) {
-            console.warn('API fallback failed:', apiError)
-            setEventData(null)
-          }
-        } else {
-          console.log('Found recent event:', recentEvent)
-          setEventData(recentEvent)
-        }
-      } else {
-        console.log('Found current event:', event)
-        setEventData(event)
-      }
-
     } catch (err) {
       console.error('Error fetching analytics data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [resolveCurrentEvent])
 
   // Generate AI summary
   const generateAISummary = useCallback(async () => {
@@ -815,155 +966,26 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                   </div>
                 </div>
 
-        {/* Tabs - Mobile Optimized with Horizontal Scroll */}
-        <Card className="p-1.5 sm:p-2 mb-4 sm:mb-6 overflow-x-auto">
-          <nav className="flex space-x-1 sm:space-x-2 min-w-max sm:min-w-0">
-            <button
-              onClick={() => setActiveTab('operational')}
-              className={`${
-                activeTab === 'operational'
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-            >
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">Operational Metrics</span>
-                <span className="sm:hidden">Operational</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('quality')}
-              className={`${
-                activeTab === 'quality'
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-            >
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span>Quality</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('compliance')}
-              className={`${
-                activeTab === 'compliance'
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-            >
-              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">JESIP/JDM Compliance</span>
-                <span className="sm:hidden">Compliance</span>
-              </div>
-            </button>
-                    <button
-                      onClick={() => setActiveTab('staff')}
-                      className={`${
-                        activeTab === 'staff'
-                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>Staff</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('ai-insights')}
-                      className={`${
-                        activeTab === 'ai-insights'
-                          ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="hidden sm:inline">AI Insights</span>
-                        <span className="sm:hidden">AI</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('custom-metrics')}
-                      className={`${
-                        activeTab === 'custom-metrics'
-                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span className="hidden sm:inline">Custom Metrics</span>
-                        <span className="sm:hidden">Metrics</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('custom-dashboards')}
-                      className={`${
-                        activeTab === 'custom-dashboards'
-                          ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
-                        <span className="hidden sm:inline">Custom Dashboards</span>
-                        <span className="sm:hidden">Dashboards</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('benchmarking')}
-                      className={`${
-                        activeTab === 'benchmarking'
-                          ? 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                        </svg>
-                        <span className="hidden sm:inline">Benchmarking</span>
-                        <span className="sm:hidden">Benchmark</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('end-of-event')}
-                      className={`${
-                        activeTab === 'end-of-event'
-                          ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-indigo-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="hidden sm:inline">End-of-Event Report</span>
-                        <span className="sm:hidden">Report</span>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('real-time')}
-                      className={`${
-                        activeTab === 'real-time'
-                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500'
-                          : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
-                      } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="hidden sm:inline">Real-Time</span>
-                        <span className="sm:hidden">Live</span>
-                      </div>
-                    </button>
+        {/* Tabs - Responsive grid that falls into two rows on compact screens */}
+        <Card className="p-2 mb-4 sm:mb-6">
+          <nav className="grid grid-flow-col auto-cols-[minmax(150px,1fr)] grid-rows-2 gap-2 overflow-x-auto pb-2 sm:auto-cols-[minmax(180px,1fr)] md:grid-rows-1 md:overflow-visible xl:flex xl:flex-wrap">
+            {analyticsTabs.map(tab => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`${tabButtonBaseClasses} ${isActive ? tab.activeClass : inactiveTabClass}`}
+                >
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                  </div>
+                </button>
+              )
+            })}
           </nav>
         </Card>
 
@@ -990,6 +1012,37 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                     endDate={dateRange.endDate}
                     eventId={eventData?.id}
                   />
+                )}
+
+                {activeTab === 'crowd-intelligence' && (
+                  <section className="space-y-6">
+                    {crowdError && (
+                      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {crowdError}
+                      </div>
+                    )}
+                    <CrowdIntelligenceOverview
+                      metrics={crowdSummary?.metrics}
+                      sentimentTrend={crowdSummary?.sentimentTrend ?? []}
+                      keywordHighlights={crowdSummary?.keywordHighlights ?? []}
+                    />
+                    <div className="grid gap-6 xl:grid-cols-3">
+                      <div className="space-y-6 xl:col-span-2">
+                        <CrowdBehaviorMonitor
+                          insights={crowdSummary?.behaviorInsights ?? []}
+                          loading={crowdLoading}
+                        />
+                        <WelfareSentimentPanel
+                          insights={crowdSummary?.welfareInsights ?? []}
+                          loading={crowdLoading}
+                        />
+                      </div>
+                      <div className="space-y-6">
+                        <CrowdRiskMatrix zones={crowdSummary?.zoneRiskScores ?? []} />
+                        <CrowdAlertsList alerts={crowdSummary?.criticalAlerts ?? []} loading={crowdLoading} />
+                      </div>
+                    </div>
+                  </section>
                 )}
 
                 {activeTab === 'ai-insights' && (
