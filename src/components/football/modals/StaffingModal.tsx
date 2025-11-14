@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StaffingData, StaffingRole } from '@/types/football'
 import { Plus, Trash2, Users, AlertTriangle, CheckCircle, Heart, Shield } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface StaffingModalProps {
   onSave?: () => void
@@ -25,16 +26,47 @@ const getIconComponent = (iconName: string) => {
 
 // Actual Staffing Numbers Tab Component
 export function StaffingActual({ onSave }: StaffingModalProps) {
+  const [context, setContext] = useState<{ companyId: string; eventId: string } | null>(null)
+  const [contextLoading, setContextLoading] = useState(true)
   const [staffingData, setStaffingData] = useState<StaffingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [targetSettings, setTargetSettings] = useState({
     target_threshold: 90,
-    alert_threshold: 85
+    alert_threshold: 85,
   })
 
-  const loadData = async () => {
+  useEffect(() => {
+    const resolveContext = async () => {
+      setContextLoading(true)
+      try {
+        const [{ data: userResponse }, eventRes] = await Promise.all([
+          supabase.auth.getUser(),
+          fetch('/api/get-current-event'),
+        ])
+        const user = userResponse.user
+        if (!user) return
+        const eventJson = await eventRes.json()
+        const eventId = eventJson?.event?.id
+        if (!eventId) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single()
+        if (!profile?.company_id) return
+        setContext({ companyId: profile.company_id, eventId })
+      } catch (error) {
+        console.error('Failed to resolve staffing context', error)
+      } finally {
+        setContextLoading(false)
+      }
+    }
+    resolveContext()
+  }, [])
+
+  const loadData = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/staffing?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/staffing?company_id=${ctx.companyId}&event_id=${ctx.eventId}`)
       if (res.ok) {
         const data = await res.json()
         setStaffingData({ roles: data.roles })
@@ -46,15 +78,17 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
     }
   }
 
-  const loadTargetSettings = async () => {
+  const loadTargetSettings = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=staffing')
+      const res = await fetch(
+        `/api/football/settings?company_id=${ctx.companyId}&event_id=${ctx.eventId}&tool_type=staffing`
+      )
       if (res.ok) {
         const data = await res.json()
         if (data.settings_json) {
           setTargetSettings({
             target_threshold: data.settings_json.target_threshold || 90,
-            alert_threshold: data.settings_json.alert_threshold || 85
+            alert_threshold: data.settings_json.alert_threshold || 85,
           })
         }
       }
@@ -77,12 +111,14 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
   }
 
   useEffect(() => {
-    loadData()
-    loadTargetSettings()
-  }, [])
+    if (!context) return
+    setLoading(true)
+    loadData(context)
+    loadTargetSettings(context)
+  }, [context])
 
   const handleActualChange = async (roleId: string, actual: number) => {
-    if (!staffingData) return
+    if (!staffingData || !context) return
 
     const updatedRoles = staffingData.roles.map(role =>
       role.id === roleId ? { ...role, actual } : role
@@ -94,7 +130,11 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
     try {
       await fetch('/api/football/staffing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-company-id': context.companyId,
+          'x-event-id': context.eventId,
+        },
         body: JSON.stringify({ roleId, actual }),
       })
     } catch (error) {
@@ -102,7 +142,7 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
     }
   }
 
-  if (loading) {
+  if (loading || contextLoading) {
     return <div className="p-4 text-center">Loading...</div>
   }
 
@@ -201,30 +241,63 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
 
 // Deployment Tab Component
 export function StaffingDeployment({ onSave }: StaffingModalProps) {
+  const [context, setContext] = useState<{ companyId: string; eventId: string } | null>(null)
+  const [contextLoading, setContextLoading] = useState(true)
   const [staffingData, setStaffingData] = useState<StaffingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [newRole, setNewRole] = useState<Partial<StaffingRole>>({ 
-    name: '', 
-    planned: 0, 
-    actual: 0, 
-    icon: '👤', 
-    color: 'blue' 
+  const [newRole, setNewRole] = useState<Partial<StaffingRole>>({
+    name: '',
+    planned: 0,
+    actual: 0,
+    icon: '👤',
+    color: 'blue',
   })
   const [targetSettings, setTargetSettings] = useState({
-    target_threshold: 90, // Percentage of planned that's considered "at target"
-    alert_threshold: 85   // Percentage below which triggers alert
+    target_threshold: 90,
+    alert_threshold: 85,
   })
 
-  const loadTargetSettings = async () => {
+  useEffect(() => {
+    const resolveContext = async () => {
+      setContextLoading(true)
+      try {
+        const [{ data: userResponse }, eventRes] = await Promise.all([
+          supabase.auth.getUser(),
+          fetch('/api/get-current-event'),
+        ])
+        const user = userResponse.user
+        if (!user) return
+        const eventJson = await eventRes.json()
+        const eventId = eventJson?.event?.id
+        if (!eventId) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single()
+        if (!profile?.company_id) return
+        setContext({ companyId: profile.company_id, eventId })
+      } catch (error) {
+        console.error('Failed to resolve staffing context', error)
+      } finally {
+        setContextLoading(false)
+      }
+    }
+    resolveContext()
+  }, [])
+
+  const loadTargetSettings = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001&tool_type=staffing')
+      const res = await fetch(
+        `/api/football/settings?company_id=${ctx.companyId}&event_id=${ctx.eventId}&tool_type=staffing`
+      )
       if (res.ok) {
         const data = await res.json()
         if (data.settings_json) {
           setTargetSettings({
             target_threshold: data.settings_json.target_threshold || 90,
-            alert_threshold: data.settings_json.alert_threshold || 85
+            alert_threshold: data.settings_json.alert_threshold || 85,
           })
         }
       }
@@ -233,9 +306,9 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
     }
   }
 
-  const loadData = async () => {
+  const loadData = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/staffing?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/staffing?company_id=${ctx.companyId}&event_id=${ctx.eventId}`)
       if (res.ok) {
         const data = await res.json()
         setStaffingData({ roles: data.roles })
@@ -248,19 +321,22 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
   }
 
   useEffect(() => {
-    loadData()
-    loadTargetSettings()
-  }, [])
+    if (!context) return
+    setLoading(true)
+    loadData(context)
+    loadTargetSettings(context)
+  }, [context])
 
   const saveTargetSettings = async () => {
+    if (!context) return
     try {
-      await fetch('/api/football/settings?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001', {
+      await fetch(`/api/football/settings?company_id=${context.companyId}&event_id=${context.eventId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tool_type: 'staffing',
-          settings_json: targetSettings
-        })
+          settings_json: targetSettings,
+        }),
       })
       alert('Target settings saved successfully')
     } catch (error) {
@@ -270,15 +346,32 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
   }
 
   const handleSave = async () => {
-    if (!staffingData) return
-    
+    if (!staffingData || !context) return
+
     setSaving(true)
     try {
-      await fetch('/api/football/staffing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roles: staffingData.roles }),
-      })
+      await Promise.all(
+        staffingData.roles.map((role) =>
+          fetch('/api/football/staffing', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-company-id': context.companyId,
+              'x-event-id': context.eventId,
+            },
+            body: JSON.stringify({
+              action: 'update',
+              data: {
+                id: role.id,
+                name: role.name,
+                planned: role.planned,
+                icon: role.icon,
+                color: role.color,
+              },
+            }),
+          })
+        )
+      )
       onSave?.()
     } catch (error) {
       console.error('Failed to save staffing deployment:', error)
@@ -287,28 +380,60 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
     }
   }
 
-  const addRole = () => {
-    if (!staffingData || !newRole.name || newRole.planned === 0) return
-
-    const role: StaffingRole = {
-      id: `role-${Date.now()}`,
-      name: newRole.name,
-      planned: newRole.planned || 0,
-      actual: newRole.actual || 0,
-      icon: newRole.icon || 'users',
-      color: newRole.color || 'blue',
+  const addRole = async () => {
+    if (!context || !newRole.name || !newRole.planned) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/football/staffing', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-company-id': context.companyId,
+          'x-event-id': context.eventId,
+        },
+        body: JSON.stringify({
+          action: 'create',
+          data: {
+            name: newRole.name,
+            planned: newRole.planned,
+            icon: newRole.icon || 'users',
+            color: newRole.color || 'blue',
+          },
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to create role')
+      await loadData(context)
+      setNewRole({ name: '', planned: 0, actual: 0, icon: 'users', color: 'blue' })
+    } catch (error) {
+      console.error('Failed to create staffing role:', error)
+    } finally {
+      setSaving(false)
     }
-
-    const updatedRoles = [...staffingData.roles, role]
-    setStaffingData({ roles: updatedRoles })
-    setNewRole({ name: '', planned: 0, actual: 0, icon: 'users', color: 'blue' })
   }
 
-  const removeRole = (roleId: string) => {
-    if (!staffingData) return
-
-    const updatedRoles = staffingData.roles.filter(r => r.id !== roleId)
-    setStaffingData({ roles: updatedRoles })
+  const removeRole = async (roleId: string) => {
+    if (!context) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/football/staffing', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-company-id': context.companyId,
+          'x-event-id': context.eventId,
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          data: { id: roleId },
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to delete role')
+      await loadData(context)
+    } catch (error) {
+      console.error('Failed to delete staffing role:', error)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const updateRole = (roleId: string, updates: Partial<StaffingRole>) => {

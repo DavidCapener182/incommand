@@ -4,6 +4,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 
+export const STAND_COUNTDOWN_OFFSETS = [0, 10, 20, 30, 40, 50, 60]
+const DEFAULT_COUNTDOWN_PERCENTAGES: Record<number, number> = {
+  60: 20,
+  50: 30,
+  40: 45,
+  30: 65,
+  20: 82,
+  10: 92,
+  0: 100,
+}
+
 export interface CrowdFlowPrediction {
   currentCount: number
   predictedCounts: {
@@ -311,7 +322,9 @@ export async function predictStandFlow(
   standName: string,
   capacity: number,
   timeWindowMinutes: number = 60,
-  currentOccupancy?: number // Allow passing current occupancy directly
+  currentOccupancy?: number,
+  companyId?: string,
+  kickoffTime?: Date
 ): Promise<StandFlowPrediction> {
   try {
     const supabaseClient = supabase as SupabaseClient<any>
@@ -357,6 +370,39 @@ export async function predictStandFlow(
 
     let predictedOccupancy: StandFlowPrediction['predictedOccupancy'] = []
 
+    if (companyId && kickoffTime) {
+      const historical = await getHistoricalStandPercentages(
+        supabaseClient,
+        companyId,
+        eventId,
+        kickoffTime
+      )
+
+      if (historical.length > 0) {
+        predictedOccupancy = historical.map(({ offset, percentage }) => {
+          const targetTime = new Date(kickoffTime.getTime() - offset * 60000)
+          const predicted = Math.min(capacity * 1.05, (percentage / 100) * capacity)
+
+          let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
+          if (percentage >= 100) riskLevel = 'critical'
+          else if (percentage >= 90) riskLevel = 'high'
+          else if (percentage >= 75) riskLevel = 'medium'
+
+          return {
+            time: targetTime.toISOString(),
+            minutesAhead: offset,
+            predictedOccupancy: Math.round(predicted),
+            percentage: Math.round(percentage),
+            riskLevel,
+          }
+        })
+      }
+    }
+
+    if (predictedOccupancy.length > 0) {
+      return buildStandPredictionResponse(resolvedStandId, standName, current, capacity, predictedOccupancy)
+    }
+
     if (venueRecords && venueRecords.length >= 2) {
       // Calculate venue growth rate
       const venueRates: number[] = []
@@ -396,53 +442,205 @@ export async function predictStandFlow(
           riskLevel
         })
       }
-    } else {
-      // Default predictions
-      const now = new Date()
-      const estimatedRate = capacity > 0 ? (capacity - current) / (timeWindowMinutes * 2) : 0
-      
-      for (let minutesAhead = 10; minutesAhead <= timeWindowMinutes; minutesAhead += 10) {
-        const predictedTime = new Date(now.getTime() + minutesAhead * 60000)
-        const predicted = Math.min(capacity * 1.05, current + (estimatedRate * minutesAhead))
-        const percentage = (predicted / capacity) * 100
-
-        let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
-        if (percentage >= 100) riskLevel = 'critical'
-        else if (percentage >= 90) riskLevel = 'high'
-        else if (percentage >= 75) riskLevel = 'medium'
-
-        predictedOccupancy.push({
-          time: predictedTime.toISOString(),
-          minutesAhead,
-          predictedOccupancy: Math.round(predicted),
-          percentage: Math.round(percentage),
-          riskLevel
-        })
-      }
     }
 
-    // Find peak
-    const peak = predictedOccupancy.length > 0
-      ? predictedOccupancy.reduce((max, pred) => 
-          pred.predictedOccupancy > max.predictedOccupancy ? pred : max
-        )
-      : null
-
-    return {
-      standId: resolvedStandId,
-      standName,
-      currentOccupancy: current,
-      capacity,
-      predictedOccupancy,
-      peakPrediction: peak ? {
-        time: peak.time,
-        occupancy: peak.predictedOccupancy,
-        percentage: peak.percentage
-      } : null
+    if (predictedOccupancy.length === 0) {
+      predictedOccupancy = buildBehavioralStandCurve(capacity, kickoffTime)
     }
+
+    return buildStandPredictionResponse(resolvedStandId, standName, current, capacity, predictedOccupancy)
   } catch (error) {
     console.error('Error predicting stand flow:', error)
     throw error
   }
+}
+
+function buildStandPredictionResponse(
+  standId: string,
+  standName: string,
+  currentOccupancy: number,
+  capacity: number,
+  predictedOccupancy: StandFlowPrediction['predictedOccupancy']
+): StandFlowPrediction {
+  const normalized = enforceMonotonicPredictions(predictedOccupancy, capacity)
+  const peakPrediction =
+    normalized.length > 0
+      ? normalized.reduce((max, point) => (point.predictedOccupancy > max.predictedOccupancy ? point : max))
+      : null
+
+  return {
+    standId,
+    standName,
+    currentOccupancy,
+    capacity,
+    predictedOccupancy: normalized,
+    peakPrediction: peakPrediction
+      ? {
+          time: peakPrediction.time,
+          occupancy: peakPrediction.predictedOccupancy,
+          percentage: peakPrediction.percentage,
+        }
+      : null,
+  }
+}
+
+function buildBehavioralStandCurve(capacity: number, kickoffTime?: Date | null) {
+  const referenceTime = kickoffTime ?? new Date()
+  return STAND_COUNTDOWN_OFFSETS.filter((offset) => offset > 0).map((offset) => {
+    const percentage = DEFAULT_COUNTDOWN_PERCENTAGES[offset] ?? 75
+    const predicted = Math.round(((percentage / 100) * (capacity || 0)))
+    const targetTime = kickoffTime
+      ? new Date(kickoffTime.getTime() - offset * 60000)
+      : new Date(referenceTime.getTime() + offset * 60000)
+
+    let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
+    if (percentage >= 100) riskLevel = 'critical'
+    else if (percentage >= 90) riskLevel = 'high'
+    else if (percentage >= 75) riskLevel = 'medium'
+
+    return {
+      time: targetTime.toISOString(),
+      minutesAhead: offset,
+      predictedOccupancy: predicted,
+      percentage: Math.min(100, percentage),
+      riskLevel,
+    }
+  })
+}
+
+function enforceMonotonicPredictions(
+  predictions: StandFlowPrediction['predictedOccupancy'],
+  capacity: number
+): StandFlowPrediction['predictedOccupancy'] {
+  const sortedDesc = [...predictions].sort((a, b) => b.minutesAhead - a.minutesAhead)
+  let lastOccupancy = 0
+  const adjustedDesc = sortedDesc.map((entry) => {
+    const occupancy = Math.max(entry.predictedOccupancy, lastOccupancy)
+    const percentage = capacity > 0 ? Math.min(100, (occupancy / capacity) * 100) : 0
+    lastOccupancy = occupancy
+    return {
+      ...entry,
+      predictedOccupancy: occupancy,
+      percentage,
+    }
+  })
+
+  return adjustedDesc.sort((a, b) => a.minutesAhead - b.minutesAhead)
+}
+
+async function getHistoricalStandPercentages(
+  supabase: SupabaseClient<any>,
+  companyId: string,
+  currentEventId: string,
+  kickoffTime: Date
+): Promise<Array<{ offset: number; percentage: number }>> {
+  const fetchEvents = async (companyFilter?: string | null) => {
+    let query = supabase
+      .from('events' as any)
+      .select('id, company_id, event_type, event_date, start_datetime, main_act_start_time, venue_capacity, expected_attendance')
+      .ilike('event_type', '%football%')
+      .neq('id', currentEventId)
+      .order('event_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(4)
+
+    if (companyFilter) {
+      query = query.eq('company_id', companyFilter)
+    }
+
+    const { data } = await query
+    return data ?? []
+  }
+
+  let previousEvents = await fetchEvents(companyId)
+  if (!previousEvents || previousEvents.length === 0) {
+    previousEvents = await fetchEvents(null)
+  }
+
+  if (!previousEvents || previousEvents.length === 0) {
+    return STAND_COUNTDOWN_OFFSETS.map((offset) => ({
+      offset,
+      percentage: DEFAULT_COUNTDOWN_PERCENTAGES[offset] ?? 80,
+    }))
+  }
+
+  const accumulator: Record<number, number[]> = {}
+
+  for (const event of previousEvents) {
+    const eventKickoff = deriveKickoffFromEvent(event)
+    const capacity = event.venue_capacity || event.expected_attendance || 0
+    if (!eventKickoff || !capacity) continue
+
+    const fromTime = new Date(eventKickoff.getTime() - 2 * 60 * 60 * 1000).toISOString()
+    const toTime = eventKickoff.toISOString()
+
+    const { data: records } = await supabase
+      .from('attendance_records' as any)
+      .select('count, timestamp')
+      .eq('event_id', event.id)
+      .gte('timestamp', fromTime)
+      .lte('timestamp', toTime)
+      .order('timestamp', { ascending: true })
+
+    if (!records || records.length === 0) continue
+
+    for (const offset of STAND_COUNTDOWN_OFFSETS) {
+      const targetTime = new Date(eventKickoff.getTime() - offset * 60000)
+      const nearest = records.reduce(
+        (closest, record) => {
+          const diff = Math.abs(new Date(record.timestamp).getTime() - targetTime.getTime())
+          if (diff < closest.diff) {
+            return { diff, record }
+          }
+          return closest
+        },
+        { diff: Infinity, record: null as { count: number } | null }
+      ).record
+
+      if (!nearest) continue
+
+      const percentage = Math.min(100, (nearest.count / capacity) * 100)
+      if (!accumulator[offset]) {
+        accumulator[offset] = []
+      }
+      accumulator[offset].push(percentage)
+    }
+  }
+
+  return STAND_COUNTDOWN_OFFSETS.map((offset) => {
+    const samples = accumulator[offset]
+    if (!samples || samples.length === 0) return null
+    const avg = samples.reduce((sum, value) => sum + value, 0) / samples.length
+    return { offset, percentage: avg }
+  })
+    .filter(Boolean)
+    .map((entry) => entry as { offset: number; percentage: number })
+    .concat(
+      STAND_COUNTDOWN_OFFSETS.filter((offset) => !accumulator[offset] || accumulator[offset].length === 0).map(
+        (offset) => ({
+          offset,
+          percentage: DEFAULT_COUNTDOWN_PERCENTAGES[offset] ?? 80,
+        })
+      )
+    )
+    .sort((a, b) => b.offset - a.offset)
+}
+
+function deriveKickoffFromEvent(event: {
+  start_datetime?: string | null
+  event_date?: string | null
+  main_act_start_time?: string | null
+}): Date | null {
+  if (event.start_datetime) {
+    return new Date(event.start_datetime)
+  }
+  if (event.event_date && event.main_act_start_time) {
+    const time = event.main_act_start_time.includes(':')
+      ? event.main_act_start_time
+      : `${event.main_act_start_time}:00`
+    const normalized = time.length === 5 ? `${time}:00` : time
+    return new Date(`${event.event_date}T${normalized}`)
+  }
+  return null
 }
 

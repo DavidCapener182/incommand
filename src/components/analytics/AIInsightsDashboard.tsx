@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { supabase } from '@/lib/supabase'
 import { 
   detectTrends, 
   detectAnomalies, 
@@ -22,11 +23,13 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
 
 interface AIInsightsDashboardProps {
   startDate: Date
   endDate: Date
   eventId?: string
+  readiness?: ReadinessScore | null
 }
 
 interface IncidentData {
@@ -59,7 +62,16 @@ const SEVERITY_COLORS = {
   critical: 'text-red-800 bg-red-200 dark:text-red-300 dark:bg-red-900/50'
 }
 
-export default function AIInsightsDashboard({ startDate, endDate, eventId }: AIInsightsDashboardProps) {
+const READINESS_LABELS: Record<string, string> = {
+  staffing: 'Staffing',
+  incident_pressure: 'Incident Pressure',
+  weather: 'Weather',
+  transport: 'Transport',
+  assets: 'Assets',
+  crowd_density: 'Crowd Attendance',
+}
+
+export default function AIInsightsDashboard({ startDate, endDate, eventId, readiness }: AIInsightsDashboardProps) {
   const [incidentData, setIncidentData] = useState<IncidentData[]>([])
   const [loading, setLoading] = useState(true)
   const [trends, setTrends] = useState<Record<string, TrendAnalysis>>({})
@@ -75,37 +87,60 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
   // Fetch incident data
   useEffect(() => {
+    let cancelled = false
+
     const fetchData = async () => {
+      if (!eventId) {
+        setIncidentData([])
+        setTrends({})
+        setAnomalies([])
+        setForecasts({})
+        setPatterns([])
+        setConfidence({
+          overall: 0,
+          trends: 0,
+          predictions: 0,
+          patterns: 0
+        })
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       try {
-        // Simulate API call - replace with actual Supabase query
-        const mockData: IncidentData[] = generateMockData(startDate, endDate)
-        setIncidentData(mockData)
+        const { data: incidents, error } = await supabase
+          .from('incident_logs')
+          .select('id, created_at, responded_at, resolved_at, updated_at, status, is_closed, priority, incident_type, event_id')
+          .eq('event_id', eventId)
+          .order('created_at', { ascending: true })
 
-        // Analyze trends
-        const trendData = mockData.map(d => ({
+        if (error) throw error
+
+        const processed = aggregateIncidentData(incidents || [], startDate, endDate)
+        if (cancelled) return
+        setIncidentData(processed)
+
+        const trendData = processed.map(d => ({
           period: new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
           value: d.incident_count,
           timestamp: d.timestamp
         }))
 
+        const responseTrendData = processed.map(d => ({
+          period: new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          value: d.response_time,
+          timestamp: d.timestamp
+        }))
+
+        const qualityTrendData = processed.map(d => ({
+          period: new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          value: d.quality_score,
+          timestamp: d.timestamp
+        }))
+
         const incidentTrend = detectTrends(trendData, 'incident_count')
-        const responseTimeTrend = detectTrends(
-          mockData.map(d => ({
-            period: new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-            value: d.response_time,
-            timestamp: d.timestamp
-          })), 
-          'response_time'
-        )
-        const qualityTrend = detectTrends(
-          mockData.map(d => ({
-            period: new Date(d.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-            value: d.quality_score,
-            timestamp: d.timestamp
-          })), 
-          'quality_score'
-        )
+        const responseTimeTrend = detectTrends(responseTrendData, 'response_time')
+        const qualityTrend = detectTrends(qualityTrendData, 'quality_score')
 
         setTrends({
           incident_count: incidentTrend,
@@ -113,26 +148,31 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           quality_score: qualityTrend
         })
 
-        // Detect anomalies
         const detectedAnomalies = detectAnomalies(trendData, 'incident_count')
         setAnomalies(detectedAnomalies)
 
-        // Generate forecasts
-        const incidentForecast = generateForecast(trendData, 'incident_count', 'next 4 hours')
-        setForecasts({
-          incident_count: incidentForecast
-        })
+        const incidentForecast = trendData.length > 0
+          ? generateForecast(trendData, 'incident_count', 'next 4 hours')
+          : {
+              metric: 'incident_count',
+              currentValue: 0,
+              predictedValue: 0,
+              confidence: 0,
+              timeframe: 'next 4 hours',
+              factors: ['Insufficient data'],
+              recommendation: 'Collect more data for accurate forecasting'
+            }
 
-        // Detect patterns and calculate confidence
-        const detectedPatterns = await detectAdvancedPatterns(mockData)
+        setForecasts(trendData.length > 0 ? { incident_count: incidentForecast } : {})
+
+        const detectedPatterns = processed.length > 0 ? await detectAdvancedPatterns(processed) : []
         setPatterns(detectedPatterns)
 
-        // Calculate confidence metrics
         const confidenceMetrics = calculateConfidenceMetrics(
-          incidentTrend, 
-          responseTimeTrend, 
-          qualityTrend, 
-          detectedAnomalies, 
+          incidentTrend,
+          responseTimeTrend,
+          qualityTrend,
+          detectedAnomalies,
           incidentForecast,
           detectedPatterns
         )
@@ -140,12 +180,31 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
       } catch (error) {
         console.error('Error fetching AI insights data:', error)
+        if (!cancelled) {
+          setIncidentData([])
+          setTrends({})
+          setAnomalies([])
+          setForecasts({})
+          setPatterns([])
+          setConfidence({
+            overall: 0,
+            trends: 0,
+            predictions: 0,
+            patterns: 0
+          })
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     fetchData()
+
+    return () => {
+      cancelled = true
+    }
   }, [startDate, endDate, eventId])
 
   // Chart data preparation
@@ -184,6 +243,44 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
           AI Insights
         </h2>
       </div>
+
+      {readiness && (
+        <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 p-5 card-depth">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+                Operational Readiness
+              </p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {readiness.overall_score}%
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Trend: {readiness.trend.charAt(0).toUpperCase() + readiness.trend.slice(1)}
+              </p>
+            </div>
+            <a
+              href="#operational-readiness-card"
+              className="text-xs font-semibold text-blue-600 dark:text-blue-300 hover:underline"
+            >
+              View readiness breakdown →
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+            {Object.entries(readiness.component_scores)
+              .slice(0, 6)
+              .map(([key, value]) => (
+                <div key={key} className="rounded-lg bg-blue-50/70 dark:bg-blue-900/20 p-2 flex flex-col gap-1">
+                  <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {READINESS_LABELS[key] || key}
+                  </span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-white">
+                    {value.score}%
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Confidence Metrics */}
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6 card-depth">
@@ -299,15 +396,19 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
       </div>
 
       {/* Pattern Analysis Section */}
-      {patterns.length > 0 && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
-          <div className="flex items-center gap-3 mb-4">
-            <LightBulbIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pattern Analysis</h3>
-            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 text-xs font-medium rounded-full">
-              {patterns.length}
-            </span>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
+        <div className="flex items-center gap-3 mb-4">
+          <LightBulbIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pattern Analysis</h3>
+          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 text-xs font-medium rounded-full">
+            {patterns.length}
+          </span>
+        </div>
+        {patterns.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-purple-200 dark:border-purple-800/50 p-4 text-sm text-purple-800 dark:text-purple-200 bg-purple-50/60 dark:bg-purple-900/10">
+            Not enough incident signal yet. Capture more event activity to unlock advanced pattern detection.
           </div>
+        ) : (
           <div className="space-y-3">
             {patterns.map((pattern, index) => (
               <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -328,19 +429,23 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Anomalies Section */}
-      {anomalies.length > 0 && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
-          <div className="flex items-center gap-3 mb-4">
-            <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anomalies Detected</h3>
-            <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 text-xs font-medium rounded-full">
-              {anomalies.length}
-            </span>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
+        <div className="flex items-center gap-3 mb-4">
+          <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Anomalies Detected</h3>
+          <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 text-xs font-medium rounded-full">
+            {anomalies.length}
+          </span>
+        </div>
+        {anomalies.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-amber-200 dark:border-amber-800/50 p-4 text-sm text-amber-800 dark:text-amber-200 bg-amber-50/60 dark:bg-amber-900/10">
+            No unusual spikes detected yet. Once we log more activity, anomaly monitoring will activate automatically.
           </div>
+        ) : (
           <div className="space-y-3">
             {anomalies.slice(0, 5).map((anomaly, index) => (
               <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -361,16 +466,16 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Forecasts Section */}
-      {forecasts.incident_count && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
-          <div className="flex items-center gap-3 mb-4">
-            <EyeIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Predictions</h3>
-          </div>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
+        <div className="flex items-center gap-3 mb-4">
+          <EyeIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Predictions</h3>
+        </div>
+        {forecasts.incident_count ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">Next 4 Hours</h4>
@@ -412,8 +517,12 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
               </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="rounded-lg border border-dashed border-purple-200 dark:border-purple-800/50 p-4 text-sm text-purple-800 dark:text-purple-200 bg-purple-50/60 dark:bg-purple-900/10">
+            Forecast engine needs more recent incidents to project the next 4 hours. Refresh once there’s additional activity.
+          </div>
+        )}
+      </div>
 
       {/* Trend Visualization */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-6 card-depth">
@@ -463,6 +572,7 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId }: AII
 
 // Advanced pattern detection
 async function detectAdvancedPatterns(data: IncidentData[]): Promise<PatternAnalysis[]> {
+  if (data.length === 0) return []
   const patterns: PatternAnalysis[] = []
   
   // Detect correlation between incident count and response time
@@ -586,39 +696,95 @@ function calculateTrend(values: number[]): number {
   return (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
 }
 
-// Mock data generator for development
-function generateMockData(startDate: Date, endDate: Date): IncidentData[] {
-  const data: IncidentData[] = []
-  const now = new Date(startDate)
-  
-  // Generate hourly data points
-  while (now <= endDate) {
-    // Simulate realistic patterns with some randomness
-    const hour = now.getHours()
-    let baseIncidents = 2
-    
-    // Peak hours (evening events)
-    if (hour >= 18 && hour <= 22) {
-      baseIncidents = 8 + Math.random() * 6
-    } else if (hour >= 12 && hour <= 17) {
-      baseIncidents = 4 + Math.random() * 4
+interface RawIncident {
+  id: number
+  created_at: string
+  responded_at?: string | null
+  resolved_at?: string | null
+  updated_at?: string | null
+  status?: string | null
+  is_closed?: boolean | null
+  priority?: string | null
+}
+
+function aggregateIncidentData(incidents: RawIncident[], startDate: Date, endDate: Date): IncidentData[] {
+  if (!incidents || incidents.length === 0) return []
+
+  const start = startDate.getTime()
+  const end = endDate.getTime()
+
+  const buckets: Record<string, {
+    timestamp: string
+    incident_count: number
+    responseTotal: number
+    responseSamples: number
+    closedCount: number
+  }> = {}
+
+  incidents.forEach(incident => {
+    if (!incident.created_at) return
+    const created = new Date(incident.created_at)
+    const createdTime = created.getTime()
+    if (Number.isNaN(createdTime)) return
+    if (createdTime < start || createdTime > end) return
+
+    const bucketDate = new Date(created)
+    bucketDate.setMinutes(0, 0, 0)
+    const bucketKey = bucketDate.toISOString()
+
+    if (!buckets[bucketKey]) {
+      buckets[bucketKey] = {
+        timestamp: bucketKey,
+        incident_count: 0,
+        responseTotal: 0,
+        responseSamples: 0,
+        closedCount: 0
+      }
     }
-    
-    // Add some anomalies
-    if (Math.random() < 0.1) {
-      baseIncidents *= (2 + Math.random() * 2) // Spike
+
+    const bucket = buckets[bucketKey]
+    bucket.incident_count += 1
+
+    const responseMinutes = calculateResponseMinutes(incident)
+    if (responseMinutes !== null) {
+      bucket.responseTotal += responseMinutes
+      bucket.responseSamples += 1
     }
-    
-    data.push({
-      timestamp: now.toISOString(),
-      incident_count: Math.round(baseIncidents),
-      response_time: 5 + Math.random() * 15,
-      quality_score: 75 + Math.random() * 20,
-      compliance_rate: 85 + Math.random() * 15
+
+    if (incident.status === 'closed' || incident.is_closed) {
+      bucket.closedCount += 1
+    }
+  })
+
+  return Object.values(buckets)
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    .map(bucket => {
+      const responseAvg = bucket.responseSamples > 0 ? bucket.responseTotal / bucket.responseSamples : 0
+      const complianceRate = bucket.incident_count > 0
+        ? (bucket.closedCount / bucket.incident_count) * 100
+        : 0
+      const qualityScore = bucket.incident_count > 0
+        ? Math.min(100, Math.max(60, 70 + (complianceRate * 0.3) - (responseAvg > 30 ? 10 : 0)))
+        : 70
+
+      return {
+        timestamp: bucket.timestamp,
+        incident_count: bucket.incident_count,
+        response_time: Number(responseAvg.toFixed(1)),
+        quality_score: Number(qualityScore.toFixed(1)),
+        compliance_rate: Number(Math.min(100, complianceRate).toFixed(1))
+      }
     })
-    
-    now.setHours(now.getHours() + 1)
-  }
-  
-  return data
+}
+
+function calculateResponseMinutes(incident: RawIncident): number | null {
+  if (!incident.created_at) return null
+  const start = new Date(incident.created_at).getTime()
+  const endSource = incident.responded_at || incident.resolved_at || incident.updated_at
+  if (!endSource) return null
+
+  const end = new Date(endSource).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null
+
+  return Math.round((end - start) / (1000 * 60))
 }

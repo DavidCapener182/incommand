@@ -5,19 +5,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { FootballData } from '@/types/football'
 import FootballCard_StandOccupancy from './FootballCard_StandOccupancy'
 import FootballCard_LiveScore from './FootballCard_LiveScore'
-import FootballCard_GateStatus from './FootballCard_GateStatus'
 import FootballCard_MedicalPolicing from './FootballCard_MedicalPolicing'
 import FootballCard_Transport from './FootballCard_TransportWeather'
 import SupportToolModal from '../../football/modals/SupportToolModal'
 import { StandOccupancyCurrent, StandOccupancySetup } from '../../football/modals/StandOccupancyModal'
 import { StaffingActual, StaffingDeployment } from '../../football/modals/StaffingModal'
 import { FixtureCurrent, FixtureSetup } from '../../football/modals/FixtureModal'
-import { CrowdCurrent, CrowdSetup } from '../../football/modals/CrowdModal'
 import { TransportCurrent, TransportSetup } from '../../football/modals/TransportModal'
 
 export default function SupportToolsFootball() {
   const [data, setData] = useState<FootballData | null>(null)
-  const [activeModal, setActiveModal] = useState<null | 'stand' | 'staff' | 'fixture' | 'crowd' | 'transport'>(null)
+  const [activeModal, setActiveModal] = useState<null | 'stand' | 'staff' | 'fixture' | 'transport'>(null)
 
   useEffect(() => {
     let mounted = true
@@ -31,7 +29,7 @@ export default function SupportToolsFootball() {
     return () => { mounted = false }
   }, [])
 
-  const handleOpenModal = (modalType: 'stand' | 'staff' | 'fixture' | 'crowd' | 'transport') => {
+  const handleOpenModal = (modalType: 'stand' | 'staff' | 'fixture' | 'transport') => {
     console.log('handleOpenModal called with:', modalType)
     setActiveModal(modalType)
   }
@@ -43,22 +41,14 @@ export default function SupportToolsFootball() {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-5">
-        {/* Each wrapper uses flex + uniform height for consistent sizing */}
-        <div className="col-span-1 flex h-[260px]">
+        <div className="col-span-1 md:col-span-2 lg:col-span-2 flex h-[260px]">
           <FootballCard_StandOccupancy 
             className="flex-1" 
             onOpenModal={() => handleOpenModal('stand')}
           />
         </div>
 
-        <div className="col-span-1 flex h-[260px]">
-          <FootballCard_MedicalPolicing 
-            className="flex-1" 
-            onOpenModal={() => handleOpenModal('staff')}
-          />
-        </div>
-
-        <div className="col-span-2 flex h-[260px]">
+        <div className="col-span-1 md:col-span-2 lg:col-span-2 flex h-[260px]">
           <FootballCard_LiveScore 
             className="flex-1" 
             onOpenModal={() => handleOpenModal('fixture')}
@@ -66,9 +56,9 @@ export default function SupportToolsFootball() {
         </div>
 
         <div className="col-span-1 flex h-[260px]">
-          <FootballCard_GateStatus 
+          <FootballCard_MedicalPolicing 
             className="flex-1" 
-            onOpenModal={() => handleOpenModal('crowd')}
+            onOpenModal={() => handleOpenModal('staff')}
           />
         </div>
 
@@ -106,14 +96,6 @@ export default function SupportToolsFootball() {
         isOpen={activeModal === 'fixture'}
           onClose={() => setActiveModal(null)}
           onSave={() => console.log('Fixture checklist saved')}
-        />
-        <SupportToolModal
-          title="Crowd Movement & Gate Status"
-          currentTab={<CrowdCurrent />}
-          setupTab={<CrowdSetup />}
-        isOpen={activeModal === 'crowd'}
-          onClose={() => setActiveModal(null)}
-          onSave={() => console.log('Gate configuration saved')}
         />
         <SupportToolModal
           title="Transport Status"

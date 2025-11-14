@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FootballData } from '@/types/football'
 import { RefreshCw, Download, Settings } from 'lucide-react'
-import QuickSettingsDropdown, { QuickSettingItem } from '@/components/football/QuickSettingsDropdown'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
+import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
 
 interface FootballCard_MedicalPolicingProps {
   className?: string
@@ -15,7 +15,7 @@ interface FootballCard_MedicalPolicingProps {
 export default function FootballCard_MedicalPolicing({ className, onOpenModal }: FootballCard_MedicalPolicingProps) {
   const [data, setData] = useState<FootballData | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [staffingData, setStaffingData] = useState<any>(null)
+  const [staffingSnapshot, setStaffingSnapshot] = useState<StaffingIngestionBundle | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -79,51 +79,82 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
       }
     }
     load()
-    
-    // Load staffing data for planned numbers
-    const loadStaffing = async () => {
+
+    const loadStaffingSnapshot = async () => {
       try {
-        const res = await fetch('/api/football/staffing?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
-        if (res.ok && mounted) {
-          const json = await res.json()
-          setStaffingData(json)
+        const eventRes = await fetch('/api/get-current-event')
+        if (!eventRes.ok) return
+        const eventJson = await eventRes.json()
+        const eventId = eventJson?.event?.id
+        if (!eventId) return
+        const snapshotRes = await fetch(`/api/staffing/insights?eventId=${eventId}`)
+        if (!snapshotRes.ok) {
+          console.error('Failed to load staffing insights:', await snapshotRes.text())
+          return
         }
+        const payload = await snapshotRes.json()
+        if (mounted) setStaffingSnapshot(payload.data)
       } catch (error) {
-        console.error('Failed to load staffing data:', error)
+        console.error('Failed to load staffing snapshot:', error)
       }
     }
-    loadStaffing()
+    loadStaffingSnapshot()
 
     if (autoRefresh) {
       const id = setInterval(() => {
         load()
-        loadStaffing()
+        loadStaffingSnapshot()
       }, 30000)
       return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
   }, [autoRefresh])
 
-  const totalDeployed = useMemo(() => {
-    if (!data) return 0
-    return (data.medicalPolicing.medicalTeams || 0) + 
-           (data.medicalPolicing.policeDeployed || 0) + 
-           (data.medicalPolicing.stewards || 0)
-  }, [data])
+  const staffingTotals = useMemo(() => {
+    const fallbackSecurity = data?.medicalPolicing.stewards ?? 0
+    const fallbackPolice = data?.medicalPolicing.policeDeployed ?? 0
+    const fallbackMedical = data?.medicalPolicing.medicalTeams ?? 0
 
-  const totalPlanned = useMemo(() => {
-    if (!staffingData?.roles) return 0
-    return staffingData.roles.reduce((sum: number, role: any) => sum + (role.planned || 0), 0)
-  }, [staffingData])
+    if (!staffingSnapshot) {
+      const fallbackTotal = fallbackSecurity + fallbackPolice + fallbackMedical
+      return {
+        totalActual: fallbackTotal,
+        totalPlanned: fallbackTotal,
+        policeActual: fallbackPolice,
+        policePlanned: fallbackPolice,
+        securityActual: fallbackSecurity,
+        securityPlanned: fallbackSecurity,
+        medicalActual: fallbackMedical,
+        medicalPlanned: fallbackMedical,
+      }
+    }
+
+    const findDiscipline = (name: string) =>
+      staffingSnapshot.disciplines.find((d) => d.discipline === name)
+
+    const security = findDiscipline('security')
+    const police = findDiscipline('police')
+    const medical = findDiscipline('medical')
+
+    return {
+      totalActual: staffingSnapshot.disciplines.reduce((sum, disc) => sum + disc.actual, 0),
+      totalPlanned: staffingSnapshot.disciplines.reduce((sum, disc) => sum + disc.planned, 0),
+      policeActual: police?.actual ?? fallbackPolice,
+      policePlanned: police?.planned ?? (police?.actual ?? fallbackPolice),
+      securityActual: security?.actual ?? fallbackSecurity,
+      securityPlanned: security?.planned ?? (security?.actual ?? fallbackSecurity),
+      medicalActual: medical?.actual ?? fallbackMedical,
+      medicalPlanned: medical?.planned ?? (medical?.actual ?? fallbackMedical),
+    }
+  }, [data, staffingSnapshot])
 
   const statusType = useMemo((): StatusType => {
-    if (!data || !staffingData?.roles || totalPlanned === 0) return 'normal'
-    const percentOfPlanned = (totalDeployed / totalPlanned) * 100
-    // 90% threshold - below is alert, 90-100% is busy, 100%+ is normal
+    if (staffingTotals.totalPlanned === 0) return 'normal'
+    const percentOfPlanned = (staffingTotals.totalActual / staffingTotals.totalPlanned) * 100
     if (percentOfPlanned < 90) return 'alert'
     if (percentOfPlanned < 100) return 'busy'
     return 'normal'
-  }, [data, staffingData, totalDeployed, totalPlanned])
+  }, [staffingTotals])
 
   const handleExportReport = async () => {
     try {
@@ -143,25 +174,6 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
       console.error('Failed to export report:', error)
     }
   }
-
-  const settingsItems: QuickSettingItem[] = [
-    {
-      type: 'checkbox',
-      label: 'Auto-Refresh',
-      checked: autoRefresh,
-      onCheckedChange: setAutoRefresh,
-      icon: <RefreshCw className="h-4 w-4" />
-    },
-    {
-      type: 'separator'
-    },
-    {
-      type: 'action',
-      label: 'Export Staffing Report',
-      action: handleExportReport,
-      icon: <Download className="h-4 w-4" />
-    }
-  ]
 
   return (
     <div className={`h-full card-depth p-4 space-y-2 relative overflow-hidden flex flex-col ${className || ''}`}>
@@ -191,7 +203,7 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
         <h3 className="text-gray-800 font-semibold text-lg">
           Staffing Levels
         </h3>
-        {data && staffingData && (
+        {staffingSnapshot && (
           <StatusIndicator 
             status={statusType} 
             message={statusType === 'alert' ? 'Below Target' : statusType === 'busy' ? 'Near Target' : 'At Target'}
@@ -206,20 +218,33 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
       ) : (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="text-sm text-gray-600 mb-2 flex-shrink-0">
-            Total Deployed: <span className="font-semibold text-gray-900">{totalDeployed}</span>
-            {staffingData && totalPlanned > 0 && (
+            Total Deployed:{' '}
+            <span className="font-semibold text-gray-900">
+              {staffingTotals.totalActual.toLocaleString()}
+              {staffingTotals.totalPlanned > 0 && ` / ${staffingTotals.totalPlanned.toLocaleString()}`}
+            </span>
+            {staffingTotals.totalPlanned > 0 && (
               <span className="text-xs text-gray-500 ml-2">
-                ({((totalDeployed / totalPlanned) * 100).toFixed(0)}% of planned)
+                ({((staffingTotals.totalActual / staffingTotals.totalPlanned) * 100).toFixed(0)}% of planned)
               </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm flex-shrink-0">
             <span className="text-gray-700">Police</span>
-            <span className="font-medium text-gray-900 text-right">{data.medicalPolicing.policeDeployed}</span>
-            <span className="text-gray-700">Stewards</span>
-            <span className="font-medium text-gray-900 text-right">{data.medicalPolicing.stewards}</span>
+            <span className="font-medium text-gray-900 text-right">
+              {staffingTotals.policeActual.toLocaleString()}
+              {staffingTotals.policePlanned > 0 && ` / ${staffingTotals.policePlanned.toLocaleString()}`}
+            </span>
+            <span className="text-gray-700">Security</span>
+            <span className="font-medium text-gray-900 text-right">
+              {staffingTotals.securityActual.toLocaleString()}
+              {staffingTotals.securityPlanned > 0 && ` / ${staffingTotals.securityPlanned.toLocaleString()}`}
+            </span>
             <span className="text-gray-700">Med Teams</span>
-            <span className="font-medium text-gray-900 text-right">{data.medicalPolicing.medicalTeams}</span>
+            <span className="font-medium text-gray-900 text-right">
+              {staffingTotals.medicalActual.toLocaleString()}
+              {staffingTotals.medicalPlanned > 0 && ` / ${staffingTotals.medicalPlanned.toLocaleString()}`}
+            </span>
           </div>
         </div>
       )}

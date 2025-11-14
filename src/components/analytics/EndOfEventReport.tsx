@@ -15,17 +15,20 @@ import {
   LightBulbIcon,
   CalendarIcon,
   MapPinIcon,
-  TrophyIcon
+  TrophyIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { supabase } from '@/lib/supabase'
 import { generateEventReport, type EventReportData, type EventReportOptions } from '@/lib/analytics/eventReportGenerator'
 import { useToast } from '@/components/Toast'
 import { Card } from '@/components/ui/card'
 import { printWithNoMargins, printElement } from '@/utils/printUtils'
+import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
 
 interface EndOfEventReportProps {
   eventId?: string
   className?: string
+  readiness?: ReadinessScore | null
 }
 
 interface EventData {
@@ -63,6 +66,15 @@ interface LessonsLearned {
   improvements: string[]
   recommendations: string[]
   confidence: number
+}
+
+const READINESS_COMPONENT_LABELS: Record<keyof ReadinessScore['component_scores'], string> = {
+  staffing: 'Staffing',
+  incident_pressure: 'Incident Pressure',
+  weather: 'Weather',
+  transport: 'Transport',
+  assets: 'Assets',
+  crowd_density: 'Crowd Attendance',
 }
 
 // Logs that are not actionable incidents and should be excluded from stats/AI
@@ -156,7 +168,7 @@ const buildStaffPerformance = (
   }
 }
 
-export default function EndOfEventReport({ eventId, className = '' }: EndOfEventReportProps) {
+export default function EndOfEventReport({ eventId, className = '', readiness }: EndOfEventReportProps) {
   const { addToast } = useToast()
   const [loading, setLoading] = useState(!!eventId)
   const [generating, setGenerating] = useState(false)
@@ -179,6 +191,16 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
+  const [readinessSnapshot, setReadinessSnapshot] = useState<ReadinessScore | null>(readiness ?? null)
+  const [readinessLoading, setReadinessLoading] = useState(false)
+  const [readinessError, setReadinessError] = useState<string | null>(null)
+  const formatReadinessStatus = (score: number) => {
+    if (score >= 80) return 'Ready'
+    if (score >= 60) return 'Watch'
+    return 'Critical'
+  }
+  const formatTrendLabel = (trend: ReadinessScore['trend']) =>
+    trend.charAt(0).toUpperCase() + trend.slice(1)
 
 
   const fetchEventData = useCallback(async () => {
@@ -529,6 +551,52 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     fetchEventData()
   }, [eventId, fetchEventData])
 
+  useEffect(() => {
+    if (typeof readiness !== 'undefined') {
+      setReadinessSnapshot(readiness ?? null)
+      setReadinessError(null)
+      setReadinessLoading(false)
+      return
+    }
+
+    if (!eventId) {
+      setReadinessSnapshot(null)
+      setReadinessError(null)
+      setReadinessLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchInlineReadiness = async () => {
+      setReadinessLoading(true)
+      setReadinessError(null)
+      try {
+        const response = await fetch(`/api/analytics/readiness-index?event_id=${eventId}`)
+        if (!response.ok) {
+          throw new Error('Failed to load readiness data')
+        }
+        const payload = await response.json()
+        if (!cancelled) {
+          setReadinessSnapshot(payload?.readiness ?? null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setReadinessError(err instanceof Error ? err.message : 'Unable to load readiness data')
+        }
+      } finally {
+        if (!cancelled) {
+          setReadinessLoading(false)
+        }
+      }
+    }
+
+    fetchInlineReadiness()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId, readiness])
+
   const generateCSVReport = useCallback((): string => {
     const rows = [
       ['Event Report', eventData?.name || ''],
@@ -767,6 +835,15 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
   }, [eventData, incidentSummary, staffPerformance, currentAttendance])
 
+  const readinessComponents = useMemo(() => {
+    if (!readinessSnapshot) return []
+    return Object.entries(readinessSnapshot.component_scores).map(([key, value]) => ({
+      key,
+      label: READINESS_COMPONENT_LABELS[key as keyof ReadinessScore['component_scores']] ?? key,
+      score: value.score,
+    }))
+  }, [readinessSnapshot])
+
   const priorityBreakdown = useMemo(() => {
     if (!incidentSummary?.total) {
       return []
@@ -806,6 +883,16 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
 
     const highlights: Highlight[] = []
+
+    if (readinessSnapshot) {
+      highlights.push({
+        title: 'Readiness Score',
+        value: `${readinessSnapshot.overall_score}%`,
+        description: `${formatReadinessStatus(readinessSnapshot.overall_score)} • ${formatTrendLabel(readinessSnapshot.trend)}`,
+        Icon: ShieldCheckIcon,
+        accent: 'text-blue-600',
+      })
+    }
 
     if (computedMetrics.totalIncidents > 0) {
       highlights.push({
@@ -1099,6 +1186,51 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
           </div>
         </div>
       </Card>
+
+      {readinessSnapshot && (
+        <Card
+          id="end-of-event-readiness"
+          className="p-6 print:p-4 print:border print:border-gray-200 avoid-break"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Operational Readiness
+              </p>
+              <div className="flex items-baseline gap-3 mt-2">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {readinessSnapshot.overall_score}%
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {formatReadinessStatus(readinessSnapshot.overall_score)} •{' '}
+                  {formatTrendLabel(readinessSnapshot.trend)}
+                </span>
+              </div>
+              {readinessLoading && (
+                <p className="text-xs text-gray-500 mt-1">Refreshing readiness scores…</p>
+              )}
+              {readinessError && (
+                <p className="text-xs text-red-500 mt-1">{readinessError}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+              {readinessComponents.map((component) => (
+                <div
+                  key={component.key}
+                  className="rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2"
+                >
+                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {component.label}
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {component.score}%
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 print:gap-4">

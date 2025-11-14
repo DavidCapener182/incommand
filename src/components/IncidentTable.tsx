@@ -1427,6 +1427,7 @@ export default function IncidentTable({
                   const isMatchFlowLog = incident.type === 'match_log'
                   const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
                   const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
+                  const isGoalType = /goal/i.test(incident.incident_type || '')
                   let rowColor = getRowStyle(incident);
                   if (rowColor === 'hover:bg-gray-50') {
                     rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
@@ -1457,9 +1458,6 @@ export default function IncidentTable({
                           <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
                               <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
-                            )}
-                            {isMatchFlowLog && (
-                              <span className="text-sm mr-1" title="Match Flow Log">⚽</span>
                             )}
                             <span className={`px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
                               isMatchFlowLog 
@@ -1541,7 +1539,7 @@ export default function IncidentTable({
                         <div className="flex items-center justify-center">
                           {isMatchFlowLog ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
-                              <span>⚽</span>
+                              {isGoalType && <span>⚽</span>}
                               <span>{incident.incident_type}</span>
                             </span>
                           ) : (

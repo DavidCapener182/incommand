@@ -13,6 +13,8 @@
 
 import type { Database } from '@/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { StaffingDiscipline } from '@/lib/database/staffing'
+import { resolveDisciplines } from '@/lib/staffing/discipline'
 
 export interface ReadinessComponentScore {
   score: number // 0-100
@@ -125,52 +127,113 @@ export class ReadinessEngine {
    */
   async calculateStaffingScore(): Promise<ReadinessComponentScore> {
     try {
-      // Get event details
       const { data: event } = await this.supabase
         .from('events')
-        .select('id, expected_staff_count, venue_capacity')
+        .select('id, event_type, expected_staff_count, venue_capacity')
         .eq('id', this.eventId)
         .single()
 
-      // Get staff assignments for this event
-      const { data: assignments } = await this.supabase
-        .from('callsign_assignments')
-        .select('staff_id, callsign, position_name, department')
+      const { data: staffingRoles } = await this.supabase
+        .from('staffing_roles')
+        .select('id, planned_count, discipline')
+        .eq('company_id', this.companyId)
         .eq('event_id', this.eventId)
 
-      // Get total staff count (from profiles with company_id)
-      const { count: totalStaff } = await this.supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
+      const { data: staffingActuals } = await this.supabase
+        .from('staffing_actuals')
+        .select('role_id, actual_count')
         .eq('company_id', this.companyId)
+        .eq('event_id', this.eventId)
 
-      const eventData = (event ?? null) as { expected_staff_count?: number } | null
-      const staffOnPost = assignments?.length || 0
-      const plannedStaff = eventData?.expected_staff_count || totalStaff || 1
-      const coverageRatio = Math.min(staffOnPost / plannedStaff, 1.2) // Cap at 120% to avoid over-staffing bonus
+      const actualMap = new Map(
+        (staffingActuals ?? []).map((record) => [record.role_id, record.actual_count ?? 0])
+      )
 
-      // Base score from coverage ratio (0-80 points)
-      let score = Math.round(coverageRatio * 80)
+      const plannedFromRoles = staffingRoles?.reduce((sum, role) => sum + (role.planned_count || 0), 0) ?? 0
+      const actualFromRoles =
+        staffingRoles?.reduce((sum, role) => sum + (actualMap.get(role.id) ?? 0), 0) ?? 0
 
-      // Bonus for adequate coverage (10 points if >= 90%)
-      if (coverageRatio >= 0.9) {
-        score = Math.min(score + 10, 100)
+      const requiredDisciplines: StaffingDiscipline[] = resolveDisciplines(event?.event_type)
+
+      const disciplineBreakdown = staffingRoles?.reduce<Record<string, { planned: number; actual: number }>>(
+        (acc, role) => {
+          const discipline = (role.discipline as StaffingDiscipline) || 'security'
+          const entry = acc[discipline] ?? { planned: 0, actual: 0 }
+          entry.planned += role.planned_count || 0
+          entry.actual += actualMap.get(role.id) ?? 0
+          acc[discipline] = entry
+          return acc
+        },
+        {}
+      ) ?? {}
+
+      requiredDisciplines.forEach((discipline) => {
+        if (!disciplineBreakdown[discipline]) {
+          disciplineBreakdown[discipline] = { planned: 0, actual: 0 }
+        }
+      })
+
+      let staffOnPost = actualFromRoles
+      let plannedStaff = plannedFromRoles
+
+      if (plannedStaff === 0) {
+        const { data: assignments } = await this.supabase
+          .from('callsign_assignments')
+          .select('staff_id')
+          .eq('event_id', this.eventId)
+
+        const { count: totalStaff } = await this.supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', this.companyId)
+
+        staffOnPost = assignments?.length || 0
+        plannedStaff = event?.expected_staff_count || totalStaff || 1
       }
 
-      // Penalty for critical gaps (deduct up to 20 points)
-      const criticalGaps = this.identifyCriticalGaps(assignments || [])
-      score = Math.max(score - criticalGaps * 5, 0)
+      const coverageRatioRaw = plannedStaff > 0 ? staffOnPost / plannedStaff : 1
+      const coverageRatio = Math.max(0, coverageRatioRaw)
+      const cappedCoverageRatio = Math.min(coverageRatio, 1)
+      const surplusBonus = coverageRatio > 1 ? Math.min(Math.round((coverageRatio - 1) * 50), 5) : 0
+
+      const disciplineGaps = requiredDisciplines.reduce((count, discipline) => {
+        const stats = disciplineBreakdown[discipline]
+        if (!stats || stats.planned === 0) {
+          return count
+        }
+        return stats.actual < stats.planned ? count + 1 : count
+      }, 0)
+
+      let score = Math.round(cappedCoverageRatio * 100)
+      score = Math.min(score + surplusBonus, 105)
+      score = Math.max(score - disciplineGaps * 5, 0)
+      score = Math.min(score, 100)
 
       const factors = [
         {
           factor: 'Coverage Ratio',
-          impact: coverageRatio >= 0.9 ? 10 : coverageRatio >= 0.7 ? 0 : -20,
+          impact:
+            coverageRatio >= 1
+              ? 0
+              : -Math.round((1 - coverageRatio) * 100),
           description: `${staffOnPost} on post vs ${plannedStaff} planned (${Math.round(coverageRatio * 100)}%)`,
         },
+        ...(surplusBonus > 0
+          ? [
+              {
+                factor: 'Surplus Coverage',
+                impact: surplusBonus,
+                description: `Bonus applied for ${Math.round((coverageRatio - 1) * 100)}% over target`,
+              },
+            ]
+          : []),
         {
-          factor: 'Critical Gaps',
-          impact: -criticalGaps * 5,
-          description: criticalGaps > 0 ? `${criticalGaps} critical position(s) unfilled` : 'All critical positions filled',
+          factor: 'Discipline Shortfalls',
+          impact: -disciplineGaps * 5,
+          description:
+            disciplineGaps > 0
+              ? `${disciplineGaps} discipline(s) under target`
+              : 'All tracked disciplines at target',
         },
       ]
 
@@ -180,8 +243,9 @@ export class ReadinessEngine {
           staff_on_post: staffOnPost,
           planned_staff: plannedStaff,
           coverage_ratio: coverageRatio,
-          critical_gaps: criticalGaps,
-          assignments: assignments?.length || 0,
+          coverage_bonus: surplusBonus,
+          critical_gaps: disciplineGaps,
+          disciplines: disciplineBreakdown,
         },
         factors,
       }
@@ -400,46 +464,124 @@ export class ReadinessEngine {
       // Get event capacity
       const { data: event } = await this.supabase
         .from('events')
-        .select('venue_capacity, expected_attendance')
+        .select('venue_capacity, expected_attendance, event_type')
         .eq('id', this.eventId)
         .single()
 
-      const capacity = event?.venue_capacity || event?.expected_attendance || 10000
+      let capacity = event?.venue_capacity || event?.expected_attendance || 10000
+      let currentCount = 0
+      let source = 'attendance_logs'
 
-      // Get current attendance (from attendance_logs or venue_occupancy)
-      const { data: attendanceLogs } = await this.supabase
-        .from('attendance_logs')
-        .select('current_count')
-        .eq('event_id', this.eventId)
-        .order('timestamp', { ascending: false })
-        .limit(1)
-        .single()
+      const isFootball = (event?.event_type || '').toLowerCase().includes('football')
 
-      const currentCount = attendanceLogs?.current_count || 0
+      if (isFootball) {
+        const [{ data: stands }, { data: occupancy }] = await Promise.all([
+          this.supabase
+            .from('stands')
+            .select('id, capacity')
+            .eq('company_id', this.companyId)
+            .eq('event_id', this.eventId),
+          this.supabase
+            .from('stand_occupancy')
+            .select('stand_id, current_occupancy')
+            .eq('company_id', this.companyId)
+            .eq('event_id', this.eventId),
+        ])
+
+        if (stands && stands.length > 0) {
+          const occupancyMap = new Map(
+            (occupancy ?? []).map((record) => [record.stand_id, record.current_occupancy ?? 0])
+          )
+          currentCount = stands.reduce((sum, stand) => sum + (occupancyMap.get(stand.id) ?? 0), 0)
+          const derivedCapacity = stands.reduce((sum, stand) => sum + (stand.capacity ?? 0), 0)
+          if (!event?.venue_capacity && derivedCapacity > 0) {
+            capacity = derivedCapacity
+          }
+          source = 'stand_occupancy'
+        }
+      }
+
+      if (!currentCount) {
+        const { data: attendanceRecord } = await this.supabase
+          .from('attendance_records')
+          .select('occupied_seats')
+          .eq('event_id', this.eventId)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (attendanceRecord) {
+          currentCount = attendanceRecord.occupied_seats || 0
+          source = 'attendance_records'
+        }
+      }
+
+      if (!currentCount) {
+        const { data: venueOccupancy } = await this.supabase
+          .from('venue_occupancy')
+          .select('current_occupancy')
+          .eq('event_id', this.eventId)
+          .order('captured_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (venueOccupancy) {
+          currentCount = venueOccupancy.current_occupancy || 0
+          source = 'venue_occupancy'
+        }
+      }
+
       const occupancyRatio = capacity > 0 ? currentCount / capacity : 0
+      const occupancyPercentage = Math.round(occupancyRatio * 100)
+      const metricLabel = isFootball ? 'Crowd Attendance' : 'Crowd Density'
+      const metricDescription = isFootball
+        ? 'Ticketed attendance vs. seating capacity'
+        : 'Live occupancy vs. venue capacity'
 
-      // Score calculation:
-      // 0-60% occupancy = 100 (comfortable)
-      // 60-80% = 80 (good)
-      // 80-90% = 60 (moderate)
-      // 90-100% = 40 (high)
-      // >100% = 0 (over capacity)
       let score = 100
-      if (occupancyRatio > 1.0) {
-        score = 0
-      } else if (occupancyRatio > 0.9) {
-        score = 40
-      } else if (occupancyRatio > 0.8) {
-        score = 60
-      } else if (occupancyRatio > 0.6) {
-        score = 80
+      let impact = 0
+
+      if (isFootball) {
+        if (occupancyRatio > 1.05) {
+          score = 40
+          impact = -60
+        } else if (occupancyRatio > 1) {
+          score = 60
+          impact = -40
+        } else if (occupancyRatio >= 0.95) {
+          score = 100
+          impact = 0
+        } else if (occupancyRatio >= 0.85) {
+          score = 85
+          impact = -10
+        } else {
+          score = 75
+          impact = -20
+        }
+      } else {
+        if (occupancyRatio > 1.2) {
+          score = 30
+          impact = -70
+        } else if (occupancyRatio > 1.05) {
+          score = 50
+          impact = -50
+        } else if (occupancyRatio > 0.95) {
+          score = 65
+          impact = -35
+        } else if (occupancyRatio > 0.85) {
+          score = 80
+          impact = -20
+        } else if (occupancyRatio < 0.3) {
+          score = 75
+          impact = -25
+        }
       }
 
       const factors = [
         {
-          factor: 'Occupancy Ratio',
-          impact: occupancyRatio > 0.9 ? -60 : occupancyRatio > 0.8 ? -40 : occupancyRatio > 0.6 ? -20 : 0,
-          description: `${currentCount} / ${capacity} (${Math.round(occupancyRatio * 100)}%)`,
+          factor: metricLabel,
+          impact,
+          description: `${currentCount.toLocaleString()} / ${capacity.toLocaleString()} (${occupancyPercentage}%)`,
         },
       ]
 
@@ -447,9 +589,13 @@ export class ReadinessEngine {
         score: Math.max(0, Math.min(100, score)),
         details: {
           current_count: currentCount,
-          capacity: capacity,
+          capacity,
           occupancy_ratio: occupancyRatio,
-          occupancy_percentage: Math.round(occupancyRatio * 100),
+          occupancy_percentage: occupancyPercentage,
+          data_source: source,
+          metric_label: metricLabel,
+          metric_description: metricDescription,
+          is_football: isFootball,
         },
         factors,
       }
@@ -550,11 +696,22 @@ export class ReadinessEngine {
       })
     }
 
-    if (scores.crowdDensityScore.details.occupancy_percentage > 90) {
+    const crowdDetails = scores.crowdDensityScore.details || {}
+    const crowdLabel = crowdDetails.metric_label || 'Crowd Density'
+    const crowdWarnThreshold = crowdDetails.is_football ? 95 : 90
+    const crowdCriticalThreshold = crowdDetails.is_football ? 100 : 95
+
+    if (crowdDetails.occupancy_percentage > crowdCriticalThreshold) {
       alerts.push({
         type: 'crowd',
-        message: `Venue approaching capacity (${scores.crowdDensityScore.details.occupancy_percentage}%)`,
-        severity: scores.crowdDensityScore.details.occupancy_percentage > 95 ? 'high' : 'medium',
+        message: `${crowdLabel} exceeds capacity (${crowdDetails.occupancy_percentage}%)`,
+        severity: 'high',
+      })
+    } else if (crowdDetails.occupancy_percentage > crowdWarnThreshold) {
+      alerts.push({
+        type: 'crowd',
+        message: `${crowdLabel} approaching capacity (${crowdDetails.occupancy_percentage}%)`,
+        severity: 'medium',
       })
     }
 

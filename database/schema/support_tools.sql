@@ -20,6 +20,13 @@ CREATE TABLE IF NOT EXISTS stand_occupancy (
     event_id UUID NOT NULL,
     stand_id UUID NOT NULL REFERENCES stands(id) ON DELETE CASCADE,
     current_occupancy INTEGER NOT NULL DEFAULT 0 CHECK (current_occupancy >= 0),
+    predicted_60m INTEGER,
+    predicted_50m INTEGER,
+    predicted_40m INTEGER,
+    predicted_30m INTEGER,
+    predicted_20m INTEGER,
+    predicted_10m INTEGER,
+    predicted_0m INTEGER,
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     recorded_by VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -34,6 +41,7 @@ CREATE TABLE IF NOT EXISTS staffing_roles (
     event_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
     planned_count INTEGER NOT NULL DEFAULT 0 CHECK (planned_count >= 0),
+    discipline TEXT NOT NULL DEFAULT 'security' CHECK (discipline IN ('security','police','medical','stewarding','other')),
     icon VARCHAR(10),
     color VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -52,6 +60,20 @@ CREATE TABLE IF NOT EXISTS staffing_actuals (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(company_id, event_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS staffing_forecasts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    event_id UUID NOT NULL,
+    discipline TEXT NOT NULL CHECK (discipline IN ('security','police','medical','stewarding','other')),
+    predicted_required INTEGER NOT NULL CHECK (predicted_required >= 0),
+    confidence NUMERIC,
+    methodology TEXT,
+    generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    generated_by UUID REFERENCES profiles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Fixture/Match Progress Tables
@@ -144,6 +166,7 @@ CREATE INDEX IF NOT EXISTS idx_stands_company_event ON stands(company_id, event_
 CREATE INDEX IF NOT EXISTS idx_stand_occupancy_company_event ON stand_occupancy(company_id, event_id);
 CREATE INDEX IF NOT EXISTS idx_staffing_roles_company_event ON staffing_roles(company_id, event_id);
 CREATE INDEX IF NOT EXISTS idx_staffing_actuals_company_event ON staffing_actuals(company_id, event_id);
+CREATE INDEX IF NOT EXISTS idx_staffing_forecasts_company_event ON staffing_forecasts(company_id, event_id, discipline);
 CREATE INDEX IF NOT EXISTS idx_fixture_tasks_company_event ON fixture_tasks(company_id, event_id);
 CREATE INDEX IF NOT EXISTS idx_fixture_completions_company_event ON fixture_completions(company_id, event_id);
 CREATE INDEX IF NOT EXISTS idx_gates_company_event ON gates(company_id, event_id);
@@ -164,6 +187,7 @@ CREATE TRIGGER update_stands_updated_at BEFORE UPDATE ON stands FOR EACH ROW EXE
 CREATE TRIGGER update_stand_occupancy_updated_at BEFORE UPDATE ON stand_occupancy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_staffing_roles_updated_at BEFORE UPDATE ON staffing_roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_staffing_actuals_updated_at BEFORE UPDATE ON staffing_actuals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_staffing_forecasts_updated_at BEFORE UPDATE ON staffing_forecasts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_fixture_tasks_updated_at BEFORE UPDATE ON fixture_tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_fixture_completions_updated_at BEFORE UPDATE ON fixture_completions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_gates_updated_at BEFORE UPDATE ON gates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

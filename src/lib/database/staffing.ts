@@ -1,11 +1,14 @@
 import { getSupabaseClient } from '@/lib/mcp/supabase'
 
+export type StaffingDiscipline = 'security' | 'police' | 'medical' | 'stewarding' | 'other'
+
 export interface StaffingRoleData {
   id: string
   company_id: string
   event_id: string
   name: string
   planned_count: number
+  discipline?: StaffingDiscipline | null
   icon?: string
   color?: string
   actual_count?: number
@@ -54,6 +57,7 @@ export async function getStaffingRoles(companyId: string, eventId: string): Prom
   // Merge roles with actual counts
   const rolesWithActuals = roles?.map(role => ({
     ...role,
+    discipline: (role as StaffingRoleData).discipline || 'security',
     actual_count: actuals?.find(actual => actual.role_id === role.id)?.actual_count || 0
   })) || []
   
@@ -64,7 +68,7 @@ export async function getStaffingRoles(companyId: string, eventId: string): Prom
 export async function createStaffingRole(
   companyId: string,
   eventId: string,
-  data: { name: string; planned_count: number; icon?: string; color?: string }
+  data: { name: string; planned_count: number; icon?: string; color?: string; discipline?: StaffingDiscipline }
 ): Promise<StaffingRoleData> {
   const supabase = getSupabaseClient()
   
@@ -75,6 +79,7 @@ export async function createStaffingRole(
       event_id: eventId,
       name: data.name,
       planned_count: data.planned_count,
+      discipline: data.discipline ?? 'security',
       icon: data.icon,
       color: data.color
     })
@@ -94,13 +99,14 @@ export async function updateStaffingRole(
   companyId: string,
   eventId: string,
   roleId: string,
-  data: { name?: string; planned_count?: number; icon?: string; color?: string }
+  data: { name?: string; planned_count?: number; icon?: string; color?: string; discipline?: StaffingDiscipline }
 ): Promise<StaffingRoleData> {
   const supabase = getSupabaseClient()
   
   const updateData: any = {}
   if (data.name !== undefined) updateData.name = data.name
   if (data.planned_count !== undefined) updateData.planned_count = data.planned_count
+  if (data.discipline !== undefined) updateData.discipline = data.discipline
   if (data.icon !== undefined) updateData.icon = data.icon
   if (data.color !== undefined) updateData.color = data.color
   

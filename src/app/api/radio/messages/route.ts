@@ -169,7 +169,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    let message = insertedMessage
+    if (!insertedMessage) {
+      return NextResponse.json({ error: 'Failed to create radio message' }, { status: 500 })
+    }
+
+    let messageRecord = insertedMessage as RadioMessage
 
     // Auto-analyze and create incident if enabled (default: true)
     const autoCreateIncident = body.auto_create_incident !== false // Default to true unless explicitly false
@@ -180,12 +184,12 @@ export async function POST(request: NextRequest) {
     let taskCreated = false
     let taskId: string | undefined
     
-    if (message && messageData.event_id) {
+    if (messageRecord && messageData.event_id) {
       // Process incident creation
       if (autoCreateIncident) {
         try {
           const processed = await processRadioMessage(
-            message as RadioMessage,
+            messageRecord,
             messageData.event_id,
             user.id,
             supabase,
@@ -202,52 +206,51 @@ export async function POST(request: NextRequest) {
         }
       }
 
-        // Process task creation (only if not already an incident)
-        if (autoCreateTask && !incidentCreated) {
-          try {
-            const taskProcessed = await processRadioMessageForTask(
-              message as RadioMessage,
-              messageData.event_id,
-              user.id,
-              supabase,
-              autoCreateTask
-            )
+      // Process task creation (only if not already an incident)
+      if (autoCreateTask && !incidentCreated) {
+        try {
+          const taskProcessed = await processRadioMessageForTask(
+            messageRecord,
+            messageData.event_id,
+            user.id,
+            supabase,
+            autoCreateTask
+          )
 
-            if (taskProcessed.taskCreated && taskProcessed.taskId) {
-              taskCreated = true
-              taskId = taskProcessed.taskId
+          if (taskProcessed.taskCreated && taskProcessed.taskId) {
+            taskCreated = true
+            taskId = taskProcessed.taskId
 
-              // Refresh message data to include task_id
-              const { data: updatedMessage } = await supabase
-                .from('radio_messages')
-                .select()
-                .eq('id', message.id)
-                .single()
+            // Refresh message data to include task_id
+            const { data: updatedMessage } = await supabase
+              .from('radio_messages')
+              .select()
+              .eq('id', messageRecord.id)
+              .single()
 
-              if (updatedMessage) {
-                message = updatedMessage
-              }
+            if (updatedMessage) {
+              messageRecord = updatedMessage as RadioMessage
             }
-          } catch (taskError: any) {
-            // Log error but don't fail the request - message was created successfully
-            console.error('Error processing radio message for auto-task creation:', taskError)
           }
-        }
-
-        // Refresh message data if incident was created
-        if (incidentCreated && incidentId) {
-          const { data: updatedMessage } = await supabase
-            .from('radio_messages')
-            .select()
-            .eq('id', message.id)
-            .single()
-
-          if (updatedMessage) {
-            message = updatedMessage
-          }
+        } catch (taskError: any) {
+          // Log error but don't fail the request - message was created successfully
+          console.error('Error processing radio message for auto-task creation:', taskError)
         }
       }
 
+      // Refresh message data if incident was created
+      if (incidentCreated && incidentId) {
+        const { data: updatedMessage } = await supabase
+          .from('radio_messages')
+          .select()
+          .eq('id', messageRecord.id)
+          .single()
+
+        if (updatedMessage) {
+          messageRecord = updatedMessage as RadioMessage
+        }
+      }
+    }
     // Update channel health asynchronously (don't wait for it)
     if (messageData.event_id && messageData.channel) {
       updateChannelHealth(
@@ -259,7 +262,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return response with creation status
-    const response: any = { data: message }
+    const response: any = { data: messageRecord }
     if (incidentCreated) {
       response.incidentCreated = true
       response.incidentId = incidentId

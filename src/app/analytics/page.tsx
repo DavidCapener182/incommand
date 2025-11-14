@@ -32,6 +32,7 @@ import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
 import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
 import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
 import AIInsightsDashboard from '@/components/analytics/AIInsightsDashboard'
+import ReadinessIndexCard from '@/components/analytics/ReadinessIndexCard'
 import ExportReportModal from '@/components/analytics/ExportReportModal'
 import RealtimeAlertBanner from '@/components/analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from '@/components/analytics/RealtimeStatusIndicator'
@@ -56,6 +57,12 @@ import { CrowdAlertsList } from '@/components/analytics/CrowdAlertsList'
 import { CrowdIntelligenceOverview } from '@/components/analytics/CrowdIntelligenceOverview'
 import { CrowdRiskMatrix } from '@/components/analytics/CrowdRiskMatrix'
 import { CrowdIntelligenceSummary } from '@/types/crowdIntelligence'
+import { StaffingOverview } from '@/components/analytics/staffing/StaffingOverview'
+import { StaffingDisciplineGrid } from '@/components/analytics/staffing/StaffingDisciplineGrid'
+import { StaffingAlertsList } from '@/components/analytics/staffing/StaffingAlertsList'
+import { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
+import { StaffingForecastResult } from '@/lib/analytics/staffingForecast'
+import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
 
 interface IncidentRecord {
   id: string
@@ -95,6 +102,7 @@ const analyticsTabKeys = [
   'custom-dashboards',
   'benchmarking',
   'real-time',
+  'staffing',
   'crowd-intelligence',
   'end-of-event',
 ] as const
@@ -177,6 +185,13 @@ const analyticsTabs: AnalyticsTabDefinition[] = [
     activeClass: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-500',
   },
   {
+    key: 'staffing',
+    label: 'Staffing Intelligence',
+    shortLabel: 'Staffing',
+    icon: Users,
+    activeClass: 'bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 border-teal-500',
+  },
+  {
     key: 'crowd-intelligence',
     label: 'Crowd Intelligence',
     shortLabel: 'Crowd',
@@ -209,6 +224,11 @@ export default function AnalyticsPage() {
   const [crowdSummary, setCrowdSummary] = useState<CrowdIntelligenceSummary | null>(null)
   const [crowdLoading, setCrowdLoading] = useState(false)
   const [crowdError, setCrowdError] = useState<string | null>(null)
+  const [staffingSnapshot, setStaffingSnapshot] = useState<StaffingIngestionBundle | null>(null)
+  const [staffingForecast, setStaffingForecast] = useState<StaffingForecastResult | null>(null)
+  const [staffingLoading, setStaffingLoading] = useState(false)
+  const [staffingError, setStaffingError] = useState<string | null>(null)
+  const [readinessData, setReadinessData] = useState<ReadinessScore | null>(null)
   
   // Mobile analytics state
   const [selectedMobileView, setSelectedMobileView] = useState<'dashboard' | 'comparison' | 'realtime'>('dashboard')
@@ -240,15 +260,24 @@ export default function AnalyticsPage() {
     if (activeTab !== 'crowd-intelligence') return
     if (!eventData?.id) return
 
+    const currentEventId = eventData.id
+
     let cancelled = false
     async function loadCrowdSummary() {
       setCrowdLoading(true)
-      setCrowdError(null)
+      setCrowdError(null);
       try {
-        const res = await fetch(`/api/crowd-intelligence?eventId=${eventData.id}`)
-        if (!res.ok) throw new Error('Failed to load crowd intelligence')
-        const payload = await res.json()
-        if (!cancelled) setCrowdSummary(payload.data)
+        const res = await fetch(`/api/crowd-intelligence?eventId=${currentEventId}`)
+        if (!res.ok) {
+          const errorText = await res.text();
+          setCrowdError(errorText || 'Failed to load crowd intelligence');
+          return;
+        }
+        const payload = await res.json();
+        if (!payload || typeof payload.data === 'undefined' || payload.data === null) {
+          throw new Error('Crowd intelligence data is missing or invalid');
+        }
+        if (!cancelled) setCrowdSummary(payload.data);
       } catch (err: any) {
         if (!cancelled) setCrowdError(err?.message ?? 'Unable to load crowd intelligence')
       } finally {
@@ -260,6 +289,85 @@ export default function AnalyticsPage() {
       cancelled = true
     }
   }, [activeTab, eventData?.id])
+
+  useEffect(() => {
+    if (activeTab !== 'staffing') return
+    if (!eventData?.id) return
+
+    const currentEventId = eventData.id
+    let cancelled = false
+
+    async function loadStaffingPanels() {
+      setStaffingLoading(true)
+      setStaffingError(null)
+      try {
+        const [insightsResponse, forecastResponse] = await Promise.all([
+          fetch(`/api/staffing/insights?eventId=${currentEventId}`),
+          fetch(`/api/staffing/forecast?eventId=${currentEventId}`),
+        ])
+
+        if (!insightsResponse.ok) {
+          throw new Error('Unable to load staffing insights')
+        }
+        if (!forecastResponse.ok) {
+          throw new Error('Unable to load staffing forecast')
+        }
+
+        const insightsPayload = await insightsResponse.json()
+        const forecastPayload = await forecastResponse.json()
+
+        if (!cancelled) {
+          setStaffingSnapshot(insightsPayload.data)
+          setStaffingForecast(forecastPayload.data)
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setStaffingError(err?.message ?? 'Unable to load staffing intelligence')
+        }
+      } finally {
+        if (!cancelled) {
+          setStaffingLoading(false)
+        }
+      }
+    }
+
+    loadStaffingPanels()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, eventData?.id])
+
+  useEffect(() => {
+    if (!eventData?.id) {
+      setReadinessData(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadReadinessSnapshot = async () => {
+      try {
+        const response = await fetch(`/api/analytics/readiness-index?event_id=${eventData.id}`)
+        if (!response.ok) {
+          throw new Error('Unable to load readiness snapshot')
+        }
+        const payload = await response.json()
+        if (!cancelled) {
+          setReadinessData(payload?.readiness ?? null)
+        }
+      } catch (err) {
+        console.warn('Readiness snapshot failed:', err)
+        if (!cancelled) {
+          setReadinessData(null)
+        }
+      }
+    }
+
+    loadReadinessSnapshot()
+    return () => {
+      cancelled = true
+    }
+  }, [eventData?.id])
 
   const closedIncidentsCount = useMemo(
     () => incidentData.filter((incident) => incident.status === 'closed').length,
@@ -739,6 +847,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
           {selectedMobileView === 'dashboard' && (
             <>
+              {eventData?.id && (
+                <ReadinessIndexCard
+                  eventId={eventData.id}
+                  initialData={readinessData}
+                  className="mb-4"
+                />
+              )}
               <div className="space-y-4">
                 {createAnalyticsCards(incidentData, eventData).map((card) => {
                   if (card.type === 'chart') {
@@ -1014,6 +1129,19 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                   />
                 )}
 
+                {activeTab === 'staffing' && (
+                  <section className="space-y-6">
+                    <StaffingOverview
+                      snapshot={staffingSnapshot}
+                      forecast={staffingForecast}
+                      loading={staffingLoading}
+                      error={staffingError}
+                    />
+                    <StaffingDisciplineGrid snapshot={staffingSnapshot} forecast={staffingForecast} />
+                    <StaffingAlertsList snapshot={staffingSnapshot} forecast={staffingForecast} />
+                  </section>
+                )}
+
                 {activeTab === 'crowd-intelligence' && (
                   <section className="space-y-6">
                     {crowdError && (
@@ -1050,6 +1178,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     eventId={eventData?.id}
+                    readiness={readinessData}
                   />
                 )}
 
@@ -1092,7 +1221,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 )}
 
                 {activeTab === 'end-of-event' && (
-                  <EndOfEventReport eventId={eventData?.id} />
+                  <EndOfEventReport eventId={eventData?.id} readiness={readinessData} />
                 )}
 
                 {activeTab === 'real-time' && (
@@ -1114,26 +1243,37 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
         {/* Operational Tab Content - Dynamic Split */}
         {activeTab === 'operational' && (
-          <AnalyticsDashboard 
-            data={{
-              kpis: {
-                total: metrics.total,
-                open: incidentData.filter(i => i.status !== 'closed').length,
-                closed: incidentData.filter(i => i.status === 'closed').length,
-                avgResponseTime: metrics.avgResponseTime,
-                mostLikelyType: Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A',
-                peakAttendance: attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'
-              },
-              trends: {
-                incidentVolumeData: chartData.incidentVolumeData,
-                responseTimeData: chartData.responseTimeData
-              },
-              activity: {
-                attendanceTimelineData: chartData.attendanceTimelineData,
-                ejectionPatternData: chartData.ejectionPatternData
-              }
-            }}
-          />
+          <section className="space-y-6">
+            {eventData?.id && (
+              <div id="operational-readiness-card">
+                <ReadinessIndexCard
+                  eventId={eventData.id}
+                  initialData={readinessData}
+                  className="mb-2"
+                />
+              </div>
+            )}
+            <AnalyticsDashboard 
+              data={{
+                kpis: {
+                  total: metrics.total,
+                  open: incidentData.filter(i => i.status !== 'closed').length,
+                  closed: incidentData.filter(i => i.status === 'closed').length,
+                  avgResponseTime: metrics.avgResponseTime,
+                  mostLikelyType: Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A',
+                  peakAttendance: attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'
+                },
+                trends: {
+                  incidentVolumeData: chartData.incidentVolumeData,
+                  responseTimeData: chartData.responseTimeData
+                },
+                activity: {
+                  attendanceTimelineData: chartData.attendanceTimelineData,
+                  ejectionPatternData: chartData.ejectionPatternData
+                }
+              }}
+            />
+          </section>
         )}
 
 

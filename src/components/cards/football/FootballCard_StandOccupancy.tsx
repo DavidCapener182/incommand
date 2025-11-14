@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FootballData, StandOccupancyMap } from '@/types/football'
-import { RefreshCw, Download, Settings, Clock } from 'lucide-react'
-import QuickSettingsDropdown, { QuickSettingItem } from '@/components/football/QuickSettingsDropdown'
+import { StandConfig, StandsSetup } from '@/types/football'
+import { Download, Settings } from 'lucide-react'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import {
   Tooltip,
@@ -14,7 +13,23 @@ import {
 } from '@/components/ui/tooltip'
 import { useEventContext } from '@/contexts/EventContext'
 import { supabase } from '@/lib/supabase'
-import { predictStandFlow, type StandFlowPrediction } from '@/lib/analytics/crowdFlowPrediction'
+import { predictStandFlow, type StandFlowPrediction, STAND_COUNTDOWN_OFFSETS } from '@/lib/analytics/crowdFlowPrediction'
+import { useCompanyEventContext } from '@/hooks/useCompanyEventContext'
+const buildContextQuery = (ctx: { companyId: string; eventId: string }) =>
+  `?company_id=${ctx.companyId}&event_id=${ctx.eventId}`
+
+const deriveCountdownBucket = (kickoffTime: Date | null) => {
+  if (!kickoffTime) return null
+  const minutesToKickoff = Math.round((kickoffTime.getTime() - Date.now()) / 60000)
+  if (minutesToKickoff >= 55) return 60
+  if (minutesToKickoff >= 45) return 50
+  if (minutesToKickoff >= 35) return 40
+  if (minutesToKickoff >= 25) return 30
+  if (minutesToKickoff >= 15) return 20
+  if (minutesToKickoff >= 5) return 10
+  if (minutesToKickoff >= 0) return 0
+  return null
+}
 
 
 interface FootballCard_StandOccupancyProps {
@@ -23,77 +38,123 @@ interface FootballCard_StandOccupancyProps {
 }
 
 export default function FootballCard_StandOccupancy({ className, onOpenModal }: FootballCard_StandOccupancyProps) {
-  const { eventId } = useEventContext()
-  const [data, setData] = useState<FootballData | null>(null)
+  const { eventId, eventData } = useEventContext()
+  const { context, loading: contextLoading } = useCompanyEventContext(eventId)
+  const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [thresholds, setThresholds] = useState({
     default_green_threshold: 90,
     default_amber_threshold: 97,
     default_red_threshold: 100,
-    stand_overrides: {} as Record<string, { amber?: number; red?: number }>
+    stand_overrides: {} as Record<string, { amber?: number; red?: number }>,
   })
   const [standPredictions, setStandPredictions] = useState<Record<string, StandFlowPrediction>>({})
-  const [expandedStand, setExpandedStand] = useState<string | null>(null)
+
+  const kickoffTime = useMemo(() => {
+    if (eventData?.start_datetime) {
+      return new Date(eventData.start_datetime)
+    }
+    if (eventData?.event_date && eventData?.main_act_start_time) {
+      const time = eventData.main_act_start_time.includes(':')
+        ? eventData.main_act_start_time
+        : `${eventData.main_act_start_time}:00`
+      const normalizedTime = time.length === 5 ? `${time}:00` : time
+      return new Date(`${eventData.event_date}T${normalizedTime}`)
+    }
+    return null
+  }, [eventData?.start_datetime, eventData?.event_date, eventData?.main_act_start_time])
+
+  const kickoffTimestamp = kickoffTime?.getTime() ?? null
 
   useEffect(() => {
+    if (!context) return
     let mounted = true
-    const load = async () => {
-      const res = await fetch('/api/football/data')
-      if (!res.ok) return
-      const json = await res.json()
-      if (mounted) {
-        setData(json.data)
-        
-        // Load predictions for each stand
-          if (eventId && json.data?.occupancy) {
+
+    const computeHorizonMinutes = () => {
+      if (!kickoffTime) return 60
+      const minutesUntilKickoff = Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000))
+      const padded = Math.ceil(minutesUntilKickoff / 10) * 10 + 10
+      return Math.min(Math.max(60, padded), 360)
+    }
+
+    const loadStands = async () => {
+      try {
+        const res = await fetch(`/api/football/stands${buildContextQuery(context)}`)
+        if (!res.ok) {
+          console.error('Failed to load stand occupancy:', res.status, res.statusText)
+          return
+        }
+        const payload = await res.json()
+        if (mounted) {
+          setStandsSetup(payload.standsSetup)
+        }
+
+        if (eventId && payload.standsSetup?.stands) {
           const predictions: Record<string, StandFlowPrediction> = {}
-            const occupancy = json.data.occupancy as StandOccupancyMap
-            for (const [standName, standData] of Object.entries(occupancy)) {
+          const horizonMinutes = computeHorizonMinutes()
+          for (const stand of payload.standsSetup.stands as StandConfig[]) {
             try {
               const prediction = await predictStandFlow(
                 supabase,
                 eventId,
-                '', // standId - will be resolved by name
-                standName,
-                  standData.capacity,
-                60
+                stand.id,
+                stand.name,
+                stand.capacity,
+                horizonMinutes,
+                stand.current || 0,
+                context.companyId,
+                kickoffTime || undefined
               )
-              predictions[standName] = prediction
+              predictions[stand.name] = prediction
             } catch (err) {
-              console.warn(`Failed to predict flow for stand ${standName}:`, err)
+              console.warn(`Failed to predict flow for stand ${stand.name}:`, err)
             }
           }
           if (mounted) setStandPredictions(predictions)
+        } else if (mounted) {
+          setStandPredictions({})
         }
+      } catch (error) {
+        console.error('Error loading stand occupancy:', error)
       }
     }
-    load()
-    if (autoRefresh) {
-      const id = setInterval(load, 30000)
-      return () => { mounted = false; clearInterval(id) }
-    }
-    return () => { mounted = false }
-  }, [autoRefresh, eventId])
 
-  useEffect(() => {
     const loadThresholds = async () => {
       try {
-        const res = await fetch('/api/football/thresholds?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
-        if (res.ok) {
-          const data = await res.json()
+        const res = await fetch(`/api/football/thresholds${buildContextQuery(context)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted) {
           setThresholds({
             default_green_threshold: data.default_green_threshold || 90,
             default_amber_threshold: data.default_amber_threshold || 97,
             default_red_threshold: data.default_red_threshold || 100,
-            stand_overrides: data.stand_overrides || {}
+            stand_overrides: data.stand_overrides || {},
           })
         }
       } catch (error) {
         console.error('Failed to load thresholds:', error)
       }
     }
+
+    loadStands()
     loadThresholds()
-  }, [])
+
+    if (autoRefresh) {
+      const id = setInterval(() => {
+        loadStands()
+        loadThresholds()
+      }, 30000)
+      return () => {
+        mounted = false
+        clearInterval(id)
+      }
+    }
+
+    return () => {
+      mounted = false
+    }
+  }, [context, autoRefresh, eventId, kickoffTimestamp])
 
   const getColorForStand = (standName: string, percent: number): string => {
     const override = thresholds.stand_overrides[standName]
@@ -120,17 +181,15 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
   }
 
   const totals = useMemo(() => {
-    if (!data?.occupancy) return { current: 0, capacity: 0, percent: 0 }
-    const values = Object.values(data.occupancy as StandOccupancyMap)
-    const current = values.reduce((sum, v) => sum + (v.current || 0), 0)
-    const capacity = values.reduce((sum, v) => sum + (v.capacity || 0), 0)
+    if (!standsSetup?.stands) return { current: 0, capacity: 0, percent: 0 }
+    const current = standsSetup.stands.reduce((sum, stand) => sum + (stand.current || 0), 0)
+    const capacity = standsSetup.stands.reduce((sum, stand) => sum + (stand.capacity || 0), 0)
     const percent = capacity ? (current / capacity) * 100 : 0
     return { current, capacity, percent }
-  }, [data])
+  }, [standsSetup])
 
   const statusType = useMemo(() => {
-    if (!data) return 'normal' as StatusType
-    // Use thresholds to determine overall status
+    if (!standsSetup) return 'normal' as StatusType
     const override = thresholds.stand_overrides['Overall']
     const amberThreshold = override?.amber ?? thresholds.default_amber_threshold
     const redThreshold = override?.red ?? thresholds.default_red_threshold
@@ -140,11 +199,12 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
     if (totals.percent >= amberThreshold) return 'busy'
     if (totals.percent >= greenThreshold) return 'busy'
     return 'normal'
-  }, [data, totals.percent, thresholds])
+  }, [standsSetup, totals.percent, thresholds])
 
-  const handleExportReport = async () => {
+  const handleExportReport = useCallback(async () => {
+    if (!context) return
     try {
-      const response = await fetch('/api/football/export/stand?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const response = await fetch(`/api/football/export/stand${buildContextQuery(context)}`)
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -159,182 +219,170 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
     } catch (error) {
       console.error('Failed to export report:', error)
     }
+  }, [context]);
+
+  const statusLabelMap: Record<StatusType, string> = {
+    normal: 'Normal',
+    busy: 'Busy',
+    alert: 'Alert',
   }
 
-  const settingsItems: QuickSettingItem[] = [
-    {
-      type: 'checkbox',
-      label: 'Auto-Refresh',
-      checked: autoRefresh,
-      onCheckedChange: setAutoRefresh,
-      icon: <RefreshCw className="h-4 w-4" />
-    },
-    {
-      type: 'separator'
-    },
-    {
-      type: 'action',
-      label: 'Export Occupancy Report',
-      action: handleExportReport,
-      icon: <Download className="h-4 w-4" />
-    }
-  ]
+  const statusToneMap: Record<StatusType, string> = {
+    normal: 'bg-emerald-100 text-emerald-700',
+    busy: 'bg-amber-100 text-amber-700',
+    alert: 'bg-red-100 text-red-700',
+  }
 
   return (
-    <div className={`h-full card-depth p-4 space-y-2 relative overflow-hidden flex flex-col ${className || ''}`}>
-      {/* Status indicator dot */}
-      {data && <StatusDot status={statusType} />}
-      
-      {/* Quick Settings Dropdown */}
-      {onOpenModal && (
-        <div className="absolute top-3 right-3 z-50">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              console.log('Settings button clicked directly')
-              onOpenModal()
-            }}
-            className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
-            title="Quick Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
+    <div className={`h-full card-depth p-4 space-y-3 relative overflow-hidden flex flex-col ${className || ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {standsSetup && <StatusDot status={statusType} />}
+          <h3 className="text-gray-800 font-semibold text-lg leading-tight">Stand Occupancy</h3>
         </div>
-      )}
 
-      <div className="flex items-start justify-between pr-10">
-        <h3 className="text-gray-800 font-semibold text-lg">
-          Stand Occupancy
-        </h3>
-        {data && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatusIndicator status={statusType} showIcon={false} className="text-xs" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded"></div>
-                    <span>Normal (&lt;85%)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-amber-500 rounded"></div>
-                    <span>Busy (85-95%)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded"></div>
-                    <span>Full (&gt;95%)</span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        {(onOpenModal || context) && (
+          <div className="flex items-center gap-2 shrink-0">
+            {standsSetup && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusToneMap[statusType]}`}
+              >
+                {statusLabelMap[statusType]}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                void handleExportReport()
+              }}
+              className="h-7 w-7 rounded-full bg-white/70 text-gray-700 shadow hover:bg-white transition"
+              title="Export occupancy report"
+            >
+              <Download className="h-4 w-4 mx-auto" />
+            </button>
+            {onOpenModal && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onOpenModal()
+                }}
+                className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
+                title="Open Stand Occupancy settings"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      {!data ? (
-        <div className="text-xs text-gray-500">Loading…</div>
+      {!standsSetup ? (
+        <div className="text-xs text-gray-500">
+          {contextLoading ? 'Loading event context…' : 'Loading stand occupancy…'}
+        </div>
       ) : (
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           <div className="text-xs text-gray-600 mb-2">
-            Overall: <span className="font-semibold text-gray-900">{totals.current.toLocaleString()} / {totals.capacity.toLocaleString()} ({totals.percent.toFixed(1)}%)</span>
+            Overall:{' '}
+            <span className="font-semibold text-gray-900">
+              {totals.current.toLocaleString()} / {totals.capacity.toLocaleString()} ({totals.percent.toFixed(1)}
+              %)
+            </span>
           </div>
-              <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
-                {Object.entries(data.occupancy).map(([name, val]) => {
-                  const percent = val.capacity ? Math.min(100, (val.current / val.capacity) * 100) : 0
-                  const colour = getColorForStand(name, percent)
-                  const truncatedName = name.length > 12 ? name.substring(0, 10) + '…' : name
-                  const prediction = standPredictions[name]
-                  const nextPrediction = prediction?.predictedOccupancy.find(p => p.minutesAhead === 10)
-                  const hasHighRisk = prediction?.predictedOccupancy.some(p => p.riskLevel === 'high' || p.riskLevel === 'critical')
-                  const isExpanded = expandedStand === name
-                  
-                  return (
-                    <div key={name} className="space-y-1">
-                      <div className="flex justify-between items-center text-sm">
-                        <div className="flex items-center gap-1 flex-1 min-w-0">
-                          <span className="text-gray-700 truncate">{truncatedName}</span>
-                          {hasHighRisk && (
-                            <span className="text-amber-500 text-xs">⚠</span>
-                          )}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 overflow-y-auto flex-1 pr-1">
+            {standsSetup.stands.map((stand) => {
+              const percent = stand.capacity ? Math.min(100, ((stand.current || 0) / stand.capacity) * 100) : 0
+              const colour = getColorForStand(stand.name, percent)
+              const prediction = standPredictions[stand.name]
+              const hasHighRisk = prediction?.predictedOccupancy.some(
+                (p) => p.riskLevel === 'high' || p.riskLevel === 'critical'
+              )
+              const trend = (() => {
+                if (!prediction || !kickoffTime) return null
+                const minutesToKickoff = Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000))
+                const nearest = prediction.predictedOccupancy.reduce(
+                  (closest, entry) => {
+                    const diff = Math.abs(entry.minutesAhead - minutesToKickoff)
+                    if (diff < closest.diff) {
+                      return { diff, entry }
+                    }
+                    return closest
+                  },
+                  { diff: Infinity, entry: null as (typeof prediction.predictedOccupancy)[0] | null }
+                ).entry
+                if (!nearest || stand.capacity === 0) return null
+                const bucket = deriveCountdownBucket(kickoffTime)
+                const actualBasis =
+                  bucket != null && stand.snapshots?.[bucket] != null
+                    ? (stand.snapshots?.[bucket] as number)
+                    : stand.current || 0
+                const actualPercent = (actualBasis / stand.capacity) * 100
+                const predictedPercent = (nearest.predictedOccupancy / stand.capacity) * 100
+                const diff = actualPercent - predictedPercent
+                if (Math.abs(diff) < 3) {
+                  return { label: 'on track', className: 'text-emerald-600' }
+                }
+                if (diff > 0) {
+                  return { label: `+${diff.toFixed(1)}% vs plan`, className: 'text-emerald-600' }
+                }
+                return { label: `${diff.toFixed(1)}% vs plan`, className: 'text-amber-600' }
+              })()
+
+              return (
+                <div
+                  key={stand.id}
+                  className="rounded-md border border-gray-100 px-2.5 py-1.5 dark:border-gray-800"
+                >
+                  <button
+                    onClick={() => {
+                      if (onOpenModal) onOpenModal()
+                    }}
+                    className="w-full text-left"
+                    type="button"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                            {stand.name}
+                          </span>
+                          {hasHighRisk && <span className="text-amber-500 text-xs">⚠</span>}
                         </div>
-                        <div className="flex items-center gap-2 flex-1 max-w-32 mx-2">
-                          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden flex-1">
-                            <div
-                              className={`h-2 ${colour} rounded-full transition-all duration-700`}
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                          <span className="font-medium text-gray-900 text-xs min-w-[35px] text-right">{percent.toFixed(0)}%</span>
-                        </div>
+                        <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                          {percent.toFixed(0)}%
+                        </span>
                       </div>
-                      
-                      {/* Prediction display */}
-                      {nextPrediction && (
-                        <div className="ml-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
-                          <button
-                            onClick={() => setExpandedStand(isExpanded ? null : name)}
-                            className="w-full flex items-center justify-between text-[10px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-                          >
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>
-                                {nextPrediction.minutesAhead}m: ~{nextPrediction.predictedOccupancy} ({nextPrediction.percentage}%)
-                              </span>
-                              {nextPrediction.riskLevel === 'critical' && (
-                                <span className="text-red-500 font-semibold">⚠️</span>
-                              )}
-                              {nextPrediction.riskLevel === 'high' && (
-                                <span className="text-amber-500">!</span>
-                              )}
-                            </div>
-                            <span className="text-[9px]">
-                              {isExpanded ? '▼' : '▶'}
-                            </span>
-                          </button>
-                          
-                          {isExpanded && prediction && (
-                            <div className="mt-1.5 space-y-1 text-[9px] text-gray-600 dark:text-gray-400">
-                              {prediction.predictedOccupancy.slice(0, 6).map((pred) => (
-                                <div key={pred.minutesAhead} className="flex items-center justify-between">
-                                  <span>{pred.minutesAhead}m:</span>
-                                  <span className={`
-                                    ${pred.riskLevel === 'critical' ? 'text-red-600 font-semibold' : ''}
-                                    ${pred.riskLevel === 'high' ? 'text-amber-600' : ''}
-                                    ${pred.riskLevel === 'medium' ? 'text-yellow-600' : ''}
-                                    ${pred.riskLevel === 'low' ? 'text-green-600' : ''}
-                                  `}>
-                                    {pred.predictedOccupancy} ({pred.percentage}%)
-                                  </span>
-                                </div>
-                              ))}
-                              {prediction.peakPrediction && (
-                                <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
-                                  <div className="flex items-center justify-between font-semibold">
-                                    <span>Peak:</span>
-                                    <span className="text-amber-600">
-                                      {prediction.peakPrediction.occupancy} ({prediction.peakPrediction.percentage}%) at {new Date(prediction.peakPrediction.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 flex-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${colour} rounded-full transition-all duration-500`}
+                            style={{ width: `${percent}%` }}
+                          />
                         </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {stand.current?.toLocaleString() || 0} / {stand.capacity.toLocaleString()}
+                        </span>
+                      </div>
+                      {trend && (
+                        <p className={`text-[10px] font-medium ${trend.className}`}>
+                          {trend.label}
+                        </p>
                       )}
                     </div>
-                  )
-                })}
-              </div>
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
   )
 }
+
 
 

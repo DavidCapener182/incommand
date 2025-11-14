@@ -20,65 +20,82 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import ReadinessDetailsModal from './ReadinessDetailsModal'
+import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
 
 interface ReadinessIndexCardProps {
   eventId: string | null
   className?: string
+  initialData?: ReadinessScore | null
 }
 
-interface ReadinessData {
-  overall_score: number
-  component_scores: {
-    staffing: { score: number; details: any }
-    incident_pressure: { score: number; details: any }
-    weather: { score: number; details: any }
-    transport: { score: number; details: any }
-    assets: { score: number; details: any }
-    crowd_density: { score: number; details: any }
-  }
-  trend: 'improving' | 'stable' | 'declining'
-  alerts: Array<{ type: string; message: string; severity: 'low' | 'medium' | 'high' }>
-  calculated_at: string
-}
+type ReadinessData = ReadinessScore
 
-export default function ReadinessIndexCard({ eventId, className = '' }: ReadinessIndexCardProps) {
-  const [readiness, setReadiness] = useState<ReadinessData | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function ReadinessIndexCard({
+  eventId,
+  className = '',
+  initialData,
+}: ReadinessIndexCardProps) {
+  const [readiness, setReadiness] = useState<ReadinessData | null>(initialData ?? null)
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
-    if (eventId) {
-      fetchReadiness()
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchReadiness, 30 * 1000)
-      return () => clearInterval(interval)
+    if (typeof initialData === 'undefined') return
+    setReadiness(initialData ?? null)
+    setLoading(false)
+  }, [initialData])
+
+  useEffect(() => {
+    if (!eventId) {
+      setReadiness(null)
+      return
     }
-  }, [eventId])
 
-  const fetchReadiness = async () => {
-    if (!eventId) return
+    let cancelled = false
 
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch(`/api/analytics/readiness-index?event_id=${eventId}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch readiness index')
-      }
-      const data = await response.json()
-      if (data.success && data.readiness) {
-        setReadiness(data.readiness)
+    const fetchReadiness = async (silent = false) => {
+      if (!eventId) return
+      if (!silent) {
+        setLoading(true)
+        setError(null)
       } else {
-        throw new Error('Invalid response format')
+        setError(null)
       }
-    } catch (err) {
-      console.error('Error fetching readiness index:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setLoading(false)
+
+      try {
+        const response = await fetch(`/api/analytics/readiness-index?event_id=${eventId}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch readiness index')
+        }
+        const data = await response.json()
+        if (!cancelled) {
+          if (data.success && data.readiness) {
+            setReadiness(data.readiness)
+          } else {
+            throw new Error('Invalid response format')
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching readiness index:', err)
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+        }
+      } finally {
+        if (!silent && !cancelled) {
+          setLoading(false)
+        }
+      }
     }
-  }
+
+    // If we already have initial data, refresh silently to avoid flicker
+    fetchReadiness(Boolean(initialData))
+    const interval = setInterval(() => fetchReadiness(true), 30 * 1000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [eventId, initialData])
 
   const getScoreColor = (score: number): string => {
     if (score >= 80) return 'text-green-600 dark:text-green-400'
@@ -198,7 +215,9 @@ export default function ReadinessIndexCard({ eventId, className = '' }: Readines
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Crowd</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {readiness.component_scores.crowd_density.details?.metric_label || 'Crowd'}
+              </span>
               <span className={getScoreColor(readiness.component_scores.crowd_density.score)}>
                 {readiness.component_scores.crowd_density.score}%
               </span>

@@ -18,25 +18,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       res.status(200).json({
         standsSetup: {
-          stands: stands.map(stand => ({
+          stands: stands.map((stand) => ({
             id: stand.id,
             name: stand.name,
             capacity: stand.capacity,
             order: stand.order_index,
-            current: stand.current_occupancy || 0
+            current: stand.current_occupancy || 0,
+            snapshots: stand.snapshots || {},
           })),
-          totalCapacity
-        }
+          totalCapacity,
+        },
       });
     } else if (req.method === 'POST') {
       // For operational updates (current occupancy)
-      const { standId, occupancy, recordedBy } = req.body;
+      const { standId, occupancy, recordedBy, countdownBucket } = req.body;
       
       if (!standId || typeof occupancy !== 'number') {
         return res.status(400).json({ error: 'standId and occupancy are required' });
       }
       
-      await updateStandOccupancy(companyId, eventId, standId, occupancy, recordedBy);
+      await updateStandOccupancy(companyId, eventId, standId, occupancy, recordedBy, countdownBucket);
       res.status(200).json({ success: true });
     } else if (req.method === 'PUT') {
       // For config/setup updates (adding/removing stands)

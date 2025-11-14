@@ -1,5 +1,4 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/supabase'
 import {
   CrowdBehaviorInsight,
   CrowdBehaviorReading,
@@ -13,7 +12,9 @@ import {
   ZoneRiskScore,
 } from '@/types/crowdIntelligence'
 
-type Supabase = SupabaseClient<Database>
+// These tables live in a feature-specific schema that isn't covered by the generated
+// Supabase types yet, so we intentionally widen the typing here to avoid noisy errors.
+type Supabase = SupabaseClient<any>
 
 const BEHAVIOR_LOOKBACK_MINUTES = 60
 const WELFARE_LOOKBACK_MINUTES = 90
@@ -64,7 +65,10 @@ export async function getCrowdIntelligenceSummary(
   const welfareSince = new Date(now.getTime() - WELFARE_LOOKBACK_MINUTES * 60 * 1000).toISOString()
 
   try {
-    const [{ data: behaviorData }, { data: welfareData }] = await Promise.all([
+    const [
+      { data: behaviorData, error: behaviorError },
+      { data: welfareData, error: welfareError },
+    ] = await Promise.all([
       supabase
         .from('crowd_behavior_readings')
         .select('*')
@@ -79,23 +83,54 @@ export async function getCrowdIntelligenceSummary(
         .gte('captured_at', welfareSince)
         .order('captured_at', { ascending: false })
         .limit(200),
-    ])
+    ]);
+
+    if (behaviorError || welfareError) {
+      throw new Error(
+        `Supabase fetch failed: behaviorError=${behaviorError?.message ?? "none"}, welfareError=${welfareError?.message ?? "none"}`
+      );
+    }
 
     const behaviorInsights = generateBehaviorInsights(behaviorData ?? [])
     const welfareInsights = generateWelfareInsights(welfareData ?? [])
-    const criticalAlerts = createCriticalAlerts(behaviorInsights, welfareInsights)
-    const zoneRiskScores = buildZoneRiskScores(behaviorInsights, welfareInsights)
-    const sentimentTrend = buildSentimentTrend(welfareData ?? [])
-    const keywordHighlights = buildKeywordHighlights(welfareData ?? [])
+    const criticalAlerts = createCriticalAlerts(behaviorInsights, welfareInsights);
+    const zoneRiskScores = buildZoneRiskScores(behaviorInsights, welfareInsights);
+    const sentimentTrend = buildSentimentTrend(Array.isArray(welfareData) ? welfareData : []);
+    const keywordHighlights = buildKeywordHighlights(Array.isArray(welfareData) ? welfareData : []);
 
-    const totalSignals = (behaviorData?.length ?? 0) + (welfareData?.length ?? 0)
-    const highSeveritySignals =
-      (behaviorData?.filter(b => b.severity === 'high' || b.severity === 'critical').length ?? 0) +
-      (welfareData?.filter(w => w.concern_level === 'warning' || w.concern_level === 'critical').length ?? 0)
+    const totalSignals =
+      (Array.isArray(behaviorData) ? behaviorData.length : 0) +
+      (Array.isArray(welfareData) ? welfareData.length : 0)
+
+    const highSeverityBehavior = Array.isArray(behaviorData)
+      ? behaviorData.filter(
+          b =>
+            b &&
+            typeof b.severity === 'string' &&
+            (b.severity === 'high' || b.severity === 'critical')
+        ).length
+      : 0
+
+    const highSeverityWelfare = Array.isArray(welfareData)
+      ? welfareData.filter(
+          w =>
+            w &&
+            typeof w.concern_level === 'string' &&
+            (w.concern_level === 'warning' || w.concern_level === 'critical')
+        ).length
+      : 0
+
+    const highSeveritySignals = highSeverityBehavior + highSeverityWelfare
+
+    const validSentiments = Array.isArray(welfareData)
+      ? (welfareData
+          .map(item => item?.sentiment_score)
+          .filter(score => typeof score === 'number' && !Number.isNaN(score)) as number[])
+      : []
 
     const averageSentiment =
-      welfareData && welfareData.length > 0
-        ? welfareData.reduce((sum, item) => sum + item.sentiment_score, 0) / welfareData.length
+      validSentiments.length > 0
+        ? validSentiments.reduce((sum, score) => sum + score, 0) / validSentiments.length
         : null
 
     const concernZones = welfareInsights.filter(

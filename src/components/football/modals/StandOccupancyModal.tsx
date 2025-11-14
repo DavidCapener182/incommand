@@ -1,13 +1,32 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { StandsSetup, StandConfig } from '@/types/football'
-import { Plus, Trash2, GripVertical, Clock } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ChevronDown } from 'lucide-react'
 import { useEventContext } from '@/contexts/EventContext'
 import { supabase } from '@/lib/supabase'
-import { predictStandFlow, type StandFlowPrediction } from '@/lib/analytics/crowdFlowPrediction'
+import { predictStandFlow, type StandFlowPrediction, STAND_COUNTDOWN_OFFSETS } from '@/lib/analytics/crowdFlowPrediction'
+import { useCompanyEventContext } from '@/hooks/useCompanyEventContext'
+
+const buildContextQuery = (ctx: { companyId: string; eventId: string }) =>
+  `?company_id=${ctx.companyId}&event_id=${ctx.eventId}`
+
+const COUNTDOWN_BUCKETS = [60, 50, 40, 30, 20, 10, 0] as const
+
+const deriveCountdownBucket = (kickoffTime: Date | null) => {
+  if (!kickoffTime) return null
+  const minutesToKickoff = Math.round((kickoffTime.getTime() - Date.now()) / 60000)
+  if (minutesToKickoff >= 55) return 60
+  if (minutesToKickoff >= 45) return 50
+  if (minutesToKickoff >= 35) return 40
+  if (minutesToKickoff >= 25) return 30
+  if (minutesToKickoff >= 15) return 20
+  if (minutesToKickoff >= 5) return 10
+  if (minutesToKickoff >= 0) return 0
+  return null
+}
 
 interface StandOccupancyModalProps {
   onSave?: () => void
@@ -15,12 +34,13 @@ interface StandOccupancyModalProps {
 
 // Current Tab Component
 export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
-  const { eventId } = useEventContext()
+  const { eventId, eventData } = useEventContext()
+  const { context, loading: contextLoading } = useCompanyEventContext(eventId)
   const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [editingStand, setEditingStand] = useState<string | null>(null)
   const [newStand, setNewStand] = useState<Partial<StandConfig>>({ name: '', capacity: 0 })
+  const [initialStands, setInitialStands] = useState<StandConfig[]>([])
   const [thresholds, setThresholds] = useState({
     default_green_threshold: 90,
     default_amber_threshold: 97,
@@ -29,81 +49,105 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   })
   const [standPredictions, setStandPredictions] = useState<Record<string, StandFlowPrediction>>({})
   const [expandedStand, setExpandedStand] = useState<string | null>(null)
+  const [showPredictions, setShowPredictions] = useState(false)
+
+  const kickoffTime = useMemo(() => {
+    if (eventData?.start_datetime) {
+      return new Date(eventData.start_datetime)
+    }
+    if (eventData?.event_date && eventData?.main_act_start_time) {
+      const time = eventData.main_act_start_time.includes(':')
+        ? eventData.main_act_start_time
+        : `${eventData.main_act_start_time}:00`
+      const normalizedTime = time.length === 5 ? `${time}:00` : time
+      return new Date(`${eventData.event_date}T${normalizedTime}`)
+    }
+    return null
+  }, [eventData?.start_datetime, eventData?.event_date, eventData?.main_act_start_time])
+
+  const computeHorizonMinutes = useCallback(() => {
+    if (!kickoffTime) return 60
+    const minutesUntilKickoff = Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000))
+    const padded = Math.ceil(minutesUntilKickoff / 10) * 10 + 10
+    return Math.min(Math.max(60, padded), 360)
+  }, [kickoffTime])
 
   useEffect(() => {
-    loadData()
-    loadThresholds()
-  }, [eventId])
+    if (!context) return
+    loadData(context)
+    loadThresholds(context)
+  }, [context, kickoffTime, computeHorizonMinutes])
 
-  const loadData = async () => {
+  const loadData = async (ctx: { companyId: string; eventId: string }) => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/football/stands?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/stands${buildContextQuery(ctx)}`)
       if (res.ok) {
         const data = await res.json()
         setStandsSetup(data.standsSetup)
-        
-        // Load predictions for each stand
+        setInitialStands(data.standsSetup?.stands ?? [])
+
         if (eventId && data.standsSetup?.stands) {
           const predictions: Record<string, StandFlowPrediction> = {}
+          const horizonMinutes = computeHorizonMinutes()
           for (const stand of data.standsSetup.stands) {
             try {
-              console.log(`Loading prediction for stand: ${stand.name}, current: ${stand.current || 0}, capacity: ${stand.capacity}`)
               const prediction = await predictStandFlow(
                 supabase,
                 eventId,
                 stand.id,
                 stand.name,
                 stand.capacity,
-                60,
-                stand.current || 0 // Pass current occupancy directly
+                horizonMinutes,
+                stand.current || 0,
+                ctx.companyId,
+                kickoffTime || undefined
               )
-              console.log(`Prediction loaded for ${stand.name}:`, prediction)
               predictions[stand.name] = prediction
             } catch (err) {
               console.error(`Failed to predict flow for stand ${stand.name}:`, err)
-              // Create a fallback prediction using current occupancy
               const current = stand.current || 0
               const now = new Date()
               const estimatedRate = stand.capacity > 0 ? (stand.capacity - current) / 120 : 0
               const fallbackPredictions: StandFlowPrediction['predictedOccupancy'] = []
-              
+
               for (let minutesAhead = 10; minutesAhead <= 60; minutesAhead += 10) {
                 const predictedTime = new Date(now.getTime() + minutesAhead * 60000)
-                const predicted = Math.min(stand.capacity * 1.05, current + (estimatedRate * minutesAhead))
-                const percentage = (predicted / stand.capacity) * 100
-                
+                const predicted = Math.min(stand.capacity * 1.05, current + estimatedRate * minutesAhead)
+                const percentage = stand.capacity ? (predicted / stand.capacity) * 100 : 0
+
                 let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
                 if (percentage >= 100) riskLevel = 'critical'
                 else if (percentage >= 90) riskLevel = 'high'
                 else if (percentage >= 75) riskLevel = 'medium'
-                
+
                 fallbackPredictions.push({
                   time: predictedTime.toISOString(),
                   minutesAhead,
                   predictedOccupancy: Math.round(predicted),
                   percentage: Math.round(percentage),
-                  riskLevel
+                  riskLevel,
                 })
               }
-              
+
               predictions[stand.name] = {
                 standId: stand.id,
                 standName: stand.name,
                 currentOccupancy: current,
                 capacity: stand.capacity,
                 predictedOccupancy: fallbackPredictions,
-                peakPrediction: fallbackPredictions.length > 0 ? {
-                  time: fallbackPredictions[fallbackPredictions.length - 1].time,
-                  occupancy: fallbackPredictions[fallbackPredictions.length - 1].predictedOccupancy,
-                  percentage: fallbackPredictions[fallbackPredictions.length - 1].percentage
-                } : null
+                peakPrediction:
+                  fallbackPredictions.length > 0
+                    ? {
+                        time: fallbackPredictions[fallbackPredictions.length - 1].time,
+                        occupancy: fallbackPredictions[fallbackPredictions.length - 1].predictedOccupancy,
+                        percentage: fallbackPredictions[fallbackPredictions.length - 1].percentage,
+                      }
+                    : null,
               }
             }
           }
-          console.log('All predictions loaded:', predictions)
           setStandPredictions(predictions)
-        } else {
-          console.warn('Cannot load predictions - eventId:', eventId, 'stands:', data.standsSetup?.stands)
         }
       }
     } catch (error) {
@@ -113,16 +157,16 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     }
   }
 
-  const loadThresholds = async () => {
+  const loadThresholds = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/thresholds?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/thresholds${buildContextQuery(ctx)}`)
       if (res.ok) {
         const data = await res.json()
         setThresholds({
           default_green_threshold: data.default_green_threshold || 90,
           default_amber_threshold: data.default_amber_threshold || 97,
           default_red_threshold: data.default_red_threshold || 100,
-          stand_overrides: data.stand_overrides || {}
+          stand_overrides: data.stand_overrides || {},
         })
       }
     } catch (error) {
@@ -143,15 +187,57 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   }
 
   const handleSave = async () => {
-    if (!standsSetup) return
-    
+    if (!standsSetup || !context) return
+
     setSaving(true)
+    const query = buildContextQuery(context)
     try {
-      await fetch('/api/football/stands', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ standsSetup }),
-      })
+      for (const [index, stand] of standsSetup.stands.entries()) {
+        const payload = {
+          id: stand.id,
+          name: stand.name,
+          capacity: stand.capacity,
+          order_index: stand.order ?? index + 1,
+        }
+
+        const action: 'create' | 'update' =
+          !stand.id || stand.id.startsWith('stand-') || !initialStands.find((s) => s.id === stand.id)
+            ? 'create'
+            : 'update'
+
+        const res = await fetch(`/api/football/stands${query}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            data: payload,
+          }),
+        })
+
+        if (!res.ok) {
+          const msg = await res.text()
+          throw new Error(`Failed to ${action} stand ${stand.name}: ${res.status} ${msg}`)
+        }
+      }
+
+      for (const stand of initialStands) {
+        if (!standsSetup.stands.find((s) => s.id === stand.id)) {
+          const res = await fetch(`/api/football/stands${query}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'delete',
+              data: { id: stand.id },
+            }),
+          })
+          if (!res.ok) {
+            const msg = await res.text()
+            throw new Error(`Failed to delete stand ${stand.name}: ${res.status} ${msg}`)
+          }
+        }
+      }
+
+      await loadData(context)
       onSave?.()
     } catch (error) {
       console.error('Failed to save stands setup:', error)
@@ -161,20 +247,38 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   }
 
   const handleCurrentOccupancyChange = async (standId: string, current: number) => {
-    if (!standsSetup) return
+    if (!standsSetup || !context) return
 
-    const updatedStands = standsSetup.stands.map(stand =>
-      stand.id === standId ? { ...stand, current } : stand
+    const bucket = deriveCountdownBucket(kickoffTime)
+
+    const updatedStands = standsSetup.stands.map((stand) =>
+      stand.id === standId
+        ? {
+            ...stand,
+            current,
+            snapshots:
+              bucket == null
+                ? stand.snapshots
+                : {
+                    ...(stand.snapshots ?? {}),
+                    [bucket]: current,
+                  },
+          }
+        : stand
     )
-    
+
     setStandsSetup({ ...standsSetup, stands: updatedStands })
 
-    // Auto-save current occupancy
     try {
-      await fetch('/api/football/stands', {
+      await fetch(`/api/football/stands${buildContextQuery(context)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ standId, current }),
+        body: JSON.stringify({
+          standId,
+          occupancy: current,
+          recordedBy: 'stand-occupancy',
+          countdownBucket: bucket,
+        }),
       })
     } catch (error) {
       console.error('Failed to auto-save occupancy:', error)
@@ -231,6 +335,139 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     })
   }
 
+  const buildTimeline = useCallback(
+    (prediction?: StandFlowPrediction) => {
+      if (!prediction) return []
+
+      if (!kickoffTime) {
+        return prediction.predictedOccupancy
+          .slice(0, 6)
+          .map((point) => ({
+            key: `+${point.minutesAhead}`,
+            label: `+${point.minutesAhead}m`,
+            timeLabel: new Date(point.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            occupancy: point.predictedOccupancy,
+            percentage: point.percentage,
+            offset: point.minutesAhead,
+          }))
+          .sort((a, b) => b.offset - a.offset)
+      }
+
+      const now = Date.now()
+      const timeline: {
+        key: string
+        label: string
+        timeLabel: string
+        occupancy: number
+        percentage: number
+        offset: number
+      }[] = []
+
+      for (const offset of STAND_COUNTDOWN_OFFSETS) {
+        const targetTime = new Date(kickoffTime.getTime() - offset * 60000)
+        if (targetTime.getTime() < now) continue
+
+        const nearest = prediction.predictedOccupancy.reduce(
+          (closest, point) => {
+            const diff = Math.abs(new Date(point.time).getTime() - targetTime.getTime())
+            if (diff < closest.diff) {
+              return { diff, point }
+            }
+            return closest
+          },
+          { diff: Infinity, point: null as (typeof prediction.predictedOccupancy)[0] | null }
+        ).point
+
+        if (!nearest) continue
+
+        timeline.push({
+          key: offset === 0 ? 'kickoff' : `-${offset}`,
+          label: offset === 0 ? 'Kick-off' : `${offset}m to KO`,
+          timeLabel: targetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          occupancy: nearest.predictedOccupancy,
+          percentage: nearest.percentage,
+          offset,
+        })
+      }
+
+      return timeline.sort((a, b) => b.offset - a.offset)
+    },
+    [kickoffTime]
+  )
+
+  const countdownOffsets = useMemo(
+    () => STAND_COUNTDOWN_OFFSETS.filter((offset) => offset >= 0).sort((a, b) => b - a),
+    []
+  )
+
+  const countdownSummary = useMemo(() => {
+    if (!standsSetup?.stands?.length) return []
+
+    return countdownOffsets
+      .map((offset) => {
+        let totalPredicted = 0
+        let totalCapacity = 0
+        let contributing = 0
+
+        for (const stand of standsSetup.stands) {
+          totalCapacity += stand.capacity || 0
+          const snapshotValue = stand.snapshots?.[offset] ?? null
+          if (snapshotValue != null) {
+            totalPredicted += snapshotValue
+            contributing++
+            continue
+          }
+
+          const prediction = standPredictions[stand.name]?.predictedOccupancy.find(
+            (entry) => entry.minutesAhead === offset
+          )
+          if (prediction) {
+            totalPredicted += prediction.predictedOccupancy
+            contributing++
+          }
+        }
+
+        if (contributing === 0 || totalCapacity === 0) {
+          return null
+        }
+
+        return {
+          key: offset,
+          label: offset === 0 ? 'Kick-off' : `${offset}m to KO`,
+          timeLabel: kickoffTime
+            ? new Date(kickoffTime.getTime() - offset * 60000).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : undefined,
+          occupancy: Math.round(totalPredicted),
+          percentage: Math.min(100, Math.round((totalPredicted / totalCapacity) * 100)),
+        }
+      })
+      .filter(Boolean) as Array<{
+        key: number
+        label: string
+        timeLabel?: string
+        occupancy: number
+        percentage: number
+      }>
+  }, [standsSetup, standPredictions, kickoffTime, countdownOffsets])
+
+  const standPredictionRows = useMemo(() => {
+    if (!standsSetup?.stands?.length) return []
+    return standsSetup.stands.map((stand) => ({
+      id: stand.id,
+      name: stand.name,
+      capacity: stand.capacity,
+      snapshots: stand.snapshots ?? {},
+      predictions: standPredictions[stand.name]?.predictedOccupancy ?? [],
+    }))
+  }, [standsSetup, standPredictions])
+
+  if (contextLoading || !context) {
+    return <div className="p-4 text-center">Loading event context…</div>
+  }
+
   if (loading) {
     return <div className="p-4 text-center">Loading...</div>
   }
@@ -240,114 +477,180 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
   }
 
   const currentTab = (
-    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
+    <div className="space-y-4 pr-2">
       <div className="text-sm text-muted-foreground mb-4">
         Edit live occupancy numbers. Changes are saved automatically.
       </div>
       
-      {standsSetup.stands.map((stand) => {
-        const percent = stand.capacity ? Math.min(100, ((stand.current || 0) / stand.capacity) * 100) : 0
-        const colorClass = getColorForStand(stand.name, percent)
-        const prediction = standPredictions[stand.name]
-        const nextPrediction = prediction?.predictedOccupancy.find(p => p.minutesAhead === 10)
-        const hasHighRisk = prediction?.predictedOccupancy.some(p => p.riskLevel === 'high' || p.riskLevel === 'critical')
-        const isExpanded = expandedStand === stand.id
-        
-        return (
-          <div key={stand.id} className="border rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium">{stand.name}</h4>
-                {hasHighRisk && (
-                  <span className="text-amber-500 text-xs">⚠</span>
-                )}
+      {countdownSummary.length > 0 && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30">
+          <button
+            type="button"
+            onClick={() => setShowPredictions((prev) => !prev)}
+            className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+          >
+            <span>Predicted attendance (countdown to kick-off)</span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${showPredictions ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {showPredictions && (
+            <div className="px-4 pb-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
+            {countdownSummary.map((entry) => (
+              <div key={entry.key} className="flex items-center justify-between text-gray-900 dark:text-gray-100">
+                <span className="text-gray-600 dark:text-gray-300">
+                  {entry.label}{' '}
+                  {entry.timeLabel && <span className="text-muted-foreground text-xs">({entry.timeLabel})</span>}
+                </span>
+                <span className="font-semibold">
+                  {entry.occupancy.toLocaleString()} ({entry.percentage}%)
+                </span>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {stand.current || 0} / {stand.capacity.toLocaleString()}
-              </span>
+            ))}
+          </div>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={stand.current || 0}
-                  onChange={(e) => handleCurrentOccupancyChange(stand.id, parseInt(e.target.value) || 0)}
-                  className="w-32"
-                  min="0"
-                  max={stand.capacity}
-                />
-                <span className="text-sm text-muted-foreground self-center">people</span>
+          )}
+        </div>
+      )}
+
+      {standPredictionRows.length > 0 && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-4 bg-white/60 dark:bg-gray-900/20 overflow-x-auto">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="text-muted-foreground">
+                <th className="text-left font-semibold py-1 pr-4">Stand</th>
+                {countdownOffsets.map((offset) => (
+                  <th key={offset} className="text-right font-semibold px-2">
+                    {offset === 0 ? 'KO' : `${offset}m`}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {standPredictionRows.map((row) => (
+                <tr key={row.id} className="border-t border-gray-100 dark:border-gray-800">
+                  <td className="py-1 pr-4 font-medium text-gray-900 dark:text-gray-100">{row.name}</td>
+                  {countdownOffsets.map((offset) => {
+                    const snapshotValue = row.snapshots?.[offset] ?? null
+                    const entry = row.predictions.find((prediction) => prediction.minutesAhead === offset)
+                    const displayValue = snapshotValue ?? entry?.predictedOccupancy ?? null
+                    const percentage =
+                      displayValue != null && row.capacity > 0
+                        ? Math.min(100, (displayValue / row.capacity) * 100)
+                        : null
+
+                    return (
+                      <td key={offset} className="text-right px-2 py-1 text-gray-700 dark:text-gray-200">
+                        {displayValue != null && percentage != null
+                          ? `${displayValue.toLocaleString()} (${percentage.toFixed(0)}%)${
+                              snapshotValue != null ? ' • actual' : ''
+                            }`
+                          : '—'}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      <div className="grid gap-2 md:grid-cols-2">
+        {standsSetup.stands.map((stand) => {
+          const percent = stand.capacity ? Math.min(100, ((stand.current || 0) / stand.capacity) * 100) : 0
+          const colorClass = getColorForStand(stand.name, percent)
+          const prediction = standPredictions[stand.name]
+          const hasHighRisk = prediction?.predictedOccupancy.some(
+            (p) => p.riskLevel === 'high' || p.riskLevel === 'critical'
+          )
+          const isExpanded = expandedStand === stand.id
+          const timeline = buildTimeline(prediction)
+          const hasTimeline = timeline.length > 0
+          const bucket = deriveCountdownBucket(kickoffTime)
+          const minutesToKickoff =
+            kickoffTime != null ? Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000)) : null
+          const matchingPrediction =
+            kickoffTime && prediction && minutesToKickoff != null
+              ? prediction.predictedOccupancy.reduce(
+                  (closest, entry) => {
+                    const diff = Math.abs(entry.minutesAhead - minutesToKickoff)
+                    if (diff < closest.diff) {
+                      return { diff, entry }
+                    }
+                    return closest
+                  },
+                  { diff: Infinity, entry: null as (typeof prediction.predictedOccupancy)[0] | null }
+                ).entry
+              : null
+          const predictedPercent =
+            matchingPrediction && stand.capacity
+              ? Math.min(100, (matchingPrediction.predictedOccupancy / stand.capacity) * 100)
+              : null
+          const snapshotValue = bucket != null ? stand.snapshots?.[bucket] ?? null : null
+
+          const liveVsPlan = (() => {
+            if (predictedPercent == null || stand.capacity === 0) return null
+            const basis = snapshotValue ?? stand.current ?? 0
+            const actualPercent = (basis / stand.capacity) * 100
+            const diff = actualPercent - predictedPercent
+            if (Math.abs(diff) < 3) return { label: 'on track', className: 'text-emerald-600' }
+            if (diff > 0) return { label: `+${diff.toFixed(1)}% vs plan`, className: 'text-emerald-600' }
+            return { label: `${diff.toFixed(1)}% vs plan`, className: 'text-amber-600' }
+          })()
+
+          return (
+            <div key={stand.id} className="border rounded-lg p-2.5 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                  {stand.name}
+                  {hasHighRisk && <span className="text-amber-500 text-xs">⚠</span>}
+                </div>
+                <div className="flex items-center gap-1 ml-auto text-sm text-gray-600">
+                  <Input
+                    type="number"
+                    value={stand.current || 0}
+                    onChange={(e) => handleCurrentOccupancyChange(stand.id, parseInt(e.target.value) || 0)}
+                    className="h-7 w-24 text-sm"
+                    min="0"
+                    max={stand.capacity}
+                  />
+                  <span>people</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {stand.current?.toLocaleString() || 0} / {stand.capacity.toLocaleString()}
+                  </span>
+                </div>
               </div>
-              
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-2 ${colorClass} rounded-full transition-all duration-300`}
+                  className={`h-full ${colorClass} rounded-full transition-all duration-300`}
                   style={{ width: `${Math.min(percent, 100)}%` }}
                 />
               </div>
-              
-              <div className="text-xs text-muted-foreground">
-                {percent.toFixed(1)}% occupied
-              </div>
-              
-              {/* Prediction display */}
-              {nextPrediction && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => setExpandedStand(isExpanded ? null : stand.id)}
-                    className="w-full flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+
+              <div className="text-[11px] text-muted-foreground flex flex-wrap gap-2">
+                <span className="font-semibold text-gray-900">{percent.toFixed(1)}% occupied</span>
+                {predictedPercent !== null && (
+                  <span
+                    className={
+                      Math.abs(percent - predictedPercent) < 3
+                        ? 'text-emerald-600 font-semibold'
+                        : percent > predictedPercent
+                        ? 'text-emerald-600 font-semibold'
+                        : 'text-amber-600 font-semibold'
+                    }
                   >
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      <span>
-                        {nextPrediction.minutesAhead}m: ~{nextPrediction.predictedOccupancy.toLocaleString()} ({nextPrediction.percentage}%)
-                      </span>
-                      {nextPrediction.riskLevel === 'critical' && (
-                        <span className="text-red-500 font-semibold">⚠️</span>
-                      )}
-                      {nextPrediction.riskLevel === 'high' && (
-                        <span className="text-amber-500">!</span>
-                      )}
-                    </div>
-                    <span className="text-[10px]">
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
-                  </button>
-                  
-                  {isExpanded && prediction && (
-                    <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                      {prediction.predictedOccupancy.slice(0, 6).map((pred) => (
-                        <div key={pred.minutesAhead} className="flex items-center justify-between">
-                          <span>{pred.minutesAhead}m:</span>
-                          <span className={`
-                            ${pred.riskLevel === 'critical' ? 'text-red-600 font-semibold' : ''}
-                            ${pred.riskLevel === 'high' ? 'text-amber-600' : ''}
-                            ${pred.riskLevel === 'medium' ? 'text-yellow-600' : ''}
-                            ${pred.riskLevel === 'low' ? 'text-green-600' : ''}
-                          `}>
-                            {pred.predictedOccupancy.toLocaleString()} ({pred.percentage}%)
-                          </span>
-                        </div>
-                      ))}
-                      {prediction.peakPrediction && (
-                        <div className="pt-1 mt-1 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between font-semibold">
-                            <span>Peak:</span>
-                            <span className="text-amber-600">
-                              {prediction.peakPrediction.occupancy.toLocaleString()} ({prediction.peakPrediction.percentage}%) at {new Date(prediction.peakPrediction.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                    {predictedPercent.toFixed(0)}% predicted
+                  </span>
+                )}
+                {liveVsPlan && <span className={`${liveVsPlan.className} font-semibold`}>{liveVsPlan.label}</span>}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
       
       <div className="border-t pt-4">
         <div className="text-sm font-medium">
@@ -445,10 +748,13 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
 
 // Setup Tab Component
 export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
+  const { eventId, eventData } = useEventContext()
+  const { context, loading: contextLoading } = useCompanyEventContext(eventId)
   const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newStand, setNewStand] = useState<Partial<StandConfig>>({ name: '', capacity: 0 })
+  const [initialStands, setInitialStands] = useState<StandConfig[]>([])
   const [thresholds, setThresholds] = useState({
     default_green_threshold: 90,
     default_amber_threshold: 97,
@@ -457,12 +763,35 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
   })
   const [editingStandOverride, setEditingStandOverride] = useState<string | null>(null)
 
-  const loadData = async () => {
+  const kickoffTime = useMemo(() => {
+    if (eventData?.start_datetime) {
+      return new Date(eventData.start_datetime)
+    }
+    if (eventData?.event_date && eventData?.main_act_start_time) {
+      const time = eventData.main_act_start_time.includes(':')
+        ? eventData.main_act_start_time
+        : `${eventData.main_act_start_time}:00`
+      const normalizedTime = time.length === 5 ? `${time}:00` : time
+      return new Date(`${eventData.event_date}T${normalizedTime}`)
+    }
+    return null
+  }, [eventData?.start_datetime, eventData?.event_date, eventData?.main_act_start_time])
+
+  const computeHorizonMinutes = useCallback(() => {
+    if (!kickoffTime) return 60
+    const minutesUntilKickoff = Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000))
+    const padded = Math.ceil(minutesUntilKickoff / 10) * 10 + 10
+    return Math.min(Math.max(60, padded), 360)
+  }, [kickoffTime])
+
+  const loadData = async (ctx: { companyId: string; eventId: string }) => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/football/stands?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/stands${buildContextQuery(ctx)}`)
       if (res.ok) {
         const data = await res.json()
         setStandsSetup(data.standsSetup)
+        setInitialStands(data.standsSetup?.stands ?? [])
       }
     } catch (error) {
       console.error('Failed to load stands data:', error)
@@ -471,16 +800,16 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
     }
   }
 
-  const loadThresholds = async () => {
+  const loadThresholds = async (ctx: { companyId: string; eventId: string }) => {
     try {
-      const res = await fetch('/api/football/thresholds?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
+      const res = await fetch(`/api/football/thresholds${buildContextQuery(ctx)}`)
       if (res.ok) {
         const data = await res.json()
         setThresholds({
           default_green_threshold: data.default_green_threshold || 90,
           default_amber_threshold: data.default_amber_threshold || 97,
           default_red_threshold: data.default_red_threshold || 100,
-          stand_overrides: data.stand_overrides || {}
+          stand_overrides: data.stand_overrides || {},
         })
       }
     } catch (error) {
@@ -489,14 +818,16 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
   }
 
   useEffect(() => {
-    loadData()
-    loadThresholds()
-  }, [])
+    if (!context) return
+    loadData(context)
+    loadThresholds(context)
+  }, [context, kickoffTime, computeHorizonMinutes])
 
   const saveThresholds = async () => {
+    if (!context) return
     setSaving(true)
     try {
-      await fetch('/api/football/thresholds', {
+      await fetch(`/api/football/thresholds${buildContextQuery(context)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -515,15 +846,57 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
   }
 
   const handleSave = async () => {
-    if (!standsSetup) return
-    
+    if (!standsSetup || !context) return
+
     setSaving(true)
+    const query = buildContextQuery(context)
     try {
-      await fetch('/api/football/stands', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ standsSetup }),
-      })
+      for (const [index, stand] of standsSetup.stands.entries()) {
+        const payload = {
+          id: stand.id,
+          name: stand.name,
+          capacity: stand.capacity,
+          order_index: stand.order ?? index + 1,
+        }
+
+        const action: 'create' | 'update' =
+          !stand.id || stand.id.startsWith('stand-') || !initialStands.find((s) => s.id === stand.id)
+            ? 'create'
+            : 'update'
+
+        const res = await fetch(`/api/football/stands${query}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            data: payload,
+          }),
+        })
+
+        if (!res.ok) {
+          const msg = await res.text()
+          throw new Error(`Failed to ${action} stand ${stand.name}: ${res.status} ${msg}`)
+        }
+      }
+
+      for (const stand of initialStands) {
+        if (!standsSetup.stands.find((s) => s.id === stand.id)) {
+          const res = await fetch(`/api/football/stands${query}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'delete',
+              data: { id: stand.id },
+            }),
+          })
+          if (!res.ok) {
+            const msg = await res.text()
+            throw new Error(`Failed to delete stand ${stand.name}: ${res.status} ${msg}`)
+          }
+        }
+      }
+
+      await loadData(context)
       onSave?.()
     } catch (error) {
       console.error('Failed to save stands setup:', error)
@@ -738,8 +1111,18 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
 
       {/* Stand Configuration Section */}
       <div className="border rounded-lg p-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure stand names, capacities, and order. Changes require explicit save.
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <p className="text-sm text-muted-foreground">
+          Configure stand names, capacities, and order. Use the modal Save Changes button to persist updates.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => context && loadData(context)}
+          disabled={saving}
+        >
+          Reset
+        </Button>
       </div>
       
       {/* Add new stand */}

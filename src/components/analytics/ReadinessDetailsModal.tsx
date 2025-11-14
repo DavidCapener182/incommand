@@ -11,6 +11,13 @@ import React from 'react'
 import { XMarkIcon, CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Info } from 'lucide-react'
 
 interface ReadinessDetailsModalProps {
   isOpen: boolean
@@ -72,13 +79,18 @@ export default function ReadinessDetailsModal({
     })
   }
 
+  const crowdDetails = readiness.component_scores.crowd_density.details ?? {}
+  const crowdLabel = crowdDetails.metric_label ?? 'Crowd Density'
+  const crowdDescription = crowdDetails.metric_description ?? 'Live occupancy vs. venue capacity'
+  const crowdWarnThreshold = crowdDetails.is_football ? 95 : 90
+
   const components = [
-    { key: 'staffing', label: 'Staffing', weight: '25%' },
-    { key: 'incident_pressure', label: 'Incident Pressure', weight: '25%' },
-    { key: 'weather', label: 'Weather', weight: '15%' },
-    { key: 'transport', label: 'Transport', weight: '10%' },
-    { key: 'assets', label: 'Assets', weight: '10%' },
-    { key: 'crowd_density', label: 'Crowd Density', weight: '15%' },
+    { key: 'staffing', label: 'Staffing', weight: '25%', description: 'On-post staff vs. planned headcount by discipline' },
+    { key: 'incident_pressure', label: 'Incident Pressure', weight: '25%', description: 'Open incidents, priority levels, and last-hour activity' },
+    { key: 'weather', label: 'Weather', weight: '15%', description: 'Current weather conditions and risk to operations' },
+    { key: 'transport', label: 'Transport', weight: '10%', description: 'Ingress and egress health across transport modes' },
+    { key: 'assets', label: 'Assets', weight: '10%', description: 'Critical infrastructure availability' },
+    { key: 'crowd_density', label: crowdLabel, weight: '15%', description: crowdDescription },
   ] as const
 
   return (
@@ -113,6 +125,18 @@ export default function ReadinessDetailsModal({
                         <Badge variant="outline" className="text-xs">
                           {comp.weight}
                         </Badge>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="text-gray-400 hover:text-gray-600">
+                                <Info className="h-4 w-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs">
+                              {comp.description}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                       <div className={`text-2xl font-bold ${getScoreColor(component.score)}`}>
                         {component.score}
@@ -130,6 +154,28 @@ export default function ReadinessDetailsModal({
                                 ({factor.impact > 0 ? '+' : ''}{factor.impact})
                               </span>
                             )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {comp.key === 'staffing' && component.details?.disciplines && (
+                      <div className="mt-4 grid gap-2 text-xs text-gray-600 dark:text-gray-400 sm:grid-cols-3">
+                        {Object.entries(component.details.disciplines).map(([discipline, stats]) => (
+                          <div key={discipline} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100 capitalize">{discipline}</p>
+                            <p>
+                              On Post:{' '}
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                {stats.actual}
+                              </span>
+                            </p>
+                            <p>
+                              Planned:{' '}
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                {stats.planned}
+                              </span>
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -179,9 +225,9 @@ export default function ReadinessDetailsModal({
                   • Consider additional resources to manage incident load
                 </div>
               )}
-              {readiness.component_scores.crowd_density.details.occupancy_percentage > 90 && (
+              {crowdDetails.occupancy_percentage > crowdWarnThreshold && (
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                  • Monitor crowd density closely - approaching capacity
+                  • Monitor {crowdLabel.toLowerCase()} closely - approaching capacity
                 </div>
               )}
               {readiness.overall_score >= 80 && (
