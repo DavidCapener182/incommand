@@ -1242,43 +1242,34 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 )}
 
         {/* Operational Tab Content - Dynamic Split */}
-        {activeTab === 'operational' && (
-          <section className="space-y-6">
-            {eventData?.id && (
-              <div id="operational-readiness-card">
-                <ReadinessIndexCard
-                  eventId={eventData.id}
-                  initialData={readinessData}
-                  className="mb-2"
-                />
-              </div>
-            )}
-            <AnalyticsDashboard 
-              data={{
-                kpis: {
-                  total: metrics.total,
-                  open: incidentData.filter(i => i.status !== 'closed').length,
-                  closed: incidentData.filter(i => i.status === 'closed').length,
-                  avgResponseTime: metrics.avgResponseTime,
-                  mostLikelyType: Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A',
-                  peakAttendance: attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'
-                },
-                trends: {
-                  incidentVolumeData: chartData.incidentVolumeData,
-                  responseTimeData: chartData.responseTimeData
-                },
-                activity: {
-                  attendanceTimelineData: chartData.attendanceTimelineData,
-                  ejectionPatternData: chartData.ejectionPatternData
-                }
-              }}
-            />
-          </section>
-        )}
+                {activeTab === 'operational' && (
+                  <section className="space-y-6">
+                    <AnalyticsDashboard 
+                      data={{
+                        kpis: {
+                          total: metrics.total,
+                          open: incidentData.filter(i => i.status !== 'closed').length,
+                          closed: incidentData.filter(i => i.status === 'closed').length,
+                          avgResponseTime: metrics.avgResponseTime,
+                          mostLikelyType: Object.entries(metrics.typeBreakdown).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A',
+                          peakAttendance: attendanceData.length > 0 ? Math.max(...attendanceData.map(a => a.count)) : 'N/A'
+                        },
+                        trends: {
+                          incidentVolumeData: chartData.incidentVolumeData,
+                          responseTimeData: chartData.responseTimeData
+                        },
+                        activity: {
+                          attendanceTimelineData: chartData.attendanceTimelineData,
+                          ejectionPatternData: chartData.ejectionPatternData
+                        }
+                      }}
+                    />
+                  </section>
+                )}
 
 
         {/* AI Summary Section */}
-        {aiSummary && (
+        {activeTab === 'ai-insights' && aiSummary && (
           <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
@@ -1345,63 +1336,65 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
         )}
 
         {/* Recent Incidents Section */}
-        <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-3 w-1 rounded-full bg-gradient-to-b from-gray-500 to-slate-500" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Recent Incidents</h2>
-          </div>
-          <Card>
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
-          </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Response Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Created
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {incidentData.slice(0, 10).map((incident) => (
-                  <tr key={incident.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
-                      {incident.incident_type.replace('_', ' ')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        incident.priority === 'urgent' || incident.priority === 'high'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          : incident.priority === 'medium'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      }`}>
-                        {incident.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {incident.response_time_minutes ? `${incident.response_time_minutes}m` : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {new Date(incident.created_at).toLocaleDateString()}
-                    </td>
+        {activeTab === 'ai-insights' && (
+          <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-gray-500 to-slate-500" />
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">Recent Incidents</h2>
+            </div>
+            <Card>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Incidents</h2>
+            </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Priority
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Response Time
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Created
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-        </section>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {incidentData.slice(0, 10).map((incident) => (
+                    <tr key={incident.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white capitalize">
+                        {incident.incident_type.replace('_', ' ')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          incident.priority === 'urgent' || incident.priority === 'high'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            : incident.priority === 'medium'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        }`}>
+                          {incident.priority}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {incident.response_time_minutes ? `${incident.response_time_minutes}m` : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {new Date(incident.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          </section>
+        )}
           </div>
         </div>
       )}

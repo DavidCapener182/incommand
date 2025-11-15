@@ -4,6 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-marquee {
+    animation: marquee var(--duration, 30s) linear infinite;
+  }
+
+  .marquee-paused:hover .animate-marquee {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;

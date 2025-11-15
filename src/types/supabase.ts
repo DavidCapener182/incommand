@@ -6557,6 +6557,447 @@ export type Database = {
         }
         Relationships: []
       }
+      stands: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        capacity: number // format: integer
+        order_index: number // format: integer
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        capacity: number // format: integer
+        order_index: number // format: integer
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        name?: string // format: text
+        capacity?: number // format: integer
+        order_index?: number // format: integer
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      stand_occupancy: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        stand_id: string // format: uuid
+        current_occupancy: number // format: integer
+        predicted_60m: number | null // format: integer
+        predicted_50m: number | null // format: integer
+        predicted_40m: number | null // format: integer
+        predicted_30m: number | null // format: integer
+        predicted_20m: number | null // format: integer
+        predicted_10m: number | null // format: integer
+        predicted_0m: number | null // format: integer
+        recorded_at: string | null // format: timestamp with time zone
+        recorded_by: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        stand_id: string // format: uuid
+        current_occupancy?: number // format: integer
+        predicted_60m?: number | null // format: integer
+        predicted_50m?: number | null // format: integer
+        predicted_40m?: number | null // format: integer
+        predicted_30m?: number | null // format: integer
+        predicted_20m?: number | null // format: integer
+        predicted_10m?: number | null // format: integer
+        predicted_0m?: number | null // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        stand_id?: string // format: uuid
+        current_occupancy?: number // format: integer
+        predicted_60m?: number | null // format: integer
+        predicted_50m?: number | null // format: integer
+        predicted_40m?: number | null // format: integer
+        predicted_30m?: number | null // format: integer
+        predicted_20m?: number | null // format: integer
+        predicted_10m?: number | null // format: integer
+        predicted_0m?: number | null // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      staffing_roles: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        planned_count: number // format: integer
+        discipline: string // format: text
+        icon: string | null // format: text
+        color: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        planned_count?: number // format: integer
+        discipline?: string // format: text
+        icon?: string | null // format: text
+        color?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        name?: string // format: text
+        planned_count?: number // format: integer
+        discipline?: string // format: text
+        icon?: string | null // format: text
+        color?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      staffing_actuals: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        role_id: string // format: uuid
+        actual_count: number // format: integer
+        recorded_at: string | null // format: timestamp with time zone
+        recorded_by: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        role_id: string // format: uuid
+        actual_count?: number // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        role_id?: string // format: uuid
+        actual_count?: number // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      staffing_forecasts: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        discipline: string // format: text
+        predicted_required: number // format: integer
+        confidence: number | null // format: numeric
+        methodology: string | null // format: text
+        generated_at: string // format: timestamp with time zone
+        generated_by: string | null // format: uuid
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        discipline: string // format: text
+        predicted_required: number // format: integer
+        confidence?: number | null // format: numeric
+        methodology?: string | null // format: text
+        generated_at?: string // format: timestamp with time zone
+        generated_by?: string | null // format: uuid
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        discipline?: string // format: text
+        predicted_required?: number // format: integer
+        confidence?: number | null // format: numeric
+        methodology?: string | null // format: text
+        generated_at?: string // format: timestamp with time zone
+        generated_by?: string | null // format: uuid
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      fixture_tasks: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        minute: number // format: integer
+        description: string // format: text
+        assigned_role: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        minute: number // format: integer
+        description: string // format: text
+        assigned_role?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        minute?: number // format: integer
+        description?: string // format: text
+        assigned_role?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      fixture_completions: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        task_id: string // format: uuid
+        completed: boolean // format: boolean
+        completed_at: string | null // format: timestamp with time zone
+        completed_by: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        task_id: string // format: uuid
+        completed?: boolean // format: boolean
+        completed_at?: string | null // format: timestamp with time zone
+        completed_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        task_id?: string // format: uuid
+        completed?: boolean // format: boolean
+        completed_at?: string | null // format: timestamp with time zone
+        completed_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      gates: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        sensor_id: string | null // format: text
+        entry_rate: number // format: integer
+        threshold: number // format: integer
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        name: string // format: text
+        sensor_id?: string | null // format: text
+        entry_rate?: number // format: integer
+        threshold?: number // format: integer
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        name?: string // format: text
+        sensor_id?: string | null // format: text
+        entry_rate?: number // format: integer
+        threshold?: number // format: integer
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      gate_status: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        gate_id: string // format: uuid
+        status: string // format: text
+        entry_rate: number // format: integer
+        recorded_at: string | null // format: timestamp with time zone
+        recorded_by: string | null // format: text
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        gate_id: string // format: uuid
+        status: string // format: text
+        entry_rate?: number // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        gate_id?: string // format: uuid
+        status?: string // format: text
+        entry_rate?: number // format: integer
+        recorded_at?: string | null // format: timestamp with time zone
+        recorded_by?: string | null // format: text
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      transport_configs: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        location: string // format: text
+        postcode: string | null // format: text
+        latitude: number | null // format: numeric
+        longitude: number | null // format: numeric
+        radius: number // format: integer
+        providers: string[] | null // format: text[]
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        location: string // format: text
+        postcode?: string | null // format: text
+        latitude?: number | null // format: numeric
+        longitude?: number | null // format: numeric
+        radius?: number // format: integer
+        providers?: string[] | null // format: text[]
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        location?: string // format: text
+        postcode?: string | null // format: text
+        latitude?: number | null // format: numeric
+        longitude?: number | null // format: numeric
+        radius?: number // format: integer
+        providers?: string[] | null // format: text[]
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
+      transport_issues: {
+        Row: {
+        id: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        config_id: string // format: uuid
+        type: string // format: text
+        description: string // format: text
+        severity: string // format: text
+        reported_at: string | null // format: timestamp with time zone
+        reported_by: string | null // format: text
+        resolved: boolean // format: boolean
+        resolved_at: string | null // format: timestamp with time zone
+        created_at: string // format: timestamp with time zone
+        updated_at: string // format: timestamp with time zone
+        }
+        Insert: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id: string // format: uuid
+        event_id: string // format: uuid
+        config_id: string // format: uuid
+        type: string // format: text
+        description: string // format: text
+        severity: string // format: text
+        reported_at?: string | null // format: timestamp with time zone
+        reported_by?: string | null // format: text
+        resolved?: boolean // format: boolean
+        resolved_at?: string | null // format: timestamp with time zone
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Update: {
+        id?: string // Note: This is a Primary Key.<pk/> | format: uuid
+        company_id?: string // format: uuid
+        event_id?: string // format: uuid
+        config_id?: string // format: uuid
+        type?: string // format: text
+        description?: string // format: text
+        severity?: string // format: text
+        reported_at?: string | null // format: timestamp with time zone
+        reported_by?: string | null // format: text
+        resolved?: boolean // format: boolean
+        resolved_at?: string | null // format: timestamp with time zone
+        created_at?: string // format: timestamp with time zone
+        updated_at?: string // format: timestamp with time zone
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
         id: string // Note: This is a Primary Key.<pk/> | format: uuid

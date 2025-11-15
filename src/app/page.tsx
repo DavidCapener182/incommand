@@ -7,10 +7,18 @@ import { SocialLinks } from '@/components/marketing/SocialLinks'
 import { FadeIn } from '@/components/marketing/Motion'
 import { HeroActions } from '@/components/marketing/interactives/HeroActions'
 import { FeatureShowcase } from '@/components/marketing/interactives/FeatureShowcase'
-import { PricingPlans, type PricingPlan } from '@/components/marketing/interactives/PricingPlans'
+import type { PricingPlan } from '@/components/marketing/interactives/PricingPlans'
+import { PricingShowcase } from '@/components/marketing/PricingShowcase'
+import { Testimonials } from '@/components/marketing/Testimonials'
+import { FAQSection } from '@/components/marketing/FAQ'
+import { ContactCTA } from '@/components/marketing/ContactCTA'
 import { PRICING_PLANS, type Plan, type PlanCode } from '@/config/PricingConfig'
 import { pageMetadata } from '@/config/seo.config'
 import { getServerUser } from '@/lib/auth/getServerUser'
+import CardSwap, { Card } from '@/components/CardSwap'
+import LogoLoop from '@/components/LogoLoop'
+import DarkVeil from '@/components/DarkVeil'
+import { SiReact, SiNextdotjs, SiTypescript, SiTailwindcss, SiCloudflare, SiSupabase, SiDatadog } from 'react-icons/si'
 import {
   ShieldCheckIcon,
   LightBulbIcon,
@@ -200,23 +208,44 @@ const howItWorksSteps = [
   },
 ]
 
-const faqs = [
+
+const partnerLogos = [
+  { node: <SiReact />, title: 'React', href: 'https://react.dev' },
+  { node: <SiNextdotjs />, title: 'Next.js', href: 'https://nextjs.org' },
+  { node: <SiTypescript />, title: 'TypeScript', href: 'https://www.typescriptlang.org' },
+  { node: <SiTailwindcss />, title: 'Tailwind CSS', href: 'https://tailwindcss.com' },
+  { node: <SiSupabase />, title: 'Supabase', href: 'https://supabase.com' },
+  { node: <SiCloudflare />, title: 'Cloudflare', href: 'https://cloudflare.com' },
+  { node: <SiDatadog />, title: 'Datadog', href: 'https://www.datadoghq.com' },
+]
+
+const heroCardPlaceholders = [
   {
-    question: 'Can I cancel or change my plan at any time?',
-    answer: 'Absolutely. You can upgrade, downgrade, or cancel whenever needed — with no hidden fees.',
+    title: 'Live Incident Feed',
+    badge: 'Operations Control',
+    description: 'Placeholder for a screenshot of your real-time incident timeline showing active logs and status chips.',
+    placeholderNote: 'Swap with: dashboard image of incident cards + response timers.',
+    gradient: 'from-[#2563eb] via-[#1d4ed8] to-[#0f172a]',
+    statLabel: 'Avg Response',
+    statValue: '6m 12s',
   },
   {
-    question: 'How do I get started?',
-    answer: 'Contact our sales team to discuss your requirements and get started with InCommand.',
+    title: 'Staff Readiness Snapshot',
+    badge: 'Staffing & Readiness',
+    description: 'Placeholder for a staffing or readiness widget displaying coverage by discipline.',
+    placeholderNote: 'Swap with: staffing coverage heatmap / readiness gauge.',
+    gradient: 'from-[#111827] via-[#334155] to-[#9ca3af]',
+    statLabel: 'Coverage',
+    statValue: '94%',
   },
   {
-    question: 'Do you offer annual billing discounts?',
-    answer: 'Annual plans receive two months free and priority onboarding support.',
-  },
-  {
-    question: 'How secure is my data?',
-    answer:
-      'All data is encrypted, stored on UK-based servers, and fully compliant with GDPR and ISO 27001 standards.',
+    title: 'AI Event Summary',
+    badge: 'Analytics',
+    description: 'Placeholder for AI-generated insights or executive summary view.',
+    placeholderNote: 'Swap with: AI summary text block with highlights.',
+    gradient: 'from-[#fb7185] via-[#f43f5e] to-[#fbcfe8]',
+    statLabel: 'Confidence',
+    statValue: '92%',
   },
 ]
 
@@ -243,8 +272,18 @@ export default async function HomePage() {
 
       {/* Hero Section */}
       <section id="hero" className="relative overflow-hidden">
-        <div className="w-full bg-gradient-to-b from-[#23408e] to-[#2661F5] text-white">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 px-4 py-12 sm:gap-12 sm:px-6 sm:py-16 md:px-10 md:py-24 lg:flex-row">
+        <div className="relative w-full bg-[#23408e] text-white">
+          <div className="absolute inset-0 pointer-events-none opacity-70 mix-blend-screen">
+            <DarkVeil
+              hueShift={-8}
+              noiseIntensity={0.04}
+              scanlineIntensity={0.08}
+              scanlineFrequency={720}
+              speed={0.35}
+              warpAmount={0.1}
+            />
+          </div>
+          <div className="relative mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 px-4 py-12 sm:gap-12 sm:px-6 sm:py-16 md:px-10 md:py-24 lg:flex-row">
             <FadeIn className="max-w-xl text-center lg:text-left">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm backdrop-blur-sm">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
@@ -270,15 +309,51 @@ export default async function HomePage() {
             </FadeIn>
 
             <FadeIn delay={0.2} className="relative w-full max-w-lg mt-8 lg:mt-0">
-              <div className="overflow-hidden rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-sm">
-                <Image
-                  src="/placeholder-dashboard.png"
-                  alt="Screenshot of InCommand dashboard showing live incidents and analytics"
-                  width={960}
-                  height={540}
-                  className="h-full w-full object-cover"
-                  priority
+              <div className="relative mx-auto w-full max-w-[520px]" style={{ height: 520 }}>
+                <div
+                  className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20"
+                  aria-hidden="true"
                 />
+                <CardSwap
+                  width={460}
+                  height={540}
+                  cardDistance={65}
+                  verticalDistance={75}
+                  delay={4500}
+                  pauseOnHover
+                >
+                  {heroCardPlaceholders.map((card) => (
+                    <Card key={card.title} className="border border-white/20 shadow-2xl">
+                      <div
+                        className={`flex h-full w-full flex-col justify-between rounded-2xl bg-gradient-to-br ${card.gradient} p-6 text-white`}
+                      >
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-white/70">{card.badge}</p>
+                          <h3 className="mt-2 text-2xl font-semibold">{card.title}</h3>
+                          <p className="mt-3 text-sm text-white/80">{card.description}</p>
+                        </div>
+                        <div className="mt-6 space-y-3">
+                          <div className="rounded-xl border border-white/30 bg-white/10 p-4 text-xs leading-relaxed text-white/80">
+                            {card.placeholderNote}
+                          </div>
+                          <div className="rounded-2xl border border-white/30 bg-white/10 p-4 flex items-center justify-center">
+                            <Image
+                              src="/inCommand.png"
+                              alt="InCommand logo placeholder"
+                              width={160}
+                              height={48}
+                              className="opacity-90"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl bg-white/20 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/90">
+                            <span>{card.statLabel}</span>
+                            <span className="text-base">{card.statValue}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </CardSwap>
               </div>
             </FadeIn>
           </div>
@@ -290,16 +365,20 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
           <FadeIn className="text-center">
             <p className="mb-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-blue-600 sm:mb-6">Trusted by employees at</p>
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 opacity-60">
-              {/* Placeholder for company logos - can be replaced with actual logos */}
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div
-                  key={i}
-                  className="h-10 w-20 sm:h-12 sm:w-24 rounded-lg bg-blue-100/50 flex items-center justify-center text-blue-400 text-xs font-semibold"
-                >
-                  Logo {i}
-                </div>
-              ))}
+            <div className="relative mx-auto max-w-5xl">
+              <LogoLoop
+                logos={partnerLogos}
+                speed={60}
+                direction="left"
+                logoHeight={44}
+                gap={48}
+                hoverSpeed={20}
+                scaleOnHover
+                fadeOut
+                fadeOutColor="#ffffff"
+                ariaLabel="Technology partners"
+                className="text-blue-700 w-full"
+              />
             </div>
           </FadeIn>
         </div>
@@ -359,95 +438,29 @@ export default async function HomePage() {
               Whether you manage a local festival or a national venue, InCommand adapts to your needs.
             </p>
           </FadeIn>
-          <PricingPlans plans={plans} />
+          <PricingShowcase plans={plans} />
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="bg-gradient-to-b from-white to-blue-50 px-4 py-12 text-blue-900 sm:px-6 sm:py-16 md:px-10 md:py-20">
-        <div className="mx-auto max-w-7xl">
-          <FadeIn className="mx-auto mb-10 max-w-3xl text-center sm:mb-16">
-            <h2 className="text-2xl font-bold text-[#23408e] sm:text-3xl md:text-4xl">Loved by People Worldwide</h2>
+      <section id="testimonials" className="bg-gradient-to-b from-white to-blue-50 px-4 py-12 sm:px-6 sm:py-16 md:px-10 md:py-20">
+        <div className="mx-auto max-w-7xl text-center">
+          <FadeIn className="mx-auto max-w-3xl">
+            <h2 className="text-2xl font-bold text-[#23408e] sm:text-3xl md:text-4xl">Trusted by Venues Around the World</h2>
             <p className="mt-3 text-base text-blue-700 sm:mt-4 sm:text-lg">
-              See what event professionals are saying about InCommand.
+              Real operators. Real events. Real impact.
             </p>
           </FadeIn>
-
-          <div className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {testimonials.map((testimonial, index) => (
-              <FadeIn
-                key={testimonial.name}
-                delay={0.2 + index * 0.08}
-                className="rounded-xl sm:rounded-2xl bg-white p-5 sm:p-6 text-blue-800 shadow-md transition hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className="mb-3 flex text-yellow-400 sm:mb-4">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="h-4 w-4 sm:h-5 sm:w-5 fill-current" viewBox="0 0 20 20">
-                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="mb-3 text-sm italic sm:mb-4 sm:text-base">&ldquo;{testimonial.quote}&rdquo;</p>
-                <p className="text-sm font-semibold text-blue-900 sm:text-base">{testimonial.name}</p>
-                <p className="text-xs text-blue-600 sm:text-sm">{testimonial.org}</p>
-              </FadeIn>
-            ))}
-          </div>
+          <Testimonials />
         </div>
       </section>
 
       {/* FAQ Section */}
       <section id="faq" className="bg-white px-4 py-12 text-blue-900 sm:px-6 sm:py-16 md:px-10 md:py-20">
-        <div className="mx-auto max-w-7xl">
-          <FadeIn className="mb-8 text-center sm:mb-10">
-            <h2 className="text-2xl font-bold text-[#23408e] sm:text-3xl">Frequently Asked Questions</h2>
-            <p className="mt-3 text-base text-blue-700 sm:mt-4 sm:text-lg">
-              Address some major questions to help people make the final call.
-            </p>
-          </FadeIn>
-
-          <div className="mx-auto max-w-3xl space-y-3 sm:space-y-4">
-            {faqs.map((faq, index) => (
-              <FadeIn
-                key={faq.question}
-                delay={index * 0.06}
-                className="group rounded-lg sm:rounded-xl bg-blue-50 p-4 transition hover:shadow-md sm:p-6"
-              >
-                <details className="text-blue-900">
-                  <summary className="flex cursor-pointer items-center justify-between text-base font-semibold sm:text-lg">
-                    {faq.question}
-                    <span className="text-blue-500 transition group-open:rotate-180">⌄</span>
-                  </summary>
-                  <p className="mt-2 text-sm text-blue-800 sm:mt-3 sm:text-base">{faq.answer}</p>
-                </details>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
+        <FAQSection />
       </section>
 
-      {/* Final CTA Section */}
-      <section id="cta" className="bg-gradient-to-r from-[#23408e] to-[#2661F5] py-12 text-center text-white sm:py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
-          <FadeIn className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
-            <div>
-              <h2 className="text-2xl font-extrabold sm:text-3xl md:text-4xl">Ready to Simplify Your Operations?</h2>
-              <p className="mt-2 text-base text-blue-100 sm:mt-3 sm:text-lg">
-                Join the growing number of venues using inCommand to manage their security operations smarter.
-              </p>
-            </div>
-            <HeroActions
-              className="justify-center"
-              preLaunchLabel="Register Interest"
-              postLaunchLabel="Request a Demo"
-              secondaryHref="mailto:sales@incommand.uk?subject=Request%20Demo"
-              secondaryLabel="Talk to Sales"
-              secondaryButtonClassName="border border-white text-white px-8 py-4 rounded-xl hover:bg-white/10 font-semibold transition-colors"
-              showCountdown={false}
-            />
-          </FadeIn>
-        </div>
-      </section>
+      <ContactCTA />
 
       {/* Mobile Notice Section - Only visible on mobile */}
       <section className="bg-blue-50 border-t-2 border-blue-200 py-8 px-6 sm:hidden">

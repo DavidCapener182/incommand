@@ -245,7 +245,10 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId, readi
       </div>
 
       {readiness && (
-        <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 p-5 card-depth">
+        <div
+          id="ai-operational-readiness"
+          className="rounded-xl border border-blue-100 dark:border-blue-900/40 p-5 card-depth"
+        >
           <div className="flex items-center justify-between gap-4 mb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
@@ -258,12 +261,6 @@ export default function AIInsightsDashboard({ startDate, endDate, eventId, readi
                 Trend: {readiness.trend.charAt(0).toUpperCase() + readiness.trend.slice(1)}
               </p>
             </div>
-            <a
-              href="#operational-readiness-card"
-              className="text-xs font-semibold text-blue-600 dark:text-blue-300 hover:underline"
-            >
-              View readiness breakdown →
-            </a>
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
             {Object.entries(readiness.component_scores)

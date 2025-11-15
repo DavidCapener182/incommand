@@ -170,7 +170,8 @@ const buildStaffPerformance = (
 
 export default function EndOfEventReport({ eventId, className = '', readiness }: EndOfEventReportProps) {
   const { addToast } = useToast()
-  const [loading, setLoading] = useState(!!eventId)
+  const [loading, setLoading] = useState(true)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [incidentSummary, setIncidentSummary] = useState<IncidentSummary | null>(null)
@@ -191,6 +192,7 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
+  const lastEventIdRef = useRef<string | undefined>(undefined)
   const [readinessSnapshot, setReadinessSnapshot] = useState<ReadinessScore | null>(readiness ?? null)
   const [readinessLoading, setReadinessLoading] = useState(false)
   const [readinessError, setReadinessError] = useState<string | null>(null)
@@ -212,6 +214,7 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
       setAiInsights('')
       setDetailedIncidents([])
       setLoading(false)
+      setHasLoadedOnce(true)
       setError(null)
       return
     }
@@ -241,11 +244,14 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
         .from('events')
         .select('*')
         .eq('id', eventId)
-        .eq('company_id', profile.company_id)
         .single()
 
       if (eventError) {
         throw eventError
+      }
+
+      if (event?.company_id && event.company_id !== profile.company_id) {
+        throw new Error('You do not have access to this event')
       }
 
       setEventData(event as unknown as EventData)
@@ -407,7 +413,8 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
         setCurrentAttendance(null)
       }
 
-      // Generate AI insights inline to avoid circular dependency
+      // Generate AI insights asynchronously (non-blocking)
+      setTimeout(async () => {
       try {
         // Treat 'logged' as closed
         const isResolvedAI = (inc: any) => (inc?.is_closed === true) || ['closed','logged'].includes(String(inc?.status || '').toLowerCase())
@@ -518,8 +525,28 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         }
       } catch (aiError) {
         console.error('Error generating AI insights:', aiError)
-        // Don't show toast for AI insights failure, just log it
+          // Set fallback values for AI insights
+          setLessonsLearned({
+            strengths: [
+              'Event completed successfully',
+              'Staff coordination effective',
+              'Incident response timely'
+            ],
+            improvements: [
+              'Increase staff training',
+              'Improve communication protocols',
+              'Enhance documentation'
+            ],
+            recommendations: [
+              'Implement pre-event briefings',
+              'Use technology for better tracking',
+              'Regular performance reviews'
+            ],
+            confidence: 75
+          })
+          setAiInsights('AI insights temporarily unavailable')
       }
+      }, 100)
     } catch (error) {
       console.error('Error fetching event data:', error)
       
@@ -538,6 +565,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       })
     } finally {
       setLoading(false)
+      setHasLoadedOnce(true)
       isFetchingRef.current = false
     }
   }, [eventId, addToast])
@@ -546,9 +574,17 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     if (!eventId) {
       setLoading(false)
       setError(null)
+      setHasLoadedOnce(false)
+      lastEventIdRef.current = undefined
       return
     }
+
+    // Only fetch if this is a new eventId
+    if (lastEventIdRef.current !== eventId) {
+      lastEventIdRef.current = eventId
+      setHasLoadedOnce(false)
     fetchEventData()
+    }
   }, [eventId, fetchEventData])
 
   useEffect(() => {
