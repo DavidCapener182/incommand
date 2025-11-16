@@ -12,8 +12,8 @@ import {
   ZoneRiskScore,
 } from '@/types/crowdIntelligence'
 
-// These tables live in a feature-specific schema that isn't covered by the generated
-// Supabase types yet, so we intentionally widen the typing here to avoid noisy errors.
+// These tables (crowd_behavior_readings, welfare_sentiment) live in a feature-specific schema
+// that isn't covered by the generated Supabase types yet, so we use 'any' here to avoid type errors
 type Supabase = SupabaseClient<any>
 
 const BEHAVIOR_LOOKBACK_MINUTES = 60

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No active event found' }, { status: 404 })
     }
 
-    const summary = await getCrowdIntelligenceSummary(supabase, eventId)
+    const summary = await getCrowdIntelligenceSummary(supabase as any, eventId)
 
     return NextResponse.json({
       data: summary,
