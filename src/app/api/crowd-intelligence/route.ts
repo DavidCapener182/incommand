@@ -4,14 +4,28 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { Database } from '@/types/supabase'
 import { getCrowdIntelligenceSummary } from '@/lib/analytics/crowdIntelligence'
 
+interface EventRow {
+  id: string
+}
+
 async function resolveEventId(supabase: ReturnType<typeof createRouteHandlerClient<Database>>, eventId?: string) {
   if (eventId) {
-    const { data } = await supabase.from('events').select('id').eq('id', eventId).maybeSingle()
-    return data?.id ?? null
+    const result = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .maybeSingle<EventRow>()
+    
+    return result.data?.id ?? null
   }
 
-  const { data } = await supabase.from('events').select('id').eq('is_current', true).maybeSingle()
-  return data?.id ?? null
+  const result = await supabase
+    .from('events')
+    .select('id')
+    .eq('is_current', true)
+    .maybeSingle<EventRow>()
+  
+  return result.data?.id ?? null
 }
 
 export async function GET(request: NextRequest) {
