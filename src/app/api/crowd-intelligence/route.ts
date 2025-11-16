@@ -8,6 +8,10 @@ interface EventRow {
   id: string
 }
 
+interface ProfileRow {
+  company_id: string
+}
+
 async function resolveEventId(supabase: ReturnType<typeof createRouteHandlerClient<Database>>, eventId?: string) {
   if (eventId) {
     const result = await supabase
@@ -43,15 +47,17 @@ export async function GET(request: NextRequest) {
   const eventIdParam = request.nextUrl.searchParams.get('eventId')
 
   try {
-    const { data: profile, error: profileError } = await supabase
+    const result = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', session.user.id)
-      .single()
+      .single<ProfileRow>()
 
-    if (profileError || !profile?.company_id) {
+    if (result.error || !result.data?.company_id) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
     }
+
+    const profile = result.data
 
     const eventId = await resolveEventId(supabase, eventIdParam || undefined)
 
