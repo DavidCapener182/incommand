@@ -1,4 +1,5 @@
-import { FaInstagram, FaLinkedinIn, FaTwitter } from 'react-icons/fa'
+import { FaInstagram, FaLinkedinIn, FaTwitter, FaFacebook, FaEnvelope } from 'react-icons/fa'
+import { SiTiktok } from 'react-icons/si'
 import { cn } from '@/lib/utils'
 
 interface SocialLinksProps {
@@ -23,6 +24,21 @@ const socialChannels = [
     href: 'https://www.instagram.com/incommandhq',
     label: 'Follow InCommand on Instagram',
     Icon: FaInstagram,
+  },
+  {
+    href: 'https://www.facebook.com/incommand',
+    label: 'Follow InCommand on Facebook',
+    Icon: FaFacebook,
+  },
+  {
+    href: 'https://www.tiktok.com/@incommand',
+    label: 'Follow InCommand on TikTok',
+    Icon: SiTiktok,
+  },
+  {
+    href: 'mailto:info@incommand.uk',
+    label: 'Email InCommand',
+    Icon: FaEnvelope,
   },
 ]
 

@@ -16,8 +16,9 @@ import {
   ArrowTrendingDownIcon,
   MinusIcon,
   InformationCircleIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import ReadinessDetailsModal from './ReadinessDetailsModal'
 import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
@@ -139,30 +140,42 @@ export default function ReadinessIndexCard({
 
   if (loading && !readiness) {
     return (
-      <Card className={`${className}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Operational Readiness</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className={`h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5 ${className}`}>
+        <div className="flex flex-col space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-0">
+              <div className="flex items-center space-x-3">
+                <ShieldCheckIcon className="h-5 w-5 text-[#4361EE]" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Operational Readiness</h3>
+              </div>
+            </div>
+          </div>
+          <hr className="border-gray-200 dark:border-gray-700" />
           <div className="flex items-center justify-center h-32">
             <div className="animate-pulse text-gray-400">Loading...</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     )
   }
 
   if (error && !readiness) {
     return (
-      <Card className={`${className}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Operational Readiness</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className={`h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5 ${className}`}>
+        <div className="flex flex-col space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-0">
+              <div className="flex items-center space-x-3">
+                <ShieldCheckIcon className="h-5 w-5 text-[#4361EE]" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Operational Readiness</h3>
+              </div>
+            </div>
+          </div>
+          <hr className="border-gray-200 dark:border-gray-700" />
           <div className="flex items-center justify-center h-32">
             <div className="text-red-600 text-sm">{error}</div>
           </div>
-        </CardContent>
+        </div>
       </Card>
     )
   }
@@ -176,25 +189,53 @@ export default function ReadinessIndexCard({
 
   return (
     <>
-      <Card className={`cursor-pointer hover:shadow-md transition-shadow ${className}`} onClick={() => setShowDetails(true)}>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
-              Operational Readiness
-            </CardTitle>
-            {getTrendIcon()}
+      <Card className={`cursor-pointer hover:shadow-md transition-shadow h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5 ${className}`} onClick={() => setShowDetails(true)}>
+        <div className="flex flex-col space-y-3">
+          {/* Header Section */}
+          <div>
+            <div className="flex items-center justify-between mb-0">
+              <div className="flex items-center space-x-3">
+                <ShieldCheckIcon className="h-5 w-5 text-[#4361EE]" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Operational Readiness
+                </h3>
+              </div>
+              {getTrendIcon()}
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div className={`flex items-center space-x-3 ${getScoreBgColor(readiness.overall_score)} rounded-lg p-3`}>
-              <StatusIcon className={`h-8 w-8 ${getScoreColor(readiness.overall_score)}`} />
-              <div>
-                <div className={`text-3xl font-bold ${getScoreColor(readiness.overall_score)}`}>
-                  {readiness.overall_score}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {getStatusLabel(readiness.overall_score)}
+
+          {/* Divider */}
+          <hr className="border-gray-200 dark:border-gray-700" />
+
+          {/* Content */}
+          <div>
+          {/* Progress Bar Section */}
+          <div className="mb-3">
+            <div className="relative w-full h-12 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+              {/* Progress Bar Fill */}
+              <div
+                className={`absolute inset-y-0 left-0 flex items-center px-4 transition-all duration-500 ease-out ${
+                  readiness.overall_score >= 80
+                    ? 'bg-green-100 dark:bg-green-900/30'
+                    : readiness.overall_score >= 60
+                    ? 'bg-amber-100 dark:bg-amber-900/30'
+                    : 'bg-red-100 dark:bg-red-900/30'
+                }`}
+                style={{ width: `${readiness.overall_score}%` }}
+              >
+                {/* Icon and Score */}
+                <div className="flex items-center space-x-3">
+                  <StatusIcon
+                    className={`h-5 w-5 ${getScoreColor(readiness.overall_score)}`}
+                  />
+                  <div>
+                    <div className={`text-xl font-bold ${getScoreColor(readiness.overall_score)}`}>
+                      {readiness.overall_score}
+                    </div>
+                    <div className={`text-xs font-medium ${getScoreColor(readiness.overall_score)}`}>
+                      {getStatusLabel(readiness.overall_score)}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -226,7 +267,7 @@ export default function ReadinessIndexCard({
 
           {/* Alerts */}
           {highSeverityAlerts.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-1 text-red-600 text-xs">
                 <ExclamationTriangleIcon className="h-4 w-4" />
                 <span>{highSeverityAlerts.length} critical alert(s)</span>
@@ -241,7 +282,8 @@ export default function ReadinessIndexCard({
               Click for details
             </div>
           </div>
-        </CardContent>
+          </div>
+        </div>
       </Card>
 
       {showDetails && readiness && (

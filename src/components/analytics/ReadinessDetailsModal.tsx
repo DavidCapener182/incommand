@@ -17,7 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Info } from 'lucide-react'
+import { InfoIcon } from 'lucide-react'
 
 interface ReadinessDetailsModalProps {
   isOpen: boolean
@@ -129,7 +129,7 @@ export default function ReadinessDetailsModal({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button type="button" className="text-gray-400 hover:text-gray-600">
-                                <Info className="h-4 w-4" />
+                                <InfoIcon className="h-4 w-4" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs text-xs">
@@ -161,23 +161,26 @@ export default function ReadinessDetailsModal({
 
                     {comp.key === 'staffing' && component.details?.disciplines && (
                       <div className="mt-4 grid gap-2 text-xs text-gray-600 dark:text-gray-400 sm:grid-cols-3">
-                        {Object.entries(component.details.disciplines).map(([discipline, stats]) => (
-                          <div key={discipline} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">
-                            <p className="font-semibold text-gray-900 dark:text-gray-100 capitalize">{discipline}</p>
-                            <p>
-                              On Post:{' '}
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                {stats.actual}
-                              </span>
-                            </p>
-                            <p>
-                              Planned:{' '}
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                {stats.planned}
-                              </span>
-                            </p>
-                          </div>
-                        ))}
+                        {Object.entries(component.details.disciplines).map(([discipline, stats]) => {
+                          const statsTyped = stats as { actual?: number; planned?: number }
+                          return (
+                            <div key={discipline} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+                              <p className="font-semibold text-gray-900 dark:text-gray-100 capitalize">{discipline}</p>
+                              <p>
+                                On Post:{' '}
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {statsTyped.actual ?? 0}
+                                </span>
+                              </p>
+                              <p>
+                                Planned:{' '}
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {statsTyped.planned ?? 0}
+                                </span>
+                              </p>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

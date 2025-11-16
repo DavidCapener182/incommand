@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StandConfig, StandsSetup } from '@/types/football'
-import { Download, Settings } from 'lucide-react'
+import { Download, Cog } from 'lucide-react'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import {
   Tooltip,
@@ -273,7 +273,7 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
                 className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
                 title="Open Stand Occupancy settings"
               >
-                <Settings className="h-4 w-4" />
+                <Cog className="h-4 w-4" />
               </button>
             )}
           </div>

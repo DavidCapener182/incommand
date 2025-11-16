@@ -15,7 +15,7 @@ export default function FootballCard_Transport({ className }: { className?: stri
   return (
     <div className={`h-full card-depth flex flex-col justify-between ${className || ''}`}>
       <h3 className="text-gray-800 font-semibold text-lg mb-3">Transport Status</h3>
-      <div className="text-sm text-gray-700 space-y-1">
+      <div className="text-sm text-gray-700 space-y-1 leading-relaxed">
         <p><strong>Rail:</strong> {data.transport.rail}</p>
         <p><strong>Buses:</strong> {data.transport.buses}</p>
         <p><strong>Taxi:</strong> {data.transport.taxi}</p>

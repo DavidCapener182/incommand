@@ -193,11 +193,11 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
       whileTap={{ scale: 0.98 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 sm:p-8">
-        <div className="flex flex-col space-y-8">
+      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5">
+        <div className="flex flex-col space-y-3">
           {/* Header Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-0">
               <div className="flex items-center space-x-3">
                 <ClockIcon className="h-5 w-5 text-[#4361EE]" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Current Time</h3>
@@ -217,9 +217,9 @@ const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTiming
           <hr className="border-gray-200 dark:border-gray-700" />
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left Column - Time Info */}
-            <div className="space-y-4">
+            <div className="space-y-3">
 
               <div className="flex items-start space-x-3">
                 <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
@@ -1612,7 +1612,7 @@ export default function Dashboard() {
       </div>
 
 {/* Incident Dashboard */}
-<div className="mb-4 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
+<div className="mb-3 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
   {/* Header */}
   <div className="mb-3 flex flex-col gap-3">
     <div>
@@ -1631,7 +1631,7 @@ export default function Dashboard() {
 
   {/* Live Status + Alerts */}
   {currentEvent && (
-    <div className="mt-4 flex flex-col gap-4 lg:flex-row">
+    <div className="mt-3 flex flex-col gap-4 lg:flex-row">
       <div className="flex-1">
         <RealtimeStatusIndicator
           isConnected={realtimeAnalytics.isConnected}
@@ -1653,13 +1653,13 @@ export default function Dashboard() {
 
   {/* Radio Alerts Widget */}
   {currentEvent && (
-    <div className="mt-4">
+    <div className="mt-3">
       <RadioAlertsWidget eventId={currentEvent.id} />
     </div>
   )}
 
   {/* Dashboard Sections */}
-  <div className="mt-4 space-y-4">
+  <div className="mt-3 space-y-3">
     {/* Mobile-only Venue Occupancy */}
     <div className="block md:hidden">
       <div className="mb-4">
@@ -2271,7 +2271,7 @@ export default function Dashboard() {
       {/* Incident Table and Staff Deployment */}
       <main 
         id="main-content" 
-        className="mt-8 lg:mt-10"
+        className="mt-7 lg:mt-9 mb-6"
         role="main"
         aria-label="Incident logs"
         tabIndex={-1}

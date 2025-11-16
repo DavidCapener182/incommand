@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StaffingData, StaffingRole } from '@/types/football'
-import { Plus, Trash2, Users, AlertTriangle, CheckCircle, Heart, Shield } from 'lucide-react'
+import { Plus, Trash2, Users, AlertTriangle, CheckCircle2, Heart, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface StaffingModalProps {
@@ -212,7 +212,7 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-green-600">
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle2 className="h-4 w-4" />
                     <span className="text-sm font-medium">
                       {status.label}
                       {variance > 0 ? ` (+${variance} over planned)` : ''}

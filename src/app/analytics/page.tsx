@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { 
-  Sparkles, RefreshCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock, 
+  Sparkles, RotateCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock3, 
   PieChart, Activity, UserX, UserCheck, Eye, Zap, Target, Calendar,
-  Lightbulb, AlertCircle, CheckCircle, Timer, UserPlus, MapPin
+  Lightbulb, AlertCircle, CheckCircle2, Timer, UserPlus, MapPin
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import {
@@ -139,7 +139,7 @@ const analyticsTabs: AnalyticsTabDefinition[] = [
     key: 'compliance',
     label: 'JESIP/JDM Compliance',
     shortLabel: 'Compliance',
-    icon: CheckCircle,
+    icon: CheckCircle2,
     activeClass: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500',
   },
   {

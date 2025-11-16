@@ -1025,11 +1025,44 @@ export default function IncidentTable({
             {PRIORITY_FILTER_OPTIONS.map((priorityOption) => {
               const isActive = normalizedSelectedPriorities.includes(priorityOption);
               const config = getPriorityDisplayConfig(priorityOption);
-              const Icon = config.icon;
+              
+              // Get badge style based on priority
+              const getBadgeStyle = (priority: string) => {
+                switch (priority) {
+                  case 'urgent':
+                    return 'bg-red-600/10 dark:bg-red-600/20 hover:bg-red-600/10 text-red-500 border-red-600/60'
+                  case 'high':
+                    return 'bg-red-600/10 dark:bg-red-600/20 hover:bg-red-600/10 text-red-500 border-red-600/60'
+                  case 'medium':
+                    return 'bg-amber-600/10 dark:bg-amber-600/20 hover:bg-amber-600/10 text-amber-500 border-amber-600/60'
+                  case 'low':
+                    return 'bg-emerald-600/10 dark:bg-emerald-600/20 hover:bg-emerald-600/10 text-emerald-500 border-emerald-600/60'
+                  default:
+                    return 'bg-gray-600/10 dark:bg-gray-600/20 hover:bg-gray-600/10 text-gray-500 border-gray-600/60'
+                }
+              }
+              
+              const getDotColor = (priority: string) => {
+                switch (priority) {
+                  case 'urgent':
+                  case 'high':
+                    return 'bg-red-500'
+                  case 'medium':
+                    return 'bg-amber-500'
+                  case 'low':
+                    return 'bg-emerald-500'
+                  default:
+                    return 'bg-gray-500'
+                }
+              }
+              
+              const badgeStyle = getBadgeStyle(priorityOption);
+              const dotColor = getDotColor(priorityOption);
+              
               const buttonClasses = [
-                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
-                getPriorityChipClass(priorityOption, isActive),
-                isActive ? 'shadow-md' : 'hover:shadow-sm',
+                'flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
+                badgeStyle,
+                !isActive && 'opacity-60',
               ]
                 .filter(Boolean)
                 .join(' ');
@@ -1042,7 +1075,7 @@ export default function IncidentTable({
                   className={buttonClasses}
                   aria-pressed={isActive}
                 >
-                  <Icon size={18} aria-hidden />
+                  <div className={`h-1.5 w-1.5 rounded-full ${dotColor} mr-2`} />
                   <span>{config.label}</span>
                 </button>
               );
@@ -1453,7 +1486,7 @@ export default function IncidentTable({
                         }
                       }}
                     >
-                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
@@ -1477,7 +1510,7 @@ export default function IncidentTable({
                           </div>
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
@@ -1497,7 +1530,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
@@ -1517,7 +1550,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
+                      <td className={`px-4 py-3 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
                         isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
                       }`} style={{
                         lineHeight: '1.3',
@@ -1535,7 +1568,7 @@ export default function IncidentTable({
                           {incident.occurrence}
                         </span>
                       </td>
-                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
                         <div className="flex items-center justify-center">
                           {isMatchFlowLog ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
@@ -1550,7 +1583,7 @@ export default function IncidentTable({
                           )}
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1566,7 +1599,7 @@ export default function IncidentTable({
                           {incident.action_taken}
                         </span>
                       </td>
-                      <td className={`p-4 align-middle text-center ${tableColumnWidths.status}`}>
+                      <td className={`px-4 py-3 align-middle text-center ${tableColumnWidths.status}`}>
                         <div className="flex flex-col items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                           <div className="flex flex-wrap gap-1.5 items-center justify-center">
                             <PriorityBadge priority={incident.priority} />

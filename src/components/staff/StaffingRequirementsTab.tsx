@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import type { StaffingDiscipline } from '@/lib/database/staffing'
 import { DISCIPLINE_META, resolveDisciplines } from '@/lib/staffing/discipline'
 import { Card } from '@/components/ui/card'
-import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
 
 interface StaffingRequirementsTabProps {
   eventId?: string | null
@@ -153,6 +153,10 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
     setSaving('actual')
     setError(null)
     try {
+      if (!role.id) {
+        throw new Error('Role ID is required')
+      }
+
       const { data: existing, error: selectError } = await supabase
         .from('staffing_actuals')
         .select('id')
@@ -173,6 +177,9 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
 
         if (updateError) throw updateError
       } else {
+        if (!companyId) {
+          throw new Error('Company ID is required')
+        }
         const { error: insertError } = await supabase.from('staffing_actuals').insert({
           company_id: companyId,
           event_id: eventId,
@@ -275,7 +282,7 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
               fulfillment >= 100 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
             }`}
           >
-            {fulfillment >= 100 ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            {fulfillment >= 100 ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             {fulfillment}% fulfilled
           </div>
         </div>

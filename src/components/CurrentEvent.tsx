@@ -247,139 +247,139 @@ export default function CurrentEvent({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-      <Card className="h-full flex flex-col justify-between relative bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 sm:p-8">
+      <Card className="h-full flex flex-col relative bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5">
         {currentEvent ? (
-          <div className="flex flex-col space-y-8">
-            {/* Event Info Section */}
-            <div>
-              {/* Venue row */}
-              <div className="flex items-center space-x-3 mb-4">
-                <MapPinIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                  {currentEvent.venue_name}
-                  {isEventLive() && (
-                    <span className="ml-2 relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+          <>
+            {/* CONTENT AREA – grows to fill space */}
+            <div className="flex-1 flex flex-col space-y-3">
+              {/* Event Info Section */}
+              <div>
+                {/* Location - Event on same line */}
+                <div className="flex items-center space-x-3 mb-0">
+                  <MapPinIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                    {currentEvent.venue_name}
+                    {isEventLive() && (
+                      <span className="ml-2 relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
+                        </span>
+                        LIVE
                       </span>
-                      LIVE
-                    </span>
-                  )}
-                </h2>
-              </div>
-              
-              {/* Event row */}
-              <div className="flex items-start space-x-3">
-                <CalendarIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
-                <div>
+                    )}
+                  </h2>
+                  <span className="text-gray-400 dark:text-gray-500">-</span>
+                  <CalendarIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {eventType === 'football' 
                       ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
                       : currentEvent.event_name
                     }
                   </h3>
-                  {currentEvent.support_acts && (() => {
-                    let acts = currentEvent.support_acts
-                    if (typeof acts === 'string') {
-                      try {
-                        acts = JSON.parse(acts)
-                      } catch {
-                        acts = []
-                      }
+                </div>
+                {currentEvent.support_acts && (() => {
+                  let acts = currentEvent.support_acts
+                  if (typeof acts === 'string') {
+                    try {
+                      acts = JSON.parse(acts)
+                    } catch {
+                      acts = []
                     }
-                    return Array.isArray(acts) && acts.length > 0 ? (
-                      <p className="text-gray-600 dark:text-gray-300">
-                        {'+ ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
-                      </p>
-                    ) : null
-                  })()}
+                  }
+                  return Array.isArray(acts) && acts.length > 0 ? (
+                    <p className="text-gray-600 dark:text-gray-300 ml-8">
+                      {'+ ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
+                    </p>
+                  ) : null
+                })()}
+              </div>
+
+              {/* Divider */}
+              <hr className="border-gray-200 dark:border-gray-700" />
+
+              {/* Event Summary Section */}
+              <div className="flex-1 flex flex-col min-h-[120px]">
+                <div className="flex items-center space-x-3 mb-0">
+                  <svg className="h-5 w-5 text-[#4361EE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Summary</h3>
                 </div>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <hr className="border-gray-200 dark:border-gray-700" />
-
-            {/* Event Summary Section */}
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <svg className="h-5 w-5 text-[#4361EE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Summary</h3>
-              </div>
-              
-              {/* AI Insights Content */}
-              <div>
-                {aiLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                  </div>
-                ) : aiError ? (
-                  <div>
-                    <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
-                    <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
-                      {aiError}
-                      <button 
-                        onClick={fetchAiInsights}
-                        className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
-                      >
-                        Retry
-                      </button>
+                
+                {/* AI Insights Content */}
+                <div className="mt-2 flex-1">
+                  {aiLoading ? (
+                    <div className="animate-pulse space-y-1.5">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
                     </div>
-                  </div>
-                ) : aiInsights.length > 0 ? (
-                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {aiInsights[currentInsightIndex]?.content}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-300">No insights available yet.</p>
-                )}
+                  ) : aiError ? (
+                    <div>
+                      <h4 className="text-xs font-bold text-red-700 dark:text-red-400 mb-1.5">System Error</h4>
+                      <div className="text-xs text-red-600 dark:text-red-300 leading-snug">
+                        {aiError}
+                        <button 
+                          onClick={fetchAiInsights}
+                          className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  ) : aiInsights.length > 0 ? (
+                    <div className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+                      {aiInsights[currentInsightIndex]?.content}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-snug">No insights available yet.</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Navigation Dots */}
+            {/* FIXED BOTTOM CONTROLS */}
             {!aiLoading && aiInsights.length > 1 && (
-              <div className="flex justify-center items-center mt-8 pt-4">
-                <button
-                  onClick={goToPrevious}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  aria-label="Previous insight"
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-                <div className="flex space-x-2 mx-4">
-                  {aiInsights.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setCurrentInsightIndex(index);
-                        setAutoAdvance(false);
-                        setTimeout(() => setAutoAdvance(true), 120000);
-                      }}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentInsightIndex
-                          ? 'bg-[#4361EE]'
-                          : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                      aria-label={`Go to insight ${index + 1}`}
-                    />
-                  ))}
+              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-center items-center">
+                  <button
+                    onClick={goToPrevious}
+                    className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    aria-label="Previous insight"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </button>
+                  <div className="flex space-x-2 mx-4">
+                    {aiInsights.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setCurrentInsightIndex(index);
+                          setAutoAdvance(false);
+                          setTimeout(() => setAutoAdvance(true), 120000);
+                        }}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === currentInsightIndex
+                            ? 'bg-[#4361EE]'
+                            : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                        aria-label={`Go to insight ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={goToNext}
+                    className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    aria-label="Next insight"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={goToNext}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  aria-label="Next insight"
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
               </div>
             )}
-          </div>
+          </>
         ) : (
           <CardContent>
             <div className="space-y-3">

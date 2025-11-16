@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FootballData } from '@/types/football'
-import { RefreshCw, Download, Settings } from 'lucide-react'
+import type { FootballData } from '@/types/football'
+import { RefreshCw, Download, Cog } from 'lucide-react'
 import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
 
@@ -194,7 +194,7 @@ export default function FootballCard_MedicalPolicing({ className, onOpenModal }:
             className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
             title="Quick Settings"
           >
-            <Settings className="h-4 w-4" />
+            <Cog className="h-4 w-4" />
           </button>
         </div>
       )}
