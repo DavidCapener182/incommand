@@ -99,15 +99,11 @@ const EVENT_TYPES = [
 
 // Skeleton Loading Components
 const StatCardSkeleton = () => (
-  <Card className="card-skeleton">
-    <CardContent className="p-3 md:p-4">
-      <div className="flex flex-row items-center justify-between w-full">
-        <div className="flex flex-col items-start">
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-        </div>
-        <div className="h-6 w-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
-      </div>
+  <Card className="rounded-none border-0 shadow-none py-0">
+    <CardContent className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 p-4 sm:p-6">
+      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+      <div className="w-full h-8 bg-gray-200 dark:bg-gray-600 rounded"></div>
     </CardContent>
   </Card>
 );
@@ -151,7 +147,7 @@ const CardSkeleton = () => (
 interface StatCardProps {
   title: string
   value: number
-  icon: React.ReactNode
+  icon?: React.ReactNode
   color?: string
   isSelected?: boolean
   trendData?: number[]
@@ -161,6 +157,10 @@ interface StatCardProps {
   tooltip?: string
   showPulse?: boolean
   index?: number
+  change?: string
+  changeType?: 'positive' | 'negative'
+  isFirst?: boolean
+  isLast?: boolean
 }
 
 interface EventTiming {
@@ -318,7 +318,11 @@ const StatCard: React.FC<StatCardProps> = ({
   tooltip,
   showPulse,
   index = 0,
-  trendData
+  trendData,
+  change,
+  changeType,
+  isFirst = false,
+  isLast = false
 }) => {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -370,35 +374,44 @@ const StatCard: React.FC<StatCardProps> = ({
 
   const content = (
     <Card className={cn(
-      'card-depth relative h-[75px] md:h-[80px] flex items-center justify-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]',
+      'rounded-none border-0 shadow-none py-0 relative h-full bg-background',
+      '!border-0 !shadow-none',
+      isFirst && 'rounded-tl-xl rounded-bl-xl',
+      isLast && 'rounded-tr-xl rounded-br-xl',
       isFilterable && 'cursor-pointer touch-target',
-      isSelected && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg',
+      isSelected && 'ring-2 ring-blue-500 ring-offset-0 dark:ring-offset-0 z-10',
       pulse && 'animate-pulse',
       className
-    )}>
-      <CardContent className="p-1.5 md:p-2 flex flex-col items-center justify-center space-y-1">
-        <div className="flex items-center gap-1">
-          <motion.div
-            key={value}
-            initial={{ scale: 1.1, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-lg font-bold text-gray-900 dark:text-white"
-          >
-            {value}
-          </motion.div>
-          <div className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'} h-4 w-4`}>
-            {icon}
+    )} style={{ border: 'none !important', outline: 'none', boxShadow: 'none' }}>
+      <CardContent className="flex flex-col items-center justify-center gap-y-2 px-4 sm:px-6 py-2 sm:py-3 h-full">
+        <div className="flex items-center justify-center gap-2 w-full">
+          {icon && (
+            <div className={cn(
+              "flex-shrink-0 flex items-center justify-center",
+              colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'
+            )}>
+              {icon}
+            </div>
+          )}
+          <div className="text-sm font-medium text-muted-foreground text-center">
+            {title}
           </div>
+          {change && (
+            <div
+              className={cn(
+                "text-xs font-medium",
+                changeType === "positive"
+                  ? "text-green-800 dark:text-green-400"
+                  : "text-red-800 dark:text-red-400"
+              )}
+            >
+              {change}
+            </div>
+          )}
         </div>
-        <span className="text-[11px] font-semibold text-muted-foreground tracking-tight leading-none text-center">
-          {title}
-        </span>
-        {trendData && trendData.length > 0 && (
-          <div className="mt-1 hidden sm:block">
-            <MiniTrendChart data={trendData} height={20} width={60} />
-          </div>
-        )}
+        <div className="w-full flex-none text-3xl font-medium tracking-tight text-foreground text-center">
+          {value}
+        </div>
         {showPulse && (
           <div className="absolute top-2 right-2">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
@@ -1691,166 +1704,170 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Grid */}
-      <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 pt-3 pb-4">
-        {!isFullyReady ? (
-          Array.from({ length: 8 }).map((_, index) => (
-            <StatCardSkeleton key={index} />
-          ))
-        ) : (
-          <>
-            <StatCard
-              title="High Priority"
-              value={incidentStats.high}
-              icon={<ExclamationTriangleIcon className="h-5 w-5 md:h-6 md:w-6 text-red-400" />}
-              isSelected={safeFilters.types.some(type =>
-                ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
-              )}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: [
-                    'Ejection',
-                    'Code Green',
-                    'Code Black',
-                    'Code Pink',
-                    'Aggressive Behaviour',
-                    'Missing Child/Person',
-                    'Hostile Act',
-                    'Counter-Terror Alert',
-                    'Fire Alarm',
-                    'Evacuation',
-                    'Medical',
-                    'Suspicious Behaviour',
-                    'Queue Build-Up',
-                  ],
-                  statuses: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="red"
-              tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
-              showPulse={incidentStats.hasOpenHighPrio}
-              index={0}
-            />
-            <StatCard
-              title="Medicals"
-              value={incidentStats.medicals}
-              icon={<HeartIcon className="h-5 w-5 md:h-6 md:w-6 text-red-400" />}
-              isSelected={safeFilters.types.includes('Medical')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Medical')
-                    ? prev.types.filter(t => t !== 'Medical')
-                    : ['Medical'],
-                }))
-              }
-              isFilterable
-              tooltip="Medical-related incidents."
-              index={1}
-            />
-            <StatCard
-              title="Open"
-              value={incidentStats.open}
-              icon={<FolderOpenIcon className="h-5 w-5 md:h-6 md:w-6 text-yellow-400" />}
-              isSelected={safeFilters.statuses.includes('open')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  statuses: prev.statuses.includes('open')
-                    ? prev.statuses.filter(s => s !== 'open')
-                    : ['open'],
-                  types: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="yellow"
-              tooltip="Incidents that are currently open (is_closed = false)."
-              index={2}
-            />
-            <StatCard
-              title="Ejections"
-              value={incidentStats.ejections}
-              icon={<UsersIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={safeFilters.types.includes('Ejection')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Ejection')
-                    ? prev.types.filter(t => t !== 'Ejection')
-                    : ['Ejection'],
-                }))
-              }
-              isFilterable
-              tooltip="Incidents where someone was ejected."
-              index={3}
-            />
-            <StatCard
-              title="Refusals"
-              value={incidentStats.refusals}
-              icon={<UserGroupIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={safeFilters.types.includes('Refusal')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Refusal')
-                    ? prev.types.filter(t => t !== 'Refusal')
-                    : ['Refusal'],
-                }))
-              }
-              isFilterable
-              tooltip="Incidents where entry was refused."
-              index={4}
-            />
-            <StatCard
-              title="Total"
-              value={incidentStats.total}
-              icon={<ExclamationTriangleIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={
-                safeFilters.types.length + safeFilters.statuses.length + safeFilters.priorities.length === 0
-              }
-              onClick={resetToTotal}
-              isFilterable
-              tooltip="All incidents (excluding Attendance and Sit Reps)."
-              index={5}
-            />
-            <StatCard
-              title="Closed"
-              value={incidentStats.closed}
-              icon={<CheckCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-green-400" />}
-              isSelected={safeFilters.statuses.includes('closed')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  statuses: prev.statuses.includes('closed')
-                    ? prev.statuses.filter(s => s !== 'closed')
-                    : ['closed'],
-                  types: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="green"
-              tooltip="Incidents that have been closed (is_closed = true)."
-              index={6}
-            />
-            <StatCard
-              title="Other"
-              value={incidentStats.other}
-              icon={<QuestionMarkCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={
-                safeFilters.types.length > 0 &&
-                !['Refusal', 'Ejection', 'Medical'].some(t => safeFilters.types.includes(t))
-              }
-              onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
-              isFilterable
-              tooltip="All other incident types."
-              index={7}
-            />
-          </>
-        )}
+      <div className="hidden md:block pt-3 pb-4">
+        <div className="mx-auto grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 items-stretch">
+          {!isFullyReady ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <StatCardSkeleton key={index} />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="High Priority"
+                value={incidentStats.high}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-red-400" />}
+                isSelected={safeFilters.types.some(type =>
+                  ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
+                )}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: [
+                      'Ejection',
+                      'Code Green',
+                      'Code Black',
+                      'Code Pink',
+                      'Aggressive Behaviour',
+                      'Missing Child/Person',
+                      'Hostile Act',
+                      'Counter-Terror Alert',
+                      'Fire Alarm',
+                      'Evacuation',
+                      'Medical',
+                      'Suspicious Behaviour',
+                      'Queue Build-Up',
+                    ],
+                    statuses: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="red"
+                tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+                showPulse={incidentStats.hasOpenHighPrio}
+                index={0}
+                isFirst={true}
+              />
+              <StatCard
+                title="Medicals"
+                value={incidentStats.medicals}
+                icon={<HeartIcon className="h-4 w-4 text-red-400" />}
+                isSelected={safeFilters.types.includes('Medical')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Medical')
+                      ? prev.types.filter(t => t !== 'Medical')
+                      : ['Medical'],
+                  }))
+                }
+                isFilterable
+                tooltip="Medical-related incidents."
+                index={1}
+              />
+              <StatCard
+                title="Open"
+                value={incidentStats.open}
+                icon={<FolderOpenIcon className="h-4 w-4 text-yellow-400" />}
+                isSelected={safeFilters.statuses.includes('open')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    statuses: prev.statuses.includes('open')
+                      ? prev.statuses.filter(s => s !== 'open')
+                      : ['open'],
+                    types: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="yellow"
+                tooltip="Incidents that are currently open (is_closed = false)."
+                index={2}
+              />
+              <StatCard
+                title="Ejections"
+                value={incidentStats.ejections}
+                icon={<UsersIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={safeFilters.types.includes('Ejection')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Ejection')
+                      ? prev.types.filter(t => t !== 'Ejection')
+                      : ['Ejection'],
+                  }))
+                }
+                isFilterable
+                tooltip="Incidents where someone was ejected."
+                index={3}
+              />
+              <StatCard
+                title="Refusals"
+                value={incidentStats.refusals}
+                icon={<UserGroupIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={safeFilters.types.includes('Refusal')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Refusal')
+                      ? prev.types.filter(t => t !== 'Refusal')
+                      : ['Refusal'],
+                  }))
+                }
+                isFilterable
+                tooltip="Incidents where entry was refused."
+                index={4}
+              />
+              <StatCard
+                title="Total"
+                value={incidentStats.total}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={
+                  safeFilters.types.length + safeFilters.statuses.length + safeFilters.priorities.length === 0
+                }
+                onClick={resetToTotal}
+                isFilterable
+                tooltip="All incidents (excluding Attendance and Sit Reps)."
+                index={5}
+              />
+              <StatCard
+                title="Closed"
+                value={incidentStats.closed}
+                icon={<CheckCircleIcon className="h-4 w-4 text-green-400" />}
+                isSelected={safeFilters.statuses.includes('closed')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    statuses: prev.statuses.includes('closed')
+                      ? prev.statuses.filter(s => s !== 'closed')
+                      : ['closed'],
+                    types: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="green"
+                tooltip="Incidents that have been closed (is_closed = true)."
+                index={6}
+              />
+              <StatCard
+                title="Other"
+                value={incidentStats.other}
+                icon={<QuestionMarkCircleIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={
+                  safeFilters.types.length > 0 &&
+                  !['Refusal', 'Ejection', 'Medical'].some(t => safeFilters.types.includes(t))
+                }
+                onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
+                isFilterable
+                tooltip="All other incident types."
+                index={7}
+                isLast={true}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {currentEvent && (

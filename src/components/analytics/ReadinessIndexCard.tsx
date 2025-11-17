@@ -66,21 +66,51 @@ export default function ReadinessIndexCard({
 
       try {
         const response = await fetch(`/api/analytics/readiness-index?event_id=${eventId}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch readiness index')
+        
+        let data
+        try {
+          data = await response.json()
+        } catch (jsonError) {
+          // If JSON parsing fails, treat as error
+          if (!response.ok) {
+            throw new Error(response.statusText || 'Failed to fetch readiness index')
+          }
+          throw new Error('Invalid response format')
         }
-        const data = await response.json()
+        
         if (!cancelled) {
-          if (data.success && data.readiness) {
+          if (response.ok && data.success && data.readiness) {
             setReadiness(data.readiness)
-          } else {
-            throw new Error('Invalid response format')
+            setError(null) // Clear any previous errors
+          } else if (data.readiness) {
+            // If we have readiness data even if success is false, use it
+            setReadiness(data.readiness)
+            setError(null)
+          } else if (!response.ok) {
+            // Only set error if response is not ok AND we don't have data
+            const errorMessage = data.error || data.details || 'Failed to fetch readiness index'
+            // Only show error if we don't have cached data
+            if (!readiness) {
+              setError(errorMessage)
+            }
+          } else if (data.success === false) {
+            // Response is ok but success is false - might be a calculation issue
+            if (!readiness && !silent) {
+              setError(data.error || 'Unable to calculate readiness index')
+            }
           }
         }
       } catch (err) {
         console.error('Error fetching readiness index:', err)
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Unknown error')
+          // Only set error if we don't have cached data
+          if (!readiness) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+            // Don't show network errors if we have cached data
+            if (!(err instanceof TypeError && readiness)) {
+              setError(errorMessage)
+            }
+          }
         }
       } finally {
         if (!silent && !cancelled) {
@@ -172,8 +202,14 @@ export default function ReadinessIndexCard({
             </div>
           </div>
           <hr className="border-gray-200 dark:border-gray-700" />
-          <div className="flex items-center justify-center h-32">
-            <div className="text-red-600 text-sm">{error}</div>
+          <div className="flex flex-col items-center justify-center h-32 space-y-2">
+            <ExclamationTriangleIcon className="h-8 w-8 text-amber-500" />
+            <div className="text-amber-600 dark:text-amber-400 text-sm text-center px-4">
+              Unable to calculate readiness index
+            </div>
+            <div className="text-gray-500 dark:text-gray-400 text-xs text-center px-4">
+              This may be temporary. The system will retry automatically.
+            </div>
           </div>
         </div>
       </Card>
