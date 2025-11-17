@@ -1,11 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { CalendarIcon, ClockIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import { BlogModal } from '@/components/modals/BlogModal'
-import { PageWrapper } from '@/components/layout/PageWrapper'
-import { StackedPanel } from '@/components/ui/StackedPanel'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { ArrowUpRight, CirclePlay, Calendar, ClockIcon as Clock } from 'lucide-react'
+import Link from 'next/link'
+
+const categories = [
+  {
+    name: 'Best Practices',
+    totalPosts: 2,
+    icon: '📋',
+  },
+  {
+    name: 'Event Safety',
+    totalPosts: 1,
+    icon: '🛡️',
+  },
+  {
+    name: 'Technology',
+    totalPosts: 0,
+    icon: '💻',
+  },
+  {
+    name: 'Operations',
+    totalPosts: 0,
+    icon: '⚙️',
+  },
+]
 
 const posts = [
   {
@@ -241,107 +265,106 @@ export default function BlogPage() {
   const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null)
 
   return (
-    <PageWrapper>
-      {/* Hero Section with Image Placeholder */}
-      <div className="relative -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-8 h-80 sm:h-96 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 overflow-hidden">
-        {/* Background pattern overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{ 
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-        
-        {/* Content overlay */}
-        <div className="relative h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-4xl"
-          >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <div className="min-h-[80vh] flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="max-w-7xl w-full mx-auto grid lg:grid-cols-2 gap-12 px-6 py-12">
+          <div>
+            <Badge
+              variant="secondary"
+              className="rounded-full py-1 border-border bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+              asChild
+            >
+              <Link href="#">
+                Latest insights & updates <ArrowUpRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Badge>
+            <h1 className="mt-6 max-w-[17ch] text-4xl md:text-5xl lg:text-[2.75rem] xl:text-[3.25rem] font-semibold leading-[1.2] tracking-tighter text-gray-900 dark:text-white">
               Insights from the Field
             </h1>
-            <p className="text-xl text-purple-100 max-w-3xl mx-auto">
-              Real-world lessons, practical guidance, and professional perspectives on event management and safety operations.
+            <p className="mt-6 max-w-[60ch] sm:text-lg text-gray-600 dark:text-gray-300">
+              Real-world lessons, practical guidance, and professional perspectives on event management and safety operations. Learn from decades of experience managing major festivals and public events.
             </p>
-          </motion.div>
+            <div className="mt-12 flex items-center gap-4">
+              <Button 
+                size="lg" 
+                className="rounded-full text-base bg-[#2A3990] hover:bg-[#1e2a6a] text-white"
+              >
+                Explore Articles <ArrowUpRight className="h-5 w-5 ml-1" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-full text-base shadow-none border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <CirclePlay className="h-5 w-5 mr-2" /> Watch Demo
+              </Button>
+            </div>
+          </div>
+          <div className="w-full aspect-video bg-gradient-to-br from-[#4361EE] to-[#23408e] rounded-xl flex items-center justify-center text-white text-6xl shadow-2xl">
+            📚
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <StackedPanel className="space-y-12">
-        {/* Blog Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {posts.map((post, index) => (
-            <motion.article
-              key={post.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="card-depth overflow-hidden cursor-pointer group"
-              onClick={() => setSelectedPost(post)}
-            >
-              {/* Image Placeholder */}
-              <div className="h-48 bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-6xl">
-                {post.image}
-              </div>
-              
-              {/* Content */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${post.categoryColor}`}>
-                    {post.category}
-                  </span>
+      {/* Blog Content */}
+      <div className="max-w-7xl mx-auto py-10 lg:py-16 px-6 xl:px-0 flex flex-col lg:flex-row items-start gap-12">
+        <div className="flex-1">
+          <div className="space-y-12">
+            {posts.map((post, index) => (
+              <Card
+                key={post.title}
+                className="flex flex-col sm:flex-row sm:items-center shadow-none overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 py-0 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedPost(post)}
+              >
+                <div className="shrink-0 aspect-video grow sm:w-56 sm:aspect-square bg-gradient-to-br from-[#4361EE] to-[#23408e] rounded-lg flex items-center justify-center text-6xl">
+                  {post.image}
                 </div>
-                
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {post.title}
-                </h2>
-                
-                <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
-                  {post.excerpt}
-                </p>
-                
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-500 mb-4">
-                  <CalendarIcon className="w-4 h-4 mr-1" />
-                  <span className="mr-4">{post.date}</span>
-                  <ClockIcon className="w-4 h-4 mr-1" />
-                  <span>{post.readTime}</span>
+                <CardContent className="px-0 sm:px-6 py-6 flex flex-col">
+                  <div className="flex items-center gap-6">
+                    <Badge className={`bg-primary/5 text-primary hover:bg-primary/5 shadow-none ${post.categoryColor}`}>
+                      {post.category}
+                    </Badge>
+                  </div>
+                  <h3 className="mt-4 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                    {post.title}
+                  </h3>
+                  <p className="mt-2 text-muted-foreground line-clamp-3 text-ellipsis">
+                    {post.excerpt}
+                  </p>
+                  <div className="mt-4 flex items-center gap-6 text-muted-foreground text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" /> {post.readTime}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> {post.date}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+        <aside className="sticky top-8 shrink-0 lg:max-w-sm w-full">
+          <h3 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">Categories</h3>
+          <div className="mt-4 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-1 gap-2">
+            {categories.map((category) => (
+              <div
+                key={category.name}
+                className="flex items-center justify-between gap-2 bg-muted p-3 rounded-md bg-opacity-15 dark:bg-opacity-25"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{category.icon}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
                 </div>
-                
-                <span className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm group">
-                  Read more
-                  <ArrowRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                </span>
+                <Badge className="px-1.5 rounded-full bg-foreground/7 text-foreground">
+                  {category.totalPosts}
+                </Badge>
               </div>
-            </motion.article>
-          ))}
-        </div>
-
-        {/* Newsletter Section */}
-        <div className="card-depth bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 p-12 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-              Subscribe for Updates
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Get the latest articles and insights on event management delivered to your inbox.
-            </p>
-            <a
-              href="mailto:info@incommand.uk?subject=Newsletter Subscription"
-              className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
-            >
-              Get in Touch
-            </a>
-          </motion.div>
-        </div>
-      </StackedPanel>
+            ))}
+          </div>
+        </aside>
+      </div>
 
       {/* Blog Modal */}
       {selectedPost && (
@@ -356,6 +379,6 @@ export default function BlogPage() {
           image={selectedPost.image}
         />
       )}
-    </PageWrapper>
+    </div>
   )
 }
