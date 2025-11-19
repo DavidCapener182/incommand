@@ -58,17 +58,21 @@ const testimonials = [
 ]
 
 export const Testimonials = () => (
-  <div className="relative mt-12 flex flex-col gap-10">
-    <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-blue-50 via-blue-50/70 to-transparent" />
-    <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-blue-50 via-blue-50/70 to-transparent" />
+  // The styling here breaks the component out of the parent container to span full width
+  <div className="relative left-[50%] right-[50%] ml-[-50vw] mr-[-50vw] w-screen mt-16">
+    
+    {/* CSS Mask for perfect edge fading regardless of background color */}
+    <div className="relative flex w-full flex-col gap-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
+      
+      <Marquee pauseOnHover className="[--duration:40s]">
+        <TestimonialList />
+      </Marquee>
 
-    <Marquee pauseOnHover className="[--duration:25s]">
-      <TestimonialList />
-    </Marquee>
-
-    <Marquee pauseOnHover reverse className="[--duration:25s]">
-      <TestimonialList />
-    </Marquee>
+      <Marquee pauseOnHover reverse className="[--duration:40s]">
+        <TestimonialList />
+      </Marquee>
+      
+    </div>
   </div>
 )
 
@@ -77,47 +81,52 @@ const TestimonialList = () => (
     {testimonials.map((testimonial) => (
       <div
         key={testimonial.id}
-        className="min-w-[320px] max-w-sm rounded-2xl border border-blue-100 bg-white/90 p-6 text-left shadow-sm"
+        className="mx-4 flex w-[350px] flex-col justify-between rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md hover:border-blue-200"
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Avatar>
-              <AvatarFallback className="bg-blue-100 text-blue-700 text-lg font-semibold">
-                {testimonial.name
-                  .split(' ')
-                  .map((word) => word[0])
-                  .join('')
-                  .slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold text-blue-900">{testimonial.name}</p>
-              <p className="text-sm text-blue-600">
-                {testimonial.designation}, {testimonial.company}
-              </p>
+        <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border border-slate-100">
+                <AvatarFallback className="bg-slate-50 text-slate-600 text-sm font-bold">
+                  {testimonial.name
+                    .split(' ')
+                    .map((word) => word[0])
+                    .join('')
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-bold text-slate-900">{testimonial.name}</p>
+                <p className="text-xs font-medium text-slate-500">
+                  {testimonial.company}
+                </p>
+              </div>
             </div>
           </div>
 
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="#" target="_blank" aria-label="View testimonial on X">
-              <TwitterLogo className="h-4 w-4 text-blue-500" />
-            </Link>
-          </Button>
+          <div className="mt-4">
+            <p className="text-sm leading-relaxed text-slate-600">
+              &quot;{testimonial.testimonial}&quot;
+            </p>
+          </div>
         </div>
-
-        <p className="mt-4 text-base leading-relaxed text-blue-900">“{testimonial.testimonial}”</p>
+        
+        {/* Optional: Status indicator to add detail */}
+        <div className="mt-6 flex items-center gap-2 border-t border-slate-50 pt-4">
+           <div className="flex -space-x-1">
+             {[1,2,3,4,5].map(i => (
+               <StarIcon key={i} className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+             ))}
+           </div>
+           <span className="text-xs font-medium text-slate-400">Verified Customer</span>
+        </div>
       </div>
     ))}
   </>
 )
 
-const TwitterLogo = (props: ComponentProps<'svg'>) => (
-  <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <title>X</title>
-    <path
-      fill="currentColor"
-      d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
-    />
+const StarIcon = (props: ComponentProps<'svg'>) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...props}>
+    <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clipRule="evenodd" />
   </svg>
 )
-

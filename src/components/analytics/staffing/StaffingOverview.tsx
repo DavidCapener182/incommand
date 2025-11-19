@@ -1,10 +1,11 @@
 'use client'
 
-import React from 'react'
-import { Loader2, Users, ShieldCheck, CalendarClock } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import type { StaffingForecastResult } from '@/lib/analytics/staffingForecast'
-import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
+import React from 'react';
+import { Loader2, Users, ShieldCheck, CalendarClock } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import type { StaffingForecastResult } from '@/lib/analytics/staffingForecast';
+import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion';
+
 
 interface StaffingOverviewProps {
   snapshot?: StaffingIngestionBundle | null
