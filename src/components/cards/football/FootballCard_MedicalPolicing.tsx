@@ -1,10 +1,16 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { 
+  Users, 
+  Shield, 
+  Stethoscope, 
+  Siren,
+  MoreHorizontal 
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { FootballData } from '@/types/football'
-import { RefreshCw, Download, Cog } from 'lucide-react'
-import StatusIndicator, { StatusDot, StatusType } from '@/components/football/StatusIndicator'
+import { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
 
 interface FootballCard_MedicalPolicingProps {
@@ -12,244 +18,271 @@ interface FootballCard_MedicalPolicingProps {
   onOpenModal?: () => void
 }
 
+// --- Constants ---
+const ITEMS_PER_PAGE = 2
+const AUTO_SCROLL_INTERVAL = 3000 // 3 seconds per slide
+
+// --- Helper Components ---
+const CardFrame = ({ children, className, onMouseEnter, onMouseLeave }: { children: React.ReactNode; className?: string; onMouseEnter?: () => void; onMouseLeave?: () => void }) => (
+  <div 
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
+    className={cn("flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md h-full relative overflow-hidden", className)}
+  >
+    {children}
+  </div>
+)
+
+const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
+  <div className="flex items-center justify-between mb-3 shrink-0">
+    <div className="flex items-center gap-2">
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <span className="text-sm font-semibold text-slate-700">{title}</span>
+    </div>
+    {action && (
+      <button onClick={action} className="text-slate-400 hover:text-slate-600 transition-colors">
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+    )}
+  </div>
+)
+
+const StaffingBar = ({ 
+  label, 
+  actual, 
+  planned, 
+  icon: Icon, 
+  colorClass 
+}: { 
+  label: string
+  actual: number
+  planned: number
+  icon: any
+  colorClass: string
+}) => {
+  const percent = planned > 0 ? Math.min((actual / planned) * 100, 100) : 0
+  
+  return (
+    <div className="w-full rounded-lg border border-slate-100 bg-slate-50/50 px-2.5 py-2 hover:bg-white hover:shadow-sm transition-all animate-in fade-in slide-in-from-right-2 duration-300">
+      <div className="flex justify-between items-center mb-1.5">
+        <div className="flex items-center gap-2">
+           <Icon className="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+           <span className="text-xs font-semibold text-slate-700">{label}</span>
+        </div>
+        <div className="text-[10px] font-mono font-medium text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-100">
+           <span className="text-slate-900 font-bold">{actual}</span>
+           <span className="opacity-50"> / {planned}</span>
+        </div>
+      </div>
+      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden relative">
+         <div 
+           className={cn("h-full rounded-full transition-all duration-500", colorClass)} 
+           style={{ width: `${percent}%` }} 
+         />
+      </div>
+    </div>
+  )
+}
+
 export default function FootballCard_MedicalPolicing({ className, onOpenModal }: FootballCard_MedicalPolicingProps) {
   const [data, setData] = useState<FootballData | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [staffingSnapshot, setStaffingSnapshot] = useState<StaffingIngestionBundle | null>(null)
 
+  // --- Carousel State ---
+  const [pageIndex, setPageIndex] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+
+  // --- Data Fetching ---
   useEffect(() => {
     let mounted = true
     const load = async () => {
       try {
         const res = await fetch('/api/football/data')
-        if (!res.ok) {
-          console.error('Failed to load football data:', res.status, res.statusText)
-          return
+        if (res.ok) {
+           const json = await res.json()
+           if (mounted) setData(json.data)
         }
-        const json = await res.json()
-        if (mounted) setData(json.data)
-      } catch (error) {
-        console.error('Error loading football data:', error)
-        // Set fallback data to prevent component crash
-        if (mounted) {
-          setData({
-            fixture: '',
-            matchDate: '',
-            liveScore: {
-              home: 0,
-              away: 0,
-              time: '0:00',
-              phase: 'Pre-Match',
-              cards: { yellow: 0, red: 0 },
-              subs: 0,
-              homeTeam: '',
-              awayTeam: '',
-              competition: '',
-            },
-            occupancy: {},
-            gateStatus: {
-              openTime: '',
-              totalTurnstiles: 0,
-              activeTurnstiles: 0,
-              entryRate: 0,
-              queueAlerts: [],
-              predictedFullEntry: '',
-            },
-            medicalPolicing: {
-              medicalTeams: 0,
-              policeDeployed: 0,
-              stewards: 0,
-            },
-            transportWeather: {
-              transport: {
-                rail: 'Normal service',
-                buses: 'Normal service',
-                taxi: 'Operating normally',
-                roadClosures: [],
-              },
-              weather: {
-                temp: 0,
-                wind: 'Calm',
-                condition: 'Clear',
-                risk: 'Low',
-              },
-            },
-          })
-        }
-      }
+      } catch (e) { console.error(e) }
     }
     load()
 
-    const loadStaffingSnapshot = async () => {
+    const loadSnapshot = async () => {
       try {
         const eventRes = await fetch('/api/get-current-event')
-        if (!eventRes.ok) return
-        const eventJson = await eventRes.json()
-        const eventId = eventJson?.event?.id
-        if (!eventId) return
-        const snapshotRes = await fetch(`/api/staffing/insights?eventId=${eventId}`)
-        if (!snapshotRes.ok) {
-          console.error('Failed to load staffing insights:', await snapshotRes.text())
-          return
+        if (eventRes.ok) {
+           const { event } = await eventRes.json()
+           if (event?.id) {
+             const snapRes = await fetch(`/api/staffing/insights?eventId=${event.id}`)
+             if (snapRes.ok) {
+               const payload = await snapRes.json()
+               if (mounted) setStaffingSnapshot(payload.data)
+             }
+           }
         }
-        const payload = await snapshotRes.json()
-        if (mounted) setStaffingSnapshot(payload.data)
-      } catch (error) {
-        console.error('Failed to load staffing snapshot:', error)
-      }
+      } catch (e) {}
     }
-    loadStaffingSnapshot()
+    loadSnapshot()
 
     if (autoRefresh) {
-      const id = setInterval(() => {
-        load()
-        loadStaffingSnapshot()
-      }, 30000)
+      const id = setInterval(() => { load(); loadSnapshot() }, 30000)
       return () => { mounted = false; clearInterval(id) }
     }
     return () => { mounted = false }
   }, [autoRefresh])
 
+  // --- Calculations ---
   const staffingTotals = useMemo(() => {
     const fallbackSecurity = data?.medicalPolicing.stewards ?? 0
     const fallbackPolice = data?.medicalPolicing.policeDeployed ?? 0
     const fallbackMedical = data?.medicalPolicing.medicalTeams ?? 0
 
     if (!staffingSnapshot) {
-      const fallbackTotal = fallbackSecurity + fallbackPolice + fallbackMedical
+      const total = fallbackSecurity + fallbackPolice + fallbackMedical
       return {
-        totalActual: fallbackTotal,
-        totalPlanned: fallbackTotal,
-        policeActual: fallbackPolice,
-        policePlanned: fallbackPolice,
-        securityActual: fallbackSecurity,
-        securityPlanned: fallbackSecurity,
-        medicalActual: fallbackMedical,
-        medicalPlanned: fallbackMedical,
+        totalActual: total,
+        totalPlanned: total,
+        items: [
+          { id: 'sec', label: 'Security', actual: fallbackSecurity, planned: fallbackSecurity, icon: Shield },
+          { id: 'med', label: 'Medical', actual: fallbackMedical, planned: fallbackMedical, icon: Stethoscope },
+          { id: 'pol', label: 'Police', actual: fallbackPolice, planned: fallbackPolice, icon: Siren },
+        ]
       }
     }
 
-    const findDiscipline = (name: string) =>
-      staffingSnapshot.disciplines.find((d) => d.discipline === name)
-
+    const findDiscipline = (name: string) => staffingSnapshot.disciplines.find((d) => d.discipline === name)
     const security = findDiscipline('security')
     const police = findDiscipline('police')
     const medical = findDiscipline('medical')
+    
+    // Fallbacks if discipline missing in snapshot
+    const secActual = security?.actual ?? fallbackSecurity
+    const secPlanned = security?.planned ?? secActual
+    const polActual = police?.actual ?? fallbackPolice
+    const polPlanned = police?.planned ?? polActual
+    const medActual = medical?.actual ?? fallbackMedical
+    const medPlanned = medical?.planned ?? medActual
 
     return {
       totalActual: staffingSnapshot.disciplines.reduce((sum, disc) => sum + disc.actual, 0),
       totalPlanned: staffingSnapshot.disciplines.reduce((sum, disc) => sum + disc.planned, 0),
-      policeActual: police?.actual ?? fallbackPolice,
-      policePlanned: police?.planned ?? (police?.actual ?? fallbackPolice),
-      securityActual: security?.actual ?? fallbackSecurity,
-      securityPlanned: security?.planned ?? (security?.actual ?? fallbackSecurity),
-      medicalActual: medical?.actual ?? fallbackMedical,
-      medicalPlanned: medical?.planned ?? (medical?.actual ?? fallbackMedical),
+      items: [
+        { id: 'sec', label: 'Security', actual: secActual, planned: secPlanned, icon: Shield },
+        { id: 'med', label: 'Medical', actual: medActual, planned: medPlanned, icon: Stethoscope },
+        { id: 'pol', label: 'Police', actual: polActual, planned: polPlanned, icon: Siren },
+      ]
     }
   }, [data, staffingSnapshot])
 
   const statusType = useMemo((): StatusType => {
     if (staffingTotals.totalPlanned === 0) return 'normal'
-    const percentOfPlanned = (staffingTotals.totalActual / staffingTotals.totalPlanned) * 100
-    if (percentOfPlanned < 90) return 'alert'
-    if (percentOfPlanned < 100) return 'busy'
+    const percent = (staffingTotals.totalActual / staffingTotals.totalPlanned) * 100
+    if (percent < 90) return 'alert'
+    if (percent < 100) return 'busy'
     return 'normal'
   }, [staffingTotals])
 
-  const handleExportReport = async () => {
-    try {
-      const response = await fetch('/api/football/export/staffing?company_id=550e8400-e29b-41d4-a716-446655440000&event_id=550e8400-e29b-41d4-a716-446655440001')
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `staffing-report-${new Date().toISOString()}.csv`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }
-    } catch (error) {
-      console.error('Failed to export report:', error)
-    }
+  const getProgressColor = (actual: number, planned: number) => {
+     if (planned === 0) return 'bg-slate-300'
+     const pct = (actual / planned) * 100
+     if (pct < 80) return 'bg-red-500'
+     if (pct < 95) return 'bg-amber-400'
+     return 'bg-emerald-500'
   }
 
-  return (
-    <div className={`h-full card-depth p-4 space-y-2 relative overflow-hidden flex flex-col ${className || ''}`}>
-      {/* Status indicator dot */}
-      {data && <StatusDot status={statusType} />}
-      
-      {/* Quick Settings Button */}
-      {onOpenModal && (
-        <div className="absolute top-3 right-3 z-50">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              console.log('Settings button clicked directly')
-              onOpenModal()
-            }}
-            className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center"
-            title="Quick Settings"
-          >
-            <Cog className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+  // --- Carousel Logic ---
+  const totalPages = Math.ceil(staffingTotals.items.length / ITEMS_PER_PAGE)
 
-      <div className="flex items-start justify-between pr-10">
-        <h3 className="text-gray-800 font-semibold text-lg">
-          Staffing Levels
-        </h3>
-        {staffingSnapshot && (
-          <StatusIndicator 
-            status={statusType} 
-            message={statusType === 'alert' ? 'Below Target' : statusType === 'busy' ? 'Near Target' : 'At Target'}
-            showIcon={false}
-            className="text-xs"
-          />
-        )}
-      </div>
+  useEffect(() => {
+    if (totalPages <= 1 || isHovered) return
+    const interval = setInterval(() => {
+      setPageIndex((prev) => (prev + 1) % totalPages)
+    }, AUTO_SCROLL_INTERVAL)
+    return () => clearInterval(interval)
+  }, [totalPages, isHovered])
+
+  const visibleItems = staffingTotals.items.slice(
+    pageIndex * ITEMS_PER_PAGE,
+    (pageIndex * ITEMS_PER_PAGE) + ITEMS_PER_PAGE
+  )
+
+  return (
+    <CardFrame 
+      className={className}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <CardHeader 
+        icon={Users} 
+        title="Staffing Levels" 
+        action={() => onOpenModal?.()} 
+      />
 
       {!data ? (
-        <div className="text-xs text-gray-500">Loading…</div>
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-xs animate-pulse">
+           <div className="h-8 w-8 rounded bg-slate-100 mb-2" />
+           Loading data...
+        </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="text-sm text-gray-600 mb-2 flex-shrink-0">
-            Total Deployed:{' '}
-            <span className="font-semibold text-gray-900">
-              {staffingTotals.totalActual.toLocaleString()}
-              {staffingTotals.totalPlanned > 0 && ` / ${staffingTotals.totalPlanned.toLocaleString()}`}
-            </span>
-            {staffingTotals.totalPlanned > 0 && (
-              <span className="text-xs text-gray-500 ml-2">
-                ({((staffingTotals.totalActual / staffingTotals.totalPlanned) * 100).toFixed(0)}% of planned)
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm flex-shrink-0">
-            <span className="text-gray-700">Police</span>
-            <span className="font-medium text-gray-900 text-right">
-              {staffingTotals.policeActual.toLocaleString()}
-              {staffingTotals.policePlanned > 0 && ` / ${staffingTotals.policePlanned.toLocaleString()}`}
-            </span>
-            <span className="text-gray-700">Security</span>
-            <span className="font-medium text-gray-900 text-right">
-              {staffingTotals.securityActual.toLocaleString()}
-              {staffingTotals.securityPlanned > 0 && ` / ${staffingTotals.securityPlanned.toLocaleString()}`}
-            </span>
-            <span className="text-gray-700">Med Teams</span>
-            <span className="font-medium text-gray-900 text-right">
-              {staffingTotals.medicalActual.toLocaleString()}
-              {staffingTotals.medicalPlanned > 0 && ` / ${staffingTotals.medicalPlanned.toLocaleString()}`}
-            </span>
-          </div>
+        <div className="flex flex-col h-full min-h-0 justify-between">
+           
+           {/* Top Summary */}
+           <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
+              <div>
+                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Deployment</p>
+                 <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="text-xl font-bold text-slate-900">
+                      {((staffingTotals.totalActual / (staffingTotals.totalPlanned || 1)) * 100).toFixed(0)}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      ({staffingTotals.totalActual}/{staffingTotals.totalPlanned})
+                    </span>
+                 </div>
+              </div>
+              <div className={cn(
+                "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide",
+                statusType === 'alert' ? "bg-red-100 text-red-700" :
+                statusType === 'busy' ? "bg-amber-100 text-amber-700" :
+                "bg-emerald-100 text-emerald-700"
+              )}>
+                {statusType === 'normal' ? 'On Target' : statusType}
+              </div>
+           </div>
+
+           {/* Paged List - Fixed height container to prevent jumping */}
+           <div className="flex-1 flex flex-col gap-2 min-h-[110px]">
+              {visibleItems.map((item) => (
+                 <StaffingBar 
+                   key={item.id}
+                   label={item.label}
+                   actual={item.actual}
+                   planned={item.planned}
+                   icon={item.icon}
+                   colorClass={getProgressColor(item.actual, item.planned)}
+                 />
+              ))}
+           </div>
+
+           {/* Pagination Dots */}
+           {totalPages > 1 && (
+             <div className="flex justify-center gap-1.5 mt-2">
+               {Array.from({ length: totalPages }).map((_, idx) => (
+                 <button
+                   key={idx}
+                   onClick={() => setPageIndex(idx)}
+                   className={cn(
+                     "h-1 rounded-full transition-all duration-300",
+                     pageIndex === idx ? "w-4 bg-blue-500" : "w-1 bg-slate-200 hover:bg-slate-300"
+                   )}
+                   aria-label={`Go to page ${idx + 1}`}
+                 />
+               ))}
+             </div>
+           )}
         </div>
       )}
-    </div>
+    </CardFrame>
   )
 }
-
-

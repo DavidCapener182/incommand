@@ -41,6 +41,7 @@ import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import SupportToolsFootball from '@/components/cards/football/SupportToolsFootball'
 import FootballCard_LiveScore from '@/components/cards/football/FootballCard_LiveScore'
+import TimeCard, { type EventTiming } from './TimeCard'
 
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -163,148 +164,8 @@ interface StatCardProps {
   isLast?: boolean
 }
 
-interface EventTiming {
-  title: string
-  time: string
-  isNext?: boolean
-  isActuallyHappeningNow?: boolean
-}
-
-interface TimeCardProps {
-  companyId: string | null;
-  currentTime: string;
-  eventTimings: EventTiming[];
-  nextEvent: EventTiming | null;
-  countdown: string;
-  currentSlot?: EventTiming | null;
-  timeSinceLastIncident: string;
-}
-
 // Card styling is now centralized in globals.css using utility classes:
 // .card-depth, .card-depth-subtle, .card-time, .card-skeleton, etc.
-
-const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="h-full"
-    >
-      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5">
-        <div className="flex flex-col space-y-3">
-          {/* Header Section */}
-          <div>
-            <div className="flex items-center justify-between mb-0">
-              <div className="flex items-center space-x-3">
-                <ClockIcon className="h-5 w-5 text-[#4361EE]" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Current Time</h3>
-              </div>
-              <motion.p
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight"
-              >
-                {currentTime}
-              </motion.p>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <hr className="border-gray-200 dark:border-gray-700" />
-
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left Column - Time Info */}
-            <div className="space-y-3">
-
-              <div className="flex items-start space-x-3">
-                <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-1">
-                    Time Since Last Incident
-                  </h4>
-                  <p className="text-lg font-semibold text-orange-600 dark:text-orange-300">
-                    {timeSinceLastIncident}
-                  </p>
-                </div>
-              </div>
-
-              {(currentSlot || nextEvent) && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
-                >
-                  <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                    {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-                  </h4>
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    {currentSlot?.title || nextEvent?.title}
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                    {currentSlot?.time || countdown}
-                  </p>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Right Column - Event Schedule */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <CalendarIcon className="h-5 w-5 text-[#4361EE]" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
-              </div>
-              {eventTimings.length > 0 && (
-                <div className="space-y-2">
-                  {eventTimings.map((timing, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + index * 0.1 }}
-                      className={`flex justify-between items-center px-3 py-2 rounded-lg ${
-                        timing.isNext
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                      }`}
-                    >
-                      <span
-                        className={`text-sm font-medium ${
-                          timing.isNext
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : 'text-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {timing.title}
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          timing.isNext
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : 'text-gray-900 dark:text-gray-100'
-                        }`}
-                      >
-                        {timing.time}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-              {eventTimings.length === 0 && !nextEvent && (
-                <p className="text-sm text-gray-400 dark:text-gray-400">No upcoming event timings</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-    </motion.div>
-  )
-}
 
 const StatCard: React.FC<StatCardProps> = ({ 
   title, 

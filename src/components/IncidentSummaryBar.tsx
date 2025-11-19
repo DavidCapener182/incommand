@@ -1,18 +1,15 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { formatDistanceToNow } from 'date-fns'
-import { motion } from 'framer-motion'
+import React, { useEffect, useRef, useState } from 'react'
 import { 
-  ExclamationTriangleIcon, 
-  ClockIcon, 
-  CheckCircleIcon, 
-  FolderOpenIcon 
-} from '@heroicons/react/24/outline'
-
+  Activity,
+  ShieldAlert,
+  AlertCircle,
+  Clock,
+  CheckCircle2
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 export type SummaryStatus = 'open' | 'in_progress' | 'closed'
 
@@ -22,48 +19,25 @@ interface IncidentSummaryBarProps {
   className?: string
 }
 
-interface StatusConfig {
-  key: SummaryStatus
-  label: string
-  description: string
-  color: string
-  accent: string
-  dot: string
-}
+const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn("flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md h-full", className)}>
+    {children}
+  </div>
+)
 
-const STATUS_CONFIG: StatusConfig[] = [
-  {
-    key: 'open',
-    label: 'Open',
-    description: 'Incidents awaiting action',
-    color: 'text-red-700 dark:text-red-300',
-    accent: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    dot: 'bg-red-500',
-  },
-  {
-    key: 'in_progress',
-    label: 'In Progress',
-    description: 'Actively being resolved',
-    color: 'text-yellow-700 dark:text-yellow-300',
-    accent: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    dot: 'bg-yellow-500',
-  },
-  {
-    key: 'closed',
-    label: 'Closed',
-    description: 'Resolved & verified',
-    color: 'text-green-700 dark:text-green-300',
-    accent: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    dot: 'bg-green-500',
-  },
-]
+const CardHeader = ({ icon: Icon, title }: { icon: any; title: string }) => (
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className="text-sm font-semibold text-slate-700">{title}</span>
+    </div>
+  </div>
+)
 
-function classes(...tokens: Array<string | false | null | undefined>) {
-  return tokens.filter(Boolean).join(' ')
-}
-
-export function IncidentSummaryBar({ onFilter, activeStatus = null, className }: IncidentSummaryBarProps) {
-  const { counts, lastUpdated } = useIncidentSummary()
+export function IncidentSummaryBar({ onFilter, activeStatus, className }: IncidentSummaryBarProps) {
+  const { counts } = useIncidentSummary()
   const statusCounts = counts as Record<SummaryStatus, number>
   const [changedStatuses, setChangedStatuses] = useState<Set<SummaryStatus>>(new Set())
   const previousCountsRef = useRef(counts)
@@ -71,138 +45,99 @@ export function IncidentSummaryBar({ onFilter, activeStatus = null, className }:
   useEffect(() => {
     const prev = previousCountsRef.current
     const changed: SummaryStatus[] = []
-
-    STATUS_CONFIG.forEach(({ key }) => {
-      if (prev[key] !== counts[key]) {
-        changed.push(key)
-      }
+    ;(['open', 'in_progress', 'closed'] as const).forEach((key) => {
+      if (prev[key] !== counts[key]) changed.push(key)
     })
-
     previousCountsRef.current = counts
-
-    if (changed.length === 0) {
-      return
+    if (changed.length > 0) {
+      setChangedStatuses(new Set(changed))
+      const timeout = setTimeout(() => setChangedStatuses(new Set()), 1200)
+      return () => clearTimeout(timeout)
     }
-
-    setChangedStatuses(new Set(changed))
-
-    const timeout = setTimeout(() => {
-      setChangedStatuses(new Set())
-    }, 1200)
-
-    return () => clearTimeout(timeout)
   }, [counts])
 
-  const formattedUpdated = useMemo(() => {
-    if (!lastUpdated) {
-      return 'Waiting for activity'
-    }
-
-    try {
-      return `Updated ${formatDistanceToNow(new Date(lastUpdated), { addSuffix: true })}`
-    } catch {
-      return 'Updated moments ago'
-    }
-  }, [lastUpdated])
-
-  const statusItems = [
-    { 
-      label: 'Open', 
-      value: statusCounts.open, 
-      color: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300', 
-      icon: <ExclamationTriangleIcon className="h-4 w-4" />,
-      key: 'open' as SummaryStatus | 'total'
-    },
-    { 
-      label: 'In Progress', 
-      value: statusCounts.in_progress, 
-      color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', 
-      icon: <ClockIcon className="h-4 w-4" />,
-      key: 'in_progress' as SummaryStatus | 'total'
-    },
-    { 
-      label: 'Closed', 
-      value: statusCounts.closed, 
-      color: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300', 
-      icon: <CheckCircleIcon className="h-4 w-4" />,
-      key: 'closed' as SummaryStatus | 'total'
-    },
-    { 
-      label: 'Total', 
-      value: counts.total, 
-      color: 'bg-gray-50 text-gray-700 dark:bg-gray-800/60 dark:text-gray-100', 
-      icon: <FolderOpenIcon className="h-4 w-4" />,
-      key: 'total' as SummaryStatus | 'total'
-    },
-  ]
-
   return (
-    <motion.div 
-      className={classes('h-full flex flex-col', className)}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 sm:p-5">
-        <div className="flex flex-col space-y-3">
-          {/* Header Section */}
-          <div>
-            <div className="flex items-center gap-3 mb-0">
-              <svg className="h-6 w-6 text-[#4338CA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Incident Summary</h3>
-            </div>
-          </div>
+    <CardFrame className={className}>
+      <CardHeader icon={ShieldAlert} title="Incident Summary" />
+      
+      <div className="grid grid-cols-2 gap-4">
+         {/* Big Total Hero Card - SOFTENED BORDER */}
+         <div 
+           onClick={() => onFilter?.(null)}
+           className={cn(
+             "col-span-2 flex items-center justify-between rounded-xl border p-4 transition-all cursor-pointer hover:scale-[1.01]",
+             activeStatus === null 
+               ? "bg-slate-50 border-blue-300 shadow-sm" // Removed thick ring
+               : "bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50"
+           )}
+         >
+           <div>
+             <p className={cn(
+               "text-xs font-bold uppercase tracking-wide",
+               activeStatus === null ? "text-blue-700" : "text-slate-500"
+             )}>Total Incidents</p>
+             <p className="text-3xl font-bold mt-1 text-slate-900">{counts.total}</p>
+           </div>
+           <div className={cn(
+             "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+             activeStatus === null ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+           )}>
+              <Activity className="h-5 w-5" />
+           </div>
+         </div>
 
-          {/* Divider */}
-          <hr className="border-gray-200 dark:border-gray-700" />
+         {/* Open Incidents Card */}
+         <button
+            onClick={() => onFilter?.('open')}
+            className={cn(
+              "flex flex-col justify-center gap-1 rounded-lg border p-3 text-center transition-all hover:shadow-sm",
+              activeStatus === 'open' 
+                ? "border-red-200 bg-red-50 ring-1 ring-red-200" 
+                : "border-red-100 bg-red-50/50 hover:bg-red-50",
+              changedStatuses.has('open') && "animate-pulse bg-red-100"
+            )}
+         >
+            <span className="text-2xl font-bold text-red-700">{statusCounts.open}</span>
+            <span className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase text-red-600">
+               <AlertCircle className="h-3 w-3" />
+               Open
+            </span>
+         </button>
 
-          {/* Status Grid */}
-          <div>
-            <div className="space-y-1.5">
-              {/* Open Incidents */}
-              <div className="flex items-center justify-between py-1 rounded-md bg-slate-50 dark:bg-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-red-500"></div>
-                  <span className="text-sm font-medium leading-tight text-slate-600 dark:text-slate-300">Open</span>
-                </div>
-                <span className="text-sm font-semibold leading-tight text-slate-900 dark:text-white">{statusCounts.open}</span>
-              </div>
-
-              {/* In Progress Incidents */}
-              <div className="flex items-center justify-between py-1 rounded-md bg-slate-50 dark:bg-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-400"></div>
-                  <span className="text-sm font-medium leading-tight text-slate-600 dark:text-slate-300">In Progress</span>
-                </div>
-                <span className="text-sm font-semibold leading-tight text-slate-900 dark:text-white">{statusCounts.in_progress}</span>
-              </div>
-
-              {/* Closed Incidents */}
-              <div className="flex items-center justify-between py-1 rounded-md bg-slate-50 dark:bg-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-medium leading-tight text-slate-600 dark:text-slate-300">Closed</span>
-                </div>
-                <span className="text-sm font-semibold leading-tight text-slate-900 dark:text-white">{statusCounts.closed}</span>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-
-              {/* Total Incidents */}
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm font-bold leading-tight text-slate-600 dark:text-slate-200">Total</span>
-                <span className="text-base font-extrabold leading-tight text-[#4338CA]">{counts.total}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    </motion.div>
+         {/* In Progress Card */}
+         <button
+            onClick={() => onFilter?.('in_progress')}
+            className={cn(
+              "flex flex-col justify-center gap-1 rounded-lg border p-3 text-center transition-all hover:shadow-sm",
+              activeStatus === 'in_progress' 
+                ? "border-amber-200 bg-amber-50 ring-1 ring-amber-200" 
+                : "border-amber-100 bg-amber-50/50 hover:bg-amber-50",
+              changedStatuses.has('in_progress') && "animate-pulse bg-amber-100"
+            )}
+         >
+            <span className="text-2xl font-bold text-amber-700">{statusCounts.in_progress}</span>
+            <span className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase text-amber-600">
+               <Clock className="h-3 w-3" />
+               In Progress
+            </span>
+         </button>
+      </div>
+      
+      <div className="mt-3 flex items-center justify-between text-xs">
+         <button 
+           onClick={() => onFilter?.('closed')}
+           className={cn(
+             "flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors",
+             activeStatus === 'closed' 
+               ? "bg-emerald-100 text-emerald-800 font-bold" 
+               : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+           )}
+         >
+           <CheckCircle2 className={cn("h-3.5 w-3.5", activeStatus === 'closed' ? "text-emerald-600" : "text-emerald-500")} />
+           <span>{statusCounts.closed} closed incidents</span>
+         </button>
+      </div>
+    </CardFrame>
   )
 }
 
