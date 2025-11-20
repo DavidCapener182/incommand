@@ -8,7 +8,7 @@ import FootballCard_LiveScore from './FootballCard_LiveScore'
 import FootballCard_MedicalPolicing from './FootballCard_MedicalPolicing'
 import FootballCard_Transport from './FootballCard_TransportWeather'
 import SupportToolModal from '../../football/modals/SupportToolModal'
-import { StandOccupancyCurrent, StandOccupancySetup } from '../../football/modals/StandOccupancyModal'
+import StandOccupancyModal from '../../football/modals/StandOccupancyModal'
 import { StaffingActual, StaffingDeployment } from '../../football/modals/StaffingModal'
 import { FixtureCurrent, FixtureSetup } from '../../football/modals/FixtureModal'
 import { TransportCurrent, TransportSetup } from '../../football/modals/TransportModal'
@@ -71,11 +71,8 @@ export default function SupportToolsFootball() {
       </div>
 
       {/* Modals - Always render, control visibility via isOpen prop */}
-        <SupportToolModal
-          title="Stand Occupancy"
-          currentTab={<StandOccupancyCurrent />}
-          setupTab={<StandOccupancySetup />}
-        isOpen={activeModal === 'stand'}
+        <StandOccupancyModal
+          isOpen={activeModal === 'stand'}
           onClose={() => setActiveModal(null)}
           onSave={() => console.log('Stand occupancy saved')}
         />

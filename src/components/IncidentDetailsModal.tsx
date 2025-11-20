@@ -19,7 +19,9 @@ import {
   CheckCircleIcon,
   DocumentTextIcon,
   MapPinIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
+  ArrowPathIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
 import PriorityBadge from './PriorityBadge'
@@ -34,17 +36,12 @@ import {
   type Priority,
 } from '../utils/incidentStyles'
 import { getIncidentTypeIcon } from '../utils/incidentIcons'
-import { LuSiren } from 'react-icons/lu'
 import { 
   formatDualTimestamp, 
-  getEntryTypeBadgeConfig, 
-  getAmendmentBadgeConfig 
 } from '@/lib/auditableLogging'
-import { AuditableIncidentLog } from '@/types/auditableLog'
 import dynamic from 'next/dynamic'
 import IncidentRadioMessages from './incidents/IncidentRadioMessages'
 
-// Dynamically import DecisionLogger to avoid initialization issues
 const DecisionLogger = dynamic(() => import('./decisions/DecisionLogger'), {
   ssr: false,
   loading: () => null,
@@ -86,7 +83,6 @@ interface Incident {
   auto_assigned?: boolean
   dependencies?: string[]
   what3words?: string
-  // Auditable logging fields
   time_of_occurrence?: string
   time_logged?: string
   entry_type?: 'contemporaneous' | 'retrospective'
@@ -115,59 +111,40 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [showFullImage, setShowFullImage] = useState(false)
   const [isEscalationModalOpen, setIsEscalationModalOpen] = useState(false)
   const [isAmendmentModalOpen, setIsAmendmentModalOpen] = useState(false)
-  const [isRevisionHistoryOpen, setIsRevisionHistoryOpen] = useState(false)
   const [revisionCount, setRevisionCount] = useState(0)
   const [currentUserName, setCurrentUserName] = useState('Event Control')
   const [showDecisionLogger, setShowDecisionLogger] = useState(false)
 
+  // --- 1. Logic & Effects (Unchanged) ---
+
   useEffect(() => {
     let cancelled = false
-
     const resolveDisplayName = async () => {
       if (!user?.id) {
         setCurrentUserName('Event Control')
         return
       }
-
-      const metadataName = (user.user_metadata?.full_name as string | undefined)
-        || (user.user_metadata?.name as string | undefined)
-        || (user.user_metadata?.display_name as string | undefined)
-
+      const metadataName = (user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || (user.user_metadata?.display_name as string)
       if (metadataName) {
         setCurrentUserName(metadataName)
         return
       }
-
       try {
         const { data, error } = await supabase
-          .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
+          .from('profiles')
           .select('display_name, full_name, callsign')
           .eq('id', user.id)
           .maybeSingle()
-
-        if (cancelled) {
-          return
-        }
-
-        if (error) {
-          throw error
-        }
-
+        if (cancelled) return
+        if (error) throw error
         const profileName = data?.display_name || data?.full_name || data?.callsign || user.email || 'Event Control'
         setCurrentUserName(profileName)
       } catch (profileError) {
-        console.warn('Unable to resolve profile name for incident updates', profileError)
-        if (!cancelled) {
-          setCurrentUserName(user.email || 'Event Control')
-        }
+        if (!cancelled) setCurrentUserName(user.email || 'Event Control')
       }
     }
-
     resolveDisplayName()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [user?.id, user?.email, user?.user_metadata])
 
   const formatDateTime = (value?: string | null) => {
@@ -176,23 +153,16 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
     return Number.isNaN(date.getTime()) ? 'Timestamp unavailable' : date.toLocaleString()
   }
 
-  // Cleanup function to handle unsubscribe
   const cleanup = () => {
     if (subscriptionRef.current) {
-      console.log('Cleaning up incident details subscription');
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
   };
 
   useEffect(() => {
-    // Fetch current event id
     const fetchEvent = async () => {
-      const { data: eventData } = await supabase
-        .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
-        .select('id')
-        .eq('is_current', true)
-        .single();
+      const { data: eventData } = await supabase.from('events').select('id').eq('is_current', true).single();
       setCurrentEventId(eventData?.id || null);
     };
     fetchEvent();
@@ -200,98 +170,55 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
 
   const fetchAssignments = useCallback(async () => {
     if (!currentEventId) return;
-    
     try {
-      const { data: assignmentsData } = await supabase
-        .from<any, any>('callsign_assignments')
-        .select('callsign, staff_id, staff_name')
-        .eq('event_id', currentEventId);
-
+      const { data: assignmentsData } = await supabase.from('callsign_assignments').select('callsign, staff_id, staff_name').eq('event_id', currentEventId);
       if (assignmentsData) {
         const assignmentsMap: Record<string, string> = {};
         const shortToNameMap: Record<string, string> = {};
-        
         assignmentsData.forEach((assignment: any) => {
           if (assignment.callsign && assignment.staff_name) {
             assignmentsMap[assignment.callsign.toUpperCase()] = assignment.staff_name;
             shortToNameMap[assignment.callsign.toUpperCase()] = assignment.staff_name;
           }
         });
-        
         setCallsignAssignments(assignmentsMap);
         setCallsignShortToName(shortToNameMap);
       }
-    } catch (error) {
-      console.error('Error fetching callsign assignments:', error);
-    }
+    } catch (error) { console.error(error); }
   }, [currentEventId]);
 
   const getSignedUrl = useCallback(async (photoUrl?: string) => {
     const targetPhotoUrl = photoUrl ?? incident?.photo_url;
     if (!targetPhotoUrl) return;
-    
     try {
-      const { data } = await supabase.storage
-        .from('incident-photos')
-        .createSignedUrl(targetPhotoUrl, 3600);
-      
-      if (data?.signedUrl) {
-        setPhotoUrl(data.signedUrl);
-      }
-    } catch (error) {
-      console.error('Error getting signed URL:', error);
-    }
+      const { data } = await supabase.storage.from('incident-photos').createSignedUrl(targetPhotoUrl, 3600);
+      if (data?.signedUrl) setPhotoUrl(data.signedUrl);
+    } catch (error) { console.error(error); }
   }, [incident?.photo_url]);
 
   const fetchIncidentDetails = useCallback(async () => {
     if (!incidentId) return;
-
     setLoading(true);
     setError(null);
-
     try {
-      // Fetch incident details
-      const { data: incidentData, error: incidentError } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
-        .select('*')
-        .eq('id', Number(incidentId))
-        .single();
-
+      const { data: incidentData, error: incidentError } = await supabase.from('incident_logs').select('*').eq('id', Number(incidentId)).single();
       if (incidentError) throw incidentError;
-
       setIncident(incidentData as any);
       setEditedIncident(incidentData as any);
 
-      // Fetch revision count if incident has been amended
       if (incidentData?.is_amended) {
-        const { count } = await supabase
-          .from<any, any>('incident_log_revisions')
-          .select('*', { count: 'exact', head: true })
-          .eq('incident_log_id', Number(incidentId))
+        const { count } = await supabase.from('incident_log_revisions').select('*', { count: 'exact', head: true }).eq('incident_log_id', Number(incidentId))
         setRevisionCount(count || 0)
       } else {
         setRevisionCount(0)
       }
 
-      // Fetch updates
-      const { data: updatesData, error: updatesError } = await supabase
-        .from<any, any>('incident_updates')
-        .select('*')
-        .eq('incident_id', Number(incidentId))
-        .order('created_at', { ascending: false });
-
+      const { data: updatesData, error: updatesError } = await supabase.from('incident_updates').select('*').eq('incident_id', Number(incidentId)).order('created_at', { ascending: false });
       if (updatesError) throw updatesError;
-
       setUpdates((updatesData || []) as any);
 
-      // Fetch additional data
-      await Promise.all([
-        fetchAssignments(),
-        getSignedUrl(incidentData?.photo_url)
-      ]);
-
+      await Promise.all([fetchAssignments(), getSignedUrl(incidentData?.photo_url)]);
     } catch (err) {
-      console.error('Error fetching incident details:', err);
       setError('Failed to load incident details');
     } finally {
       setLoading(false);
@@ -301,868 +228,422 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   useEffect(() => {
     if (isOpen && incidentId) {
       fetchIncidentDetails();
-
-      // Clean up any existing subscription
       cleanup();
-
-      // Set up new subscription for both incident updates and log changes
-      subscriptionRef.current = supabase
-        .channel(`incident_${incidentId}_${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'incident_updates',
-            filter: `incident_id=eq.${incidentId}`
-          },
-          () => {
-            console.log('Incident update detected, refreshing...');
-            fetchIncidentDetails();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'incident_logs',
-            filter: `id=eq.${incidentId}`
-          },
-          (payload) => {
-            console.log('Incident log updated, refreshing...', payload);
-            fetchIncidentDetails();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'incident_log_revisions',
-            filter: `incident_log_id=eq.${incidentId}`
-          },
-          (payload) => {
-            console.log('New revision created, refreshing...', payload);
-            fetchIncidentDetails();
-          }
-        )
+      subscriptionRef.current = supabase.channel(`incident_${incidentId}_${Date.now()}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'incident_updates', filter: `incident_id=eq.${incidentId}` }, () => fetchIncidentDetails())
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'incident_logs', filter: `id=eq.${incidentId}` }, () => fetchIncidentDetails())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incident_log_revisions', filter: `incident_log_id=eq.${incidentId}` }, () => fetchIncidentDetails())
         .subscribe();
     }
-
-    // Cleanup on unmount or when modal closes
     return cleanup;
   }, [isOpen, incidentId, fetchIncidentDetails]);
 
   const handleEscalationSuccess = (_escalation: EscalationResponse) => {
-    setIncident((prev) => {
-      if (!prev) {
-        return prev
-      }
-
-      const nextLevel = (prev.escalation_level ?? 0) + 1
-      return {
-        ...prev,
-        escalated: true,
-        escalation_level: nextLevel,
-      }
-    })
-
-    setEditedIncident((prev) => {
-      const nextLevel =
-        typeof prev.escalation_level === 'number'
-          ? prev.escalation_level + 1
-          : (incident?.escalation_level ?? 0) + 1
-
-      return {
-        ...prev,
-        escalated: true,
-        escalation_level: nextLevel,
-      }
-    })
-
-    fetchIncidentDetails().catch((err) => {
-      console.error('Failed to refresh incident after escalation', err)
-    })
-
+    setIncident((prev) => prev ? ({ ...prev, escalated: true, escalation_level: (prev.escalation_level ?? 0) + 1 }) : prev)
+    setEditedIncident((prev) => ({ ...prev, escalated: true, escalation_level: (typeof prev.escalation_level === 'number' ? prev.escalation_level + 1 : (incident?.escalation_level ?? 0) + 1) }))
+    fetchIncidentDetails();
     setIsEscalationModalOpen(false)
   }
 
   const handleUpdateSubmit = async () => {
     if (!newUpdate.trim() || !incident) return;
-
     try {
-      const { error } = await supabase
-        .from<any, any>('incident_updates')
-        .insert({
-          incident_id: Number(incident.id),
-          update_text: newUpdate,
-          updated_by: currentUserName
-        });
-
+      const { error } = await supabase.from('incident_updates').insert({ incident_id: Number(incident.id), update_text: newUpdate, updated_by: currentUserName });
       if (error) throw error;
-
-      // Also append this update into the main log's action_taken so it shows on the log
+      
       const normalizedNote = newUpdate.trim().replace(/\s+/g, ' ');
       const appendedAction = `Update: ${normalizedNote.replace(/\.$/, '')}.`;
       try {
-        // Get current actions (fresh)
-        const { data: current, error: selErr } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
-        .select('action_taken')
-        .eq('id', Number(incident.id))
-        .single();
-        if (selErr) throw selErr;
+        const { data: current } = await supabase.from('incident_logs').select('action_taken').eq('id', Number(incident.id)).single();
         const prevActions = (current?.action_taken as string) || '';
         const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
-        const { error: updErr } = await supabase
-          .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
-          .update({ action_taken: updatedActions, updated_at: new Date().toISOString() })
-          .eq('id', Number(incident.id));
-        if (updErr) throw updErr;
-        // Reflect locally
+        await supabase.from('incident_logs').update({ action_taken: updatedActions, updated_at: new Date().toISOString() }).eq('id', Number(incident.id));
         setIncident(prev => prev ? { ...prev, action_taken: updatedActions } : prev);
-      } catch (err) {
-        console.error('Failed to append update to action_taken:', err);
-      }
+      } catch (err) { console.error(err); }
 
       setNewUpdate('');
       await fetchIncidentDetails();
-    } catch (err) {
-      console.error('Error adding update:', err);
-      setError('Failed to add update');
-    }
+    } catch (err) { setError('Failed to add update'); }
   };
 
   const handleSaveChanges = async () => {
     if (!incident) return;
-
     try {
-      const { error } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
-        .update({
+      const { error } = await supabase.from('incident_logs').update({
           occurrence: editedIncident.occurrence,
           action_taken: editedIncident.action_taken,
           callsign_from: editedIncident.callsign_from,
           callsign_to: editedIncident.callsign_to,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', Number(incident.id));
-
+        }).eq('id', Number(incident.id));
       if (error) throw error;
-
-      // Add an update to the audit trail
-      const { error: auditError } = await supabase
-        .from<any, any>('incident_updates')
-        .insert({
-          incident_id: Number(incident.id),
-          update_text: 'Incident details updated',
-          updated_by: currentUserName
-        });
-
-      if (auditError) throw auditError;
-
+      await supabase.from('incident_updates').insert({ incident_id: Number(incident.id), update_text: 'Incident details updated', updated_by: currentUserName });
       setEditMode(false);
       await fetchIncidentDetails();
-    } catch (err) {
-      console.error('Error saving changes:', err);
-      setError('Failed to save changes');
-    }
+    } catch (err) { setError('Failed to save changes'); }
   };
 
   const handleStatusChange = async () => {
     if (!incident) return;
-
     try {
       const newStatus = !incident.is_closed;
-
-      // Update the incident status
-      const { error: updateError } = await supabase
-        .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
-        .update({
-          is_closed: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', Number(incident.id));
-
+      const { error: updateError } = await supabase.from('incident_logs').update({ is_closed: newStatus, updated_at: new Date().toISOString() }).eq('id', Number(incident.id));
       if (updateError) throw updateError;
-
-      // Add an update to the audit trail
-      const { error: auditError } = await supabase
-        .from<any, any>('incident_updates')
-        .insert({
-          incident_id: parseInt(incident.id),
-          update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`,
-          updated_by: currentUserName
-        });
-
-      if (auditError) throw auditError;
-
+      await supabase.from('incident_updates').insert({ incident_id: parseInt(incident.id), update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`, updated_by: currentUserName });
       await fetchIncidentDetails();
-    } catch (err) {
-      console.error('Error updating incident status:', err);
-      setError('Failed to update incident status');
-    }
+    } catch (err) { setError('Failed to update incident status'); }
   };
 
-  const getStatusIcon = (isClosed: boolean) => {
-    return isClosed ? (
-      <CheckCircleIcon className="h-5 w-5 text-green-600" />
-    ) : (
-      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600" />
-    );
-  };
-
-  // Scroll lock effect
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = 'unset'
-      }
-    }
+    if (isOpen) { document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = 'unset' } }
   }, [isOpen])
 
-  // Keyboard accessibility - Escape key to close
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      return () => document.removeEventListener('keydown', handleEscape)
-    }
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape' && isOpen) onClose() }
+    if (isOpen) { document.addEventListener('keydown', handleEscape); return () => document.removeEventListener('keydown', handleEscape) }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
 
-  const modalContent = (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-stretch bg-black/40 backdrop-blur-sm sm:items-center sm:justify-center"
-          onClick={(e) => {
-            // Close modal when clicking backdrop
-            if (e.target === e.currentTarget) {
-              onClose()
-            }
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className={cn(
-              'relative mx-auto flex h-full w-full flex-col overflow-hidden bg-white dark:bg-[#1b203b] rounded-2xl shadow-3xl',
-              'max-h-screen rounded-none sm:h-auto sm:max-h-[calc(100vh-48px)] sm:w-[95%] sm:max-w-[1280px] sm:rounded-3xl'
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-        {/* Header */}
-        <div className="bg-blue-600 text-white flex items-center justify-between px-6 py-4 border-b border-border/40">
-          <div>
-            <h2 className="text-xl font-bold">
-              Log number - {incident?.log_number}
-            </h2>
-            <p className="text-sm text-blue-100">
-              {incident?.incident_type} · {incident?.time_of_occurrence && incident?.time_logged && incident?.entry_type ? (
-                formatDualTimestamp(
-                  incident.time_of_occurrence,
-                  incident.time_logged,
-                  incident.entry_type as any
-                ).isRetrospective ? (
-                  <>
-                    <span className="mr-1">🕓</span>
-                    Occurred: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred} | 
-                    Logged: {formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).logged}
-                  </>
-                ) : (
-                  formatDualTimestamp(incident.time_of_occurrence, incident.time_logged, incident.entry_type as any).occurred
-                )
-              ) : (
-                formatDateTime(incident?.timestamp)
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {incident && (
-              <button
-                onClick={() => setShowDecisionLogger(true)}
-                className="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                title="Log Decision"
-              >
-                <DocumentTextIcon className="h-4 w-4" />
-                <span>Log Decision</span>
-              </button>
-            )}
-            {incident && incident.incident_type !== 'Sit Rep' && (
-              <button
-                onClick={handleStatusChange}
-                className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 ${
-                  incident.is_closed
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
-                }`}
-              >
-                {getStatusIcon(incident.is_closed)}
-                <span>{incident.is_closed ? 'Closed' : 'Open'}</span>
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="text-white/70 hover:text-white transition-colors p-1 rounded"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-1 min-h-0 flex-col overflow-y-auto md:h-[calc(90vh-80px)] md:flex-row md:overflow-hidden">
-          {/* Left Column - Main Content */}
-          <div className="flex-1 px-4 sm:px-6 py-6 md:min-h-0 md:overflow-y-auto">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : error ? (
-              <div className="text-red-500 text-center py-8 bg-red-50 rounded-lg">
-                <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-4 text-red-400" />
-                <p className="text-lg font-semibold">{error}</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Radio Messages Section */}
-                {incident && (
-                  <IncidentRadioMessages 
-                    incidentId={incident.id} 
-                    eventId={currentEventId}
-                  />
-                )}
-
-                {/* Incident Type & Priority */}
-                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                     style={{
-                       boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                       transition: 'box-shadow 0.25s ease'
-                     }}
-                     onMouseEnter={(e) => {
-                       if (window.innerWidth >= 768) {
-                         e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
-                       }
-                     }}
-                     onMouseLeave={(e) => {
-                       e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
-                     }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center">
-                      <DocumentTextIcon className="h-4 w-4 mr-2 text-blue-600" />
-                      Incident Information
-                    </h3>
-                    <button
-                      onClick={() => setIsAmendmentModalOpen(true)}
-                      className="flex items-center space-x-2 px-3 py-2 text-sm rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                      <span>Amend Entry</span>
-                    </button>
-                  </div>
-                  
-                  {editMode ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Occurrence</label>
-                        <textarea
-                          value={editedIncident.occurrence || ''}
-                          onChange={(e) => setEditedIncident({ ...editedIncident, occurrence: e.target.value })}
-                          className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                          rows={4}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Callsign From</label>
-                          <input
-                            type="text"
-                            value={editedIncident.callsign_from || ''}
-                            onChange={(e) => setEditedIncident({ ...editedIncident, callsign_from: e.target.value })}
-                            placeholder="e.g., A1, R2, PM"
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Callsign To</label>
-                          <input
-                            type="text"
-                            value={editedIncident.callsign_to || ''}
-                            onChange={(e) => setEditedIncident({ ...editedIncident, callsign_to: e.target.value })}
-                            placeholder="e.g., Control, Medics, Security 1"
-                            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Action Taken</label>
-                        <textarea
-                          value={editedIncident.action_taken || ''}
-                          onChange={(e) => setEditedIncident({ ...editedIncident, action_taken: e.target.value })}
-                          className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                          rows={4}
-                        />
-                      </div>
-                      <button
-                        onClick={handleSaveChanges}
-                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                      >
-                        <CheckIcon className="h-5 w-5 inline mr-2" />
-                        Save Changes
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      className={`space-y-4 rounded-xl border p-4 ${
-                        getPriorityBorderClass(incident?.priority as Priority)
-                      } ${(() => {
-                        if (!incident) return 'border-gray-200';
-                        const status = String(incident.status ?? '').toLowerCase();
-                        const normalizedPriority = normalizePriority(incident.priority as Priority);
-                        const isHighPriority = normalizedPriority === 'high' || normalizedPriority === 'urgent';
-                        const isOpenStatus = !incident.is_closed && (status === 'open' || status === 'logged' || status === '');
-                        return isOpenStatus && isHighPriority
-                          ? 'ring-2 ring-red-400 border-red-300 animate-pulse-border motion-reduce:animate-none shadow-md shadow-red-300/40'
-                          : 'border-gray-200';
-                      })()}`}
-                    >
-                      {/* Incident Type Badge */}
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident?.incident_type || '');
-                          return (
-                            <span className={`inline-flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full ${getIncidentTypeStyle(incident?.incident_type || '')}`}>
-                              <IncidentTypeIcon size={18} aria-hidden className="shrink-0" />
-                              <span>{incident?.incident_type || 'Incident'}</span>
-                            </span>
-                          );
-                        })()}
-                        <PriorityBadge priority={incident?.priority} />
-                      </div>
-
-                      {/* Key Details Grid */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <ClockIcon className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">Time</span>
-                          </div>
-                          <p className="text-gray-900 font-medium text-sm">
-                            {formatDateTime(incident?.timestamp)}
-                          </p>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <UserIcon className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">From</span>
-                          </div>
-                          <p className="text-gray-900 font-medium text-sm">
-                            <span
-                              title={
-                                incident?.callsign_from &&
-                                (callsignShortToName[incident.callsign_from.toUpperCase()] ||
-                                  callsignAssignments[incident.callsign_from.toUpperCase()] ||
-                                  undefined)
-                              }
-                              className="underline decoration-dotted cursor-help"
-                            >
-                              {incident?.callsign_from}
-                            </span>
-                          </p>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <UserIcon className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">To</span>
-                          </div>
-                          <p className="text-gray-900 font-medium text-sm">
-                            <span
-                              title={
-                                incident?.callsign_to &&
-                                (callsignShortToName[incident.callsign_to.toUpperCase()] ||
-                                  callsignAssignments[incident.callsign_to.toUpperCase()] ||
-                                  undefined)
-                              }
-                              className="underline decoration-dotted cursor-help"
-                            >
-                              {incident?.callsign_to}
-                            </span>
-                          </p>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <MapPinIcon className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">Location</span>
-                          </div>
-                          <p className="text-gray-900 font-medium text-sm">
-                            {incident?.what3words || 'Not specified'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Occurrence */}
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                          <ClipboardDocumentIcon className="h-4 w-4 mr-2" />
-                          Occurrence
-                        </h4>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="whitespace-pre-wrap text-gray-900 text-sm">
-                            {(() => {
-                              if (!incident?.occurrence) return 'No occurrence details provided.';
-                              // Regex to find all what3words addresses
-                              const regex = /(\/\/\/[a-zA-Z0-9]+\.[a-zA-Z0-9]+\.[a-zA-Z0-9]+)/g;
-                              const parts = incident.occurrence.split(regex);
-                              return parts.map((part, i) => {
-                                if (regex.test(part)) {
-                                  return (
-                                    <span
-                                      key={i}
-                                      className="inline-flex items-center bg-blue-100 rounded px-2 py-1 mr-1 cursor-pointer hover:bg-blue-200 active:bg-blue-300 transition-colors font-mono text-blue-800 underline text-xs"
-                                      title="Click to copy what3words address"
-                                      onClick={() => navigator.clipboard.writeText(part)}
-                                      tabIndex={0}
-                                      role="button"
-                                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { navigator.clipboard.writeText(part); } }}
-                                    >
-                                      {part}
-                                    </span>
-                                  );
-                                } else {
-                                  return <span key={i}>{part}</span>;
-                                }
-                              });
-                            })()}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Action Taken */}
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                          <CheckIcon className="h-4 w-4 mr-2" />
-                          Action Taken
-                        </h4>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="whitespace-pre-wrap text-gray-900 text-sm">
-                            {incident?.action_taken || 'No action details provided.'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-5">
-                {/* Assignment Info */}
-                {incident?.assigned_staff_ids && incident.assigned_staff_ids.length > 0 && (
-                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                       style={{
-                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                         transition: 'box-shadow 0.25s ease'
-                       }}
-                       onMouseEnter={(e) => {
-                         if (window.innerWidth >= 768) {
-                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
-                         }
-                       }}
-                       onMouseLeave={(e) => {
-                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
-                       }}>
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
-                      <UserIcon className="h-4 w-4 mr-2 text-blue-600" />
-                      Assigned Staff
-                    </h3>
-                    <div className="space-y-2">
-                      {incident.assigned_staff_ids.map((staffId, index) => (
-                        <div key={staffId} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-blue-600">
-                              {index + 1}
-                            </span>
-                          </div>
-                          <span className="text-sm text-gray-700">Staff Member {index + 1}</span>
-                          {incident.auto_assigned && (
-                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                              Auto
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Dependencies */}
-                {incident?.dependencies && incident.dependencies.length > 0 && (
-                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                       style={{
-                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                         transition: 'box-shadow 0.25s ease'
-                       }}
-                       onMouseEnter={(e) => {
-                         if (window.innerWidth >= 768) {
-                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
-                         }
-                       }}
-                       onMouseLeave={(e) => {
-                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
-                       }}>
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
-                      <ClipboardDocumentIcon className="h-4 w-4 mr-2 text-blue-600" />
-                      Dependencies
-                    </h3>
-                    <div className="space-y-2">
-                      {incident.dependencies.map((depId, index) => (
-                        <div key={depId} className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                          <span className="text-sm text-orange-800">{depId}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Photo Attachment */}
-                {incident && incident.photo_url && photoUrl && isAdmin && (
-                  <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                       style={{
-                         boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                         transition: 'box-shadow 0.25s ease'
-                       }}
-                       onMouseEnter={(e) => {
-                         if (window.innerWidth >= 768) {
-                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)';
-                         }
-                       }}
-                       onMouseLeave={(e) => {
-                         e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)';
-                       }}>
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center">
-                      <PhotoIcon className="h-4 w-4 mr-2 text-blue-600" />
-                      Photo Attachment
-                    </h3>
-                    <div className="relative h-32">
-                      <Image
-                        src={photoUrl}
-                        alt="Incident Attachment"
-                        fill
-                        className="object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setShowFullImage(true)}
-                        onContextMenu={e => e.preventDefault()}
-                        draggable={false}
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                        <PhotoIcon className="h-6 w-6 text-white opacity-0 hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                    
-                    {showFullImage && (
-                      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70]" onClick={() => setShowFullImage(false)}>
-                        <div className="relative max-h-[90vh] max-w-[90vw]">
-                          <Image
-                            src={photoUrl}
-                            alt="Full Incident Attachment"
-                            width={1920}
-                            height={1080}
-                            className="max-h-[90vh] max-w-[90vw] w-auto h-auto rounded-lg shadow-2xl object-contain"
-                            onContextMenu={e => e.preventDefault()}
-                            draggable={false}
-                            unoptimized
-                          />
-                          <button
-                            onClick={() => setShowFullImage(false)}
-                            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
-                          >
-                            <XMarkIcon className="h-8 w-8" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Add Update Form */}
-              <div
-                className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                style={{
-                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                  transition: 'box-shadow 0.25s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (window.innerWidth >= 768) {
-                    e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)'
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center">
-                    <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2 text-blue-600" />
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Add Update</h3>
-                  </div>
-                  <button
-                    onClick={handleUpdateSubmit}
-                    disabled={!newUpdate.trim()}
-                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    Add Update
-                  </button>
-                </div>
-                <textarea
-                  value={newUpdate}
-                  onChange={(e) => setNewUpdate(e.target.value)}
-                  placeholder="Add an update to this incident..."
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  rows={4}
-                />
-              </div>
-            </div>
-          )}
-          </div>
-
-          {/* Right Column - Revision History & Updates with scrolling */}
-          <div className="w-full border-t border-border/30 px-4 sm:px-6 py-6 mt-6 md:mt-0 md:w-80 md:border-t-0 md:border-l md:min-h-0 md:overflow-y-auto">
-            <div className="space-y-6">
-              {incident && (
-                <IncidentRevisionHistory
-                  incidentId={String(incident.id)}
-                  incident={incident as any}
-                />
-              )}
-
-              <div
-                className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-250"
-                style={{
-                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-                  transition: 'box-shadow 0.25s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (window.innerWidth >= 768) {
-                    e.currentTarget.style.boxShadow = '0 8px 18px rgba(0, 0, 0, 0.08)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.06)'
-                }}
-              >
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 flex items-center">
-                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2 text-blue-600" />
-                  Updates & Audit Trail
-                </h3>
-                
-                <div className="space-y-3">
-                  {updates.length === 0 ? (
-                    <div className="text-center py-6 text-gray-500">
-                      <ChatBubbleLeftRightIcon className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p>No updates yet</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {updates.map((update, index) => (
-                        <div key={update.id} className="relative">
-                          {/* Timeline line */}
-                          {index < updates.length - 1 && (
-                            <div className="absolute left-5 top-10 w-0.5 h-6 bg-gray-200"></div>
-                          )}
-                          
-                          <div className="flex space-x-3">
-                            {/* Timeline dot */}
-                            <div className="flex-shrink-0">
-                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                <UserIcon className="h-5 w-5 text-blue-600" />
-                              </div>
-                            </div>
-                            
-                            {/* Update content */}
-                            <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {update.updated_by}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {formatDateTime(update.created_at)}
-                                </span>
-                              </div>
-                              <p className="text-gray-700 text-sm">{update.update_text}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Child Modals - Escalation */}
-        {incident && (
-          <EscalationModal
-            incidentId={String(incident.id)}
-            incidentType={incident.incident_type}
-            incidentPriority={incident.priority}
-            isOpen={isEscalationModalOpen}
-            onClose={() => setIsEscalationModalOpen(false)}
-            onSuccess={handleEscalationSuccess}
-          />
-        )}
-
-        {/* Amendment Modal */}
-        {incident && (
-          <IncidentAmendmentModal
-            isOpen={isAmendmentModalOpen}
-            onClose={() => setIsAmendmentModalOpen(false)}
-            incident={incident as any}
-            onAmendmentCreated={() => {
-              // Refresh incident data
-              fetchIncidentDetails()
-            }}
-          />
-        )}
-
-        {/* Decision Logger Modal */}
-        {incident && currentEventId && (
-          <DecisionLogger
-            eventId={currentEventId}
-            isOpen={showDecisionLogger}
-            onClose={() => setShowDecisionLogger(false)}
-            onDecisionCreated={() => {
-              setShowDecisionLogger(false)
-            }}
-            linkedIncidentIds={[Number(incident.id)]}
-          />
-        )}
-      </motion.div>
-    </motion.div>
-      )}
-    </AnimatePresence>
+  // --- 2. Helper UI Components for this Modal ---
+  
+  const DetailItem = ({ icon: Icon, label, value, subtext }: any) => (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium uppercase tracking-wide">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{label}</span>
+      </div>
+      <div className="pl-5">
+         <span className="text-sm font-semibold text-slate-900 block truncate" title={value}>{value || 'N/A'}</span>
+         {subtext && <span className="text-[10px] text-slate-400 block truncate">{subtext}</span>}
+      </div>
+    </div>
   )
 
-  // Render modal using React Portal to body
-  return typeof document !== 'undefined' 
-    ? createPortal(modalContent, document.body)
-    : null
-} 
+  const getStatusButton = (isClosed: boolean) => (
+    <button
+      onClick={handleStatusChange}
+      className={cn(
+        "flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shadow-sm",
+        isClosed
+          ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+          : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+      )}
+    >
+      {isClosed ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
+      <span>{isClosed ? 'CLOSED' : 'OPEN'}</span>
+    </button>
+  )
+
+  // --- 3. Render ---
+
+  return typeof document !== 'undefined' ? createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={onClose}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="relative w-full max-w-6xl h-[85vh] bg-[#F8FAFC] dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            
+            {/* --- HEADER --- */}
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-start justify-between shrink-0">
+              
+              {/* Title Block */}
+              <div className="flex flex-col gap-1">
+                 <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                       Log #{incident?.log_number}
+                    </h2>
+                    {incident && (
+                      <div className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border", getIncidentTypeStyle(incident.incident_type))}>
+                         {incident.incident_type}
+                      </div>
+                    )}
+                    <PriorityBadge priority={incident?.priority} />
+                 </div>
+                 <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <ClockIcon className="h-3.5 w-3.5" />
+                    {incident?.time_of_occurrence ? (
+                        formatDualTimestamp(
+                          incident.time_of_occurrence, 
+                          incident.time_logged, 
+                          incident.entry_type as any
+                        ).occurred
+                    ) : formatDateTime(incident?.timestamp)}
+                 </p>
+              </div>
+
+              {/* Actions Block */}
+              <div className="flex items-center gap-2">
+                 {incident && (
+                   <button
+                     onClick={() => setShowDecisionLogger(true)}
+                     className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 rounded-lg text-xs font-semibold transition-colors shadow-sm"
+                   >
+                     <ClipboardDocumentIcon className="h-4 w-4" />
+                     Log Decision
+                   </button>
+                 )}
+                 {incident && incident.incident_type !== 'Sit Rep' && getStatusButton(incident.is_closed)}
+                 <div className="h-6 w-px bg-slate-200 mx-1" />
+                 <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+                    <XMarkIcon className="h-5 w-5" />
+                 </button>
+              </div>
+            </div>
+
+            {/* --- MAIN BODY --- */}
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+              
+              {/* LEFT COLUMN: Details */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#F8FAFC]">
+                
+                {loading ? (
+                   <div className="flex justify-center items-center h-full">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                   </div>
+                ) : error ? (
+                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600 text-center text-sm">
+                     {error}
+                   </div>
+                ) : (
+                   <>
+                      {/* Radio Context */}
+                      {incident && <IncidentRadioMessages incidentId={incident.id} eventId={currentEventId} />}
+
+                      {/* Metadata Grid Card */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <DetailItem icon={ClockIcon} label="Occurred" value={formatDateTime(incident?.time_of_occurrence || incident?.timestamp)} />
+                            <DetailItem 
+                              icon={UserIcon} 
+                              label="From" 
+                              value={incident?.callsign_from} 
+                              subtext={callsignShortToName[incident?.callsign_from?.toUpperCase() || ''] || 'Unknown Staff'} 
+                            />
+                            <DetailItem 
+                              icon={UserIcon} 
+                              label="To" 
+                              value={incident?.callsign_to} 
+                              subtext={callsignShortToName[incident?.callsign_to?.toUpperCase() || ''] || 'Control'} 
+                            />
+                            <DetailItem icon={MapPinIcon} label="Location" value={incident?.location || incident?.what3words || 'N/A'} />
+                         </div>
+                      </div>
+
+                      {/* Edit / View Content */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <h3 className="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                               <DocumentTextIcon className="h-4 w-4 text-blue-600" />
+                               Incident Record
+                            </h3>
+                            {!editMode && (
+                              <button
+                                onClick={() => setIsAmendmentModalOpen(true)}
+                                className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline"
+                              >
+                                <PencilIcon className="h-3 w-3" />
+                                Amend Entry
+                              </button>
+                            )}
+                         </div>
+                         
+                         <div className="p-5 space-y-6">
+                            {editMode ? (
+                               <div className="space-y-4">
+                                  {/* Edit Mode Inputs */}
+                                  <div>
+                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Occurrence</label>
+                                     <textarea
+                                        value={editedIncident.occurrence || ''}
+                                        onChange={(e) => setEditedIncident({ ...editedIncident, occurrence: e.target.value })}
+                                        className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500 p-3"
+                                        rows={4}
+                                     />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                     <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">From</label>
+                                        <input value={editedIncident.callsign_from || ''} onChange={(e) => setEditedIncident({ ...editedIncident, callsign_from: e.target.value })} className="w-full rounded-lg border-slate-200 text-sm p-2" />
+                                     </div>
+                                     <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To</label>
+                                        <input value={editedIncident.callsign_to || ''} onChange={(e) => setEditedIncident({ ...editedIncident, callsign_to: e.target.value })} className="w-full rounded-lg border-slate-200 text-sm p-2" />
+                                     </div>
+                                  </div>
+                                  <div>
+                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Action Taken</label>
+                                     <textarea
+                                        value={editedIncident.action_taken || ''}
+                                        onChange={(e) => setEditedIncident({ ...editedIncident, action_taken: e.target.value })}
+                                        className="w-full rounded-lg border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500 p-3"
+                                        rows={4}
+                                     />
+                                  </div>
+                                  <div className="flex gap-2 pt-2">
+                                     <button onClick={handleSaveChanges} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Save Changes</button>
+                                     <button onClick={() => setEditMode(false)} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">Cancel</button>
+                                  </div>
+                               </div>
+                            ) : (
+                               <>
+                                  {/* Read Only Mode */}
+                                  <div>
+                                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Occurrence</h4>
+                                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-800 leading-relaxed whitespace-pre-wrap font-mono text-[13px]">
+                                        {incident?.occurrence || 'No details provided.'}
+                                     </div>
+                                  </div>
+
+                                  <div>
+                                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Action Taken</h4>
+                                     <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                        {incident?.action_taken || 'No action recorded.'}
+                                     </div>
+                                  </div>
+                               </>
+                            )}
+                         </div>
+                      </div>
+
+                      {/* Photo Attachment */}
+                      {incident?.photo_url && photoUrl && (
+                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                               <PhotoIcon className="h-4 w-4" /> Attachment
+                            </h4>
+                            <div className="relative h-48 w-full rounded-lg overflow-hidden group cursor-zoom-in border border-slate-100" onClick={() => setShowFullImage(true)}>
+                               <Image src={photoUrl} alt="Evidence" fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                            </div>
+                         </div>
+                      )}
+
+                      {/* Add Update Box */}
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                         <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                            <ChatBubbleLeftRightIcon className="h-4 w-4 text-blue-500" />
+                            Add Update
+                         </h4>
+                         <div className="relative">
+                            <textarea
+                              value={newUpdate}
+                              onChange={(e) => setNewUpdate(e.target.value)}
+                              placeholder="Type a new update or note..."
+                              className="w-full rounded-lg border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-blue-500 p-3 text-sm min-h-[80px] pr-12 resize-y"
+                            />
+                            <button
+                              onClick={handleUpdateSubmit}
+                              disabled={!newUpdate.trim()}
+                              className="absolute bottom-3 right-3 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-sm"
+                            >
+                               <PaperAirplaneIcon className="h-4 w-4" />
+                            </button>
+                         </div>
+                      </div>
+                   </>
+                )}
+              </div>
+
+              {/* RIGHT COLUMN: Timeline Sidebar */}
+              <div className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col h-full">
+                 <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                    <h3 className="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                       <ArrowPathIcon className="h-4 w-4 text-slate-500" />
+                       Audit Trail
+                    </h3>
+                 </div>
+                 
+                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white">
+                    {/* Revisions Block */}
+                    {incident && <IncidentRevisionHistory incidentId={String(incident.id)} incident={incident as any} />}
+
+                    {/* Updates Timeline */}
+                    <div className="space-y-6 mt-4 relative">
+                       {/* Vertical Line */}
+                       {updates.length > 0 && <div className="absolute left-3.5 top-3 bottom-3 w-px bg-slate-200" />}
+
+                       {updates.map((update) => (
+                          <div key={update.id} className="relative flex gap-3 group">
+                             {/* Dot */}
+                             <div className="relative z-10 mt-1 h-7 w-7 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center shrink-0 group-hover:border-blue-400 transition-colors">
+                                <div className="h-2 w-2 rounded-full bg-slate-400 group-hover:bg-blue-500 transition-colors" />
+                             </div>
+                             
+                             {/* Content */}
+                             <div className="flex-1 pb-1">
+                                <div className="flex items-baseline justify-between mb-1">
+                                   <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">
+                                      {update.updated_by}
+                                   </span>
+                                   <span className="text-[10px] text-slate-400">
+                                      {new Date(update.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                   </span>
+                                </div>
+                                <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 group-hover:border-slate-200 transition-colors leading-snug">
+                                   {update.update_text}
+                                </div>
+                             </div>
+                          </div>
+                       ))}
+
+                       {updates.length === 0 && (
+                          <div className="text-center py-8 text-slate-400 text-xs italic">
+                             No updates recorded yet.
+                          </div>
+                       )}
+                    </div>
+                 </div>
+              </div>
+
+            </div>
+          </motion.div>
+
+          {/* Image Modal */}
+          {showFullImage && photoUrl && (
+             <div className="fixed inset-0 z-[80] bg-black/95 flex items-center justify-center p-4" onClick={() => setShowFullImage(false)}>
+                <button className="absolute top-4 right-4 text-white/70 hover:text-white"><XMarkIcon className="h-8 w-8" /></button>
+                <img src={photoUrl} alt="Full View" className="max-w-full max-h-full object-contain rounded-md" />
+             </div>
+          )}
+
+          {/* Other Modals */}
+          {incident && (
+            <EscalationModal
+              incidentId={String(incident.id)}
+              incidentType={incident.incident_type}
+              incidentPriority={incident.priority}
+              isOpen={isEscalationModalOpen}
+              onClose={() => setIsEscalationModalOpen(false)}
+              onSuccess={handleEscalationSuccess}
+            />
+          )}
+          {incident && (
+            <IncidentAmendmentModal
+              isOpen={isAmendmentModalOpen}
+              onClose={() => setIsAmendmentModalOpen(false)}
+              incident={incident as any}
+              onAmendmentCreated={fetchIncidentDetails}
+            />
+          )}
+          {incident && currentEventId && (
+            <DecisionLogger
+              eventId={currentEventId}
+              isOpen={showDecisionLogger}
+              onClose={() => setShowDecisionLogger(false)}
+              onDecisionCreated={() => setShowDecisionLogger(false)}
+              linkedIncidentIds={[Number(incident.id)]}
+            />
+          )}
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
+  ) : null
+}

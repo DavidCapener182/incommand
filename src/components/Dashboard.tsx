@@ -2,7 +2,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, Fragment, useCallback, useMemo } from 'react'
-import Image from 'next/image'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
@@ -19,14 +18,12 @@ import {
   UsersIcon,
   ExclamationTriangleIcon,
   FolderOpenIcon,
-  ClockIcon,
   CheckCircleIcon,
   UserGroupIcon,
   CalendarIcon,
   HeartIcon,
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
-  PlusIcon,
   AcademicCapIcon,
   ChatBubbleLeftRightIcon,
   ShieldExclamationIcon,
@@ -57,8 +54,7 @@ import MultiSelectFilter from './ui/MultiSelectFilter'
 import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
 import { AnimatePresence, motion } from 'framer-motion'
-import RotatingText from './RotatingText'
-import { createPortal } from 'react-dom';
+import NoEventSplash from './NoEventSplash'
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
@@ -83,6 +79,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
+import StatCardSkeleton from './dashboard/cards/StatCardSkeleton'
+import TimeCardSkeleton from './dashboard/cards/TimeCardSkeleton'
+import CardSkeleton from './dashboard/cards/CardSkeleton'
+import StatCard from './dashboard/cards/StatCard'
+import TopIncidentTypesCard from './dashboard/cards/TopIncidentTypesCard'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -98,253 +99,7 @@ const EVENT_TYPES = [
   'Corporate Event',
 ];
 
-// Skeleton Loading Components
-const StatCardSkeleton = () => (
-  <Card className="rounded-none border-0 shadow-none py-0">
-    <CardContent className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 p-4 sm:p-6">
-      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
-      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-      <div className="w-full h-8 bg-gray-200 dark:bg-gray-600 rounded"></div>
-    </CardContent>
-  </Card>
-);
-
-const TimeCardSkeleton = () => (
-  <div className="card-time animate-pulse p-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="md:block relative">
-        <div className="hidden md:block">
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
-          <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-40 mb-2"></div>
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-28"></div>
-        </div>
-      </div>
-      <div>
-        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex justify-between items-center p-2">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-12"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const CardSkeleton = () => (
-  <Card className="h-[130px] card-skeleton">
-    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-      <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
-      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
-      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-    </CardContent>
-  </Card>
-);
-
-interface StatCardProps {
-  title: string
-  value: number
-  icon?: React.ReactNode
-  color?: string
-  isSelected?: boolean
-  trendData?: number[]
-  onClick?: () => void
-  isFilterable?: boolean
-  className?: string
-  tooltip?: string
-  showPulse?: boolean
-  index?: number
-  change?: string
-  changeType?: 'positive' | 'negative'
-  isFirst?: boolean
-  isLast?: boolean
-}
-
-// Card styling is now centralized in globals.css using utility classes:
-// .card-depth, .card-depth-subtle, .card-time, .card-skeleton, etc.
-
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  icon, 
-  color = 'blue', 
-  isSelected, 
-  onClick, 
-  isFilterable = false,
-  className,
-  tooltip,
-  showPulse,
-  index = 0,
-  trendData,
-  change,
-  changeType,
-  isFirst = false,
-  isLast = false
-}) => {
-  const colorClasses = {
-    blue: 'text-blue-500',
-    red: 'text-red-500',
-    yellow: 'text-yellow-500',
-    green: 'text-green-500',
-  }
-
-  // Pulse animation when value changes
-  const [pulse, setPulse] = React.useState(false);
-  const prevValue = React.useRef(value);
-  React.useEffect(() => {
-    if (prevValue.current !== value) {
-      setPulse(true);
-      const timeout = setTimeout(() => setPulse(false), 400);
-      prevValue.current = value;
-      return () => clearTimeout(timeout);
-    }
-  }, [value]);
-
-  const [showTooltip, setShowTooltip] = React.useState(false);
-  const [isDesktop, setIsDesktop] = React.useState(true);
-  const [tooltipPosition, setTooltipPosition] = React.useState({ top: 0, left: 0 });
-  const cardRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const checkScreen = () => {
-      if (typeof window !== 'undefined') {
-        setIsDesktop(window.innerWidth >= 768);
-      }
-    };
-    checkScreen();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', checkScreen);
-      return () => window.removeEventListener('resize', checkScreen);
-    }
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      setTooltipPosition({
-        top: rect.top - 10,
-        left: rect.left + rect.width / 2
-      });
-    }
-    setShowTooltip(true);
-  };
-
-  const content = (
-    <Card className={cn(
-      'rounded-none border-0 shadow-none py-0 relative h-full bg-background',
-      '!border-0 !shadow-none',
-      isFirst && 'rounded-tl-xl rounded-bl-xl',
-      isLast && 'rounded-tr-xl rounded-br-xl',
-      isFilterable && 'cursor-pointer touch-target',
-      isSelected && 'ring-2 ring-blue-500 ring-offset-0 dark:ring-offset-0 z-10',
-      pulse && 'animate-pulse',
-      className
-    )} style={{ border: 'none !important', outline: 'none', boxShadow: 'none' }}>
-      <CardContent className="flex flex-col items-center justify-center gap-y-2 px-4 sm:px-6 py-2 sm:py-3 h-full">
-        <div className="flex items-center justify-center gap-2 w-full">
-          {icon && (
-            <div className={cn(
-              "flex-shrink-0 flex items-center justify-center",
-              colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'
-            )}>
-              {icon}
-            </div>
-          )}
-          <div className="text-sm font-medium text-muted-foreground text-center">
-            {title}
-          </div>
-          {change && (
-            <div
-              className={cn(
-                "text-xs font-medium",
-                changeType === "positive"
-                  ? "text-green-800 dark:text-green-400"
-                  : "text-red-800 dark:text-red-400"
-              )}
-            >
-              {change}
-            </div>
-          )}
-        </div>
-        <div className="w-full flex-none text-3xl font-medium tracking-tight text-foreground text-center">
-          {value}
-        </div>
-        {showPulse && (
-          <div className="absolute top-2 right-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-            <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  if (isFilterable) {
-    return (
-      <motion.div 
-        ref={cardRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ 
-          duration: 0.5, 
-          delay: index * 0.1,
-          ease: "easeOut"
-        }}
-        whileHover={{ 
-          y: -4,
-          scale: 1.03,
-          transition: { duration: 0.2 }
-        }}
-        whileTap={{ scale: 0.97 }}
-        onClick={onClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={() => setShowTooltip(false)}
-      >
-        {content}
-        {tooltip && showTooltip && isDesktop && createPortal(
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="fixed z-[99999] px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap"
-            style={{
-              top: tooltipPosition.top,
-              left: tooltipPosition.left,
-              transform: 'translateX(-50%)',
-              pointerEvents: 'none'
-            }}
-          >
-            {tooltip}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </motion.div>,
-          document.body
-        )}
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        duration: 0.5, 
-        delay: index * 0.1,
-        ease: "easeOut"
-      }}
-      whileHover={{ 
-        y: -4,
-        transition: { duration: 0.2 }
-      }}
-    >
-      {content}
-    </motion.div>
-  );
-};
+// Card components are now in separate files in ./dashboard/cards/
 
 // Add a helper to fetch What3Words address via API route (to keep API key secret)
 async function fetchWhat3Words(lat: number, lon: number): Promise<string | null> {
@@ -363,109 +118,7 @@ const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
 
 
-// Top 3 Incident Types Card
-interface TopIncidentTypesCardProps {
-  incidents: any[];
-  onTypeClick: (type: string) => void;
-  selectedType: string | null;
-}
-
-function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncidentTypesCardProps) {
-  try {
-    // Ensure incidents is an array
-    const safeIncidents = Array.isArray(incidents) ? incidents : [];
-    
-    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage, and match flow logs
-    const filtered = safeIncidents.filter((i: any) => {
-      // Exclude match flow logs
-      if (i.type === 'match_log') {
-        return false
-      }
-      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage', 'Artist off Stage', 'Artist on Stage'].includes(i.incident_type);
-    });
-    
-    // Count by type
-    const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
-      if (i.incident_type) {
-        acc[i.incident_type] = (acc[i.incident_type] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Sort by count desc, then alphabetically
-    const sorted = (Object.entries(counts) as [string, number][]) 
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 3);
-
-    if (sorted.length === 0) {
-      return (
-        <Card className="card-depth w-full h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-          <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-            <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <Card className="w-full h-full card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-        <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">Top 3 Incident Types</div>
-        <div className="flex flex-col gap-1 w-full">
-          {/* Clear Filter Button - Show when a filter is active */}
-          {selectedType && (
-            <button
-              onClick={() => onTypeClick('')}
-              className="flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-            >
-              <span className="truncate">Clear Filter</span>
-            </button>
-          )}
-          
-          {sorted.map(([type, count]) => {
-            try {
-              const styleClasses = getIncidentTypeStyle(type);
-              const isSelected = selectedType === type;
-              return (
-                <button
-                  key={type}
-                  onClick={() => onTypeClick(type)}
-                  className={`flex items-center justify-between px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full ${styleClasses} ${
-                    isSelected 
-                      ? 'ring-2 ring-offset-1 ring-gray-400' 
-                      : 'hover:opacity-80'
-                  }`}
-                >
-                  <span className="truncate flex-1 text-left">{type}</span>
-                  <span className="ml-1 font-bold">{count}</span>
-                </button>
-              );
-            } catch (error) {
-              console.error('Error rendering incident type button:', error, type);
-              return (
-                <div key={type} className="px-2 py-1 text-xs text-gray-500">
-                  {type}: {count}
-                </div>
-              );
-            }
-          })}
-        </div>
-        </CardContent>
-      </Card>
-    );
-  } catch (error) {
-    console.error('Error in TopIncidentTypesCard:', error);
-    return (
-      <Card className="w-full h-full">
-        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
-          <div className="text-xs text-red-500">Error loading data</div>
-        </CardContent>
-      </Card>
-    );
-  }
-}
+// TopIncidentTypesCard is now in ./dashboard/cards/TopIncidentTypesCard.tsx
 
 
 
@@ -1322,49 +975,7 @@ export default function Dashboard() {
 
   // Splash screen if no current event
   if (!currentEvent) {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#23408e] z-50 min-h-screen splash-bg">
-        <Image
-          src="/inCommand.png"
-          alt="inCommand Logo"
-          width={256}
-          height={128}
-          className="mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
-          priority
-        />
-        {/* Create + Event type on same line under logo */}
-        <div className="flex flex-row items-center justify-center mb-8 gap-4">
-          <span className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg md:drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]">Event Control for</span>
-          <RotatingText
-            items={eventTypes}
-            interval={2000}
-            className="bg-white rounded-xl px-6 py-2 shadow-lg flex items-center justify-center min-w-[160px] min-h-[40px] font-extrabold text-2xl md:text-3xl"
-          />
-        </div>
-        <div className="text-base text-blue-100 font-medium mt-2 mb-8 text-center max-w-xl mx-auto">
-          Modern incident tracking and event command for every scale of operation.
-        </div>
-        <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-md rounded-2xl p-8 flex flex-col items-center mt-10 shadow-2xl shadow-[0_10px_32px_4px_rgba(34,41,120,0.15)]">
-          <button 
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white text-xl font-bold py-4 rounded-xl shadow-xl mb-4 transition hover:scale-[1.02] focus-visible:ring-4 focus-visible:ring-blue-300 outline-none hover:shadow-2xl hover:-translate-y-1 hover:ring-2 hover:ring-blue-400"
-            onClick={() => setShowCreateEvent(true)}
-          >
-            <PlusIcon className="h-6 w-6 mr-2" /> Start New Event
-          </button>
-          <button 
-            className="w-full flex items-center justify-center gap-2 border border-blue-300 text-blue-700 font-semibold py-3 rounded-xl bg-white/60 hover:bg-blue-50 transition focus-visible:ring-4 focus-visible:ring-blue-300 outline-none"
-            onClick={() => router.push('/settings/events')}
-          >
-            <ClockIcon className="h-5 w-5 mr-2" /> Open Previous Events
-          </button>
-        </div>
-        {showCreateEvent && (
-          <EventCreationModal isOpen={showCreateEvent} onClose={() => setShowCreateEvent(false)} onEventCreated={fetchCurrentEvent} />
-        )}
-        {/* Floating FABs removed; actions available in sticky bottom nav */}
-        <div className="absolute bottom-2 right-4 text-xs text-blue-100 opacity-70 select-none">v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
-      </div>
-    );
+    return <NoEventSplash onEventCreated={fetchCurrentEvent} />;
   }
 
   return (
@@ -1754,9 +1365,9 @@ export default function Dashboard() {
       <div>
 
         {/* Desktop Grid - Event-Specific Dashboard */}
-        <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6 pt-2">
+        <div className={`hidden md:grid grid-cols-2 gap-4 pt-2 ${eventType === 'concert' ? 'lg:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-6'}`}>
           {!isFullyReady ? (
-            Array.from({ length: 5 }).map((_, index) => <CardSkeleton key={index} />)
+            Array.from({ length: eventType === 'concert' ? 4 : 5 }).map((_, index) => <CardSkeleton key={index} />)
           ) : eventType === 'concert' ? (
             /* 
               ⚠️  CONCERT DASHBOARD - PERMANENTLY LOCKED ⚠️
@@ -1781,15 +1392,16 @@ export default function Dashboard() {
                 </Card>
               </motion.div>
 
-              {/* Card 2: WeatherCard - Only shows if venue_address exists */}
-              {currentEvent?.venue_address && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+              {/* Card 2: WeatherCard - Always show, use placeholder if no venue_address */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
+              >
+                {currentEvent?.venue_address ? (
                   <WeatherCard
                     lat={coordinates?.lat}
                     lon={coordinates?.lon}
@@ -1798,8 +1410,16 @@ export default function Dashboard() {
                     startTime={currentEvent.main_act_start_time ?? ''}
                     curfewTime={currentEvent.curfew_time ?? ''}
                   />
-                </motion.div>
-              )}
+                ) : (
+                  <Card className="card-depth h-full shadow-sm dark:shadow-md">
+                    <CardContent className="flex h-full flex-col items-center justify-center p-4">
+                      <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
+                        Weather data unavailable
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </motion.div>
 
               {/* Card 3: What3WordsSearchCard - Wrapped in Card with specific props */}
               <motion.div

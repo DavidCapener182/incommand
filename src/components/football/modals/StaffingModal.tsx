@@ -1,31 +1,50 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StaffingData, StaffingRole } from '@/types/football'
-import { Plus, Trash2, Users, AlertTriangle, CheckCircle2, Heart, Shield } from 'lucide-react'
+import { 
+  Plus, 
+  Trash2, 
+  Users, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Heart, 
+  Shield, 
+  Briefcase 
+} from 'lucide-react'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { supabase } from '@/lib/supabase'
 
 interface StaffingModalProps {
+  isOpen: boolean
+  onClose: () => void
   onSave?: () => void
 }
 
-// Icon mapping function
+// Internal Tab Props
+interface StaffingTabProps {
+  onSave?: () => void
+}
+
+// --- Helper: Icon Mapping ---
 const getIconComponent = (iconName: string) => {
   const iconMap: { [key: string]: React.ComponentType<any> } = {
     'heart': Heart,
     'shield': Shield,
     'users': Users,
   }
-  
   const IconComponent = iconMap[iconName] || Users
-  return <IconComponent className="w-6 h-6" />
+  return <IconComponent className="w-5 h-5" />
 }
 
-// Actual Staffing Numbers Tab Component
-export function StaffingActual({ onSave }: StaffingModalProps) {
+// --- CURRENT TAB: ACTUAL NUMBERS ---
+export function StaffingActual({ onSave }: StaffingTabProps) {
   const [context, setContext] = useState<{ companyId: string; eventId: string } | null>(null)
   const [contextLoading, setContextLoading] = useState(true)
   const [staffingData, setStaffingData] = useState<StaffingData | null>(null)
@@ -126,7 +145,6 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
     
     setStaffingData({ roles: updatedRoles })
 
-    // Auto-save actual numbers
     try {
       await fetch('/api/football/staffing', {
         method: 'POST',
@@ -142,105 +160,89 @@ export function StaffingActual({ onSave }: StaffingModalProps) {
     }
   }
 
-  if (loading || contextLoading) {
-    return <div className="p-4 text-center">Loading...</div>
-  }
-
-  if (!staffingData) {
-    return <div className="p-4 text-center text-red-600">Failed to load staffing data</div>
-  }
+  if (loading || contextLoading) return <div className="p-8 text-center text-slate-500">Loading staffing data...</div>
+  if (!staffingData) return <div className="p-8 text-center text-red-500">Failed to load data</div>
 
   return (
-    <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
-      <div className="text-sm text-muted-foreground mb-4">
-        Input actual staffing numbers. Changes are saved automatically.
-      </div>
+    <div className="space-y-6 pr-2 pb-4">
       
-      {staffingData.roles.map((role) => {
-        const variance = role.actual - role.planned
-        const percentOfPlanned = role.planned > 0 ? (role.actual / role.planned) * 100 : 0
-        const status = getStatusForRole(percentOfPlanned)
-        
-        return (
-          <div key={role.id} className="border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {getIconComponent(role.icon || 'users')}
-                <h4 className="font-medium">{role.name}</h4>
-                <Badge variant={role.color === 'blue' ? 'info' : role.color === 'orange' ? 'warning' : 'destructive'}>
-                  {role.color}
-                </Badge>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold text-gray-900">
-                  Planned: <span className="font-bold">{role.planned}</span>
+      {/* Roles List */}
+      <div className="space-y-4">
+        {staffingData.roles.map((role) => {
+          const variance = role.actual - role.planned
+          const percentOfPlanned = role.planned > 0 ? (role.actual / role.planned) * 100 : 0
+          const status = getStatusForRole(percentOfPlanned)
+          
+          return (
+            <div key={role.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${role.color === 'blue' ? 'bg-blue-100 text-blue-600' : role.color === 'orange' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'}`}>
+                     {getIconComponent(role.icon || 'users')}
+                  </div>
+                  <div>
+                     <h4 className="font-bold text-slate-900">{role.name}</h4>
+                     <span className="text-xs text-slate-500">{percentOfPlanned.toFixed(0)}% Deployed</span>
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {percentOfPlanned.toFixed(1)}% of target
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex gap-2 items-center">
-                <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground mb-1">Actual Present</span>
-                <Input
-                  type="number"
-                  value={role.actual}
-                  onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
-                  className="w-32"
-                  min="0"
-                />
-                </div>
-                <div className="flex flex-col ml-4">
-                  <span className="text-xs text-muted-foreground mb-1">Planned</span>
-                  <div className="text-sm font-semibold text-gray-900 pt-2">{role.planned}</div>
+                
+                {/* Status Badge */}
+                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                   status.status === 'below-target' ? 'bg-red-100 text-red-700' :
+                   status.status === 'near-target' ? 'bg-amber-100 text-amber-700' :
+                   'bg-green-100 text-green-700'
+                }`}>
+                   {status.label}
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                {status.status === 'below-target' ? (
-                  <div className="flex items-center gap-1 text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">{status.label} - {Math.abs(variance)} below planned</span>
-                  </div>
-                ) : status.status === 'near-target' ? (
-                  <div className="flex items-center gap-1 text-amber-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">{status.label} - {Math.abs(variance)} below planned</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {status.label}
-                      {variance > 0 ? ` (+${variance} over planned)` : ''}
-                    </span>
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-6 items-end">
+                <div className="space-y-1.5">
+                   <label className="text-xs font-semibold text-slate-500 uppercase">Actual On Site</label>
+                   <Input
+                     type="number"
+                     value={role.actual}
+                     onChange={(e) => handleActualChange(role.id, parseInt(e.target.value) || 0)}
+                     className="h-10 text-lg font-bold bg-slate-50 border-slate-200 focus:bg-white"
+                     min="0"
+                   />
+                </div>
+                
+                <div className="space-y-1.5 text-right pb-2">
+                   <span className="text-xs text-slate-400 uppercase font-bold">Target</span>
+                   <div className="text-xl font-bold text-slate-700">{role.planned}</div>
+                </div>
+              </div>
+              
+              {/* Variance */}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                 <span className="text-slate-400 font-medium">Variance</span>
+                 <span className={`font-bold ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {variance > 0 ? '+' : ''}{variance} Staff
+                 </span>
               </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
       
-      <div className="border-t pt-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="font-medium">Total Planned:</span> {staffingData.roles.reduce((sum, r) => sum + r.planned, 0)}
-          </div>
-          <div>
-            <span className="font-medium">Total Actual:</span> {staffingData.roles.reduce((sum, r) => sum + r.actual, 0)}
-          </div>
+      {/* Total Summary */}
+      <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 flex justify-between items-center">
+        <div>
+           <p className="text-xs font-bold text-slate-400 uppercase">Total Deployment</p>
+           <p className="text-2xl font-bold text-slate-900">{staffingData.roles.reduce((sum, r) => sum + r.actual, 0)}</p>
+        </div>
+        <div className="text-right">
+           <p className="text-xs font-bold text-slate-400 uppercase">Total Planned</p>
+           <p className="text-xl font-semibold text-slate-600">{staffingData.roles.reduce((sum, r) => sum + r.planned, 0)}</p>
         </div>
       </div>
     </div>
   )
 }
 
-// Deployment Tab Component
-export function StaffingDeployment({ onSave }: StaffingModalProps) {
+// --- SETUP TAB: CONFIGURATION ---
+export function StaffingDeployment({ onSave }: StaffingTabProps) {
   const [context, setContext] = useState<{ companyId: string; eventId: string } | null>(null)
   const [contextLoading, setContextLoading] = useState(true)
   const [staffingData, setStaffingData] = useState<StaffingData | null>(null)
@@ -250,13 +252,26 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
     name: '',
     planned: 0,
     actual: 0,
-    icon: '👤',
+    icon: 'users',
     color: 'blue',
   })
   const [targetSettings, setTargetSettings] = useState({
     target_threshold: 90,
     alert_threshold: 85,
   })
+
+  const colorOptions = [
+    { value: 'blue', label: 'Blue' },
+    { value: 'orange', label: 'Orange' },
+    { value: 'red', label: 'Red' },
+    { value: 'green', label: 'Green' },
+  ]
+
+  const iconOptions = [
+    { value: 'heart', label: 'Heart' },
+    { value: 'shield', label: 'Shield' },
+    { value: 'users', label: 'Users' },
+  ]
 
   useEffect(() => {
     const resolveContext = async () => {
@@ -301,9 +316,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
           })
         }
       }
-    } catch (error) {
-      console.error('Failed to load target settings:', error)
-    }
+    } catch (error) { console.error(error) }
   }
 
   const loadData = async (ctx: { companyId: string; eventId: string }) => {
@@ -313,11 +326,7 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
         const data = await res.json()
         setStaffingData({ roles: data.roles })
       }
-    } catch (error) {
-      console.error('Failed to load staffing data:', error)
-    } finally {
-      setLoading(false)
-    }
+    } catch (error) { console.error(error) } finally { setLoading(false) }
   }
 
   useEffect(() => {
@@ -338,46 +347,8 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
           settings_json: targetSettings,
         }),
       })
-      alert('Target settings saved successfully')
-    } catch (error) {
-      console.error('Failed to save target settings:', error)
-      alert('Failed to save target settings')
-    }
-  }
-
-  const handleSave = async () => {
-    if (!staffingData || !context) return
-
-    setSaving(true)
-    try {
-      await Promise.all(
-        staffingData.roles.map((role) =>
-          fetch('/api/football/staffing', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-company-id': context.companyId,
-              'x-event-id': context.eventId,
-            },
-            body: JSON.stringify({
-              action: 'update',
-              data: {
-                id: role.id,
-                name: role.name,
-                planned: role.planned,
-                icon: role.icon,
-                color: role.color,
-              },
-            }),
-          })
-        )
-      )
-      onSave?.()
-    } catch (error) {
-      console.error('Failed to save staffing deployment:', error)
-    } finally {
-      setSaving(false)
-    }
+      alert('Settings saved')
+    } catch (error) { console.error(error); alert('Failed to save') }
   }
 
   const addRole = async () => {
@@ -401,21 +372,17 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
           },
         }),
       })
-      if (!res.ok) throw new Error('Failed to create role')
+      if (!res.ok) throw new Error('Failed')
       await loadData(context)
       setNewRole({ name: '', planned: 0, actual: 0, icon: 'users', color: 'blue' })
-    } catch (error) {
-      console.error('Failed to create staffing role:', error)
-    } finally {
-      setSaving(false)
-    }
+    } catch (error) { console.error(error) } finally { setSaving(false) }
   }
 
   const removeRole = async (roleId: string) => {
     if (!context) return
     setSaving(true)
     try {
-      const res = await fetch('/api/football/staffing', {
+      await fetch('/api/football/staffing', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -427,227 +394,168 @@ export function StaffingDeployment({ onSave }: StaffingModalProps) {
           data: { id: roleId },
         }),
       })
-      if (!res.ok) throw new Error('Failed to delete role')
       await loadData(context)
-    } catch (error) {
-      console.error('Failed to delete staffing role:', error)
-    } finally {
-      setSaving(false)
-    }
+    } catch (error) { console.error(error) } finally { setSaving(false) }
   }
 
-  const updateRole = (roleId: string, updates: Partial<StaffingRole>) => {
-    if (!staffingData) return
-
-    const updatedRoles = staffingData.roles.map(role =>
-      role.id === roleId ? { ...role, ...updates } : role
-    )
-    
-    setStaffingData({ roles: updatedRoles })
-  }
-
-  if (loading) {
-    return <div className="p-4 text-center">Loading...</div>
-  }
-
-  if (!staffingData) {
-    return <div className="p-4 text-center text-red-600">Failed to load staffing data</div>
-  }
-
-  const colorOptions = [
-    { value: 'blue', label: 'Blue', variant: 'info' as const },
-    { value: 'orange', label: 'Orange', variant: 'warning' as const },
-    { value: 'red', label: 'Red', variant: 'destructive' as const },
-    { value: 'green', label: 'Green', variant: 'success' as const },
-  ]
-
-  const iconOptions = [
-    { value: 'heart', label: 'Heart', icon: Heart },
-    { value: 'shield', label: 'Shield', icon: Shield },
-    { value: 'users', label: 'Users', icon: Users },
-  ]
+  if (loading) return <div className="p-4 text-center">Loading...</div>
+  if (!staffingData) return <div className="p-4 text-center text-red-600">Failed to load</div>
 
   return (
-    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2">
-      {/* Target Configuration Section */}
-      <div className="border rounded-lg p-4 space-y-4">
-        <div>
-          <h4 className="font-medium mb-1">Target Thresholds</h4>
-          <p className="text-xs text-muted-foreground">
-            Configure staffing target thresholds. These determine when staffing is considered &quot;at target&quot;, 
-            &quot;near target&quot;, or &quot;below target&quot; based on percentage of planned staff.
-          </p>
+    <div className="space-y-6 overflow-y-auto max-h-[calc(85vh-200px)] pr-2 pb-4">
+      
+      {/* Thresholds */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+        <div className="flex justify-between items-start">
+           <div>
+             <h4 className="text-sm font-bold text-slate-800">KPI Thresholds</h4>
+             <p className="text-xs text-slate-500 mt-1">Define success criteria percentages.</p>
+           </div>
+           <Button onClick={saveTargetSettings} size="sm" variant="outline" className="h-8 text-xs">Save Settings</Button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Target Threshold (%)</label>
-            <Input
-              type="number"
-              value={targetSettings.target_threshold}
-              onChange={(e) => setTargetSettings({
-                ...targetSettings,
-                target_threshold: parseInt(e.target.value) || 90
-              })}
-              min="0"
-              max="100"
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              At or above this % of planned: &quot;At Target&quot;
-            </p>
+          <div className="bg-white p-3 rounded border border-slate-200">
+            <label className="text-xs font-bold text-green-600 uppercase block mb-1">Target (Green)</label>
+            <div className="flex items-center gap-2">
+               <Input
+                 type="number"
+                 value={targetSettings.target_threshold}
+                 onChange={(e) => setTargetSettings({ ...targetSettings, target_threshold: parseInt(e.target.value) || 90 })}
+                 className="h-9"
+               />
+               <span className="text-sm font-medium text-slate-500">%</span>
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Alert Threshold (%)</label>
-            <Input
-              type="number"
-              value={targetSettings.alert_threshold}
-              onChange={(e) => setTargetSettings({
-                ...targetSettings,
-                alert_threshold: parseInt(e.target.value) || 85
-              })}
-              min="0"
-              max="100"
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Below this % of planned: &quot;Below Target&quot; (Alert)
-            </p>
+          <div className="bg-white p-3 rounded border border-slate-200">
+            <label className="text-xs font-bold text-amber-600 uppercase block mb-1">Alert (Amber)</label>
+            <div className="flex items-center gap-2">
+               <Input
+                 type="number"
+                 value={targetSettings.alert_threshold}
+                 onChange={(e) => setTargetSettings({ ...targetSettings, alert_threshold: parseInt(e.target.value) || 85 })}
+                 className="h-9"
+               />
+               <span className="text-sm font-medium text-slate-500">%</span>
+            </div>
           </div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button onClick={saveTargetSettings} size="sm">
-            Save Target Settings
-          </Button>
         </div>
       </div>
 
-      {/* Role Configuration Section */}
-      <div className="border rounded-lg p-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure staffing roles and deployment numbers. Changes require explicit save.
-      </div>
-      
-      {/* Add new role */}
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="font-medium mb-3">Add New Role</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            placeholder="Role name"
-            value={newRole.name || ''}
-            onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-          />
-          <Input
-            type="number"
-            placeholder="Planned count"
-            value={newRole.planned || ''}
-            onChange={(e) => setNewRole({ ...newRole, planned: parseInt(e.target.value) || 0 })}
-            min="0"
-          />
-          <div className="flex gap-1">
-            <select
-              value={newRole.icon || 'users'}
-              onChange={(e) => setNewRole({ ...newRole, icon: e.target.value })}
-              className="px-2 py-1 border rounded text-sm"
+      {/* Add Role */}
+      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 grid grid-cols-12 gap-3 items-end">
+         <div className="col-span-4">
+            <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Role Name</label>
+            <Input placeholder="e.g. Security" value={newRole.name} onChange={e => setNewRole({...newRole, name: e.target.value})} className="bg-white h-9" />
+         </div>
+         <div className="col-span-3">
+            <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Planned</label>
+            <Input type="number" placeholder="0" value={newRole.planned} onChange={e => setNewRole({...newRole, planned: parseInt(e.target.value)})} className="bg-white h-9" />
+         </div>
+         <div className="col-span-3">
+            <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Icon</label>
+            <select 
+              className="w-full h-9 rounded-md border border-slate-200 text-sm px-2 bg-white"
+              value={newRole.icon}
+              onChange={e => setNewRole({...newRole, icon: e.target.value})}
             >
-              {iconOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
+               {iconOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select
-              value={newRole.color || 'blue'}
-              onChange={(e) => setNewRole({ ...newRole, color: e.target.value })}
-              className="px-2 py-1 border rounded text-sm"
-            >
-              {colorOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          <Button onClick={addRole} disabled={!newRole.name || newRole.planned === 0}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Role
-          </Button>
-        </div>
+         </div>
+         <div className="col-span-2">
+            <Button onClick={addRole} disabled={!newRole.name} className="w-full h-9 text-xs">
+               <Plus className="w-3 h-3 mr-1" /> Add
+            </Button>
+         </div>
       </div>
-      
-      {/* Roles list */}
-      <div className="space-y-2">
+
+      {/* Existing Roles */}
+      <div className="space-y-3">
         {staffingData.roles.map((role) => (
-          <div key={role.id} className="border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              {getIconComponent(role.icon || 'users')}
-              <Badge variant={colorOptions.find(c => c.value === role.color)?.variant || 'default'}>
-                {role.color}
-              </Badge>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">Role Name</label>
-                <Input
-                  value={role.name}
-                  onChange={(e) => updateRole(role.id, { name: e.target.value })}
-                  className="mt-1"
-                />
+           <div key={role.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                 <div className={`p-2 rounded-lg bg-slate-100 text-slate-600`}>
+                    {getIconComponent(role.icon || 'users')}
+                 </div>
+                 <div>
+                    <p className="font-bold text-sm text-slate-900">{role.name}</p>
+                    <p className="text-xs text-slate-500">Target: {role.planned}</p>
+                 </div>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Planned Count</label>
-                <Input
-                  type="number"
-                  value={role.planned}
-                  onChange={(e) => updateRole(role.id, { planned: parseInt(e.target.value) || 0 })}
-                  className="mt-1"
-                  min="0"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Icon</label>
-                <select
-                  value={role.icon || 'users'}
-                  onChange={(e) => updateRole(role.id, { icon: e.target.value })}
-                  className="w-full px-2 py-1 border rounded text-sm mt-1"
-                >
-                  {iconOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Color</label>
-                <select
-                  value={role.color || 'blue'}
-                  onChange={(e) => updateRole(role.id, { color: e.target.value })}
-                  className="w-full px-2 py-1 border rounded text-sm mt-1"
-                >
-                  {colorOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => removeRole(role.id)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove
+              <Button variant="ghost" size="sm" onClick={() => removeRole(role.id)} className="text-red-500 hover:bg-red-50 hover:text-red-700">
+                 <Trash2 className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+           </div>
         ))}
       </div>
-      
-      <div className="border-t pt-4">
-        <div className="text-sm font-medium">
-          Total Planned Staff: {staffingData.roles.reduce((sum, r) => sum + r.planned, 0)}
-        </div>
-        </div>
-      </div>
+
     </div>
+  )
+}
+
+// --- MAIN MODAL COMPONENT ---
+export default function StaffingLevelsModal({ isOpen, onClose, onSave }: StaffingModalProps) {
+  const [mounted, setMounted] = useState(false)
+  const [activeTab, setActiveTab] = useState<'current' | 'setup'>('current')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9998]"
+            aria-hidden="true"
+          />
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col border border-slate-200 pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                   <div className="p-2 bg-green-100 rounded-lg text-green-600">
+                      <Briefcase className="h-5 w-5" />
+                   </div>
+                   <h2 className="text-lg font-bold text-slate-900">Staffing Levels</h2>
+                </div>
+                <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'current' | 'setup')} className="flex flex-col h-full">
+                  <div className="px-6 pt-4 shrink-0">
+                    <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
+                      <TabsTrigger value="current" className="rounded-md text-xs font-bold uppercase tracking-wide">Live Numbers</TabsTrigger>
+                      <TabsTrigger value="setup" className="rounded-md text-xs font-bold uppercase tracking-wide">Configuration</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-white">
+                    <TabsContent value="current" className="mt-0 h-full outline-none"><StaffingActual onSave={onSave} /></TabsContent>
+                    <TabsContent value="setup" className="mt-0 h-full outline-none"><StaffingDeployment onSave={onSave} /></TabsContent>
+                  </div>
+                </Tabs>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
   )
 }

@@ -1,8 +1,12 @@
 'use client'
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { StandsSetup, StandConfig } from '@/types/football'
 import { Plus, Trash2, GripVertical, ChevronDown } from 'lucide-react'
 import { useEventContext } from '@/contexts/EventContext'
@@ -12,8 +16,6 @@ import { useCompanyEventContext } from '@/hooks/useCompanyEventContext'
 
 const buildContextQuery = (ctx: { companyId: string; eventId: string }) =>
   `?company_id=${ctx.companyId}&event_id=${ctx.eventId}`
-
-const COUNTDOWN_BUCKETS = [60, 50, 40, 30, 20, 10, 0] as const
 
 const deriveCountdownBucket = (kickoffTime: Date | null) => {
   if (!kickoffTime) return null
@@ -29,18 +31,17 @@ const deriveCountdownBucket = (kickoffTime: Date | null) => {
 }
 
 interface StandOccupancyModalProps {
+  isOpen: boolean
+  onClose: () => void
   onSave?: () => void
 }
 
 // Current Tab Component
-export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
+function StandOccupancyCurrent({ onSave }: { onSave?: () => void }) {
   const { eventId, eventData } = useEventContext()
   const { context, loading: contextLoading } = useCompanyEventContext(eventId)
   const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [newStand, setNewStand] = useState<Partial<StandConfig>>({ name: '', capacity: 0 })
-  const [initialStands, setInitialStands] = useState<StandConfig[]>([])
   const [thresholds, setThresholds] = useState({
     default_green_threshold: 90,
     default_amber_threshold: 97,
@@ -48,7 +49,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     stand_overrides: {} as Record<string, { amber?: number; red?: number }>
   })
   const [standPredictions, setStandPredictions] = useState<Record<string, StandFlowPrediction>>({})
-  const [expandedStand, setExpandedStand] = useState<string | null>(null)
   const [showPredictions, setShowPredictions] = useState(false)
 
   const kickoffTime = useMemo(() => {
@@ -59,8 +59,7 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       const time = eventData.main_act_start_time.includes(':')
         ? eventData.main_act_start_time
         : `${eventData.main_act_start_time}:00`
-      const normalizedTime = time.length === 5 ? `${time}:00` : time
-      return new Date(`${eventData.event_date}T${normalizedTime}`)
+      return new Date(`${eventData.event_date}T${time.length === 5 ? `${time}:00` : time}`)
     }
     return null
   }, [eventData?.start_datetime, eventData?.event_date, eventData?.main_act_start_time])
@@ -85,7 +84,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       if (res.ok) {
         const data = await res.json()
         setStandsSetup(data.standsSetup)
-        setInitialStands(data.standsSetup?.stands ?? [])
 
         if (eventId && data.standsSetup?.stands) {
           const predictions: Record<string, StandFlowPrediction> = {}
@@ -106,45 +104,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
               predictions[stand.name] = prediction
             } catch (err) {
               console.error(`Failed to predict flow for stand ${stand.name}:`, err)
-              const current = stand.current || 0
-              const now = new Date()
-              const estimatedRate = stand.capacity > 0 ? (stand.capacity - current) / 120 : 0
-              const fallbackPredictions: StandFlowPrediction['predictedOccupancy'] = []
-
-              for (let minutesAhead = 10; minutesAhead <= 60; minutesAhead += 10) {
-                const predictedTime = new Date(now.getTime() + minutesAhead * 60000)
-                const predicted = Math.min(stand.capacity * 1.05, current + estimatedRate * minutesAhead)
-                const percentage = stand.capacity ? (predicted / stand.capacity) * 100 : 0
-
-                let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
-                if (percentage >= 100) riskLevel = 'critical'
-                else if (percentage >= 90) riskLevel = 'high'
-                else if (percentage >= 75) riskLevel = 'medium'
-
-                fallbackPredictions.push({
-                  time: predictedTime.toISOString(),
-                  minutesAhead,
-                  predictedOccupancy: Math.round(predicted),
-                  percentage: Math.round(percentage),
-                  riskLevel,
-                })
-              }
-
-              predictions[stand.name] = {
-                standId: stand.id,
-                standName: stand.name,
-                currentOccupancy: current,
-                capacity: stand.capacity,
-                predictedOccupancy: fallbackPredictions,
-                peakPrediction:
-                  fallbackPredictions.length > 0
-                    ? {
-                        time: fallbackPredictions[fallbackPredictions.length - 1].time,
-                        occupancy: fallbackPredictions[fallbackPredictions.length - 1].predictedOccupancy,
-                        percentage: fallbackPredictions[fallbackPredictions.length - 1].percentage,
-                      }
-                    : null,
-              }
             }
           }
           setStandPredictions(predictions)
@@ -186,66 +145,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     return 'bg-green-500'
   }
 
-  const handleSave = async () => {
-    if (!standsSetup || !context) return
-
-    setSaving(true)
-    const query = buildContextQuery(context)
-    try {
-      for (const [index, stand] of standsSetup.stands.entries()) {
-        const payload = {
-          id: stand.id,
-          name: stand.name,
-          capacity: stand.capacity,
-          order_index: stand.order ?? index + 1,
-        }
-
-        const action: 'create' | 'update' =
-          !stand.id || stand.id.startsWith('stand-') || !initialStands.find((s) => s.id === stand.id)
-            ? 'create'
-            : 'update'
-
-        const res = await fetch(`/api/football/stands${query}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action,
-            data: payload,
-          }),
-        })
-
-        if (!res.ok) {
-          const msg = await res.text()
-          throw new Error(`Failed to ${action} stand ${stand.name}: ${res.status} ${msg}`)
-        }
-      }
-
-      for (const stand of initialStands) {
-        if (!standsSetup.stands.find((s) => s.id === stand.id)) {
-          const res = await fetch(`/api/football/stands${query}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'delete',
-              data: { id: stand.id },
-            }),
-          })
-          if (!res.ok) {
-            const msg = await res.text()
-            throw new Error(`Failed to delete stand ${stand.name}: ${res.status} ${msg}`)
-          }
-        }
-      }
-
-      await loadData(context)
-      onSave?.()
-    } catch (error) {
-      console.error('Failed to save stands setup:', error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const handleCurrentOccupancyChange = async (standId: string, current: number) => {
     if (!standsSetup || !context) return
 
@@ -284,116 +183,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       console.error('Failed to auto-save occupancy:', error)
     }
   }
-
-  const addStand = () => {
-    if (!standsSetup || !newStand.name || newStand.capacity === 0) return
-
-    const stand: StandConfig = {
-      id: `stand-${Date.now()}`,
-      name: newStand.name,
-      capacity: newStand.capacity || 0,
-      order: standsSetup.stands.length + 1,
-    }
-
-    const updatedStands = [...standsSetup.stands, stand]
-    const totalCapacity = updatedStands.reduce((sum, s) => sum + s.capacity, 0)
-    
-    setStandsSetup({
-      ...standsSetup,
-      stands: updatedStands,
-      totalCapacity,
-    })
-
-    setNewStand({ name: '', capacity: 0 })
-  }
-
-  const removeStand = (standId: string) => {
-    if (!standsSetup) return
-
-    const updatedStands = standsSetup.stands.filter(s => s.id !== standId)
-    const totalCapacity = updatedStands.reduce((sum, s) => sum + s.capacity, 0)
-    
-    setStandsSetup({
-      ...standsSetup,
-      stands: updatedStands,
-      totalCapacity,
-    })
-  }
-
-  const updateStand = (standId: string, updates: Partial<StandConfig>) => {
-    if (!standsSetup) return
-
-    const updatedStands = standsSetup.stands.map(stand =>
-      stand.id === standId ? { ...stand, ...updates } : stand
-    )
-    const totalCapacity = updatedStands.reduce((sum, s) => sum + s.capacity, 0)
-    
-    setStandsSetup({
-      ...standsSetup,
-      stands: updatedStands,
-      totalCapacity,
-    })
-  }
-
-  const buildTimeline = useCallback(
-    (prediction?: StandFlowPrediction) => {
-      if (!prediction) return []
-
-      if (!kickoffTime) {
-        return prediction.predictedOccupancy
-          .slice(0, 6)
-          .map((point) => ({
-            key: `+${point.minutesAhead}`,
-            label: `+${point.minutesAhead}m`,
-            timeLabel: new Date(point.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            occupancy: point.predictedOccupancy,
-            percentage: point.percentage,
-            offset: point.minutesAhead,
-          }))
-          .sort((a, b) => b.offset - a.offset)
-      }
-
-      const now = Date.now()
-      const timeline: {
-        key: string
-        label: string
-        timeLabel: string
-        occupancy: number
-        percentage: number
-        offset: number
-      }[] = []
-
-      for (const offset of STAND_COUNTDOWN_OFFSETS) {
-        const targetTime = new Date(kickoffTime.getTime() - offset * 60000)
-        if (targetTime.getTime() < now) continue
-
-        const nearest = prediction.predictedOccupancy.reduce(
-          (closest, point) => {
-            const diff = Math.abs(new Date(point.time).getTime() - targetTime.getTime())
-            if (diff < closest.diff) {
-              return { diff, point }
-            }
-            return closest
-          },
-          { diff: Infinity, point: null as (typeof prediction.predictedOccupancy)[0] | null }
-        ).point
-
-        if (!nearest) continue
-
-        timeline.push({
-          key: offset === 0 ? 'kickoff' : `-${offset}`,
-          label: offset === 0 ? 'Kick-off' : `${offset}m to KO`,
-          timeLabel: targetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          occupancy: nearest.predictedOccupancy,
-          percentage: nearest.percentage,
-          offset,
-        })
-      }
-
-      return timeline.sort((a, b) => b.offset - a.offset)
-    },
-    [kickoffTime]
-  )
 
   const countdownOffsets = useMemo(
     () => STAND_COUNTDOWN_OFFSETS.filter((offset) => offset >= 0).sort((a, b) => b - a),
@@ -476,7 +265,7 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
     return <div className="p-4 text-center text-red-600">Failed to load stands data</div>
   }
 
-  const currentTab = (
+  return (
     <div className="space-y-4 pr-2">
       <div className="text-sm text-muted-foreground mb-4">
         Edit live occupancy numbers. Changes are saved automatically.
@@ -496,19 +285,19 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
           </button>
           {showPredictions && (
             <div className="px-4 pb-4">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
-            {countdownSummary.map((entry) => (
-              <div key={entry.key} className="flex items-center justify-between text-gray-900 dark:text-gray-100">
-                <span className="text-gray-600 dark:text-gray-300">
-                  {entry.label}{' '}
-                  {entry.timeLabel && <span className="text-muted-foreground text-xs">({entry.timeLabel})</span>}
-                </span>
-                <span className="font-semibold">
-                  {entry.occupancy.toLocaleString()} ({entry.percentage}%)
-                </span>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-3">
+                {countdownSummary.map((entry) => (
+                  <div key={entry.key} className="flex items-center justify-between text-gray-900 dark:text-gray-100">
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {entry.label}{' '}
+                      {entry.timeLabel && <span className="text-muted-foreground text-xs">({entry.timeLabel})</span>}
+                    </span>
+                    <span className="font-semibold">
+                      {entry.occupancy.toLocaleString()} ({entry.percentage}%)
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
             </div>
           )}
         </div>
@@ -565,40 +354,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
           const hasHighRisk = prediction?.predictedOccupancy.some(
             (p) => p.riskLevel === 'high' || p.riskLevel === 'critical'
           )
-          const isExpanded = expandedStand === stand.id
-          const timeline = buildTimeline(prediction)
-          const hasTimeline = timeline.length > 0
-          const bucket = deriveCountdownBucket(kickoffTime)
-          const minutesToKickoff =
-            kickoffTime != null ? Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000)) : null
-          const matchingPrediction =
-            kickoffTime && prediction && minutesToKickoff != null
-              ? prediction.predictedOccupancy.reduce(
-                  (closest, entry) => {
-                    const diff = Math.abs(entry.minutesAhead - minutesToKickoff)
-                    if (diff < closest.diff) {
-                      return { diff, entry }
-                    }
-                    return closest
-                  },
-                  { diff: Infinity, entry: null as (typeof prediction.predictedOccupancy)[0] | null }
-                ).entry
-              : null
-          const predictedPercent =
-            matchingPrediction && stand.capacity
-              ? Math.min(100, (matchingPrediction.predictedOccupancy / stand.capacity) * 100)
-              : null
-          const snapshotValue = bucket != null ? stand.snapshots?.[bucket] ?? null : null
-
-          const liveVsPlan = (() => {
-            if (predictedPercent == null || stand.capacity === 0) return null
-            const basis = snapshotValue ?? stand.current ?? 0
-            const actualPercent = (basis / stand.capacity) * 100
-            const diff = actualPercent - predictedPercent
-            if (Math.abs(diff) < 3) return { label: 'on track', className: 'text-emerald-600' }
-            if (diff > 0) return { label: `+${diff.toFixed(1)}% vs plan`, className: 'text-emerald-600' }
-            return { label: `${diff.toFixed(1)}% vs plan`, className: 'text-amber-600' }
-          })()
 
           return (
             <div key={stand.id} className="border rounded-lg p-2.5 space-y-2">
@@ -632,20 +387,6 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
 
               <div className="text-[11px] text-muted-foreground flex flex-wrap gap-2">
                 <span className="font-semibold text-gray-900">{percent.toFixed(1)}% occupied</span>
-                {predictedPercent !== null && (
-                  <span
-                    className={
-                      Math.abs(percent - predictedPercent) < 3
-                        ? 'text-emerald-600 font-semibold'
-                        : percent > predictedPercent
-                        ? 'text-emerald-600 font-semibold'
-                        : 'text-amber-600 font-semibold'
-                    }
-                  >
-                    {predictedPercent.toFixed(0)}% predicted
-                  </span>
-                )}
-                {liveVsPlan && <span className={`${liveVsPlan.className} font-semibold`}>{liveVsPlan.label}</span>}
               </div>
             </div>
           )
@@ -659,97 +400,12 @@ export function StandOccupancyCurrent({ onSave }: StandOccupancyModalProps) {
       </div>
     </div>
   )
-
-  const setupTab = (
-    <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Configure stand names, capacities, and order. Changes require explicit save.
-      </div>
-      
-      {/* Add new stand */}
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="font-medium mb-3">Add New Stand</h4>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Stand name"
-            value={newStand.name || ''}
-            onChange={(e) => setNewStand({ ...newStand, name: e.target.value })}
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            placeholder="Capacity"
-            value={newStand.capacity || ''}
-            onChange={(e) => setNewStand({ ...newStand, capacity: parseInt(e.target.value) || 0 })}
-            className="w-32"
-            min="1"
-          />
-          <Button onClick={addStand} disabled={!newStand.name || newStand.capacity === 0}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </Button>
-        </div>
-      </div>
-      
-      {/* Stands list */}
-      <div className="space-y-2">
-        {standsSetup.stands.map((stand, index) => (
-          <div key={stand.id} className="border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">#{index + 1}</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">Name</label>
-                <Input
-                  value={stand.name}
-                  onChange={(e) => updateStand(stand.id, { name: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Capacity</label>
-                <Input
-                  type="number"
-                  value={stand.capacity}
-                  onChange={(e) => updateStand(stand.id, { capacity: parseInt(e.target.value) || 0 })}
-                  className="mt-1"
-                  min="1"
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => removeStand(stand.id)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="border-t pt-4">
-        <div className="text-sm font-medium">
-          Total Stadium Capacity: {standsSetup.totalCapacity.toLocaleString()}
-        </div>
-      </div>
-    </div>
-  )
-
-  return currentTab
 }
 
 // Setup Tab Component
-export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
+function StandOccupancySetup({ onSave }: { onSave?: () => void }) {
   const { eventId, eventData } = useEventContext()
-  const { context, loading: contextLoading } = useCompanyEventContext(eventId)
+  const { context } = useCompanyEventContext(eventId)
   const [standsSetup, setStandsSetup] = useState<StandsSetup | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -762,27 +418,6 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
     stand_overrides: {} as Record<string, { amber?: number; red?: number }>
   })
   const [editingStandOverride, setEditingStandOverride] = useState<string | null>(null)
-
-  const kickoffTime = useMemo(() => {
-    if (eventData?.start_datetime) {
-      return new Date(eventData.start_datetime)
-    }
-    if (eventData?.event_date && eventData?.main_act_start_time) {
-      const time = eventData.main_act_start_time.includes(':')
-        ? eventData.main_act_start_time
-        : `${eventData.main_act_start_time}:00`
-      const normalizedTime = time.length === 5 ? `${time}:00` : time
-      return new Date(`${eventData.event_date}T${normalizedTime}`)
-    }
-    return null
-  }, [eventData?.start_datetime, eventData?.event_date, eventData?.main_act_start_time])
-
-  const computeHorizonMinutes = useCallback(() => {
-    if (!kickoffTime) return 60
-    const minutesUntilKickoff = Math.max(0, Math.round((kickoffTime.getTime() - Date.now()) / 60000))
-    const padded = Math.ceil(minutesUntilKickoff / 10) * 10 + 10
-    return Math.min(Math.max(60, padded), 360)
-  }, [kickoffTime])
 
   const loadData = async (ctx: { companyId: string; eventId: string }) => {
     setLoading(true)
@@ -821,7 +456,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
     if (!context) return
     loadData(context)
     loadThresholds(context)
-  }, [context, kickoffTime, computeHorizonMinutes])
+  }, [context])
 
   const saveThresholds = async () => {
     if (!context) return
@@ -851,6 +486,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
     setSaving(true)
     const query = buildContextQuery(context)
     try {
+      // Handle Create/Update
       for (const [index, stand] of standsSetup.stands.entries()) {
         const payload = {
           id: stand.id,
@@ -879,6 +515,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
         }
       }
 
+      // Handle Deletions
       for (const stand of initialStands) {
         if (!standsSetup.stands.find((s) => s.id === stand.id)) {
           const res = await fetch(`/api/football/stands${query}`, {
@@ -929,30 +566,18 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
 
   const removeStand = (standId: string) => {
     if (!standsSetup) return
-
     const updatedStands = standsSetup.stands.filter(s => s.id !== standId)
     const totalCapacity = updatedStands.reduce((sum, s) => sum + s.capacity, 0)
-    
-    setStandsSetup({
-      ...standsSetup,
-      stands: updatedStands,
-      totalCapacity,
-    })
+    setStandsSetup({ ...standsSetup, stands: updatedStands, totalCapacity })
   }
 
   const updateStand = (standId: string, updates: Partial<StandConfig>) => {
     if (!standsSetup) return
-
     const updatedStands = standsSetup.stands.map(stand =>
       stand.id === standId ? { ...stand, ...updates } : stand
     )
     const totalCapacity = updatedStands.reduce((sum, s) => sum + s.capacity, 0)
-    
-    setStandsSetup({
-      ...standsSetup,
-      stands: updatedStands,
-      totalCapacity,
-    })
+    setStandsSetup({ ...standsSetup, stands: updatedStands, totalCapacity })
   }
 
   if (loading) {
@@ -970,8 +595,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
         <div>
           <h4 className="font-medium mb-1">Occupancy Thresholds</h4>
           <p className="text-xs text-muted-foreground">
-            Configure color thresholds for occupancy indicators. Stands below green threshold show green, 
-            between green and amber show amber, above amber show red.
+            Configure color thresholds for occupancy indicators.
           </p>
         </div>
 
@@ -981,45 +605,33 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
             <Input
               type="number"
               value={thresholds.default_green_threshold}
-              onChange={(e) => setThresholds({
-                ...thresholds,
-                default_green_threshold: parseInt(e.target.value) || 90
-              })}
+              onChange={(e) => setThresholds({ ...thresholds, default_green_threshold: parseInt(e.target.value) || 90 })}
               min="0"
               max="100"
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground mt-1">Below this: Green</p>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Amber Threshold (%)</label>
             <Input
               type="number"
               value={thresholds.default_amber_threshold}
-              onChange={(e) => setThresholds({
-                ...thresholds,
-                default_amber_threshold: parseInt(e.target.value) || 97
-              })}
+              onChange={(e) => setThresholds({ ...thresholds, default_amber_threshold: parseInt(e.target.value) || 97 })}
               min="0"
               max="100"
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground mt-1">Green to this: Amber</p>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Red Threshold (%)</label>
             <Input
               type="number"
               value={thresholds.default_red_threshold}
-              onChange={(e) => setThresholds({
-                ...thresholds,
-                default_red_threshold: parseInt(e.target.value) || 100
-              })}
+              onChange={(e) => setThresholds({ ...thresholds, default_red_threshold: parseInt(e.target.value) || 100 })}
               min="0"
               max="100"
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground mt-1">Above amber: Red</p>
           </div>
         </div>
 
@@ -1033,9 +645,6 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
         {standsSetup && standsSetup.stands.length > 0 && (
           <div className="border-t pt-4 mt-4">
             <h5 className="text-sm font-medium mb-2">Stand-Specific Overrides</h5>
-            <p className="text-xs text-muted-foreground mb-3">
-              Override thresholds for specific stands. Leave empty to use defaults.
-            </p>
             <div className="space-y-2">
               {standsSetup.stands.map((stand) => {
                 const override = thresholds.stand_overrides[stand.name] || {}
@@ -1066,10 +675,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
                                 ...thresholds,
                                 stand_overrides: {
                                   ...thresholds.stand_overrides,
-                                  [stand.name]: {
-                                    ...override,
-                                    amber: value
-                                  }
+                                  [stand.name]: { ...override, amber: value }
                                 }
                               })
                             }}
@@ -1088,10 +694,7 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
                                 ...thresholds,
                                 stand_overrides: {
                                   ...thresholds.stand_overrides,
-                                  [stand.name]: {
-                                    ...override,
-                                    red: value
-                                  }
+                                  [stand.name]: { ...override, red: value }
                                 }
                               })
                             }}
@@ -1111,95 +714,185 @@ export function StandOccupancySetup({ onSave }: StandOccupancyModalProps) {
 
       {/* Stand Configuration Section */}
       <div className="border rounded-lg p-4">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <p className="text-sm text-muted-foreground">
-          Configure stand names, capacities, and order. Use the modal Save Changes button to persist updates.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => context && loadData(context)}
-          disabled={saving}
-        >
-          Reset
-        </Button>
-      </div>
-      
-      {/* Add new stand */}
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="font-medium mb-3">Add New Stand</h4>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Stand name"
-            value={newStand.name || ''}
-            onChange={(e) => setNewStand({ ...newStand, name: e.target.value })}
-            className="flex-1"
-          />
-          <Input
-            type="number"
-            placeholder="Capacity"
-            value={newStand.capacity || ''}
-            onChange={(e) => setNewStand({ ...newStand, capacity: parseInt(e.target.value) || 0 })}
-            className="w-32"
-            min="1"
-          />
-          <Button onClick={addStand} disabled={!newStand.name || newStand.capacity === 0}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <p className="text-sm text-muted-foreground">
+            Configure stand names, capacities, and order. Use the modal Save Changes button to persist updates.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => context && loadData(context)}
+            disabled={saving}
+          >
+            Reset
           </Button>
         </div>
-      </div>
-      
-      {/* Stands list */}
-      <div className="space-y-2">
-        {standsSetup.stands.map((stand, index) => (
-          <div key={stand.id} className="border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">#{index + 1}</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">Name</label>
-                <Input
-                  value={stand.name}
-                  onChange={(e) => updateStand(stand.id, { name: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Capacity</label>
-                <Input
-                  type="number"
-                  value={stand.capacity}
-                  onChange={(e) => updateStand(stand.id, { capacity: parseInt(e.target.value) || 0 })}
-                  className="mt-1"
-                  min="1"
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => removeStand(stand.id)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Remove
-              </Button>
-            </div>
+        
+        {/* Add new stand */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <h4 className="font-medium mb-3">Add New Stand</h4>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Stand name"
+              value={newStand.name || ''}
+              onChange={(e) => setNewStand({ ...newStand, name: e.target.value })}
+              className="flex-1"
+            />
+            <Input
+              type="number"
+              placeholder="Capacity"
+              value={newStand.capacity || ''}
+              onChange={(e) => setNewStand({ ...newStand, capacity: parseInt(e.target.value) || 0 })}
+              className="w-32"
+              min="1"
+            />
+            <Button onClick={addStand} disabled={!newStand.name || newStand.capacity === 0}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
           </div>
-        ))}
+        </div>
+        
+        {/* Stands list */}
+        <div className="space-y-2">
+          {standsSetup.stands.map((stand, index) => (
+            <div key={stand.id} className="border rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">#{index + 1}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Name</label>
+                  <Input
+                    value={stand.name}
+                    onChange={(e) => updateStand(stand.id, { name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Capacity</label>
+                  <Input
+                    type="number"
+                    value={stand.capacity}
+                    onChange={(e) => updateStand(stand.id, { capacity: parseInt(e.target.value) || 0 })}
+                    className="mt-1"
+                    min="1"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end mt-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeStand(stand.id)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="border-t pt-4">
+          <div className="text-sm font-medium">
+            Total Stadium Capacity: {standsSetup.totalCapacity.toLocaleString()}
+          </div>
+        </div>
       </div>
       
-      <div className="border-t pt-4">
-        <div className="text-sm font-medium">
-          Total Stadium Capacity: {standsSetup.totalCapacity.toLocaleString()}
-        </div>
-        </div>
+      {/* Save Button for Setup Changes */}
+      <div className="flex justify-end pt-4 border-t">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving Changes...' : 'Save All Changes'}
+        </Button>
       </div>
     </div>
+  )
+}
+
+// Main Modal Component
+export default function StandOccupancyModal({ isOpen, onClose, onSave }: StandOccupancyModalProps) {
+  const [mounted, setMounted] = useState(false)
+  const [activeTab, setActiveTab] = useState<'current' | 'setup'>('current')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || typeof document === 'undefined') {
+    return <></>
+  }
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9998]"
+            aria-hidden="true"
+          />
+
+          {/* Modal */}
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stand-occupancy-modal-title"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <h2 id="stand-occupancy-modal-title" className="text-xl font-bold text-slate-900 dark:text-white">
+                  Stand Occupancy
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Close"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'current' | 'setup')} className="flex flex-col h-full">
+                  <div className="px-6 pt-4 shrink-0">
+                    <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-lg">
+                      <TabsTrigger value="current" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Current Status</TabsTrigger>
+                      <TabsTrigger value="setup" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">Configuration</TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto px-6 pb-6 mt-4 custom-scrollbar">
+                    <TabsContent value="current" className="mt-0 h-full">
+                      <StandOccupancyCurrent onSave={onSave} />
+                    </TabsContent>
+                    <TabsContent value="setup" className="mt-0 h-full">
+                      <StandOccupancySetup onSave={onSave} />
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
   )
 }
