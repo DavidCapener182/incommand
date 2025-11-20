@@ -303,7 +303,7 @@ const HelpPage = () => {
                 <div className="col-span-full text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                   <p className="text-slate-500">No terms found matching &quot;{searchTerm}&quot;</p>
                   <Button 
-                    variant="link" 
+                    mode="link"
                     onClick={() => setSearchTerm('')}
                     className="text-blue-600 mt-1"
                   >
