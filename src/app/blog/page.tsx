@@ -270,15 +270,14 @@ export default function BlogPage() {
       <div className="min-h-[80vh] flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="max-w-7xl w-full mx-auto grid lg:grid-cols-2 gap-12 px-6 py-12">
           <div>
-            <Badge
-              variant="secondary"
-              className="rounded-full py-1 border-border bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
-              asChild
-            >
-              <Link href="#">
+            <Link href="#">
+              <Badge
+                variant="secondary"
+                className="rounded-full py-1 border-border bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+              >
                 Latest insights & updates <ArrowUpRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Badge>
+              </Badge>
+            </Link>
             <h1 className="mt-6 max-w-[17ch] text-4xl md:text-5xl lg:text-[2.75rem] xl:text-[3.25rem] font-semibold leading-[1.2] tracking-tighter text-gray-900 dark:text-white">
               Insights from the Field
             </h1>

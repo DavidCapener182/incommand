@@ -9,9 +9,8 @@ import {
   ArrowTrendingDownIcon,
   MinusIcon,
   ShieldCheckIcon,
-  MoreHorizontal,
-  ChevronRight
-} from 'lucide-react'
+} from '@heroicons/react/24/outline'
+import { MoreHorizontal, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ReadinessDetailsModal from './ReadinessDetailsModal'
 import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
