@@ -212,6 +212,23 @@ export default function DynamicDashboardCards({
           )
         }
 
+        // Special handling for PublicSafetyCard (only accepts className)
+        if (cardName === 'PublicSafetyCard') {
+          return (
+            <motion.div
+              key={cardName}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 + (index * 0.1) }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
+            >
+              <Component />
+            </motion.div>
+          )
+        }
+
         // Default rendering for other cards
         return (
           <motion.div
