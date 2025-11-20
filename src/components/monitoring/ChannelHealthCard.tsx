@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { RadioChannelHealth, RadioChannel } from '@/types/radio'
 import {
   SignalIcon,
@@ -25,7 +25,7 @@ export default function ChannelHealthCard({ eventId, channel, className }: Chann
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
 
-  const fetchChannelHealth = async () => {
+  const fetchChannelHealth = useCallback(async () => {
     if (!eventId) {
       setLoading(false)
       return
@@ -78,7 +78,7 @@ export default function ChannelHealthCard({ eventId, channel, className }: Chann
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, channel])
 
   useEffect(() => {
     fetchChannelHealth()
@@ -87,7 +87,7 @@ export default function ChannelHealthCard({ eventId, channel, className }: Chann
       const interval = setInterval(fetchChannelHealth, 30000) // Refresh every 30 seconds
       return () => clearInterval(interval)
     }
-  }, [eventId, channel, autoRefresh])
+  }, [eventId, channel, autoRefresh, fetchChannelHealth])
 
   const getHealthColor = (score: number | null) => {
     if (score === null) return 'text-gray-400'

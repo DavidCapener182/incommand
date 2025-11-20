@@ -122,7 +122,7 @@ export default function ReadinessIndexCard({
       cancelled = true
       clearInterval(interval)
     }
-  }, [eventId, initialData])
+  }, [eventId, initialData, readiness])
 
   // --- Visual Helpers ---
   const getStatusColor = (score: number) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   RadioIcon, 
   ClockIcon, 
@@ -49,7 +49,7 @@ export default function RecentRadioMessages({
   const [expanded, setExpanded] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
 
-  const fetchRecentIncidents = async () => {
+  const fetchRecentIncidents = useCallback(async () => {
     if (!eventId) {
       setLoading(false)
       return
@@ -137,7 +137,7 @@ export default function RecentRadioMessages({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   useEffect(() => {
     fetchRecentIncidents()
@@ -146,7 +146,7 @@ export default function RecentRadioMessages({
       const interval = setInterval(fetchRecentIncidents, 30000) // Refresh every 30 seconds
       return () => clearInterval(interval)
     }
-  }, [eventId, autoRefresh])
+  }, [eventId, autoRefresh, fetchRecentIncidents])
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)

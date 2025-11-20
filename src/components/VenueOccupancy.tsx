@@ -331,7 +331,7 @@ export default function VenueOccupancy({ currentEventId }: Props) {
       }
       isCreatingToastRef.current = false;
     };
-      }, [currentEventId, handleCapacityAlert]); // Removed removeToast from dependencies - using ref instead
+      }, [currentEventId, handleCapacityAlert, currentCount]); // Added currentCount to dependencies
 
 
   // Calculate percentage and determine progress bar color

@@ -404,7 +404,7 @@ export function FixtureSetup({ onSave }: FixtureTabProps) {
                <div key={task.id} className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg group hover:border-blue-200 transition-colors">
                   <span className="text-xs font-mono font-medium text-slate-400 w-8">#{idx + 1}</span>
                   <div className="flex-1 grid grid-cols-12 gap-3 items-center">
-                     <span className="col-span-2 text-sm font-bold text-slate-700">{task.minute}'</span>
+                     <span className="col-span-2 text-sm font-bold text-slate-700">{task.minute}&apos;</span>
                      <span className="col-span-3 text-xs px-2 py-1 bg-slate-100 rounded text-slate-600 text-center truncate">{task.assignedRole}</span>
                      <span className="col-span-7 text-sm text-slate-800 truncate">{task.description}</span>
                   </div>

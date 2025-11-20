@@ -7,7 +7,7 @@
  * Status: Implemented 2025-01-08
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/Toast'
@@ -69,11 +69,7 @@ export default function SSOIntegration() {
     metadata_url: '',
   })
 
-  useEffect(() => {
-    fetchProviders()
-  }, [])
-
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
     try {
       // In a real implementation, this would fetch from a database table
       // For now, we'll use a settings/configuration approach
@@ -98,7 +94,11 @@ export default function SSOIntegration() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabaseClient])
+
+  useEffect(() => {
+    fetchProviders()
+  }, [fetchProviders])
 
     const handleSaveProvider = async () => {
     if (!formData.name || !formData.type) {

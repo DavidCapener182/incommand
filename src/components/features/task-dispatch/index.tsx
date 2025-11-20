@@ -125,7 +125,7 @@ export default function TaskDispatch() {
     } finally {
       setLoading(false)
     }
-  }, [eventData?.id, addToast])
+  }, [eventData?.id, addToast, supabaseClient])
 
   // Fetch staff
   const fetchStaff = useCallback(async () => {
@@ -144,7 +144,7 @@ export default function TaskDispatch() {
     } catch (error) {
       console.error('Error fetching staff:', error)
     }
-  }, [eventData?.id])
+  }, [eventData?.id, supabaseClient])
 
   // Setup real-time subscription with toast notifications
   useEffect(() => {

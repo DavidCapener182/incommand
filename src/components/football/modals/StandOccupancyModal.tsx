@@ -71,13 +71,7 @@ function StandOccupancyCurrent({ onSave }: { onSave?: () => void }) {
     return Math.min(Math.max(60, padded), 360)
   }, [kickoffTime])
 
-  useEffect(() => {
-    if (!context) return
-    loadData(context)
-    loadThresholds(context)
-  }, [context, kickoffTime, computeHorizonMinutes])
-
-  const loadData = async (ctx: { companyId: string; eventId: string }) => {
+  const loadData = useCallback(async (ctx: { companyId: string; eventId: string }) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/football/stands${buildContextQuery(ctx)}`)
@@ -114,9 +108,9 @@ function StandOccupancyCurrent({ onSave }: { onSave?: () => void }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, computeHorizonMinutes])
 
-  const loadThresholds = async (ctx: { companyId: string; eventId: string }) => {
+  const loadThresholds = useCallback(async (ctx: { companyId: string; eventId: string }) => {
     try {
       const res = await fetch(`/api/football/thresholds${buildContextQuery(ctx)}`)
       if (res.ok) {
@@ -131,7 +125,13 @@ function StandOccupancyCurrent({ onSave }: { onSave?: () => void }) {
     } catch (error) {
       console.error('Failed to load thresholds:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!context) return
+    loadData(context)
+    loadThresholds(context)
+  }, [context, kickoffTime, computeHorizonMinutes, loadData, loadThresholds])
 
   const getColorForStand = (standName: string, percent: number): string => {
     const override = thresholds.stand_overrides[standName]

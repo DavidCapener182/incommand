@@ -976,7 +976,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
 
     return highlights
-  }, [computedMetrics, eventData])
+  }, [computedMetrics, eventData, readinessSnapshot])
 
   // NOW we can have conditional returns, AFTER all hooks
   

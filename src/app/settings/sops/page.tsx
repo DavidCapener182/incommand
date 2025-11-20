@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/Toast'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -33,11 +33,7 @@ export default function SOPsPage() {
   const [selectedSop, setSelectedSop] = useState<SOP | null>(null)
   const [filter, setFilter] = useState<'all' | 'templates' | 'active'>('all')
 
-  useEffect(() => {
-    fetchSOPs()
-  }, [filter])
-
-  const fetchSOPs = async () => {
+  const fetchSOPs = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
@@ -65,7 +61,11 @@ export default function SOPsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, addToast])
+
+  useEffect(() => {
+    fetchSOPs()
+  }, [fetchSOPs])
 
   const handleDelete = async (sopId: string) => {
     if (!confirm('Are you sure you want to delete this SOP?')) return

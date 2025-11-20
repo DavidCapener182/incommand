@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   RadioIcon,
@@ -45,7 +45,7 @@ export default function RadioAlertsWidget({
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     if (!eventId) {
       setLoading(false)
       return
@@ -190,7 +190,7 @@ export default function RadioAlertsWidget({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, dismissedAlerts])
 
   useEffect(() => {
     fetchAlerts()
@@ -199,7 +199,7 @@ export default function RadioAlertsWidget({
       const interval = setInterval(fetchAlerts, 30000) // Refresh every 30 seconds
       return () => clearInterval(interval)
     }
-  }, [eventId, autoRefresh, dismissedAlerts])
+  }, [eventId, autoRefresh, dismissedAlerts, fetchAlerts])
 
   const handleDismiss = (alertId: string) => {
     setDismissedAlerts((prev) => new Set(prev).add(alertId))

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { RadioMessage, RadioMessageCategory, RadioMessagePriority } from '@/types/radio'
 import { 
   RadioIcon, 
@@ -42,7 +42,7 @@ export default function IncidentRadioMessages({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchRadioMessages = async () => {
+  const fetchRadioMessages = useCallback(async () => {
     if (!incidentId) return
 
     try {
@@ -71,11 +71,11 @@ export default function IncidentRadioMessages({
     } finally {
       setLoading(false)
     }
-  }
+  }, [incidentId, eventId])
 
   useEffect(() => {
     fetchRadioMessages()
-  }, [incidentId, eventId])
+  }, [fetchRadioMessages])
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)

@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   XMarkIcon, 
   LockClosedIcon, 
@@ -42,11 +42,7 @@ export default function DecisionDetails({
   const [submittingAnnotation, setSubmittingAnnotation] = useState(false)
   const [lockingDecision, setLockingDecision] = useState(false)
 
-  useEffect(() => {
-    fetchDecision()
-  }, [decisionId])
-
-  const fetchDecision = async () => {
+  const fetchDecision = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -64,7 +60,11 @@ export default function DecisionDetails({
     } finally {
       setLoading(false)
     }
-  }
+  }, [decisionId])
+
+  useEffect(() => {
+    fetchDecision()
+  }, [fetchDecision])
 
   const handleLockDecision = async () => {
     if (!confirm('Are you sure you want to lock this decision? Once locked, it cannot be edited.')) {

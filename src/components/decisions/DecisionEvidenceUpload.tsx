@@ -247,6 +247,7 @@ export default function DecisionEvidenceUpload({
               />
               {preview ? (
                 <div className="space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
                   <p className="text-sm text-gray-600 dark:text-gray-400">{file?.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-500">

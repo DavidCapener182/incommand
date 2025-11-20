@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   ClockIcon, 
   LockClosedIcon, 
@@ -58,7 +58,7 @@ export default function DecisionTimeline({
 
   const limit = 20
 
-  const fetchDecisions = async () => {
+  const fetchDecisions = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -88,13 +88,13 @@ export default function DecisionTimeline({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, page, filters])
 
   useEffect(() => {
     if (eventId) {
       fetchDecisions()
     }
-  }, [eventId, page, filters])
+  }, [eventId, fetchDecisions])
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters({ ...filters, [key]: value })

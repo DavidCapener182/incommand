@@ -131,7 +131,7 @@ export default function DynamicDashboardCards({
               whileHover={{ y: -4, scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Component
+              <WeatherCard
                 lat={coordinates?.lat || 0}
                 lon={coordinates?.lon || 0}
                 locationName={currentEvent.venue_address}
@@ -153,18 +153,12 @@ export default function DynamicDashboardCards({
             >
               <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
                 <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                  <Component
+                  <What3WordsSearchCard
                     lat={coordinates.lat}
                     lon={coordinates.lon}
                     venueAddress={currentEvent?.venue_address || ''}
                     singleCard
                     largeLogo={false}
-                    filters={defaultFilters}
-                    locationName={currentEvent?.venue_address || ''}
-                    eventDate={currentEvent?.event_date || ''}
-                    startTime={currentEvent?.main_act_start_time || ''}
-                    curfewTime={currentEvent?.curfew_time || ''}
-                    currentEventId={currentEventId || ''}
                   />
                 </CardContent>
               </Card>
@@ -185,18 +179,8 @@ export default function DynamicDashboardCards({
             >
               <Card className="card-depth h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
                 <CardContent className="flex h-full flex-col items-center justify-center p-4">
-                  <Component 
-                    currentEventId={currentEventId || ''} 
-                    filters={defaultFilters}
-                    lat={coordinates?.lat || 0}
-                    lon={coordinates?.lon || 0}
-                    locationName={currentEvent?.venue_address || ''}
-                    eventDate={currentEvent?.event_date || ''}
-                    startTime={currentEvent?.main_act_start_time || ''}
-                    curfewTime={currentEvent?.curfew_time || ''}
-                    venueAddress={currentEvent?.venue_address || ''}
-                    singleCard={false}
-                    largeLogo={false}
+                  <VenueOccupancy 
+                    currentEventId={currentEventId} 
                   />
                 </CardContent>
               </Card>
@@ -216,12 +200,14 @@ export default function DynamicDashboardCards({
               whileTap={{ scale: 0.98 }}
               className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
             >
-              <Component />
+              <PublicSafetyCard />
             </motion.div>
           )
         }
 
         // Default rendering for other cards
+        // TypeScript knows cardName can't be WeatherCard, What3WordsSearchCard, VenueOccupancy, or PublicSafetyCard here
+        // Use type assertion for components that may accept partial props
         return (
           <motion.div
             key={cardName}
@@ -233,17 +219,19 @@ export default function DynamicDashboardCards({
             className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
           >
             <Component 
-              filters={defaultFilters}
-              lat={coordinates?.lat || 0}
-              lon={coordinates?.lon || 0}
-              locationName={currentEvent?.venue_address || ''}
-              eventDate={currentEvent?.event_date || ''}
-              startTime={currentEvent?.main_act_start_time || ''}
-              curfewTime={currentEvent?.curfew_time || ''}
-              currentEventId={currentEventId || ''}
-              venueAddress={currentEvent?.venue_address || ''}
-              singleCard={false}
-              largeLogo={false}
+              {...({
+                filters: defaultFilters,
+                lat: coordinates?.lat || 0,
+                lon: coordinates?.lon || 0,
+                locationName: currentEvent?.venue_address || '',
+                eventDate: currentEvent?.event_date || '',
+                startTime: currentEvent?.main_act_start_time || '',
+                curfewTime: currentEvent?.curfew_time || '',
+                currentEventId: currentEventId || '',
+                venueAddress: currentEvent?.venue_address || '',
+                singleCard: false,
+                largeLogo: false,
+              } as any)}
             />
           </motion.div>
         )

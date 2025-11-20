@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   DocumentTextIcon,
   ExclamationTriangleIcon,
@@ -29,16 +29,7 @@ export default function DoctrineAssistant({ eventId, className = '' }: DoctrineA
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (eventId) {
-      fetchState()
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchState, 30 * 1000)
-      return () => clearInterval(interval)
-    }
-  }, [eventId])
-
-  const fetchState = async () => {
+  const fetchState = useCallback(async () => {
     if (!eventId) return
 
     try {
@@ -79,7 +70,16 @@ export default function DoctrineAssistant({ eventId, className = '' }: DoctrineA
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    if (eventId) {
+      fetchState()
+      // Refresh every 30 seconds
+      const interval = setInterval(fetchState, 30 * 1000)
+      return () => clearInterval(interval)
+    }
+  }, [eventId, fetchState])
 
   const getUrgencyColor = (urgency: string): string => {
     switch (urgency) {

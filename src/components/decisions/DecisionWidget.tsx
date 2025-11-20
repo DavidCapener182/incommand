@@ -7,7 +7,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { ClockIcon, LockClosedIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Decision } from '@/types/decisions'
@@ -25,13 +25,7 @@ export default function DecisionWidget({ eventId }: DecisionWidgetProps) {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null)
   const [lockedCount, setLockedCount] = useState(0)
 
-  useEffect(() => {
-    if (eventId) {
-      fetchRecentDecisions()
-    }
-  }, [eventId])
-
-  const fetchRecentDecisions = async () => {
+  const fetchRecentDecisions = useCallback(async () => {
     if (!eventId) return
 
     setLoading(true)
@@ -50,7 +44,13 @@ export default function DecisionWidget({ eventId }: DecisionWidgetProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
+
+  useEffect(() => {
+    if (eventId) {
+      fetchRecentDecisions()
+    }
+  }, [eventId, fetchRecentDecisions])
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)

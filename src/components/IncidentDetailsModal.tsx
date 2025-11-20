@@ -609,6 +609,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
           {showFullImage && photoUrl && (
              <div className="fixed inset-0 z-[80] bg-black/95 flex items-center justify-center p-4" onClick={() => setShowFullImage(false)}>
                 <button className="absolute top-4 right-4 text-white/70 hover:text-white"><XMarkIcon className="h-8 w-8" /></button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photoUrl} alt="Full View" className="max-w-full max-h-full object-contain rounded-md" />
              </div>
           )}
