@@ -132,17 +132,9 @@ export default function DynamicDashboardCards({
               whileTap={{ scale: 0.98 }}
             >
               <Component
-                lat={coordinates?.lat}
-                lon={coordinates?.lon}
+                lat={coordinates?.lat || 0}
+                lon={coordinates?.lon || 0}
                 locationName={currentEvent.venue_address}
-                eventDate={currentEvent.event_date ?? ''}
-                startTime={currentEvent.main_act_start_time ?? ''}
-                curfewTime={currentEvent.curfew_time ?? ''}
-                filters={defaultFilters}
-                currentEventId={currentEventId || ''}
-                venueAddress={currentEvent.venue_address || ''}
-                singleCard={false}
-                largeLogo={false}
               />
             </motion.div>
           )
