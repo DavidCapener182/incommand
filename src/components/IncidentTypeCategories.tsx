@@ -119,11 +119,11 @@ export default function IncidentTypeCategories({
   const filteredCategories = useMemo(() => {
     if (!availableTypes || availableTypes.length === 0) return INCIDENT_CATEGORIES;
     
-    const filtered: Partial<typeof INCIDENT_CATEGORIES> = {};
+    const filtered: Record<string, { icon: any; color: string; types: string[] }> = {};
     Object.entries(INCIDENT_CATEGORIES).forEach(([key, data]) => {
       const validTypes = data.types.filter(t => availableTypes.includes(t));
       if (validTypes.length > 0) {
-        filtered[key as keyof typeof INCIDENT_CATEGORIES] = { ...data, types: validTypes as any };
+        filtered[key] = { ...data, types: validTypes };
       }
     });
     return filtered;
