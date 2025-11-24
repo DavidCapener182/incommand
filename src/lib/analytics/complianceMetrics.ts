@@ -294,11 +294,15 @@ export async function calculateComplianceMetrics(
     let query = supabase
       .from('incident_logs')
       .select('*')
-      .gte('time_logged', startDate.toISOString())
-      .lte('time_logged', endDate.toISOString())
 
+    // If eventId is provided, fetch all logs for that event (ignore date range)
+    // Otherwise, use the date range filter
     if (eventId) {
       query = query.eq('event_id', eventId)
+    } else {
+      query = query
+        .gte('time_logged', startDate.toISOString())
+        .lte('time_logged', endDate.toISOString())
     }
 
     const { data: logs, error } = await query

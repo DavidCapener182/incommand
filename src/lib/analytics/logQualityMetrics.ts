@@ -218,11 +218,16 @@ export async function calculateLogQualityMetrics(
     let query = supabase
       .from('incident_logs')
       .select('*')
-      .gte('time_logged', startDate.toISOString())
-      .lte('time_logged', endDate.toISOString())
 
+    // If eventId is provided, get ALL logs for that event (ignore date range)
+    // If no eventId, filter by date range
     if (eventId) {
       query = query.eq('event_id', eventId)
+      // Don't apply date filters - we want all logs for the event
+    } else {
+      // Filter by date range when no eventId is provided
+      query = query.gte('time_logged', startDate.toISOString())
+        .lte('time_logged', endDate.toISOString())
     }
 
     const { data: logs, error } = await query

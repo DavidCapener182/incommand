@@ -64,16 +64,17 @@ CREATE TABLE IF NOT EXISTS staffing_actuals (
 
 CREATE TABLE IF NOT EXISTS staffing_forecasts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id UUID NOT NULL,
-    event_id UUID NOT NULL,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     discipline TEXT NOT NULL CHECK (discipline IN ('security','police','medical','stewarding','other')),
     predicted_required INTEGER NOT NULL CHECK (predicted_required >= 0),
     confidence NUMERIC,
     methodology TEXT,
-    generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     generated_by UUID REFERENCES profiles(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(company_id, event_id, discipline, generated_at)
 );
 
 -- Fixture/Match Progress Tables

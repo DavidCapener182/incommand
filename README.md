@@ -1,183 +1,352 @@
-# Supabase CLI
+# inCommand - Professional Event Command & Control System
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+> **Enterprise-grade event management platform with AI intelligence, mobile-first design, and complete collaboration suite**
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+[![Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen)]()
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)]()
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green)]()
 
-This repository contains all the functionality for Supabase CLI.
+---
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+## 🌟 What is inCommand?
 
-## Getting started
+inCommand is a **professional command and control system** designed for event management, combining real-time incident tracking, AI-powered analytics, mobile-first operations, and enterprise collaboration tools into one comprehensive platform.
 
-### Install the CLI
+**Built for**: Security operations, event managers, emergency responders, venue operators, and command centers.
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+---
 
-```bash
-npm i supabase --save-dev
-```
+## ✨ Key Features
 
-To install the beta release channel:
+### 🤖 AI-Powered Intelligence
+- Natural language incident search
+- Predictive staffing recommendations
+- Auto-categorization and tagging
+- Trend detection and anomaly alerts
+- Risk prediction models
+- AI decision support assistant
+- ChatGPT-style conversational interface
 
-```bash
-npm i supabase@beta --save-dev
-```
+### 📱 Mobile-First Operations
+- Progressive Web App (PWA) - installable on any device
+- Full offline mode with background sync
+- Voice-to-text incident reporting
+- Camera photo capture with GPS tagging
+- Touch-optimized interface
+- Quick action buttons
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+### 📊 Advanced Analytics (9+ Dashboards)
+- Operational metrics and KPIs
+- Log quality assessment
+- Compliance tracking (JESIP/JDM)
+- Staff performance analytics
+- AI insights and predictions
+- Custom metric builder
+- Industry benchmarking
+- Exportable reports (PDF/CSV/JSON)
+- Real-time risk pulse monitoring
 
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
+### 🔗 Complete Integration Suite
+- Email notifications (Resend, SendGrid)
+- SMS alerts (Twilio, AWS SNS)
+- Webhook system (8+ events)
+- REST API with full documentation
+- Automated shift handoffs
+- External system connectors
 
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+### 🏢 Enterprise-Ready
+- Multi-tenant architecture
+- Role-based access control (7 roles, 25+ permissions)
+- Audit logging and compliance
+- Data encryption at rest and in transit
+- Scalable infrastructure
+- Professional incident logging templates
 
-<details>
-  <summary><b>macOS</b></summary>
+### 📝 Professional Incident Management
+- Structured logging templates (JESIP/JDM compliant)
+- Dual timestamps (occurrence + logged)
+- Non-destructive amendments with audit trail
+- Real-time multi-user synchronization
+- Training mode for safe practice
+- Revision history and compliance tracking
 
-  Available via [Homebrew](https://brew.sh). To install:
+### 🎯 Real-Time Operations
+- Live incident dashboard
+- WebSocket-based real-time updates
+- Command center view
+- Staff dispatch and task assignment
+- Radio traffic analysis
+- Crowd intelligence monitoring
+- Operational readiness tracking
 
-  ```sh
-  brew install supabase/tap/supabase
-  ```
+---
 
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
+## 🚀 Quick Start
 
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account and project
+- Environment variables configured (see `.env.example`)
 
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
+### Installation
 
 ```bash
-supabase bootstrap
+# Clone the repository
+git clone <repository-url>
+cd incommand
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Supabase credentials and API keys
+
+# Run database migrations
+# See database/ directory for migration files
+
+# Start development server
+npm run dev
 ```
 
-Or using npx:
+The application will be available at `http://localhost:3000`
+
+### Production Build
 
 ```bash
-npx supabase bootstrap
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+---
 
-## Docs
+## 📚 Documentation
 
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+### For Users
+- **[Quick Start Guide](QUICK_START.md)** - Get up and running in 5 minutes
+- **[User Guide](docs/USER_GUIDE.md)** - Complete feature guide
+- **[Tutorials](docs/TUTORIALS.md)** - Step-by-step walkthroughs
 
-## Breaking changes
+### For Administrators
+- **[Admin Guide](docs/ADMIN_GUIDE.md)** - System configuration
+- **[Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - All integrations
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Problem solving
 
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+### For Developers
+- **[API Documentation](docs/API_DOCUMENTATION.md)** - REST API reference
+- **[Platform Overview](docs/incommand-overview.md)** - Architecture overview
+- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical details
+- **[Feature Catalogue](docs/FEATURE_CATALOGUE.md)** - Complete feature list
 
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+---
 
-## Developing
+## 🛠️ Technology Stack
 
-To run from source:
+### Frontend
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Framer Motion** - Animations
+- **Radix UI** - Accessible components
 
-```sh
-# Go >= 1.22
-go run . help
+### Backend
+- **Supabase** - Database, authentication, real-time subscriptions
+- **PostgreSQL** - Relational database
+- **Next.js API Routes** - Serverless functions
+
+### AI & Integrations
+- **OpenAI** - Natural language processing and AI features
+- **what3words** - Precise location services
+- **Resend/SendGrid** - Email delivery
+- **Twilio** - SMS notifications
+
+### Mobile
+- **Progressive Web App (PWA)** - Installable app experience
+- **Service Workers** - Offline support and caching
+- **IndexedDB** - Client-side data storage
+
+---
+
+## 📁 Project Structure
+
 ```
+incommand/
+├── src/
+│   ├── app/              # Next.js App Router pages
+│   ├── components/        # React components
+│   ├── lib/              # Utilities and helpers
+│   ├── hooks/            # React hooks
+│   ├── types/            # TypeScript definitions
+│   └── contexts/         # React contexts
+├── database/             # SQL migrations and schemas
+├── docs/                 # Documentation
+├── public/               # Static assets
+└── scripts/              # Build and utility scripts
+```
+
+---
+
+## 🎯 Main Features Overview
+
+### Incident Management
+- ✅ Professional structured logging templates
+- ✅ Dual timestamps (occurrence + logged)
+- ✅ Non-destructive amendments
+- ✅ Auto-escalation
+- ✅ GPS location capture
+- ✅ Photo attachments
+- ✅ Real-time synchronization
+
+### Analytics & Reporting
+- ✅ 9+ dashboard types
+- ✅ Custom metric builder
+- ✅ PDF/CSV/JSON export
+- ✅ Scheduled reports
+- ✅ Benchmarking system
+- ✅ Compliance reports
+
+### AI Features
+- ✅ ChatGPT-style assistant
+- ✅ Trend detection
+- ✅ Anomaly alerts
+- ✅ Auto-categorization
+- ✅ Predictive staffing
+- ✅ Natural language search
+
+### Mobile
+- ✅ PWA (install on phone)
+- ✅ Offline mode
+- ✅ Voice input
+- ✅ Photo capture
+- ✅ GPS tracking
+- ✅ Quick actions
+
+### Collaboration
+- ✅ Live chat
+- ✅ Real-time updates
+- ✅ Command hierarchy
+- ✅ Team coordination
+- ✅ File sharing
+
+---
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Start development server
+npm run dev:fast         # Start with Turbopack
+
+# Building
+npm run build            # Production build
+npm run build:analyze    # Build with bundle analysis
+
+# Code Quality
+npm run lint             # Run ESLint
+npm run lint:fix         # Fix linting issues
+npm run typecheck        # TypeScript type checking
+
+# Testing
+npm test                 # Run tests
+npm run test:watch       # Watch mode
+
+# Database
+npm run backfill:auditable-logs  # Backfill audit logs
+```
+
+### Environment Variables
+
+Required environment variables (see `.env.example`):
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key (server-side)
+- `OPENAI_API_KEY` - OpenAI API key for AI features
+- `RESEND_API_KEY` - Email service API key
+- Additional keys for integrations (SMS, etc.)
+
+---
+
+## 🏗️ Architecture
+
+### Multi-Tenant Design
+- Company-scoped data isolation
+- Event-based organization
+- Role-based access control (RBAC)
+- Row-level security (RLS) policies
+
+### Real-Time Updates
+- Supabase Realtime subscriptions
+- WebSocket connections
+- Optimistic UI updates
+- Conflict resolution
+
+### Offline Support
+- Service Worker caching
+- IndexedDB storage
+- Background sync queue
+- Conflict resolution on reconnect
+
+---
+
+## 📊 Database Schema
+
+Key tables:
+- `incidents` - Incident logs with audit trail
+- `events` - Event management
+- `profiles` - User profiles with roles
+- `companies` - Multi-tenant organization
+- `staffing_forecasts` - Predictive staffing data
+- `analytics_metrics` - Custom metrics
+- See `database/` directory for complete schema
+
+---
+
+## 🔒 Security
+
+- Row-level security (RLS) on all tables
+- Role-based access control (RBAC)
+- API key management
+- Audit logging for all changes
+- Data encryption at rest and in transit
+- Secure authentication via Supabase Auth
+
+---
+
+## 📈 Roadmap
+
+- [ ] Deeper predictive alerts
+- [ ] Advanced collaboration features
+- [ ] Expanded integrations
+- [ ] Mobile native apps
+- [ ] Advanced reporting templates
+
+---
+
+## 🤝 Contributing
+
+This is a private project. For questions or support, contact the development team.
+
+---
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+---
+
+## 📞 Support
+
+- **Documentation**: See `docs/` directory
+- **Quick Start**: See [QUICK_START.md](QUICK_START.md)
+- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+---
+
+**inCommand v2.0 - Ultimate Platform**  
+**Status**: ✅ Production Ready

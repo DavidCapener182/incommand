@@ -132,27 +132,41 @@ export async function middleware(req: NextRequest) {
     }
     
     // For public routes, only check session if we need to redirect logged-in users
-    // Skip session check for most public routes to avoid errors
+    // Skip session check for most public routes to avoid errors and rate limits
+    // Only check session for login/signup if we have cookies (indicates potential session)
     if (["/login", "/signup"].includes(pathname)) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        // If user is logged in and visiting login or signup, redirect based on role
-        if (session) {
-          const redirectUrl = req.nextUrl.clone()
+      // Only check session if cookies are present to avoid unnecessary auth API calls
+      // Check for Supabase auth cookies (format: sb-<project-ref>-auth-token)
+      const cookieHeader = req.headers.get('cookie') || ''
+      const hasAuthCookies = cookieHeader.includes('sb-') && (cookieHeader.includes('access-token') || cookieHeader.includes('auth-token'))
+      
+      if (hasAuthCookies) {
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession()
           
-          // Check if this is david@incommand.uk (superadmin) - redirect to admin
-          if (session.user.email === 'david@incommand.uk') {
-            redirectUrl.pathname = "/admin"
-          } else {
-            redirectUrl.pathname = "/incidents"
+          // If session check fails due to rate limit, allow route to proceed
+          if (error && (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('too many requests'))) {
+            console.warn('Middleware - Rate limit hit on session check, allowing route to proceed')
+            return res
           }
           
-          return NextResponse.redirect(redirectUrl)
+          // If user is logged in and visiting login or signup, redirect based on role
+          if (session) {
+            const redirectUrl = req.nextUrl.clone()
+            
+            // Check if this is david@incommand.uk (superadmin) - redirect to admin
+            if (session.user.email === 'david@incommand.uk') {
+              redirectUrl.pathname = "/admin"
+            } else {
+              redirectUrl.pathname = "/incidents"
+            }
+            
+            return NextResponse.redirect(redirectUrl)
+          }
+        } catch (error) {
+          // If session check fails, just allow the route to proceed
+          console.error('Middleware - Session check failed for public route:', error)
         }
-      } catch (error) {
-        // If session check fails, just allow the route to proceed
-        console.error('Middleware - Session check failed for public route:', error)
       }
     }
     
@@ -160,7 +174,36 @@ export async function middleware(req: NextRequest) {
   }
 
   // For protected pages, require authentication
-  let { data: { session } } = await supabase.auth.getSession()
+  // Only check session if cookies are present to avoid unnecessary auth API calls
+  // Check for Supabase auth cookies (format: sb-<project-ref>-auth-token)
+  const cookieHeader = req.headers.get('cookie') || ''
+  const hasAuthCookies = cookieHeader.includes('sb-') && (cookieHeader.includes('access-token') || cookieHeader.includes('auth-token'))
+  
+  let session = null
+  if (hasAuthCookies) {
+    try {
+      const { data: { session: sessionData }, error } = await supabase.auth.getSession()
+      
+      // If rate limited, allow access but log warning (better than blocking users)
+      if (error && (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('too many requests'))) {
+        console.warn('Middleware - Rate limit hit on session check for protected route, allowing access')
+        // Try to get session from JWT in cookie directly as fallback
+        // For now, we'll allow the request through - the page will handle auth
+        return res
+      }
+      
+      session = sessionData
+    } catch (error) {
+      // If session check fails, check if it's a rate limit error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('too many requests')) {
+        console.warn('Middleware - Rate limit error, allowing request to proceed')
+        // Allow request to proceed - the page component will handle auth
+        return res
+      }
+      console.error('Middleware - Session check error:', error)
+    }
+  }
   
   if (!session) {
     // Check if this is a magic link authentication attempt
@@ -291,12 +334,13 @@ export const config = {
   matcher: [
     /*
      * Match all paths except:
-     * - API routes (handled separately)
+     * - API routes (CRITICAL: must be excluded to prevent auth spam)
      * - Static files with extensions
      * - Favicon
+     * - Next.js internal paths
      * Note: We need to match /next/ paths to rewrite them to /_next/
      */
-    '/((?!api|_vercel|vercel|static|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|map|json)).*)',
+    '/((?!api|_next|_vercel|vercel|static|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot|map|json)).*)',
     // Explicitly include /next/ paths so we can rewrite them
     '/next/:path*',
   ],

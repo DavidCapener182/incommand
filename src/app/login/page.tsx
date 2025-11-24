@@ -210,7 +210,22 @@ export default function LoginPage() {
       }
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in'
+      const errorCode = err instanceof Error && 'code' in err ? String(err.code) : ''
+      
+      // Handle rate limit errors specifically
+      if (errorMessage.toLowerCase().includes('rate limit') || 
+          errorMessage.toLowerCase().includes('too many requests') ||
+          errorCode === '429' ||
+          errorCode === 'too_many_requests') {
+        setError(
+          'Authentication rate limit reached. This is a Supabase security feature. ' +
+          'Please wait 15-60 minutes or contact support@incommand.uk if this persists. ' +
+          'Rate limits can be increased in the Supabase dashboard under Authentication settings.'
+        )
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -364,9 +379,23 @@ export default function LoginPage() {
               <div
                 role="alert"
                 aria-live="polite"
-                className="text-sm text-red-700 text-center bg-red-50 border border-red-200 rounded-lg py-2 px-3"
+                className="text-sm text-red-700 text-center bg-red-50 border border-red-200 rounded-lg py-3 px-4 space-y-2"
               >
-                {error}
+                <p className="font-medium">{error}</p>
+                {error.toLowerCase().includes('rate limit') && (
+                  <div className="text-xs text-red-600 space-y-1 pt-2 border-t border-red-200">
+                    <p>Rate limits typically reset after 15-60 minutes.</p>
+                    <p>
+                      If this persists, please contact{' '}
+                      <a 
+                        href="mailto:support@incommand.uk?subject=Login Rate Limit Issue" 
+                        className="underline font-semibold"
+                      >
+                        support@incommand.uk
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

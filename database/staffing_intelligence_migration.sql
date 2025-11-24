@@ -14,25 +14,70 @@ SET discipline = CASE
   ELSE 'security'
 END;
 
--- Create staffing_forecasts table to store predicted requirements
-CREATE TABLE IF NOT EXISTS staffing_forecasts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  discipline TEXT NOT NULL CHECK (discipline IN ('security','police','medical','stewarding','other')),
-  predicted_required INTEGER NOT NULL CHECK (predicted_required >= 0),
-  confidence NUMERIC,
-  methodology TEXT,
-  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  generated_by UUID REFERENCES profiles(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(company_id, event_id, discipline, generated_at)
-);
+-- Ensure staffing_forecasts table exists with correct schema
+-- Note: The table definition is in database/schema/support_tools.sql
+-- This migration ensures constraints and RLS policies are in place
+
+-- Add foreign key constraints if they don't exist
+DO $$
+BEGIN
+  -- Check for company_id foreign key by constraint type and referenced table
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+    WHERE tc.table_name = 'staffing_forecasts'
+    AND tc.constraint_type = 'FOREIGN KEY'
+    AND kcu.column_name = 'company_id'
+    AND ccu.table_name = 'companies'
+  ) THEN
+    ALTER TABLE staffing_forecasts 
+    ADD CONSTRAINT staffing_forecasts_company_id_fkey 
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+  END IF;
+
+  -- Check for event_id foreign key by constraint type and referenced table
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+    WHERE tc.table_name = 'staffing_forecasts'
+    AND tc.constraint_type = 'FOREIGN KEY'
+    AND kcu.column_name = 'event_id'
+    AND ccu.table_name = 'events'
+  ) THEN
+    ALTER TABLE staffing_forecasts 
+    ADD CONSTRAINT staffing_forecasts_event_id_fkey 
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE;
+  END IF;
+
+  -- Check for UNIQUE constraint on (company_id, event_id, discipline, generated_at)
+  -- This checks if a unique constraint exists covering all four columns
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    WHERE tc.table_name = 'staffing_forecasts'
+    AND tc.constraint_type = 'UNIQUE'
+    AND (
+      SELECT COUNT(DISTINCT kcu.column_name) 
+      FROM information_schema.key_column_usage kcu
+      WHERE kcu.constraint_name = tc.constraint_name
+      AND kcu.table_name = 'staffing_forecasts'
+      AND kcu.column_name IN ('company_id', 'event_id', 'discipline', 'generated_at')
+    ) = 4
+  ) THEN
+    ALTER TABLE staffing_forecasts 
+    ADD CONSTRAINT staffing_forecasts_company_id_event_id_discipline_generated_at_key 
+    UNIQUE(company_id, event_id, discipline, generated_at);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_staffing_forecasts_company_event ON staffing_forecasts(company_id, event_id, discipline);
 
 -- Trigger to keep updated_at fresh
+-- Drop existing trigger if it exists (from support_tools.sql or previous migration)
+DROP TRIGGER IF EXISTS update_staffing_forecasts_updated_at ON staffing_forecasts;
+DROP TRIGGER IF EXISTS trigger_update_staffing_forecasts_updated_at ON staffing_forecasts;
+
 CREATE OR REPLACE FUNCTION update_staffing_forecasts_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

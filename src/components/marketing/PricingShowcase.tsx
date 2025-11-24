@@ -12,21 +12,36 @@ type BillingPeriod = 'monthly' | 'annual'
 const CURRENCY_SYMBOLS: Record<string, string> = { GBP: '£', USD: '$', EUR: '€' }
 
 const displayPrice = (plan: PricingPlan, period: BillingPeriod) => {
-  const value = period === 'monthly' ? plan.monthlyPrice : plan.annualPrice
-
-  if (value == null || plan.isCustom) {
+  if (plan.monthlyPrice == null || plan.isCustom) {
     return {
       label: 'Contact Sales',
       suffix: 'Custom pricing for large teams',
-      isCustom: true
+      isCustom: true,
+      monthlyEquivalent: null
     }
   }
 
   const symbol = CURRENCY_SYMBOLS[plan.currency ?? 'GBP'] ?? ''
-  return {
-    label: `${symbol}${value.toLocaleString()}`,
-    suffix: period === 'monthly' ? 'per month' : 'per month, billed annually',
-    isCustom: false
+  
+  if (period === 'monthly') {
+    return {
+      label: `${symbol}${plan.monthlyPrice.toLocaleString()}`,
+      suffix: 'per month',
+      isCustom: false,
+      monthlyEquivalent: plan.monthlyPrice
+    }
+  } else {
+    // For annual: calculate monthly * 12 - 10% discount, then show monthly equivalent
+    const annualTotal = plan.monthlyPrice * 12 * 0.9 // 10% discount
+    const monthlyEquivalent = annualTotal / 12
+    
+    return {
+      label: `${symbol}${Math.round(monthlyEquivalent).toLocaleString()}`,
+      suffix: 'per month, billed annually',
+      isCustom: false,
+      monthlyEquivalent: monthlyEquivalent,
+      annualTotal: annualTotal
+    }
   }
 }
 
@@ -43,7 +58,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
   return (
     <div className="w-full">
       {/* Billing Toggle */}
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
         <div className="relative inline-flex h-12 items-center rounded-full bg-slate-100/80 p-1 ring-1 ring-slate-200">
           <button
             onClick={() => setBillingPeriod('monthly')}
@@ -66,23 +81,22 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
           {/* Sliding Pill Background */}
           <div
             className={cn(
-              "absolute h-10 rounded-full bg-white shadow-sm ring-1 ring-slate-900/5 transition-all duration-300 ease-in-out w-[50%]",
-              billingPeriod === 'monthly' ? "left-1" : "left-[calc(50%-4px)] translate-x-[calc(100%-4px)]" // Adjust translation roughly
+              "absolute h-10 rounded-full bg-white shadow-sm ring-1 ring-slate-900/5 transition-all duration-300 ease-in-out",
+              billingPeriod === 'monthly' ? "left-1" : "left-[calc(50%+2px)]"
             )}
             style={{ 
-               width: 'calc(50% - 4px)',
-               transform: billingPeriod === 'monthly' ? 'translateX(0)' : 'translateX(100%)'
+              width: 'calc(50% - 4px)',
             }}
           />
         </div>
         
         {/* Discount Badge */}
         {billingPeriod === 'annual' && (
-           <FadeIn className="absolute mt-3 ml-[220px] hidden sm:block">
-             <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-               Save up to 20%
-             </span>
-           </FadeIn>
+          <FadeIn>
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              Save up to 10%
+            </span>
+          </FadeIn>
         )}
       </div>
 
@@ -127,12 +141,18 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
                         <span className="text-3xl font-bold tracking-tight text-slate-900">{price.label}</span>
                      ) : (
                         <>
+                          <span className="text-sm font-medium text-slate-500">From</span>
                           <span className="text-4xl font-bold tracking-tight text-slate-900">{price.label}</span>
                           <span className="text-sm font-medium text-slate-500">/mo</span>
                         </>
                      )}
                    </div>
-                   <p className="mt-1 text-xs font-medium text-slate-400">
+                   {billingPeriod === 'annual' && price.annualTotal && (
+                     <p className="mt-1 text-xs font-medium text-slate-600">
+                       From {CURRENCY_SYMBOLS[plan.currency ?? 'GBP'] ?? '£'}{Math.round(price.annualTotal).toLocaleString()} /year
+                     </p>
+                   )}
+                   <p className={cn("text-xs font-medium", billingPeriod === 'annual' && price.annualTotal ? "text-slate-400" : "text-slate-400")}>
                      {price.suffix}
                    </p>
                 </div>

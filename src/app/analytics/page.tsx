@@ -958,7 +958,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
                 <div className="relative z-10">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {liveMetricCards.map((metric) => (
                       <div
                         key={metric.key}
@@ -1004,7 +1004,7 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/18 to-transparent pointer-events-none" />
                 <div className="relative z-10">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Live Analytics</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {liveMetricCards.map((metric) => (
                       <div
                         key={metric.key}

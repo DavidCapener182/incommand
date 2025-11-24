@@ -3,10 +3,9 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import MarketingNavigation from '@/components/MarketingNavigation'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
-import { SocialLinks } from '@/components/marketing/SocialLinks'
 import { FadeIn } from '@/components/marketing/Motion'
-import { HeroActions } from '@/components/marketing/interactives/HeroActions'
-import { FeatureShowcase } from '@/components/marketing/interactives/FeatureShowcase'
+import FeatureShowcase from '@/components/marketing/interactives/FeatureShowcase'
+import HeroSection from '@/components/marketing/HeroSection'
 import type { PricingPlan } from '@/components/marketing/interactives/PricingPlans'
 import { PricingShowcase } from '@/components/marketing/PricingShowcase'
 import { Testimonials } from '@/components/marketing/Testimonials'
@@ -24,7 +23,8 @@ import {
   LightBulbIcon,
   CheckCircleIcon,
   UsersIcon,
-  SparklesIcon
+  SparklesIcon,
+  DevicePhoneMobileIcon
 } from '@heroicons/react/24/outline'
 
 export const runtime = 'nodejs'
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 }
 
-// ... [Pricing Config Logic - Same as before] ...
+// ... [Pricing Config Logic] ...
 const PLAN_ORDER: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
 const PLAN_NOTES: Record<PlanCode, string> = {
   starter: 'Built for smaller teams just getting started.',
@@ -53,20 +53,10 @@ function buildPricingPlan(
     features?: string[]
   } = {}
 ): PricingPlan {
-  const monthlyPrice =
-    options.monthlyPrice !== undefined
-      ? options.monthlyPrice
-      : typeof plan.pricing.monthly === 'number'
-      ? plan.pricing.monthly
-      : null
-
-  const annualPrice =
-    options.annualPrice !== undefined
-      ? options.annualPrice
-      : typeof plan.pricing.annual === 'number'
-      ? plan.pricing.annual
-      : null
-
+  // Use provided option, or fallback to plan default, or null
+  const monthlyPrice = options.monthlyPrice ?? (typeof plan.pricing.monthly === 'number' ? plan.pricing.monthly : null)
+  const annualPrice = options.annualPrice ?? (typeof plan.pricing.annual === 'number' ? plan.pricing.annual : null)
+  
   const currency = options.currency ?? plan.pricing.currency
   const features = options.features ?? plan.features.features
   const isCustom = monthlyPrice === null
@@ -93,6 +83,7 @@ async function loadPlans(): Promise<PricingPlan[]> {
   if (normalizedBase) {
     try {
       const baseUrl = normalizedBase.startsWith('http') ? normalizedBase : `https://${normalizedBase}`
+      // Remove trailing slash to prevent double slashes
       const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/billing/plans`, {
         cache: 'no-store',
         next: { revalidate: 0 },
@@ -105,23 +96,19 @@ async function loadPlans(): Promise<PricingPlan[]> {
         const apiPlans = PLAN_ORDER.map((code) => {
           const configPlan = PRICING_PLANS[code]
           if (!configPlan) return null
+          
           const apiPlan = planMap.get(code)
 
-          const monthlyPrice =
-            typeof apiPlan?.price_monthly === 'number'
+          const monthlyPrice = typeof apiPlan?.price_monthly === 'number'
               ? apiPlan.price_monthly
-              : typeof configPlan.pricing.monthly === 'number'
-              ? configPlan.pricing.monthly
-              : null
+              : (typeof configPlan.pricing.monthly === 'number' ? configPlan.pricing.monthly : null)
 
-          const annualPrice =
-            typeof apiPlan?.price_annual === 'number'
+          const annualPrice = typeof apiPlan?.price_annual === 'number'
               ? apiPlan.price_annual
-              : typeof configPlan.pricing.annual === 'number'
-              ? configPlan.pricing.annual
-              : null
+              : (typeof configPlan.pricing.annual === 'number' ? configPlan.pricing.annual : null)
 
           const currency = apiPlan?.currency ?? configPlan.pricing.currency
+          
           const features = Array.isArray(apiPlan?.metadata?.features)
             ? apiPlan.metadata.features
             : configPlan.features.features
@@ -135,9 +122,11 @@ async function loadPlans(): Promise<PricingPlan[]> {
       }
     } catch (error) {
       console.error('Error loading plans:', error)
+      // Fallthrough to default plans on error
     }
   }
 
+  // Fallback to static config if API fails or no URL provided
   return PLAN_ORDER.map((code) => buildPricingPlan(PRICING_PLANS[code]))
 }
 
@@ -150,8 +139,6 @@ const partnerLogos = [
   { node: <SiCloudflare />, title: 'Cloudflare', href: 'https://cloudflare.com' },
   { node: <SiDatadog />, title: 'Datadog', href: 'https://www.datadoghq.com' },
 ]
-
-
 
 export default async function HomePage() {
   try {
@@ -169,52 +156,11 @@ export default async function HomePage() {
   const plans = await loadPlans()
 
   return (
-    <div className="min-h-screen bg-[#F1F4F9] text-slate-900 font-sans selection:bg-blue-200">
+    // Added pb-24 for mobile to account for the fixed banner overlapping content at the bottom
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-200 pb-24 sm:pb-0">
       <MarketingNavigation />
 
-      {/* Hero Section */}
-      <section id="hero" className="relative overflow-hidden bg-[#23408e]">
-        <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 md:px-10 lg:flex-row lg:justify-between lg:gap-16">
-          <FadeIn className="max-w-2xl flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md transition hover:bg-white/15">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-              </span>
-              <span className="text-sm font-medium text-white/90 tracking-wide">
-                Securing 1,200+ venues nationwide
-              </span>
-            </div>
-
-            <h1 className="mt-8 text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl lg:leading-[1.1]">
-              <span className="block">Event Safety,</span>
-              <span className="bg-gradient-to-r from-blue-100 to-blue-400 bg-clip-text text-transparent">
-                Simplified.
-              </span>
-            </h1>
-            
-            <p className="mt-6 text-lg leading-relaxed text-blue-100/90 sm:text-xl">
-              Streamline every aspect of live event control — from incident logging to staff coordination — with one intelligent, AI-powered command platform.
-            </p>
-
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:gap-6 lg:justify-start">
-              <HeroActions
-                className="w-full sm:w-auto"
-                secondaryHref="#features"
-                secondaryLabel="Explore Platform"
-              />
-            </div>
-
-            <FadeIn delay={0.2} className="mt-10 flex items-center justify-center gap-6 lg:justify-start">
-              <SocialLinks textClassName="text-blue-100/80 hover:text-white text-sm font-medium" iconClassName="border-white/40 bg-white/10 hover:bg-white/20" />
-            </FadeIn>
-          </FadeIn>
-
-          <FadeIn delay={0.2}>
-            <HeroCards />
-          </FadeIn>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* Partners Section - Fixed Gradient */}
       <section className="border-b border-slate-200 bg-white py-10">
@@ -294,12 +240,12 @@ export default async function HomePage() {
 
       <ContactCTA />
 
-      <div className="sm:hidden sticky bottom-0 z-50 border-t border-blue-200 bg-blue-50/95 backdrop-blur px-6 py-4 shadow-lg">
+      {/* Mobile-Only Recommendation Banner */}
+      {/* Changed to fixed so it floats above content, and added pb-24 to main wrapper to compensate */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-blue-200 bg-blue-50/95 backdrop-blur px-6 py-4 shadow-lg">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 pt-1">
-             <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+             <DevicePhoneMobileIcon className="h-5 w-5 text-blue-600" aria-hidden="true" />
           </div>
           <div>
             <p className="text-sm font-semibold text-blue-900">Desktop Recommended</p>

@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES } from '../types/auth'
 import { useEventMembership } from '../hooks/useEventMembership'
+import { useUserPlan } from '../hooks/useUserPlan'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
 import ProfileMenu from './ProfileMenu'
@@ -94,6 +95,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
   const { isTemporaryMember, canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
+  const userPlan = useUserPlan() || 'starter';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
