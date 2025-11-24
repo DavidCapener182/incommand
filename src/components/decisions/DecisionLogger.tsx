@@ -146,7 +146,7 @@ export default function DecisionLogger({
 
     try {
       const payload: DecisionCreateInput = {
-        event_id: eventId,
+        event_id: Number(eventId),
         trigger_issue: formData.trigger_issue,
         options_considered: formData.options.filter(opt => opt.option.trim()),
         information_available: formData.information_available,
