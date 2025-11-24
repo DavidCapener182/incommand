@@ -1,30 +1,77 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 // Removed next/image import to fix build error
 import { 
   Shield, AlertTriangle, Bell, Users, BarChart3, Lock, 
-  MapPin, Activity, CheckCircle2, Wifi, TrendingUp, Map, FileCheck, Hash, MoreHorizontal, ChevronDown, Radio
+  MapPin, Activity, CheckCircle2, Wifi, TrendingUp, Map, FileCheck, Hash, MoreHorizontal, ChevronDown, Radio,
+  type LucideIcon
 } from 'lucide-react'
-import { clsx } from 'clsx'
+import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
+type AccordionValue = string | undefined
+
+type AccordionContextValue = {
+  activeItem: AccordionValue
+  setActiveItem: (value: AccordionValue) => void
+}
+
+type AccordionProps = {
+  children: React.ReactNode
+  defaultValue?: AccordionValue
+  onValueChange?: (value: AccordionValue) => void
+  className?: string
+}
+
+type AccordionItemProps = {
+  children: React.ReactNode
+  value: AccordionValue
+  className?: string
+}
+
+type AccordionTriggerProps = {
+  children: React.ReactNode
+  className?: string
+  value?: AccordionValue
+}
+
+type AccordionContentProps = {
+  children: React.ReactNode
+  className?: string
+  value?: AccordionValue
+}
+
+type DashboardFrameProps = {
+  children: React.ReactNode
+  title: string
+  badge?: string
+}
+
+type FeatureConfig = {
+  id: string
+  icon: LucideIcon
+  title: string
+  description: string
+  visual: React.ComponentType
+}
+
 // --- UTILS ---
-function cn(...inputs) {
+function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))
 }
 
 // --- ACCORDION COMPONENTS ---
-const AccordionContext = React.createContext({
+const AccordionContext = React.createContext<AccordionContextValue>({
   activeItem: undefined,
   setActiveItem: () => {}
 })
 
-const Accordion = ({ children, defaultValue, onValueChange, className }) => {
-  const [activeItem, setActiveItem] = useState(defaultValue)
+const Accordion = ({ children, defaultValue, onValueChange, className }: AccordionProps) => {
+  const [activeItem, setActiveItem] = useState<AccordionValue>(defaultValue)
 
-  const handleValueChange = (value) => {
+  const handleValueChange = (value: AccordionValue) => {
     setActiveItem(value)
     if (onValueChange) onValueChange(value)
   }
@@ -36,19 +83,19 @@ const Accordion = ({ children, defaultValue, onValueChange, className }) => {
   )
 }
 
-const AccordionItem = ({ children, value, className }) => {
+const AccordionItem = ({ children, value, className }: AccordionItemProps) => {
   return (
     <div className={cn("overflow-hidden", className)} data-value={value}>
       {React.Children.map(children, child => 
         React.isValidElement(child) 
-          ? React.cloneElement(child, { value }) 
+          ? React.cloneElement(child as React.ReactElement<{ value?: AccordionValue }>, { value }) 
           : child
       )}
     </div>
   )
 }
 
-const AccordionTrigger = ({ children, className, value }) => {
+const AccordionTrigger = ({ children, className, value }: AccordionTriggerProps) => {
   const { activeItem, setActiveItem } = React.useContext(AccordionContext)
   const isActive = activeItem === value
 
@@ -63,7 +110,7 @@ const AccordionTrigger = ({ children, className, value }) => {
   )
 }
 
-const AccordionContent = ({ children, className, value }) => {
+const AccordionContent = ({ children, className, value }: AccordionContentProps) => {
   const { activeItem } = React.useContext(AccordionContext)
   const isActive = activeItem === value
 
@@ -85,7 +132,7 @@ const AccordionContent = ({ children, className, value }) => {
 
 
 // --- 1. REUSABLE DASHBOARD FRAME ---
-const DashboardFrame = ({ children, title, badge }) => (
+const DashboardFrame = ({ children, title, badge }: DashboardFrameProps) => (
   <div className="flex h-full flex-col bg-white text-slate-900 shadow-sm relative z-10 font-sans">
     {/* App Header */}
     <div className="flex items-center justify-between border-b border-slate-100 bg-white/95 backdrop-blur-xl px-4 py-3 shrink-0">
@@ -128,7 +175,7 @@ function MultiEventVisual() {
     { name: 'South Park', status: 'LIVE', capacity: 45, color: 'blue', bg: 'bg-blue-100', image: '/assets/marketing/south-park.jpg' },
   ]
 
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -136,7 +183,7 @@ function MultiEventVisual() {
     }
   }
 
-  const item = {
+  const item: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 50 } }
   }
@@ -268,7 +315,7 @@ function RiskVisual() {
           </div>
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            transition={{ yoyo: Infinity, duration: 1 }}
+            transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
             className="px-3 py-1 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-100 shadow-sm"
           >
             Risk: HIGH
@@ -342,14 +389,23 @@ function RiskVisual() {
 
 // VISUAL 3: Alerts (Spring List & Bouncing)
 function AlertsVisual() {
-  const alerts = [
+  type AlertPriority = 'critical' | 'high' | 'medium' | 'low'
+  type AlertItem = {
+    title: string
+    loc: string
+    time: string
+    priority: AlertPriority
+    icon: LucideIcon
+  }
+
+  const alerts: AlertItem[] = [
     { title: 'Medical Emergency', loc: 'Sector 4, Row G', time: 'now', priority: 'critical', icon: AlertTriangle },
     { title: 'Unauthorized Access', loc: 'Backstage Door 3', time: '2m', priority: 'high', icon: Lock },
     { title: 'Capacity Warning', loc: 'North Concourse', time: '5m', priority: 'medium', icon: Users },
     { title: 'Staff Redeployed', loc: 'Zone A to Zone B', time: '12m', priority: 'low', icon: CheckCircle2 },
   ]
   
-  const getStyles = (p) => {
+  const getStyles = (p: AlertPriority) => {
     switch(p) {
       case 'critical': return 'bg-red-50 border-red-100 text-red-900'
       case 'high': return 'bg-amber-50 border-amber-100 text-amber-900'
@@ -444,7 +500,7 @@ function StaffVisual() {
 function DataVisual() {
     const heatmapData = [30, 55, 80, 45, 92, 60, 20, 40, 75]
     
-    const getColor = (val) => {
+    const getColor = (val: number) => {
         if (val > 85) return 'bg-red-500'
         if (val > 60) return 'bg-amber-500'
         if (val > 40) return 'bg-blue-500'
@@ -452,11 +508,12 @@ function DataVisual() {
     }
 
     // Number counting animation
-    const Counter = ({ from, to }) => {
+    type CounterProps = { from: number; to: number }
+    const Counter = ({ from, to }: CounterProps) => {
       const [count, setCount] = useState(from)
       useEffect(() => {
-        const controls = { value: from }
-        const step = (timestamp) => {
+        const controls: { value: number; start?: number } = { value: from }
+        const step = (timestamp: number) => {
           if (!controls.start) controls.start = timestamp
           const progress = Math.min((timestamp - controls.start) / 1000, 1) // 1 second
           setCount(Math.floor(progress * (to - from) + from))
@@ -599,7 +656,7 @@ function ComplianceVisual() {
 
 // --- 3. MAIN COMPONENT ---
 
-const features = [
+const features: FeatureConfig[] = [
   { 
     id: 'multi-event',
     icon: Shield, 
