@@ -1,58 +1,39 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   PlusIcon,
   TrashIcon,
   EyeIcon,
   PencilIcon,
-  CogIcon,
-  ArrowPathIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowDownTrayIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline'
-import { triggerHaptic } from '@/utils/hapticFeedback'
-import { 
-  MetricWidget, 
-  TrendWidget, 
-  ComparisonWidget,
-  ProgressWidget,
-  StatGridWidget,
-  AlertWidget 
-} from './AnalyticsWidgetLibrary'
-import MobileOptimizedChart from '../MobileOptimizedChart'
-
-interface DashboardWidget {
-  id: string
-  type: 'metric' | 'trend' | 'comparison' | 'progress' | 'chart' | 'grid' | 'alert'
-  title: string
-  position: { x: number; y: number }
-  size: { width: number; height: number }
-  data: any
-  config?: any
-}
+import { supabase } from '@/lib/supabase'
+import { CARD_REGISTRY, getCardsByCategory, getCardById, type CardMetadata } from '@/lib/analytics/cardRegistry'
+import { getCategories } from '@/lib/analytics/cardRegistry'
+import CustomDashboardViewer from './CustomDashboardViewer'
 
 interface CustomDashboardBuilderProps {
   eventId: string
-  onSave?: (dashboard: DashboardWidget[]) => void
+  onSave?: (dashboard: any) => void
   onCancel?: () => void
   className?: string
 }
 
-const WIDGET_TYPES = [
-  { type: 'metric', label: 'Metric', icon: '📊' },
-  { type: 'trend', label: 'Trend', icon: '📈' },
-  { type: 'comparison', label: 'Comparison', icon: '⚖️' },
-  { type: 'progress', label: 'Progress', icon: '🎯' },
-  { type: 'chart', label: 'Chart', icon: '📉' },
-  { type: 'grid', label: 'Stats Grid', icon: '🔢' },
-  { type: 'alert', label: 'Alert', icon: '⚠️' }
-]
-
-const GRID_SIZE = 50 // Grid cell size in pixels
-const MAX_COLUMNS = 6
-const MAX_ROWS = 8
+interface SavedDashboard {
+  id: string
+  name: string
+  description: string | null
+  card_ids: string[]
+  layout_config: any
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
 
 export default function CustomDashboardBuilder({ 
   eventId, 
@@ -60,450 +41,485 @@ export default function CustomDashboardBuilder({
   onCancel,
   className = '' 
 }: CustomDashboardBuilderProps) {
-  const [widgets, setWidgets] = useState<DashboardWidget[]>([])
-  const [selectedWidget, setSelectedWidget] = useState<string | null>(null)
-  const [isAddingWidget, setIsAddingWidget] = useState(false)
-  const [draggedWidget, setDraggedWidget] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([])
+  const [dashboardName, setDashboardName] = useState('')
+  const [dashboardDescription, setDashboardDescription] = useState('')
+  const [savedDashboards, setSavedDashboards] = useState<SavedDashboard[]>([])
+  const [selectedDashboard, setSelectedDashboard] = useState<SavedDashboard | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all')
+  const [viewMode, setViewMode] = useState<'builder' | 'viewer'>('builder')
 
-  // Add new widget
-  const addWidget = useCallback((type: DashboardWidget['type']) => {
-    const newWidget: DashboardWidget = {
-      id: `widget-${Date.now()}`,
-      type,
-      title: `${WIDGET_TYPES.find(w => w.type === type)?.label} Widget`,
-      position: { x: 0, y: 0 },
-      size: { width: 2, height: 2 },
-      data: generateSampleData(type)
+  // Load user and company info
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        setUserId(user.id)
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile?.company_id) {
+          setCompanyId(profile.company_id)
+        }
+      } catch (error) {
+        console.error('Error loading user info:', error)
+      }
     }
 
-    setWidgets(prev => [...prev, newWidget])
-    setIsAddingWidget(false)
-    triggerHaptic.medium()
+    loadUserInfo()
   }, [])
 
-  // Delete widget
-  const deleteWidget = useCallback((id: string) => {
-    setWidgets(prev => prev.filter(w => w.id !== id))
-    setSelectedWidget(null)
-    triggerHaptic.light()
+  // Load saved dashboards
+  useEffect(() => {
+    if (!userId) return
+
+    const loadDashboards = async () => {
+      try {
+        setIsLoading(true)
+        const { data, error } = await supabase
+          .from('custom_dashboards' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        setSavedDashboards((data || []) as unknown as SavedDashboard[])
+        
+        // Load default dashboard if exists
+        const defaultDashboard = (data || []).find((d: any) => d.is_default) as SavedDashboard | undefined
+        if (defaultDashboard) {
+          setSelectedDashboard(defaultDashboard)
+          setSelectedCardIds(defaultDashboard.card_ids || [])
+          setDashboardName(defaultDashboard.name)
+          setDashboardDescription(defaultDashboard.description || '')
+        }
+      } catch (error) {
+        console.error('Error loading dashboards:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadDashboards()
+  }, [userId])
+
+  // Toggle card selection
+  const toggleCard = useCallback((cardId: string) => {
+    setSelectedCardIds(prev => 
+      prev.includes(cardId)
+        ? prev.filter(id => id !== cardId)
+        : [...prev, cardId]
+    )
   }, [])
-
-  // Update widget
-  const updateWidget = useCallback((id: string, updates: Partial<DashboardWidget>) => {
-    setWidgets(prev => prev.map(w => 
-      w.id === id ? { ...w, ...updates } : w
-    ))
-  }, [])
-
-  // Move widget
-  const moveWidget = useCallback((id: string, position: { x: number; y: number }) => {
-    updateWidget(id, { position })
-  }, [updateWidget])
-
-  // Resize widget
-  const resizeWidget = useCallback((id: string, size: { width: number; height: number }) => {
-    updateWidget(id, { size })
-  }, [updateWidget])
 
   // Save dashboard
-  const saveDashboard = useCallback(() => {
-    onSave?.(widgets)
-    triggerHaptic.success()
-  }, [widgets, onSave])
-
-  // Render widget based on type
-  const renderWidget = (widget: DashboardWidget) => {
-    const commonProps = {
-      key: widget.id,
-      className: `absolute border-2 transition-all ${
-        selectedWidget === widget.id 
-          ? 'border-blue-500 shadow-lg' 
-          : 'border-transparent hover:border-gray-300'
-      }`
+  const saveDashboard = useCallback(async () => {
+    if (!userId || !companyId || !dashboardName.trim()) {
+      alert('Please enter a dashboard name')
+      return
     }
 
-    switch (widget.type) {
-      case 'metric':
-        return (
-          <div {...commonProps}>
-            <MetricWidget
-              title={widget.title}
-              value={widget.data.value}
-              subtitle={widget.data.subtitle}
-            />
-          </div>
-        )
+    setIsSaving(true)
+    try {
+      const dashboardData = {
+        user_id: userId,
+        company_id: companyId,
+        name: dashboardName.trim(),
+        description: dashboardDescription.trim() || null,
+        card_ids: selectedCardIds,
+        layout_config: {},
+        is_default: selectedDashboard?.is_default || false
+      }
 
-      case 'trend':
-        return (
-          <div {...commonProps}>
-            <TrendWidget
-              title={widget.title}
-              value={widget.data.value}
-              change={widget.data.change}
-              changeLabel={widget.data.changeLabel}
-            />
-          </div>
-        )
+      if (selectedDashboard) {
+        // Update existing dashboard
+        const { error } = await supabase
+          .from('custom_dashboards' as any)
+          .update(dashboardData)
+          .eq('id', selectedDashboard.id)
 
-      case 'comparison':
-        return (
-          <div {...commonProps}>
-            <ComparisonWidget
-              title={widget.title}
-              current={widget.data.current}
-              previous={widget.data.previous}
-              currentLabel={widget.data.currentLabel}
-              previousLabel={widget.data.previousLabel}
-              unit={widget.data.unit}
-            />
-          </div>
-        )
+        if (error) throw error
+      } else {
+        // Create new dashboard
+        const { error } = await supabase
+          .from('custom_dashboards' as any)
+          .insert(dashboardData)
 
-      case 'progress':
-        return (
-          <div {...commonProps}>
-            <ProgressWidget
-              title={widget.title}
-              current={widget.data.current}
-              target={widget.data.target}
-              unit={widget.data.unit}
-            />
-          </div>
-        )
+        if (error) throw error
+      }
 
-      case 'chart':
-        return (
-          <div {...commonProps}>
-            <MobileOptimizedChart
-              data={widget.data.chartData || []}
-              title={widget.title}
-              type={widget.data.chartType || 'line'}
-              height={200}
-            />
-          </div>
-        )
+      // Reload dashboards
+      const { data } = await supabase
+        .from('custom_dashboards' as any)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
 
-      case 'grid':
-        return (
-          <div {...commonProps}>
-            <StatGridWidget
-              title={widget.title}
-              stats={widget.data.stats}
-              columns={widget.data.columns}
-            />
-          </div>
-        )
-
-      case 'alert':
-        return (
-          <div {...commonProps}>
-            <AlertWidget
-              title={widget.title}
-              message={widget.data.message}
-              severity={widget.data.severity}
-            />
-          </div>
-        )
-
-      default:
-        return null
+      setSavedDashboards((data || []) as unknown as SavedDashboard[])
+      // Reload the selected dashboard
+      const updated = (data || []).find((d: any) => 
+        selectedDashboard ? d.id === selectedDashboard.id : d.name === dashboardData.name
+      ) as SavedDashboard | undefined
+      if (updated) {
+        setSelectedDashboard(updated)
+      }
+      onSave?.(dashboardData)
+      alert('Dashboard saved successfully!')
+    } catch (error) {
+      console.error('Error saving dashboard:', error)
+      alert('Failed to save dashboard')
+    } finally {
+      setIsSaving(false)
     }
-    }
+  }, [userId, companyId, dashboardName, dashboardDescription, selectedCardIds, selectedDashboard, onSave])
 
+  // Load dashboard
+  const loadDashboard = useCallback((dashboard: SavedDashboard) => {
+    setSelectedDashboard(dashboard)
+    setSelectedCardIds(dashboard.card_ids || [])
+    setDashboardName(dashboard.name)
+    setDashboardDescription(dashboard.description || '')
+    setViewMode('viewer')
+  }, [])
+
+  // Delete dashboard
+  const deleteDashboard = useCallback(async (dashboardId: string) => {
+    if (!confirm('Are you sure you want to delete this dashboard?')) return
+
+    try {
+      const { error } = await supabase
+        .from('custom_dashboards' as any)
+        .delete()
+        .eq('id', dashboardId)
+
+      if (error) throw error
+
+      setSavedDashboards(prev => prev.filter(d => d.id !== dashboardId))
+      if (selectedDashboard?.id === dashboardId) {
+        setSelectedDashboard(null)
+        setSelectedCardIds([])
+        setDashboardName('')
+        setDashboardDescription('')
+      }
+    } catch (error) {
+      console.error('Error deleting dashboard:', error)
+      alert('Failed to delete dashboard')
+    }
+  }, [selectedDashboard])
+
+  // Create new dashboard
+  const createNewDashboard = useCallback(() => {
+    setSelectedDashboard(null)
+    setSelectedCardIds([])
+    setDashboardName('')
+    setDashboardDescription('')
+  }, [])
+
+  // Filter cards
+  const filteredCards = CARD_REGISTRY.filter(card => {
+    const matchesSearch = card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         card.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || card.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  const categories = ['all', ...getCategories()]
+
+  if (isLoading) {
     return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
+
+  // Show viewer if a dashboard is selected and in viewer mode
+  if (viewMode === 'viewer' && selectedDashboard) {
+    return (
+      <div className={`h-full flex flex-col ${className}`}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {selectedDashboard.name}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {selectedDashboard.description || 'Custom dashboard'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('builder')}
+              className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+              title="Edit Dashboard"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                className="p-2 bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                title="Close"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <CustomDashboardViewer
+            dashboardId={selectedDashboard.id}
+            eventId={eventId}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
     <div className={`h-full flex flex-col ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Dashboard Builder
-        </h2>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Custom Dashboard Builder
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Select cards to display on your custom dashboard
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsEditing(!isEditing)}
-            className={`p-2 rounded-lg transition-colors ${
-              isEditing 
-                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-            }`}
+            onClick={createNewDashboard}
+            className="p-2 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            title="New Dashboard"
           >
-            <PencilIcon className="h-5 w-5" />
+            <PlusIcon className="h-5 w-5" />
           </button>
           <button
             onClick={saveDashboard}
-            className="p-2 bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+            disabled={isSaving || !dashboardName.trim()}
+            className="p-2 bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Save Dashboard"
           >
-            <CheckIcon className="h-5 w-5" />
+            <ArrowDownTrayIcon className="h-5 w-5" />
           </button>
-          <button
-            onClick={onCancel}
-            className="p-2 bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Grid Background */}
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-            `,
-            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`
-          }}
-        />
-
-        {/* Widgets */}
-        <div className="relative w-full h-full">
-          {widgets.map(widget => (
-            <motion.div
-              key={widget.id}
-              className="absolute cursor-pointer"
-              style={{
-                left: widget.position.x * GRID_SIZE,
-                top: widget.position.y * GRID_SIZE,
-                width: widget.size.width * GRID_SIZE,
-                height: widget.size.height * GRID_SIZE
-              }}
-              onClick={() => setSelectedWidget(widget.id)}
-              drag={isEditing}
-              dragMomentum={false}
-              dragElastic={0}
-              onDragStart={() => setDraggedWidget(widget.id)}
-              onDragEnd={(_, info) => {
-                const newPosition = {
-                  x: Math.round(info.point.x / GRID_SIZE),
-                  y: Math.round(info.point.y / GRID_SIZE)
-                }
-                moveWidget(widget.id, newPosition)
-                setDraggedWidget(null)
-              }}
-              whileDrag={{ scale: 1.05, zIndex: 1000 }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="p-2 bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+              title="Cancel"
             >
-              {renderWidget(widget)}
-            </motion.div>
-          ))}
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          )}
         </div>
-
-        {/* Add Widget Button */}
-        <motion.button
-          onClick={() => setIsAddingWidget(true)}
-          className="absolute bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <PlusIcon className="h-6 w-6" />
-        </motion.button>
       </div>
 
-      {/* Widget Type Selector */}
-      <AnimatePresence>
-        {isAddingWidget && (
-          <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            className="absolute inset-x-0 bottom-0 border-t border-gray-200 dark:border-gray-700 p-4 card-depth"
-          >
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Add Widget
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {WIDGET_TYPES.map(widgetType => (
-                      <button
-                  key={widgetType.type}
-                  onClick={() => addWidget(widgetType.type as DashboardWidget['type'])}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <span className="text-2xl">{widgetType.icon}</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {widgetType.label}
-                  </span>
-                      </button>
-              ))}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - Card Selection */}
+        <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+          {/* Dashboard Info */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Dashboard Name *
+              </label>
+              <input
+                type="text"
+                value={dashboardName}
+                onChange={(e) => setDashboardName(e.target.value)}
+                placeholder="My Custom Dashboard"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
             </div>
-            <button
-              onClick={() => setIsAddingWidget(false)}
-              className="w-full mt-4 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Widget Properties Panel */}
-      {selectedWidget && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="absolute right-0 top-0 bottom-0 w-80 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto card-depth"
-        >
-          <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Widget Properties
-              </h3>
-            <button
-              onClick={() => deleteWidget(selectedWidget)}
-              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                value={dashboardDescription}
+                onChange={(e) => setDashboardDescription(e.target.value)}
+                placeholder="Optional description..."
+                rows={2}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
           </div>
 
-          {/* Widget Configuration */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Title
-                  </label>
-                  <input
-                    type="text"
-                value={widgets.find(w => w.id === selectedWidget)?.title || ''}
-                onChange={(e) => updateWidget(selectedWidget, { title: e.target.value })}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
+          {/* Search and Filter */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search cards..."
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat === 'all' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Position
-                  </label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="X"
-                  value={widgets.find(w => w.id === selectedWidget)?.position.x || 0}
-                  onChange={(e) => updateWidget(selectedWidget, { 
-                    position: { 
-                      ...widgets.find(w => w.id === selectedWidget)?.position || { x: 0, y: 0 },
-                      x: parseInt(e.target.value) || 0
-                    }
-                  })}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                    <input
-                  type="number"
-                  placeholder="Y"
-                  value={widgets.find(w => w.id === selectedWidget)?.position.y || 0}
-                  onChange={(e) => updateWidget(selectedWidget, { 
-                    position: { 
-                      ...widgets.find(w => w.id === selectedWidget)?.position || { x: 0, y: 0 },
-                      y: parseInt(e.target.value) || 0
-                    }
-                  })}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
+          {/* Card List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Available Cards ({filteredCards.length})
+            </div>
+            {filteredCards.map(card => {
+              const isSelected = selectedCardIds.includes(card.id)
+              return (
+                <motion.button
+                  key={card.id}
+                  onClick={() => toggleCard(card.id)}
+                  className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}>
+                      {isSelected && <CheckIcon className="h-4 w-4 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {card.icon && <span className="text-lg">{card.icon}</span>}
+                        <div className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                          {card.name}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                        {card.description}
+                      </div>
+                      <div className="mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                          {card.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right Side - Preview and Saved Dashboards */}
+        <div className="flex-1 flex flex-col">
+          {/* Selected Cards Count */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Selected: {selectedCardIds.length} card{selectedCardIds.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {/* Preview Area */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            {selectedCardIds.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                <div className="text-center">
+                  <FolderIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No cards selected</p>
+                  <p className="text-sm mt-1">Select cards from the left to build your dashboard</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedCardIds.map(cardId => {
+                  const card = getCardById(cardId)
+                  if (!card) return null
+                  
+                  return (
+                    <div
+                      key={cardId}
+                      className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {card.icon && <span>{card.icon}</span>}
+                        <div className="font-medium text-sm text-gray-900 dark:text-white">
+                          {card.name}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {card.description}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                        Preview will show here when viewing the dashboard
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Saved Dashboards */}
+          {savedDashboards.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Saved Dashboards
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {savedDashboards.map(dashboard => (
+                  <div
+                    key={dashboard.id}
+                    className={`flex items-center justify-between p-2 rounded-lg border ${
+                      selectedDashboard?.id === dashboard.id
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <button
+                      onClick={() => loadDashboard(dashboard)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="font-medium text-sm text-gray-900 dark:text-white">
+                        {dashboard.name}
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        {dashboard.card_ids.length} cards
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => deleteDashboard(dashboard.id)}
+                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Size
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Width"
-                  value={widgets.find(w => w.id === selectedWidget)?.size.width || 2}
-                  onChange={(e) => updateWidget(selectedWidget, { 
-                    size: { 
-                      ...widgets.find(w => w.id === selectedWidget)?.size || { width: 2, height: 2 },
-                      width: parseInt(e.target.value) || 2
-                    }
-                  })}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                <input
-                  type="number"
-                  placeholder="Height"
-                  value={widgets.find(w => w.id === selectedWidget)?.size.height || 2}
-                  onChange={(e) => updateWidget(selectedWidget, { 
-                    size: { 
-                      ...widgets.find(w => w.id === selectedWidget)?.size || { width: 2, height: 2 },
-                      height: parseInt(e.target.value) || 2
-                    }
-                  })}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-            </div>
-                </div>
-        </motion.div>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   )
-}
-
-// Generate sample data for widgets
-function generateSampleData(type: DashboardWidget['type']) {
-  switch (type) {
-    case 'metric':
-      return {
-        value: Math.floor(Math.random() * 100),
-        subtitle: 'Current value'
-      }
-
-    case 'trend':
-      return {
-        value: Math.floor(Math.random() * 50),
-        change: (Math.random() - 0.5) * 20,
-        changeLabel: 'vs last period'
-      }
-
-    case 'comparison':
-      return {
-        current: Math.floor(Math.random() * 100),
-        previous: Math.floor(Math.random() * 100),
-        currentLabel: 'Current',
-        previousLabel: 'Previous',
-        unit: ''
-      }
-
-    case 'progress':
-      return {
-        current: Math.floor(Math.random() * 100),
-        target: 100,
-        unit: '%'
-      }
-
-    case 'chart':
-      return {
-        chartType: 'line',
-        chartData: Array.from({ length: 12 }, (_, i) => ({
-          x: i,
-          y: Math.floor(Math.random() * 50) + 10,
-          label: `${i}:00`
-        }))
-      }
-
-    case 'grid':
-      return {
-        stats: [
-          { label: 'A', value: Math.floor(Math.random() * 100) },
-          { label: 'B', value: Math.floor(Math.random() * 100) },
-          { label: 'C', value: Math.floor(Math.random() * 100) },
-          { label: 'D', value: Math.floor(Math.random() * 100) }
-        ],
-        columns: 2
-      }
-
-    case 'alert':
-      return {
-        message: 'This is a sample alert message.',
-        severity: 'info'
-      }
-
-    default:
-      return {}
-  }
 }

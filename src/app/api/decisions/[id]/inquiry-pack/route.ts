@@ -35,7 +35,8 @@ export async function GET(
     const format = (searchParams.get('format') || 'json') as 'pdf' | 'json' | 'html'
     const includeEvidence = searchParams.get('include_evidence') !== 'false'
     const includeAnnotations = searchParams.get('include_annotations') !== 'false'
-    const eventId = searchParams.get('event_id') // If provided, generate pack for all decisions in event
+    const eventIdParam = searchParams.get('event_id') // If provided, generate pack for all decisions in event
+    const eventId = eventIdParam ? parseInt(eventIdParam, 10) : null
 
     // Verify company access
     const { data: profile } = await supabase
@@ -53,7 +54,7 @@ export async function GET(
 
     let decisions: any[] = []
 
-    if (eventId) {
+    if (eventId && !isNaN(eventId)) {
       // Get all decisions for the event
       const { data: eventDecisions, error: decisionsError } = await supabase
         .from('decisions')

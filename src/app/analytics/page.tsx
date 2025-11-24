@@ -32,6 +32,7 @@ import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
 import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
 import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
 import AIInsightsDashboard from '@/components/analytics/AIInsightsDashboard'
+import AIOperationalSummaryCard from '@/components/analytics/cards/ai-insights/AIOperationalSummaryCard'
 import ReadinessIndexCard from '@/components/analytics/ReadinessIndexCard'
 import ExportReportModal from '@/components/analytics/ExportReportModal'
 import RealtimeAlertBanner from '@/components/analytics/RealtimeAlertBanner'
@@ -1270,69 +1271,14 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
 
         {/* AI Summary Section */}
         {activeTab === 'ai-insights' && aiSummary && (
-          <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase">AI Insights</h2>
-            </div>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Operational Summary</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Key insights generated from the latest incident activity.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={generateAISummary}
-                disabled={isGeneratingSummary}
-                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                {isGeneratingSummary ? 'Generating…' : 'Refresh Insights'}
-              </button>
-            </div>
-            <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Operational Summary</h2>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-              <div 
-                className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
-                dangerouslySetInnerHTML={{ 
-                  __html: aiSummary
-                    // If the AI already returned HTML, use it as-is
-                    .includes('<div') ? aiSummary :
-                    // Otherwise convert markdown to HTML
-                    aiSummary
-                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
-                      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
-                      .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
-                      .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
-                      .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
-                      .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
-                      .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
-                      .replace(/\n\n/g, '<br><br>') // Convert double line breaks
-                      .replace(/\n/g, '<br>') // Convert single line breaks
-                }}
-              />
-            </div>
-            {incidentData.length > 0 && (
-              <div className="mt-3 flex gap-2 text-xs">
-                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                  {metrics.total} incidents
-                </span>
-                <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded">
-                  {metrics.highPriority} high priority
-                </span>
-              </div>
-            )}
-          </Card>
-          </section>
+          <AIOperationalSummaryCard
+            aiSummary={aiSummary}
+            onRefresh={generateAISummary}
+            isGenerating={isGeneratingSummary}
+            totalIncidents={metrics.total}
+            highPriorityIncidents={metrics.highPriority}
+            hasIncidents={incidentData.length > 0}
+          />
         )}
 
         {/* Recent Incidents Section */}

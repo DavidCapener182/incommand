@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
-    const eventId = searchParams.get('event_id')
+    const eventIdParam = searchParams.get('event_id')
+    const eventId = eventIdParam ? parseInt(eventIdParam, 10) : null
     const lockedOnly = searchParams.get('locked_only') === 'true'
     const roleLevel = searchParams.get('role_level')
     const from = searchParams.get('from')
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
       .eq('company_id', profile.company_id)
 
-    if (eventId) {
+    if (eventId && !isNaN(eventId)) {
       query = query.eq('event_id', eventId)
     }
 

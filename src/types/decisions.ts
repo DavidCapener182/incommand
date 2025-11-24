@@ -17,7 +17,7 @@ type AnnotationsTable = Tables extends { decision_annotations: infer T } ? T : n
 export type Decision = DecisionsTable extends never ? {
   id: string
   company_id: string
-  event_id: string
+  event_id: number
   trigger_issue: string
   options_considered: any
   information_available: any
@@ -93,7 +93,7 @@ export interface DecisionInformation {
 
 // API request/response types
 export interface DecisionCreateInput {
-  event_id: string
+  event_id: number
   trigger_issue: string
   options_considered: DecisionOption[]
   information_available: DecisionInformation
@@ -124,7 +124,7 @@ export interface DecisionUpdateInput {
 }
 
 export interface DecisionListQuery {
-  event_id?: string
+  event_id?: number
   locked_only?: boolean
   role_level?: string
   from?: string
@@ -184,7 +184,7 @@ export interface InquiryPackOptions {
   format: 'pdf' | 'json' | 'html'
   include_evidence?: boolean
   include_annotations?: boolean
-  event_id?: string
+  event_id?: number
 }
 
 // Role level type
