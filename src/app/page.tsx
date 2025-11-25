@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import MarketingNavigation from '@/components/MarketingNavigation'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
@@ -141,18 +140,8 @@ const partnerLogos = [
 ]
 
 export default async function HomePage() {
-  try {
-    const { user, role } = await getServerUser()
-    if (user) {
-      if (role === 'superadmin') {
-        redirect('/admin')
-      }
-      redirect('/incidents')
-    }
-  } catch (error) {
-    console.error('Error checking auth in HomePage:', error)
-  }
-
+  // Always show the landing page - don't redirect logged-in users
+  // They can navigate to other pages via the navigation if needed
   const plans = await loadPlans()
 
   return (
