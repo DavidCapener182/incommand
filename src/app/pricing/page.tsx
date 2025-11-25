@@ -71,7 +71,7 @@ const faqs = [
 export default async function PricingPage() {
   const plans = await loadPlans()
   return (
-    <div className="min-h-screen bg-[#F1F4F9] text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-[#F1F4F9] text-slate-900">
       <MarketingNavigation />
 
       <section className="relative w-full overflow-hidden">
