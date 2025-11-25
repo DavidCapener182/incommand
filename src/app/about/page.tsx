@@ -63,8 +63,8 @@ export default function AboutPage() {
       <Script id="ld-json-org-about" type="application/ld+json">
         {JSON.stringify(schemaMarkup.organization)}
       </Script>
-      
-      <div className="min-h-screen bg-[#F1F4F9] text-slate-900">
+
+      <div className="min-h-screen overflow-x-hidden bg-[#F1F4F9] text-slate-900">
         <MarketingNavigation />
 
       <section className="relative overflow-hidden">
