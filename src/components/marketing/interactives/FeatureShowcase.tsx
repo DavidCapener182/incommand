@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-// Removed next/image import to fix build error
 import { 
   Shield, AlertTriangle, Bell, Users, BarChart3, Lock, 
   MapPin, Activity, CheckCircle2, Wifi, TrendingUp, Map, FileCheck, Hash, MoreHorizontal, ChevronDown, Radio,
@@ -206,10 +206,13 @@ function MultiEventVisual() {
              {/* Background Image */}
              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
                {venue.image && (
-                 <img 
-                   src={venue.image} 
+                 <Image
+                   src={venue.image}
                    alt={venue.name}
-                   className="absolute inset-0 w-full h-full object-cover opacity-60"
+                   fill
+                   className="object-cover opacity-60"
+                   sizes="(min-width: 1024px) 50vw, 100vw"
+                   priority={i < 2}
                  />
                )}
              </div>
@@ -483,10 +486,12 @@ function StaffVisual() {
         <div className="flex-1 relative rounded-xl border border-slate-200 overflow-hidden shadow-inner bg-blue-50/30">
             {/* CAD Map Background - replaced next/image with img tag for compatibility */}
             <div className="absolute inset-0 pointer-events-none opacity-60 z-0">
-                <img 
-                  src="image_0.png"
+                <Image
+                  src="/image_0.png"
                   alt="Festival CAD Map"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
                 />
             </div>
 

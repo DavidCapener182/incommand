@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SparklesIcon, ShieldCheckIcon, ExclamationTriangleIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -82,7 +82,9 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     formData.actions_taken,
     formData.outcome, // Add outcome to dependencies
     formData.headline,
-    guidedActionsApplied // Add to dependencies
+    guidedActionsApplied,
+    analyzeIncidentQuality,
+    analyzing
   ]);
 
   // Detect when user adds information that addresses suggestions (even if not through modal)
@@ -190,7 +192,7 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     setLastFactsLength(factsLength);
   }, [formData.facts_observed, formData.actions_taken, formData.outcome, lastFactsLength]);
 
-  const analyzeIncidentQuality = async () => {
+  const analyzeIncidentQuality = useCallback(async () => {
     setAnalyzing(true);
 
     // Combine relevant text for context - include all three key fields
@@ -411,7 +413,19 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     } finally {
       setAnalyzing(false);
     }
-  };
+  }, [
+    formData.incident_type,
+    formData.priority,
+    formData.headline,
+    formData.facts_observed,
+    formData.occurrence,
+    formData.actions_taken,
+    formData.action_taken,
+    formData.outcome,
+    addressedKeywords,
+    dismissedHashes,
+    lastAnalysisHash,
+  ]);
 
   const handleApplySuggestions = () => {
     if (!analysis || !onUpdateFactsObserved) return;
@@ -688,4 +702,3 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
 };
 
 export default IncidentQualityCard;
-

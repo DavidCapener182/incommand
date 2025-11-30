@@ -515,7 +515,7 @@ const posts = [
         </p>
         <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-[#23408e] my-8">
           <h4 className="text-[#23408e] font-bold mb-2 mt-0">Key Takeaway</h4>
-          <p className="m-0 text-blue-900">Modern event management demands systems that can keep pace with complexity. Real-time logging isn't a luxury; it's a legal and operational necessity.</p>
+          <p className="m-0 text-blue-900">Modern event management demands systems that can keep pace with complexity. Real-time logging isn&apos;t a luxury; it&apos;s a legal and operational necessity.</p>
         </div>
         <h3>Essential Systems for Success</h3>
         <ul className="list-disc pl-5 space-y-2">

@@ -741,7 +741,7 @@ export default function CustomDashboardViewer({
     }
 
     return props
-  }, [incidentData, qualityMetrics, qualityTrend, topOperators, complianceMetrics, attendanceData, eventData, eventId, aiTrends, aiAnomalies, aiForecasts, aiPatterns, aiConfidence, aiChartData, readiness])
+  }, [incidentData, qualityMetrics, qualityTrend, topOperators, complianceMetrics, attendanceData, eventData, aiTrends, aiAnomalies, aiForecasts, aiPatterns, aiConfidence, aiChartData, readiness])
 
   if (loading) {
     return (
@@ -789,4 +789,3 @@ export default function CustomDashboardViewer({
     </div>
   )
 }
-

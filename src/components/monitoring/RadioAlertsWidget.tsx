@@ -190,7 +190,7 @@ export default function RadioAlertsWidget({
     } finally {
       setLoading(false)
     }
-  }, [eventId, dismissedAlerts])
+  }, [eventId, dismissedAlerts, maxAlerts])
 
   useEffect(() => {
     fetchAlerts()
@@ -373,4 +373,3 @@ export default function RadioAlertsWidget({
     </div>
   )
 }
-

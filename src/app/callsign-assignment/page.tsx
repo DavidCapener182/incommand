@@ -1122,21 +1122,11 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
   selectedCategory: number | null;
   onAdd: (categoryId: number, position: any) => void;
 }) {
-  // AddPositionModal formData type
-  type AddPositionFormData = {
-    callsign: string;
-    position: string;
-    categoryId: number;
-    required: boolean;
-    skills: string[];
-  };
-
-  const [formData, setFormData] = useState<AddPositionFormData>({
+  const [formData, setFormData] = useState({
     callsign: '',
     position: '',
-    categoryId: selectedCategory || categories[0]?.id || 1,
+    categoryId: selectedCategory ?? categories[0]?.id ?? 1,
     required: false,
-    skills: []
   });
 
   useEffect(() => {
@@ -1145,13 +1135,12 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
     }
   }, [selectedCategory]);
 
-  // In AddPositionModal, add an Amount field and callsign suggestion logic
-  const [amount, setAmount] = useState(1);
-
-  // Suggest next available callsign based on department and last used
-function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd }: any) {
-  const [formData, setFormData] = useState({ callsign: '', position: '', categoryId: selectedCategory || categories[0]?.id, required: false });
   if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAdd(Number(formData.categoryId), formData);
+  };
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1160,12 +1149,12 @@ function AddPositionModal({ isOpen, onClose, categories, selectedCategory, onAdd
           <h3 className="font-bold text-lg text-gray-900 dark:text-white">New Position</h3>
           <button onClick={onClose}><XMarkIcon className="h-5 w-5 text-gray-400" /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onAdd(Number(formData.categoryId), formData); }} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
             <select 
               value={formData.categoryId}
-              onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
+              onChange={e => setFormData({ ...formData, categoryId: Number(e.target.value) })}
               className="w-full rounded-lg border-gray-300 dark:border-[#2d437a] dark:bg-[#15192c] py-2"
             >
               {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1273,15 +1262,6 @@ function EditPositionModal({ isOpen, position, onClose, onSave }: {
 
 // --- STAFF LIST VIEW ---
 function StaffListView({ addToast }: { addToast: any }) {
-  // Simplified for brevity - reuse similar logic from original code but with improved UI/UX
-  return (
-    <div className="p-8 text-center text-gray-500">
-      <UsersIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">Staff Management</h2>
-      <p>Full staff CRUD operations are available here.</p>
-    </div>
-  );
-}
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentStaff, setCurrentStaff] = useState<StaffForm>({

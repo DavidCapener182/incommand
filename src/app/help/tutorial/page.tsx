@@ -341,7 +341,7 @@ export default function TutorialPage() {
               </div>
               <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3">Platform Tutorial</h1>
               <p className="text-blue-100 text-lg max-w-2xl">
-                A complete guided walkthrough of InCommand's features, workflows, and best practices.
+                A complete guided walkthrough of InCommand&apos;s features, workflows, and best practices.
               </p>
             </div>
             <Button variant="secondary" asChild size="lg" className="hidden md:flex shadow-xl">
@@ -447,7 +447,7 @@ export default function TutorialPage() {
                     <CheckCircleIcon className="w-4 h-4" /> Best Practice
                   </h4>
                   <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                    Keep filters minimal during peak operations. Use the "Critical Only" toggle when incident volume is high to focus on priority 1 issues.
+                    Keep filters minimal during peak operations. Use the &quot;Critical Only&quot; toggle when incident volume is high to focus on priority 1 issues.
                   </p>
                 </div>
                 <div className="bg-gray-50 dark:bg-[#1a2a57] p-4 rounded-xl border border-gray-100 dark:border-[#2d437a]">
@@ -499,14 +499,14 @@ export default function TutorialPage() {
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">Natural Language Logging</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
                     Instead of filling out complex forms, simply type or say: <br/>
-                    <span className="font-mono text-xs bg-gray-100 dark:bg-[#15192c] p-1 rounded">"Medical incident at Gate 4, male 40s chest pain, medic dispatched"</span>.
+                    <span className="font-mono text-xs bg-gray-100 dark:bg-[#15192c] p-1 rounded">&quot;Medical incident at Gate 4, male 40s chest pain, medic dispatched&quot;</span>.
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                     The AI will automatically:
                   </p>
                   <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mb-4 list-disc list-inside">
-                    <li>Categorize as "Medical"</li>
-                    <li>Set location to "Gate 4"</li>
+                    <li>Categorize as &quot;Medical&quot;</li>
+                    <li>Set location to &quot;Gate 4&quot;</li>
                     <li>Extract severity (High)</li>
                     <li>Parse details into structured fields</li>
                   </ul>

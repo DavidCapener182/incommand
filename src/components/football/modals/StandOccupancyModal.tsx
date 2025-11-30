@@ -108,7 +108,7 @@ function StandOccupancyCurrent({ onSave }: { onSave?: () => void }) {
     } finally {
       setLoading(false)
     }
-  }, [eventId, computeHorizonMinutes])
+  }, [eventId, computeHorizonMinutes, kickoffTime])
 
   const loadThresholds = useCallback(async (ctx: { companyId: string; eventId: string }) => {
     try {
