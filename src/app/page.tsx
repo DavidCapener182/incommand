@@ -1,131 +1,28 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import MarketingNavigation from '@/components/MarketingNavigation'
 import { MarketingFooter } from '@/components/marketing/MarketingFooter'
 import { FadeIn } from '@/components/marketing/Motion'
 import FeatureShowcase from '@/components/marketing/interactives/FeatureShowcase'
 import HeroSection from '@/components/marketing/HeroSection'
-import type { PricingPlan } from '@/components/marketing/interactives/PricingPlans'
 import { PricingShowcase } from '@/components/marketing/PricingShowcase'
 import { Testimonials } from '@/components/marketing/Testimonials'
 import { FAQSection } from '@/components/marketing/FAQ'
 import { ContactCTA } from '@/components/marketing/ContactCTA'
 import { HowItWorks } from '@/components/marketing/HowItWorks'
-import { PRICING_PLANS, type Plan, type PlanCode } from '@/config/PricingConfig'
 import { pageMetadata } from '@/config/seo.config'
 import LogoLoop from '@/components/LogoLoop'
-import HeroCards from '@/components/marketing/HeroCards'
 import { SiReact, SiNextdotjs, SiTypescript, SiTailwindcss, SiCloudflare, SiSupabase, SiDatadog } from 'react-icons/si'
-import {
-  ShieldCheckIcon,
-  LightBulbIcon,
-  CheckCircleIcon,
-  UsersIcon,
-  SparklesIcon,
-  DevicePhoneMobileIcon
-} from '@heroicons/react/24/outline'
+import { loadPlans } from '@/lib/pricing/loadPlans'
+import { MobileBanner } from '@/components/marketing/MobileBanner'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
+// Use ISR instead of force-dynamic for better performance
+// Page will be statically generated and revalidated every hour
+export const revalidate = 3600 // 1 hour
 
 export const metadata: Metadata = {
   ...pageMetadata.home,
   alternates: { canonical: '/' },
-}
-
-// ... [Pricing Config Logic] ...
-const PLAN_ORDER: PlanCode[] = ['starter', 'operational', 'command', 'enterprise']
-const PLAN_NOTES: Record<PlanCode, string> = {
-  starter: 'Built for smaller teams just getting started.',
-  operational: 'Our most popular plan for growing venues.',
-  command: 'Advanced control and AI insights for complex operations.',
-  enterprise: 'Includes dedicated onboarding, custom SLAs, and private deployment options.',
-}
-
-function buildPricingPlan(
-  plan: Plan,
-  options: {
-    monthlyPrice?: number | null
-    annualPrice?: number | null
-    currency?: string
-    features?: string[]
-  } = {}
-): PricingPlan {
-  // Use provided option, or fallback to plan default, or null
-  const monthlyPrice = options.monthlyPrice ?? (typeof plan.pricing.monthly === 'number' ? plan.pricing.monthly : null)
-  const annualPrice = options.annualPrice ?? (typeof plan.pricing.annual === 'number' ? plan.pricing.annual : null)
-  
-  const currency = options.currency ?? plan.pricing.currency
-  const features = options.features ?? plan.features.features
-  const isCustom = monthlyPrice === null
-
-  return {
-    name: plan.displayName,
-    description: plan.metadata.description ?? '',
-    features,
-    cta: isCustom ? 'Talk to Sales' : 'Get Started',
-    ctaLink: isCustom
-      ? 'mailto:support@incommand.uk?subject=InCommand%20Enterprise%20Pricing'
-      : `/signup?plan=${plan.code}`,
-    note: PLAN_NOTES[plan.code],
-    monthlyPrice,
-    annualPrice,
-    currency,
-    isCustom,
-  }
-}
-
-async function loadPlans(): Promise<PricingPlan[]> {
-  const normalizedBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
-
-  if (normalizedBase) {
-    try {
-      const baseUrl = normalizedBase.startsWith('http') ? normalizedBase : `https://${normalizedBase}`
-      // Remove trailing slash to prevent double slashes
-      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/billing/plans`, {
-        cache: 'no-store',
-        next: { revalidate: 0 },
-      })
-
-      if (res.ok) {
-        const json = await res.json()
-        const planMap = new Map<string, any>((json.plans ?? []).map((p: any) => [p.code, p]))
-
-        const apiPlans = PLAN_ORDER.map((code) => {
-          const configPlan = PRICING_PLANS[code]
-          if (!configPlan) return null
-          
-          const apiPlan = planMap.get(code)
-
-          const monthlyPrice = typeof apiPlan?.price_monthly === 'number'
-              ? apiPlan.price_monthly
-              : (typeof configPlan.pricing.monthly === 'number' ? configPlan.pricing.monthly : null)
-
-          const annualPrice = typeof apiPlan?.price_annual === 'number'
-              ? apiPlan.price_annual
-              : (typeof configPlan.pricing.annual === 'number' ? configPlan.pricing.annual : null)
-
-          const currency = apiPlan?.currency ?? configPlan.pricing.currency
-          
-          const features = Array.isArray(apiPlan?.metadata?.features)
-            ? apiPlan.metadata.features
-            : configPlan.features.features
-
-          return buildPricingPlan(configPlan, { monthlyPrice, annualPrice, currency, features })
-        }).filter((plan): plan is PricingPlan => Boolean(plan))
-
-        if (apiPlans.length > 0) {
-          return apiPlans
-        }
-      }
-    } catch (error) {
-      console.error('Error loading plans:', error)
-      // Fallthrough to default plans on error
-    }
-  }
-
-  // Fallback to static config if API fails or no URL provided
-  return PLAN_ORDER.map((code) => buildPricingPlan(PRICING_PLANS[code]))
 }
 
 const partnerLogos = [
@@ -144,7 +41,7 @@ export default async function HomePage() {
   const plans = await loadPlans()
 
   return (
-    // Added pb-24 for mobile to account for the fixed banner overlapping content at the bottom
+    // Added pb-24 for mobile to account for the dismissible banner overlapping content at the bottom
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-200 pb-24 sm:pb-0">
       <MarketingNavigation />
 
@@ -228,21 +125,7 @@ export default async function HomePage() {
 
       <ContactCTA />
 
-      {/* Mobile-Only Recommendation Banner */}
-      {/* Changed to fixed so it floats above content, and added pb-24 to main wrapper to compensate */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-blue-200 bg-blue-50/95 backdrop-blur px-6 py-4 shadow-lg">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 pt-1">
-             <DevicePhoneMobileIcon className="h-5 w-5 text-blue-600" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-blue-900">Desktop Recommended</p>
-            <p className="text-xs text-blue-700 mt-1">
-              We&apos;re building a mobile app. For now, please use InCommand on a desktop for the best experience.
-            </p>
-          </div>
-        </div>
-      </div>
+      <MobileBanner />
 
       <MarketingFooter />
     </div>

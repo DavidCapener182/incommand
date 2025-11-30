@@ -385,6 +385,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearCachedRole(user.id)
         clearSessionStartTimestamp(user.id)
       }
+      // Clear login loading screen flag so it shows again on next login
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.removeItem('loginLoadingScreenShown')
+      }
       const redirectTarget = options?.redirectTo || (options?.reason ? `/login?reason=${options.reason}` : '/login')
       await supabase.auth.signOut()
       // Use window.location.href for immediate redirect to avoid route protection conflicts

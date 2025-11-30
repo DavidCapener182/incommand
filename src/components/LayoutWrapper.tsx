@@ -21,6 +21,7 @@ import PWAUpdateNotification from './PWAUpdateNotification'
 import PWASplashScreen from './PWASplashScreen'
 import FloatingActionButton from './FloatingActionButton'
 import { FooterSimple } from './FooterSimple'
+import LoginLoadingScreen from './LoginLoadingScreen'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -225,6 +226,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <OfflineIndicator />
           <PWAUpdateNotification />
           <PWASplashScreen />
+          
+          {/* Login Loading Screen */}
+          <LoginLoadingScreen />
         </>
       </EscalationToastProvider>
     </IncidentSummaryProvider>

@@ -323,13 +323,44 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
             {/* Logo - Left side */}
             <div className="flex items-center flex-shrink-0">
               <Link href="/incidents" className="flex items-center" data-tour="dashboard">
-                <Image
-                  src="/inCommand.png"
-                  alt="inCommand Logo"
-                  width={150}
-                  height={40}
-                  priority
-                />
+                <div 
+                  className="flex items-center h-10" 
+                  style={{ 
+                    width: '150px',
+                    fontSize: '24px',
+                    fontFamily: "'Montserrat', sans-serif"
+                  }}
+                >
+                  <svg 
+                    className="flex-shrink-0" 
+                    viewBox="0 0 100 100" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: '1em', height: '1em' }}
+                  >
+                    <circle 
+                      cx="50" 
+                      cy="50" 
+                      r="45" 
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                    />
+                    <path 
+                      d="M20 55 L45 75 L85 20" 
+                      fill="none"
+                      stroke="#ed1c24"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <div 
+                    className="text-white font-bold whitespace-nowrap leading-none pl-2"
+                  >
+                    InCommand
+                  </div>
+                </div>
               </Link>
             </div>
             
@@ -338,15 +369,22 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               {/* Desktop Nav */}
               {!minimal && (
                 <div className="hidden xl:flex xl:items-center">
-                  <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
-                    <NavigationMenuList className="gap-8">
-                      <NavigationMenuItem>
-                        <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                  <div className="flex items-center gap-8">
+                    <a 
+                      href="/incidents" 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/incidents'
+                      }}
+                      className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                    >
                           Incidents
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
                       
                       {/* Reports Dropdown */}
+                    <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                      <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger 
                           className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
@@ -380,46 +418,66 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
+                    </NavigationMenuList>
+                  </NavigationMenu>
 
-                      <NavigationMenuItem>
-                        <Link 
+                    <a 
                           href="/staffing" 
-                          className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/staffing'
+                      }}
+                      className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
                           Staff
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
 
-                      <NavigationMenuItem>
-                        <Link 
+                    <a 
                           href="/tasks" 
-                          className={`${isActive('/tasks')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                           onClick={(e) => {
-                            if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
                               e.preventDefault()
+                        e.stopPropagation()
+                        if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
                               setShowNoEventModal(true)
+                          return
                             }
+                        window.location.href = '/tasks'
                           }}
+                      className={`${isActive('/tasks')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
                           Tasks
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
 
-                      <NavigationMenuItem>
-                        <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                    <a 
+                      href="/help"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/help'
+                      }}
+                      className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                    >
                           Help
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
 
                       {canAccessAdminFeatures && (
-                        <NavigationMenuItem>
-                          <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                      <a 
+                        href="/settings"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.location.href = '/settings'
+                        }}
+                        className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      >
                             Settings
-                          </Link>
-                        </NavigationMenuItem>
+                      </a>
                       )}
 
                       {/* More Dropdown */}
+                    <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                      <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger
                           className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
@@ -479,17 +537,24 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
+                      </NavigationMenuList>
+                    </NavigationMenu>
 
                       {/* Admin Button - only show for admin users */}
                       {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-                        <NavigationMenuItem>
-                          <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans`}>
+                      <a 
+                        href="/admin"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.location.href = '/admin'
+                        }}
+                        className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      >
                             Admin
-                          </Link>
-                        </NavigationMenuItem>
+                      </a>
                       )}
-                    </NavigationMenuList>
-                  </NavigationMenu>
+                  </div>
                 </div>
               )}
 

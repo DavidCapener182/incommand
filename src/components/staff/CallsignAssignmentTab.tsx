@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { 
@@ -11,7 +12,9 @@ import {
   UserGroupIcon,
   MagnifyingGlassIcon,
   BuildingOfficeIcon,
-  PencilIcon
+  PencilIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/outline'
 
 interface StaffMember {
@@ -101,6 +104,9 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
     required_skills: [] as string[]
   })
   const [loading, setLoading] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+  const dropdownRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Load positions from database or create default ones
   const loadPositions = useCallback(async () => {
@@ -169,6 +175,47 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
   useEffect(() => {
     loadPositions()
   }, [eventId, loadPositions])
+
+  // Update dropdown position when opened, scrolled, or resized
+  useEffect(() => {
+    const updatePosition = () => {
+      if (openDropdown && dropdownRefs.current[openDropdown]) {
+        const buttonElement = dropdownRefs.current[openDropdown]
+        if (buttonElement) {
+          const rect = buttonElement.getBoundingClientRect()
+          setDropdownPosition({
+            top: rect.bottom + 4, // Fixed positioning is relative to viewport
+            left: rect.left,
+            width: rect.width
+          })
+        }
+      }
+    }
+
+    if (openDropdown) {
+      updatePosition()
+      window.addEventListener('scroll', updatePosition, true)
+      window.addEventListener('resize', updatePosition)
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true)
+        window.removeEventListener('resize', updatePosition)
+      }
+    } else {
+      setDropdownPosition(null)
+    }
+  }, [openDropdown])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
+        setOpenDropdown(null)
+        setDropdownPosition(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openDropdown])
 
   const assignStaffToPosition = async (positionId: string, staffId: string) => {
     const staffMember = staff.find(s => s.id === staffId)
@@ -563,7 +610,7 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
           return acc
         }, {} as Record<string, Position[]>)
       ).map(([department, deptPositions]) => (
-        <section key={department} className="card-depth p-6 space-y-6">
+        <section key={department} className="card-depth p-6 space-y-6 overflow-visible">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-3 w-1 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
@@ -576,97 +623,118 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {deptPositions.map(position => (
-              <div
-                key={position.id}
-                className={`card-depth hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 p-4 sm:p-5 ${
-                  position.assigned_staff_id 
-                    ? 'border-green-500/50 bg-green-50/80 dark:bg-green-900/20' 
-                    : ''
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase">{position.callsign}</p>
-                    <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">{position.position}</h4>
-                  </div>
-                  <div className="flex gap-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-visible">
+            {deptPositions.map(position => {
+              const suggestions = getStaffSuggestions(position)
+              const isDropdownOpen = openDropdown === position.id
+              
+              return (
+                <div
+                  key={position.id}
+                  className={`relative group p-4 rounded-lg transition-all duration-200 bg-white dark:bg-[#1a2a57] shadow-sm w-full overflow-visible ${
+                    position.assigned_staff_id 
+                      ? 'border-l-4 border-l-green-500 border border-gray-200 dark:border-[#2d437a]' 
+                      : 'border-2 border-dashed border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  {/* Edit/Delete Actions - Top Right */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <button
                       onClick={() => openEditModal(position)}
-                      className="text-blue-600 hover:bg-blue-50 p-1 rounded"
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                       title="Edit position"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => deletePosition(position.id)}
-                      className="text-red-600 hover:bg-red-50 p-1 rounded"
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                       title="Delete position"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
 
-                {position.assigned_staff_id ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <CheckIcon className="h-4 w-4 text-green-600 mr-2" />
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                        {position.assigned_staff_name}
-                      </span>
+                  {/* Callsign and Position Title */}
+                  <div className="mb-4 pr-12">
+                    <div className="font-mono text-sm font-bold text-gray-900 dark:text-white mb-1">
+                      {position.callsign}
                     </div>
-                    <button
-                      onClick={() => unassignStaffFromPosition(position.id)}
-                      className="text-xs text-red-600 hover:text-red-800 dark:hover:text-red-400 font-medium"
-                    >
-                      Unassign
-                    </button>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      {position.position}
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Available for assignment</p>
-                    <button
-                      onClick={() => openAssignStaffModal(position)}
-                      className="w-full text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                    >
-                      Assign Staff
-                    </button>
-                    {getStaffSuggestions(position).length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Suggested staff:</p>
-                        {getStaffSuggestions(position).slice(0, 3).map(staffMember => (
-                          <button
-                            key={staffMember.id}
-                            onClick={() => assignStaffToPosition(position.id, staffMember.id)}
-                            className="block w-full text-left text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                          >
-                            {staffMember.name}
-                          </button>
-                        ))}
+
+                  {/* Assignment Section */}
+                  {position.assigned_staff_id ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                        <span className="text-green-600 font-bold">✓</span>
+                        <span className="font-medium">{position.assigned_staff_name}</span>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                      <button
+                        onClick={() => unassignStaffFromPosition(position.id)}
+                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                      >
+                        Unassign
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative dropdown-container">
+                      <button
+                        ref={(el) => {
+                          dropdownRefs.current[position.id] = el
+                        }}
+                        onClick={() => {
+                          if (suggestions.length === 1) {
+                            assignStaffToPosition(position.id, suggestions[0].id)
+                          } else {
+                            setOpenDropdown(isDropdownOpen ? null : position.id)
+                          }
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a2a57] text-left text-sm text-gray-700 dark:text-gray-300 hover:border-blue-500 dark:hover:border-blue-500 transition-colors"
+                      >
+                        <span className="text-gray-500 dark:text-gray-400">Select staff...</span>
+                        {isDropdownOpen ? (
+                          <ChevronUpIcon className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            
+            {/* Add Position Button */}
+            <button
+              onClick={() => {
+                setNewPosition({
+                  callsign: '',
+                  position: '',
+                  department: department,
+                  required_skills: []
+                })
+                setShowAddPositionModal(true)
+              }}
+              className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all bg-white dark:bg-[#1a2a57]"
+            >
+              <PlusIcon className="h-6 w-6" />
+              <span className="text-sm font-medium">Add Position</span>
+            </button>
           </div>
         </section>
       ))}
 
       {/* Add Position Modal */}
-      {showAddPositionModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50"
-              onClick={() => setShowAddPositionModal(false)}
-            />
-            
-            <div
-              className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
-            >
+      {showAddPositionModal && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowAddPositionModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto z-10">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Position</h3>
                   <button
@@ -736,21 +804,19 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                     Add Position
                   </button>
                 </div>
-            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Position Modal */}
-      {showEditPositionModal && selectedPosition && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50"
-              onClick={() => setShowEditPositionModal(false)}
-            />
-            
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      {showEditPositionModal && selectedPosition && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowEditPositionModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto z-10">
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Position</h3>
                 <button
@@ -820,21 +886,19 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                   Save Changes
                 </button>
               </div>
-            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Assign Staff Modal */}
-      {showAssignStaffModal && selectedPosition && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50"
-              onClick={() => setShowAssignStaffModal(false)}
-            />
-            
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      {showAssignStaffModal && selectedPosition && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowAssignStaffModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto z-10">
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Assign Staff to {selectedPosition.callsign}
@@ -895,10 +959,44 @@ export default function CallsignAssignmentTab({ staff, onStaffUpdate, eventId }:
                   Cancel
                 </button>
               </div>
-            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* Portal-rendered dropdown to prevent clipping */}
+      {openDropdown && dropdownPosition && (() => {
+        const position = positions.find(p => p.id === openDropdown)
+        if (!position) return null
+        const suggestions = getStaffSuggestions(position)
+        if (suggestions.length === 0) return null
+        
+        return typeof window !== 'undefined' && createPortal(
+          <div
+            className="fixed z-[9999] bg-white dark:bg-[#1a2a57] border border-gray-200 dark:border-[#2d437a] rounded-lg shadow-xl max-h-48 overflow-y-auto"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`
+            }}
+          >
+            {suggestions.map(staffMember => (
+              <button
+                key={staffMember.id}
+                onClick={() => {
+                  assignStaffToPosition(openDropdown, staffMember.id)
+                  setOpenDropdown(null)
+                  setDropdownPosition(null)
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#15192c] rounded text-sm text-gray-700 dark:text-gray-300 transition-colors"
+              >
+                {staffMember.name}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )
+      })()}
     </div>
   )
 }

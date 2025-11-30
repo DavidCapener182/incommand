@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion"
-import Image from 'next/image'
 import React from 'react'
 
 interface FooterSimpleProps {
@@ -273,30 +272,44 @@ export function FooterSimple({
 }
 
 function FooterBrandLogo({ companyName }: { companyName: string }) {
-  const [error, setError] = React.useState(false)
-  const [secondaryTried, setSecondaryTried] = React.useState(false)
   return (
     <div className="mb-4">
-      {!error ? (
-        <Image
-          // Prefer the user-provided blue logo first
-          src={secondaryTried ? "/brand/logo-dark.png" : "/InCommandBlue.PNG"}
-          alt={companyName}
-          width={600}
-          height={133}
-          className="block h-10 md:h-12 w-auto"
-          priority
-          onError={() => {
-            if (!secondaryTried) {
-              setSecondaryTried(true)
-            } else {
-              setError(true)
-            }
-          }}
-        />
-      ) : (
-        <h3 className="text-foreground text-2xl font-bold">{companyName}</h3>
-      )}
+      <div 
+        className="flex items-center justify-center text-2xl md:text-3xl"
+        style={{ 
+          fontFamily: "'Montserrat', sans-serif"
+        }}
+      >
+        <svg 
+          className="flex-shrink-0" 
+          viewBox="0 0 100 100" 
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ width: '1em', height: '1em' }}
+        >
+          <circle 
+            cx="50" 
+            cy="50" 
+            r="45" 
+            fill="none"
+            stroke="black"
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+          <path 
+            d="M20 55 L45 75 L85 20" 
+            fill="none"
+            stroke="#ed1c24"
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <div 
+          className="text-black font-bold whitespace-nowrap leading-none pl-2"
+        >
+          InCommand
+        </div>
+      </div>
     </div>
   )
 }

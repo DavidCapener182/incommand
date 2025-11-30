@@ -42,43 +42,108 @@ export default function StaffPerformanceDashboard({
   className = '' 
 }: StaffPerformanceDashboardProps) {
   const [performances, setPerformances] = useState<StaffPerformance[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStaff, setSelectedStaff] = useState<StaffPerformance | null>(null)
 
   const fetchPerformanceData = useCallback(async () => {
+    if (!eventId) {
+      setLoading(false)
+      setError('No event ID provided')
+      setPerformances([])
+      return
+    }
+    
     setLoading(true)
     setError(null)
     
     try {
       console.log('Fetching performance data for event:', eventId)
-      const response = await fetch(`/api/v1/events/${eventId}/staff-performance`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
       
-      console.log('Performance API response status:', response.status)
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Performance API error:', errorData)
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch performance data`)
+      try {
+        const response = await fetch(`/api/v1/events/${eventId}/staff-performance`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
+        console.log('Performance API response status:', response.status)
+        
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error')
+          console.error('Performance API error response:', errorText)
+          let errorData = {}
+          try {
+            errorData = JSON.parse(errorText)
+          } catch {
+            // Not JSON, use text as error message
+          }
+          throw new Error(errorData.error || errorText || `HTTP ${response.status}: Failed to fetch performance data`)
+        }
+        
+        const data = await response.json()
+        console.log('Performance data received:', data)
+        setPerformances(data.performances || data || [])
+      } catch (fetchErr) {
+        clearTimeout(timeoutId)
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          throw new Error('Request timed out after 30 seconds')
+        }
+        throw fetchErr
       }
-      
-      const data = await response.json()
-      console.log('Performance data received:', data)
-      setPerformances(data.performances || [])
     } catch (err) {
       console.error('Performance fetch error:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      const errorMessage = err instanceof Error 
+        ? (err.message.includes('Load failed') 
+            ? 'Network error: Unable to connect to server. Please check if the server is running.' 
+            : err.message)
+        : 'Unknown error'
+      setError(errorMessage)
+      setPerformances([]) // Set empty array on error so we don't stay in loading state
     } finally {
       setLoading(false)
     }
   }, [eventId])
 
   useEffect(() => {
-    if (eventId) {
-      fetchPerformanceData()
+    // Ensure we're in the browser
+    if (typeof window === 'undefined') {
+      return
+    }
+    
+    console.log('StaffPerformanceDashboard: useEffect triggered, eventId:', eventId)
+    let isMounted = true
+    
+    // Small delay to ensure page is fully loaded
+    const timeoutId = setTimeout(() => {
+      if (eventId) {
+        fetchPerformanceData().catch(err => {
+          console.error('StaffPerformanceDashboard: fetchPerformanceData promise rejection:', err)
+          if (isMounted) {
+            setLoading(false)
+            setError('Failed to load performance data')
+            setPerformances([])
+          }
+        })
+      } else {
+        console.log('StaffPerformanceDashboard: No eventId, setting loading to false')
+        if (isMounted) {
+          setLoading(false)
+          setError('No event ID provided')
+          setPerformances([])
+        }
+      }
+    }, 100)
+    
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
     }
   }, [eventId, fetchPerformanceData])
 
