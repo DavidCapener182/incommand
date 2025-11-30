@@ -22,6 +22,7 @@ interface IncidentQualityCardProps {
   formData: IncidentFormData;
   onApplySuggestion?: (field: string, value: string) => void;
   onUpdateFactsObserved?: (updatedText: string) => void;
+  guidedActionsApplied?: boolean;
 }
 
 interface AnalysisResult {
@@ -45,47 +46,6 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
   const [dismissedHashes, setDismissedHashes] = useState<Set<string>>(new Set());
   const [addressedKeywords, setAddressedKeywords] = useState<Set<string>>(new Set());
   const [lastFactsLength, setLastFactsLength] = useState<number>(0);
-
-  // Debounced analysis to avoid API spam
-  // Don't start audit until guided actions are applied (if applicable)
-  useEffect(() => {
-    // If guided actions haven't been applied yet, don't run the audit
-    if (!guidedActionsApplied) {
-      return;
-    }
-
-    // Check if there's content in any of the key fields
-    const hasContent = 
-      (formData.occurrence?.length > 10 || 
-       formData.facts_observed?.length > 10 || 
-       formData.actions_taken?.length > 10 ||
-       formData.outcome?.length > 10) &&
-      formData.incident_type;
-
-    if (!hasContent) {
-      setAnalysis(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (!analyzing) {
-        analyzeIncidentQuality();
-      }
-    }, 2000); // 2s debounce
-
-    return () => clearTimeout(timer);
-  }, [
-    formData.occurrence, 
-    formData.facts_observed, 
-    formData.incident_type, 
-    formData.priority,
-    formData.actions_taken,
-    formData.outcome, // Add outcome to dependencies
-    formData.headline,
-    guidedActionsApplied,
-    analyzeIncidentQuality,
-    analyzing
-  ]);
 
   // Detect when user adds information that addresses suggestions (even if not through modal)
   // Check all three fields: facts_observed, actions_taken, and outcome
@@ -425,6 +385,45 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     addressedKeywords,
     dismissedHashes,
     lastAnalysisHash,
+  ]);
+
+  // Debounced analysis to avoid API spam
+  // Don't start audit until guided actions are applied (if applicable)
+  useEffect(() => {
+    if (!guidedActionsApplied) {
+      return;
+    }
+
+    const hasContent = 
+      ((formData.occurrence?.length ?? 0) > 10 || 
+       (formData.facts_observed?.length ?? 0) > 10 || 
+       (formData.actions_taken?.length ?? 0) > 10 ||
+       (formData.outcome?.length ?? 0) > 10) &&
+      formData.incident_type;
+
+    if (!hasContent) {
+      setAnalysis(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (!analyzing) {
+        analyzeIncidentQuality();
+      }
+    }, 2000); // 2s debounce
+
+    return () => clearTimeout(timer);
+  }, [
+    formData.occurrence, 
+    formData.facts_observed, 
+    formData.incident_type, 
+    formData.priority,
+    formData.actions_taken,
+    formData.outcome,
+    formData.headline,
+    guidedActionsApplied,
+    analyzeIncidentQuality,
+    analyzing
   ]);
 
   const handleApplySuggestions = () => {

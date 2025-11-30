@@ -78,7 +78,7 @@ export default function StaffPerformanceDashboard({
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error')
           console.error('Performance API error response:', errorText)
-          let errorData = {}
+          let errorData: { error?: string } = {}
           try {
             errorData = JSON.parse(errorText)
           } catch {

@@ -11,13 +11,6 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import OfflineIndicator from '../components/OfflineIndicator'
 import { defaultMetadata } from '../config/seo.config'
-import { Montserrat } from 'next/font/google'
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['700'],
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   ...defaultMetadata,
@@ -66,7 +59,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.supabase.co" />
         <link rel="dns-prefetch" href="https://api.supabase.co" />
       </head>
-      <body className={`${montserrat.className} bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 transition-colors duration-300`}>
+      <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 transition-colors duration-300"}>
         {/* Skip to content link */}
         <a
           href="#main"
