@@ -51,7 +51,8 @@ import {
   PlusSmallIcon,
   DocumentPlusIcon,
   CalendarDaysIcon,
-  LockClosedIcon
+  LockClosedIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline'
 import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
 import { EntryType } from '@/types/auditableLog'
@@ -71,6 +72,15 @@ import SOPModal from './SOPModal'
 import { detectMatchFlowType, isMatchFlowType, type MatchFlowType } from '@/utils/matchFlowParser'
 import type { User } from '@supabase/supabase-js'
 import type { Event } from '@/types/shared'
+// Import card components from separate files
+import IncidentCreationModalHeader from './incidents/cards/IncidentCreationModalHeader'
+import CallsignInformationCard from './incidents/cards/CallsignInformationCard'
+import IncidentConfigurationCard from './incidents/cards/IncidentConfigurationCard'
+import DetailedInformationCard from './incidents/cards/DetailedInformationCard'
+import GreenGuideBestPracticesCard from './incidents/cards/GreenGuideBestPracticesCard'
+import LocationAndActionsCard from './incidents/cards/LocationAndActionsCard'
+import AdditionalOptionsCard from './incidents/cards/AdditionalOptionsCard'
+import IncidentQualityCard from './incidents/cards/IncidentQualityCard'
 
 interface Props {
   isOpen: boolean
@@ -1971,1007 +1981,7 @@ function saveUsageCounts(counts: Record<string, number>) {
   } catch {}
 }
 
-// --- INLINED CARD COMPONENTS ---
-
-// IncidentCreationModalHeader Component
-function IncidentCreationModalHeader({
-  events,
-  selectedEventId,
-  eventsLoading,
-  currentEventFallback,
-  user,
-  onIncidentCreated,
-  onClose,
-  onResetForm,
-}: {
-  events: Event[]
-  selectedEventId: string | null
-  eventsLoading: boolean
-  currentEventFallback: Event | null
-  user: User | null
-  onIncidentCreated: () => Promise<void>
-  onClose: () => void
-  onResetForm: () => void
-}) {
-  const eventName = (() => {
-    const chosen = events.find(e => e.id === selectedEventId)
-      || events.find(e => e.is_current)
-      || currentEventFallback
-      || events[0];
-    if (chosen?.event_name) return chosen.event_name;
-    return eventsLoading ? 'Loading...' : 'No events available';
-  })()
-
-  return (
-    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-bold text-slate-900 tracking-tight">New Incident</h1>
-        <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-        <div className="hidden sm:flex items-center gap-2 text-xs">
-          <span className="text-slate-500 font-medium">Event:</span>
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 text-slate-700 font-semibold shadow-sm">
-            <CalendarDaysIcon className="h-3.5 w-3.5 text-slate-400" />
-            <span className="truncate max-w-[200px]">{eventName}</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="hidden md:block">
-          <QuickTabs
-            eventId={selectedEventId || ''}
-            onIncidentLogged={async () => {
-              await onIncidentCreated();
-            }}
-            currentUser={user}
-          />
-        </div>
-        <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
-        <button
-          onClick={() => {
-            onResetForm()
-            onClose()
-          }}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors duration-200"
-          aria-label="Close modal"
-        >
-          <XMarkIcon className="h-5 w-5" strokeWidth={2.5} />
-        </button>
-      </div>
-    </header>
-  )
-}
-
-// CallsignInformationCard Component
-function CallsignInformationCard({
-  callsignFrom,
-  callsignTo,
-  onCallsignFromChange,
-  onCallsignToChange,
-  getCallsignTo,
-  presenceUsers,
-  updateFocus,
-  updateTyping,
-}: {
-  callsignFrom: string
-  callsignTo: string
-  onCallsignFromChange: (value: string) => void
-  onCallsignToChange: (value: string) => void
-  getCallsignTo: () => string
-  presenceUsers: Array<{ id: string; name: string; color: string }>
-  updateFocus: (fieldName: string) => void
-  updateTyping: (fieldName: string, isTyping: boolean) => void
-}) {
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3 shadow-sm placeholder:text-slate-400"
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-green-100 p-1.5 rounded-md text-green-600">
-          <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-        </div>
-        <h3 id="callsign-title" className="font-semibold text-slate-800 text-sm">Callsign Information</h3>
-      </div>
-      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5" role="region" aria-labelledby="callsign-title">
-        <div className="relative space-y-1.5">
-          <label htmlFor="callsign-from" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">From</label>
-          <div className="relative">
-            <input
-              id="callsign-from"
-              type="text"
-              value={callsignFrom || ''}
-              onChange={(e) => onCallsignFromChange(e.target.value)}
-              onFocus={() => updateFocus('callsign-from')}
-              onBlur={() => updateTyping('callsign-from', false)}
-              onKeyDown={() => updateTyping('callsign-from', true)}
-              placeholder="Enter callsign..."
-              className={inputClass}
-            />
-            <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="callsign-to" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">To</label>
-          <input
-            id="callsign-to"
-            type="text"
-            value={callsignTo || getCallsignTo()}
-            onChange={(e) => onCallsignToChange(e.target.value)}
-            placeholder="Event Control"
-            className={inputClass}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// IncidentConfigurationCard Component
-function IncidentConfigurationCard({
-  priority,
-  entryType,
-  timeOfOccurrence,
-  timeLogged,
-  retrospectiveJustification,
-  onPriorityChange,
-  onEntryTypeChange,
-  onTimeOfOccurrenceChange,
-  onTimeLoggedChange,
-  onRetrospectiveJustificationChange,
-  showAdvancedTimestamps,
-  onShowAdvancedTimestampsChange,
-  entryTypeWarnings,
-  onEntryTypeWarningsChange,
-}: {
-  priority: string
-  entryType: EntryType | undefined
-  timeOfOccurrence: string | undefined
-  timeLogged: string | undefined
-  retrospectiveJustification: string | undefined
-  onPriorityChange: (value: string) => void
-  onEntryTypeChange: (value: EntryType) => void
-  onTimeOfOccurrenceChange: (value: string) => void
-  onTimeLoggedChange: (value: string) => void
-  onRetrospectiveJustificationChange: (value: string) => void
-  showAdvancedTimestamps: boolean
-  onShowAdvancedTimestampsChange: (value: boolean) => void
-  entryTypeWarnings: string[]
-  onEntryTypeWarningsChange: (warnings: string[]) => void
-}) {
-  return (
-    <div className={`${
-      priority === 'high' ? 'border-l-4 border-l-red-500 pl-4' : ''
-    }`} role="region" aria-labelledby="configuration-title">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-        <h3 id="configuration-title" className="text-sm font-semibold text-gray-900 dark:text-white">Incident Configuration</h3>
-      </div>
-      <div>
-        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
-        <div className="relative">
-          <select
-            id="priority"
-            value={priority}
-            onChange={(e) => onPriorityChange(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm appearance-none font-sans"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Entry Type
-          <span className="ml-1 text-gray-400" title="Select whether this is being logged in real-time or retrospectively">ⓘ</span>
-        </label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="entry_type"
-              value="contemporaneous"
-              checked={entryType === 'contemporaneous'}
-              onChange={(e) => {
-                onEntryTypeChange(e.target.value as EntryType)
-                onEntryTypeWarningsChange([])
-              }}
-              className="text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">⏱️ Contemporaneous (Real-time)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="entry_type"
-              value="retrospective"
-              checked={entryType === 'retrospective'}
-              onChange={(e) => {
-                onEntryTypeChange(e.target.value as EntryType)
-                onShowAdvancedTimestampsChange(true)
-              }}
-              className="text-amber-600 focus:ring-amber-500"
-            />
-            <span className="text-sm text-gray-700">🕓 Retrospective (Delayed)</span>
-          </label>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {entryType === 'contemporaneous' 
-            ? 'This entry is being logged in real-time or shortly after the incident'
-            : 'This entry is being logged after a significant delay from when the incident occurred'
-          }
-        </p>
-      </div>
-      {entryType === 'retrospective' && (
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <label htmlFor="retro-justification" className="block text-sm font-medium text-amber-800 mb-2">
-            Retrospective Justification *
-          </label>
-          <textarea
-            id="retro-justification"
-            value={retrospectiveJustification || ''}
-            onChange={(e) => onRetrospectiveJustificationChange(e.target.value)}
-            placeholder="Explain why this entry is being logged retrospectively (e.g., 'Live comms prevented immediate logging')"
-            rows={2}
-            className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm font-sans"
-            required
-          />
-          <p className="text-xs text-amber-700 mt-1">Required for retrospective entries</p>
-        </div>
-      )}
-      {(showAdvancedTimestamps || entryType === 'retrospective') && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <button
-            type="button"
-            onClick={() => onShowAdvancedTimestampsChange(!showAdvancedTimestamps)}
-            className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-3"
-          >
-            {showAdvancedTimestamps ? '▼' : '▶'} Advanced Timestamps
-          </button>
-          {showAdvancedTimestamps && (
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="time-occurred" className="block text-xs font-medium text-blue-800 mb-1">
-                  Time of Occurrence
-                </label>
-                <input
-                  id="time-occurred"
-                  type="datetime-local"
-                  value={timeOfOccurrence?.slice(0, 16) || ''}
-                  onChange={(e) => {
-                    const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                    onTimeOfOccurrenceChange(newTime)
-                    const validation = validateEntryType(
-                      new Date(newTime),
-                      new Date(timeLogged || new Date().toISOString()),
-                      entryType || 'contemporaneous'
-                    )
-                    onEntryTypeWarningsChange(validation.warnings)
-                  }}
-                  className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
-                />
-              </div>
-              <div>
-                <label htmlFor="time-logged" className="block text-xs font-medium text-blue-800 mb-1">
-                  Time Logged
-                </label>
-                <input
-                  id="time-logged"
-                  type="datetime-local"
-                  value={timeLogged?.slice(0, 16) || ''}
-                  onChange={(e) => {
-                    const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                    onTimeLoggedChange(newTime)
-                  }}
-                  className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
-                  disabled
-                />
-                <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-      {entryTypeWarnings.length > 0 && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex gap-2">
-            <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-yellow-800 mb-1">Entry Type Warning</p>
-              {entryTypeWarnings.map((warning, idx) => (
-                <p key={idx} className="text-xs text-yellow-700">{warning}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// DetailedInformationCard Component
-function DetailedInformationCard({
-  headline,
-  source,
-  factsObserved,
-  actionsTaken,
-  outcome,
-  incidentType,
-  onHeadlineChange,
-  onSourceChange,
-  onFactsObservedChange,
-  onActionsTakenChange,
-  onOutcomeChange,
-  getHeadlineWordCount,
-  factualValidationWarnings,
-  onFactualValidationWarningsChange,
-  validateFactualLanguage,
-  generateStructuredOccurrence,
-  showSOPButton,
-  sopLoading,
-  onShowSOPModal,
-  hasGuidedActions,
-  onShowGuidedActions,
-  guidedActionsGenerated,
-}: {
-  headline: string | undefined
-  source: string | undefined
-  factsObserved: string | undefined
-  actionsTaken: string | undefined
-  outcome: string | undefined
-  incidentType: string
-  onHeadlineChange: (value: string) => void
-  onSourceChange: (value: string) => void
-  onFactsObservedChange: (value: string) => void
-  onActionsTakenChange: (value: string) => void
-  onOutcomeChange: (value: string) => void
-  getHeadlineWordCount: (text: string) => number
-  factualValidationWarnings: string[]
-  onFactualValidationWarningsChange: (warnings: string[]) => void
-  validateFactualLanguage: (text: string) => { warnings: string[]; isFactual: boolean }
-  generateStructuredOccurrence: (data: {
-    headline?: string
-    source?: string
-    facts_observed?: string
-    actions_taken?: string
-    outcome?: string
-    use_structured_template?: boolean
-    occurrence?: string
-  }) => string
-  showSOPButton: boolean
-  sopLoading: boolean
-  onShowSOPModal: () => void
-  hasGuidedActions: (incidentType: string) => boolean
-  onShowGuidedActions: () => void
-  guidedActionsGenerated: boolean
-}) {
-  const textareaClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all resize-none p-3 min-h-[80px]"
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3"
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-indigo-100 p-1.5 rounded-md text-indigo-600">
-          <ListBulletIcon className="h-4 w-4" />
-        </div>
-        <h3 className="font-semibold text-slate-800 text-sm">Detailed Information</h3>
-      </div>
-      <div className="p-5 space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-               <label htmlFor="headline" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Headline</label>
-               <span className={`text-[10px] font-medium ${getHeadlineWordCount(headline || '') > 15 ? 'text-red-600' : 'text-slate-400'}`}>
-                  {getHeadlineWordCount(headline || '')}/15 words
-               </span>
-            </div>
-            <input
-              id="headline"
-              type="text"
-              value={headline || ''}
-              onChange={(e) => onHeadlineChange(e.target.value)}
-              placeholder="e.g., Medical incident at North Gate"
-              className={inputClass}
-              maxLength={150}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="source" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Source</label>
-            <input
-              id="source"
-              type="text"
-              value={source || ''}
-              onChange={(e) => onSourceChange(e.target.value)}
-              placeholder="e.g., CCTV, Steward 12, Radio"
-              className={inputClass}
-            />
-          </div>
-        </div>
-        <div className="h-px bg-slate-100" />
-        <div className="space-y-5">
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-               <label htmlFor="facts" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Facts Observed</label>
-               {factualValidationWarnings.length > 0 && (
-                 <span className="text-[10px] text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full">
-                   ⚠️ Review Language
-                 </span>
-               )}
-            </div>
-            <textarea
-              id="facts"
-              value={factsObserved || ''}
-              onChange={(e) => {
-                const val = e.target.value
-                onFactsObservedChange(val)
-                const validation = validateFactualLanguage(val)
-                onFactualValidationWarningsChange(validation.warnings)
-              }}
-              placeholder="Describe exactly what was observed (who, what, where). Avoid opinions."
-              className={textareaClass}
-              rows={3}
-            />
-            {factualValidationWarnings.length > 0 && (
-              <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-100">
-                <p className="font-medium mb-1">Language check:</p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  {factualValidationWarnings.map((w, i) => <li key={i}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-               <label htmlFor="actions" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions Taken</label>
-               <div className="flex gap-2">
-                  {showSOPButton && (
-                    <button
-                      type="button"
-                      onClick={onShowSOPModal}
-                      disabled={sopLoading}
-                      className="flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors"
-                    >
-                      <BookOpenIcon className="h-3 w-3" />
-                      {sopLoading ? 'Loading...' : 'View SOP'}
-                    </button>
-                  )}
-                  {incidentType && hasGuidedActions(incidentType) && (
-                    <button
-                      type="button"
-                      onClick={onShowGuidedActions}
-                      className="flex items-center gap-1 text-[10px] font-medium text-blue-600 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors"
-                    >
-                      <SparklesIcon className="h-3 w-3" />
-                      Guided Actions
-                    </button>
-                  )}
-               </div>
-            </div>
-            <textarea
-              id="actions"
-              value={actionsTaken || ''}
-              onChange={(e) => onActionsTakenChange(e.target.value)}
-              placeholder="Chronological list of actions taken by staff."
-              className={textareaClass}
-              rows={3}
-            />
-            {guidedActionsGenerated && (
-               <p className="text-[10px] text-emerald-600 flex items-center gap-1">
-                 <CheckCircleIcon className="h-3 w-3" /> Actions generated from best practices
-               </p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="outcome" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Outcome</label>
-            <textarea
-              id="outcome"
-              value={outcome || ''}
-              onChange={(e) => onOutcomeChange(e.target.value)}
-              placeholder="Current status (e.g. Resolved, Ongoing, Handed over)."
-              className={textareaClass}
-              rows={2}
-            />
-          </div>
-        </div>
-        {(headline || factsObserved) && (
-           <div className="pt-3 mt-2 border-t border-slate-100">
-              <details className="group">
-                 <summary className="flex items-center gap-2 text-xs font-medium text-slate-500 cursor-pointer hover:text-slate-800 select-none">
-                    <ClipboardDocumentCheckIcon className="h-4 w-4" />
-                    <span>Preview Log Entry</span>
-                 </summary>
-                 <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed">
-                    {generateStructuredOccurrence({
-                      headline, source, facts_observed: factsObserved, actions_taken: actionsTaken, outcome, use_structured_template: true
-                    })}
-                 </div>
-              </details>
-           </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// GreenGuideBestPracticesCard Component
-function GreenGuideBestPracticesCard({
-  incidentType,
-  showBestPracticeHints,
-  onShowBestPracticeHintsChange,
-  onOccurrenceAppend,
-  onActionsTakenAppend,
-}: {
-  incidentType: string
-  showBestPracticeHints: boolean
-  onShowBestPracticeHintsChange: (value: boolean) => void
-  onOccurrenceAppend: (text: string) => void
-  onActionsTakenAppend: (text: string) => void
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="bg-emerald-100 p-1.5 rounded-md text-emerald-600">
-            <ShieldCheckIcon className="h-4 w-4" />
-          </div>
-          <h3 id="best-practices-title" className="font-semibold text-slate-800 text-sm">Best Practices (Green Guide)</h3>
-        </div>
-        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors select-none">
-          <input
-            type="checkbox"
-            checked={showBestPracticeHints}
-            onChange={(e) => onShowBestPracticeHintsChange(e.target.checked)}
-            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
-          />
-          Show
-        </label>
-      </div>
-      {showBestPracticeHints && (
-        <div className="p-5 bg-slate-50/30 transition-all">
-          {(() => {
-            // @ts-ignore - JSON import typing
-            const bp = incidentType ? (greenGuideBestPractices as any)[incidentType] : null
-            if (!bp) {
-              return (
-                <div className="text-center py-2 px-1">
-                  <p className="text-xs text-slate-500 mb-2">
-                    Select a specific incident type to view brief best‑practice hints and quick‑insert templates.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wide">Examples available</span>
-                    <div className="flex flex-wrap justify-center gap-1">
-                       {['Medical', 'Ejection', 'Refusal', 'Queue Build-Up'].map(t => (
-                         <span key={t} className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] text-slate-600">
-                           {t}
-                         </span>
-                       ))}
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-slate-200/60">
-                     <a href="/green-guide" target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline font-medium">
-                       Open Green Guide (PDF)
-                     </a>
-                  </div>
-                </div>
-              )
-            }
-            return (
-              <div className="space-y-5">
-                {Array.isArray(bp.summary) && bp.summary.length > 0 && (
-                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
-                    <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide mb-2">Key Actions</h4>
-                    <ul className="space-y-1.5">
-                      {bp.summary.slice(0, 3).map((s: string, i: number) => (
-                        <li key={i} className="text-xs text-emerald-900 flex gap-2 items-start leading-relaxed">
-                          <span className="block w-1 h-1 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {Array.isArray(bp.checklists) && bp.checklists.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wide px-1">Quick Templates</h4>
-                    {bp.checklists.map((c: any, idx: number) => (
-                      <div key={idx} className="group bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:border-blue-200 hover:shadow-md transition-all">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-slate-700">{c.label}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          {c.occurrence && (
-                            <button
-                              type="button"
-                              onClick={() => onOccurrenceAppend(c.occurrence)}
-                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-medium text-slate-600 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded transition-colors"
-                              title="Append to Occurrence"
-                            >
-                              <DocumentPlusIcon className="h-3 w-3" />
-                              Add Details
-                            </button>
-                          )}
-                          {c.actions_taken && (
-                            <button
-                              type="button"
-                              onClick={() => onActionsTakenAppend(c.actions_taken)}
-                              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-medium text-slate-600 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 hover:border-indigo-200 rounded transition-colors"
-                              title="Append to Actions Taken"
-                            >
-                              <PlusSmallIcon className="h-3 w-3" />
-                              Add Action
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                  <a href="/green-guide" target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline font-medium">
-                    Read Full Green Guide
-                  </a>
-                  {Array.isArray(bp.cautions) && bp.cautions.length > 0 && (
-                    <span className="text-[10px] text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded-full">
-                      Amend, don&apos;t overwrite
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// LocationAndActionsCard Component
-function LocationAndActionsCard({
-  location,
-  onLocationChange,
-  shouldRenderMap,
-  mapCoordinates,
-  mapLocationQuery,
-  onMapLocationChange,
-}: {
-  location: string
-  onLocationChange: (value: string) => void
-  shouldRenderMap: boolean
-  mapCoordinates: Coordinates | null
-  mapLocationQuery: string
-  onMapLocationChange: (coords: Coordinates, source: 'manual' | 'geocoded' | 'drag') => void
-}) {
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3 shadow-sm placeholder:text-slate-400"
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-teal-100 p-1.5 rounded-md text-teal-600">
-          <MapPinIcon className="h-4 w-4" />
-        </div>
-        <h3 id="location-actions-title" className="font-semibold text-slate-800 text-sm">Location</h3>
-      </div>
-      <div className="p-5 space-y-4">
-        <div className="space-y-1.5">
-          <label htmlFor="location" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Exact Location
-          </label>
-          <input
-            id="location"
-            type="text"
-            value={location}
-            onChange={(e) => onLocationChange(e.target.value)}
-            placeholder="e.g., Main Stage, Gate 1, Block 102"
-            className={inputClass}
-          />
-        </div>
-        {shouldRenderMap && (
-          <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-900/5">
-            <IncidentLocationMap
-              coordinates={mapCoordinates}
-              locationQuery={mapLocationQuery}
-              overlays={[]}
-              onLocationChange={onMapLocationChange}
-            />
-            <div className="bg-slate-50 px-3 py-2 border-t border-slate-200">
-              <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                <MapPinIcon className="h-3 w-3" />
-                Drag marker to pinpoint exact location
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// AdditionalOptionsCard Component
-function AdditionalOptionsCard({
-  isClosed,
-  incidentType,
-  onIsClosedChange,
-  shouldAutoClose,
-  getAutoCloseReason,
-  photoPreviewUrl,
-  photoError,
-  onPhotoChange,
-}: {
-  isClosed: boolean
-  incidentType: string
-  onIsClosedChange: (value: boolean) => void
-  shouldAutoClose: (incidentType: string) => boolean
-  getAutoCloseReason: (incidentType: string) => string
-  photoPreviewUrl: string | null
-  photoError: string | null
-  onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-}) {
-  const isAutoClosed = isClosed && incidentType && shouldAutoClose(incidentType);
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-gray-100 p-1.5 rounded-md text-gray-600">
-          <ListBulletIcon className="h-4 w-4" />
-        </div>
-        <h3 id="additional-options-title" className="font-semibold text-slate-800 text-sm">Options</h3>
-      </div>
-      <div className="p-5 space-y-5">
-        <div>
-          <label 
-            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-              isClosed 
-                ? 'bg-blue-50 border-blue-200' 
-                : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-1.5 rounded-full ${isClosed ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
-                {isClosed ? <LockClosedIcon className="h-4 w-4" /> : <CheckCircleIcon className="h-4 w-4" />}
-              </div>
-              <div>
-                <p className={`text-sm font-semibold ${isClosed ? 'text-blue-900' : 'text-slate-700'}`}>
-                  Mark as Closed
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  {isClosed ? 'Incident will be archived immediately' : 'Incident remains open for updates'}
-                </p>
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              checked={isClosed}
-              onChange={(e) => onIsClosedChange(e.target.checked)}
-              className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all"
-            />
-          </label>
-          {isAutoClosed && (
-            <div className="mt-2 mx-1 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-md border border-emerald-100">
-              <CheckCircleIcon className="h-4 w-4 shrink-0" />
-              <span>
-                <strong>Auto-Closing:</strong> {getAutoCloseReason(incidentType)}
-              </span>
-            </div>
-          )}
-        </div>
-        <div className="h-px bg-slate-100" />
-        <div>
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
-            Evidence / Attachment
-          </label>
-          <div className="relative group">
-            <input
-              id="photo-upload"
-              type="file"
-              accept="image/jpeg,image/png,image/jpg,image/heic"
-              onChange={onPhotoChange}
-              className="hidden"
-            />
-            <label 
-              htmlFor="photo-upload" 
-              className={`
-                flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all
-                ${photoPreviewUrl ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'}
-              `}
-            >
-              {photoPreviewUrl ? (
-                <div className="relative w-full flex flex-col items-center gap-3">
-                  <div className="relative h-24 w-24 rounded-lg overflow-hidden shadow-md border border-white ring-2 ring-blue-100">
-                    <Image
-                      src={photoPreviewUrl}
-                      alt="Selected preview"
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-blue-700">Image Selected</p>
-                    <p className="text-[10px] text-blue-500">Click to change</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="bg-slate-100 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
-                    <CloudArrowUpIcon className="h-6 w-6 text-slate-400 group-hover:text-blue-500" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-700">Click to upload photo</p>
-                  <p className="text-xs text-slate-400 mt-1">JPG, PNG up to 5MB</p>
-                </>
-              )}
-            </label>
-          </div>
-          {photoError && (
-            <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-red-500" />
-              {photoError}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// IncidentQualityCard Component
-function IncidentQualityCard({ 
-  formData, 
-  onApplySuggestion 
-}: { 
-  formData: IncidentFormData
-  onApplySuggestion?: (field: string, value: string) => void
-}) {
-  const [analysis, setAnalysis] = useState<{ score: number; suggestions: string[]; riskLevel: 'Low' | 'Medium' | 'High' } | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-
-  useEffect(() => {
-    const hasContent = 
-      (formData.occurrence?.length > 10 || formData.facts_observed?.length > 10) &&
-      formData.incident_type;
-
-    if (!hasContent) {
-      setAnalysis(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (!analyzing) {
-        analyzeIncidentQuality();
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [
-    formData.occurrence, 
-    formData.facts_observed, 
-    formData.incident_type, 
-    formData.priority,
-    formData.actions_taken,
-    formData.headline
-  ]);
-
-  const analyzeIncidentQuality = async () => {
-    setAnalyzing(true);
-    const fullText = `Type: ${formData.incident_type}. Priority: ${formData.priority}. 
-    Headline: ${formData.headline || 'N/A'}. 
-    Facts: ${formData.facts_observed || formData.occurrence || 'N/A'}. 
-    Actions: ${formData.actions_taken || formData.action_taken || 'N/A'}.`;
-
-    try {
-      const response = await fetch('/api/openai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a senior event safety officer auditing incident logs based on JESIP standards. Return ONLY valid JSON with this exact structure: {"score": number (0-100), "riskLevel": "Low"|"Medium"|"High", "suggestions": ["short actionable tip 1", "short actionable tip 2"]}. Check for: missing 5Ws (Who,What,Where,When,Why), mismatch between Type/Priority/Content, incomplete information.'
-            },
-            {
-              role: 'user',
-              content: `Audit this incident log: "${fullText}". Return JSON only with score, riskLevel, and suggestions array.`
-            }
-          ],
-          model: 'gpt-4o-mini',
-          temperature: 0.3,
-          max_tokens: 300
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze incident quality');
-      }
-
-      const data = await response.json();
-      const text = data.choices?.[0]?.message?.content || '{}';
-      
-      let result: { score: number; suggestions: string[]; riskLevel: 'Low' | 'Medium' | 'High' };
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const jsonText = jsonMatch ? jsonMatch[0] : text;
-        result = JSON.parse(jsonText);
-      } catch (parseError) {
-        result = {
-          score: 50,
-          riskLevel: 'Medium' as const,
-          suggestions: ['Unable to parse analysis. Please ensure all fields are filled correctly.']
-        };
-      }
-
-      if (
-        typeof result.score === 'number' &&
-        ['Low', 'Medium', 'High'].includes(result.riskLevel) &&
-        Array.isArray(result.suggestions)
-      ) {
-        setAnalysis(result);
-      }
-    } catch (e) {
-      console.error('Incident quality audit failed:', e);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  if (!analysis && !analyzing) return null;
-
-  return (
-    <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-indigo-100 dark:border-indigo-900 shadow-sm p-5 relative overflow-hidden transition-all duration-500 mb-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 text-sm">
-          <SparklesIcon className="w-4 h-4 text-indigo-500" /> Log Quality Score
-        </h3>
-        {analyzing ? (
-          <span className="text-xs text-indigo-400 animate-pulse">Auditing...</span>
-        ) : (
-          <span 
-            className={`text-lg font-black ${
-              (analysis?.score || 0) > 80 
-                ? 'text-green-600' 
-                : (analysis?.score || 0) > 50 
-                  ? 'text-amber-500' 
-                  : 'text-red-500'
-            }`}
-          >
-            {analysis?.score}/100
-          </span>
-        )}
-      </div>
-      {analysis && (
-        <div className="space-y-3">
-          {analysis.riskLevel === 'High' && (
-            <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs px-2 py-1 rounded flex items-center gap-1 font-bold">
-              <ExclamationTriangleIcon className="w-3 h-3" /> High Risk Detected
-            </div>
-          )}
-          <div className="space-y-2">
-            {analysis.suggestions.slice(0, 2).map((suggestion, i) => (
-              <div 
-                key={i} 
-                className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded border border-indigo-50 dark:border-slate-700"
-              >
-                <ShieldCheckIcon className="w-3 h-3 text-indigo-400 mt-0.5 flex-shrink-0" />
-                <span>{suggestion}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+// Card components are now imported from separate files in ./incidents/cards/
 
 export default function IncidentCreationModal({
   isOpen,
@@ -5421,271 +4431,8 @@ export default function IncidentCreationModal({
           onResetForm={resetForm}
         />
 
-                {/* Quick Add Bar - Full Width */}
-        <div className="px-6 py-4 sm:px-8 border-b bg-gray-50 dark:bg-slate-800 space-y-3">
-          {/* Recent Radio Messages - Show at top */}
-          <RecentRadioMessages 
-            eventId={selectedEventId || currentEventFallback?.id}
-            onSelectMessage={(incident) => {
-              // Auto-fill form from incident
-              if (incident.occurrence) {
-                // Trigger QuickAddInput with the incident occurrence text
-                handleQuickAdd(incident.occurrence)
-              }
-              if (incident.callsign_from) {
-                setFormData(prev => ({ ...prev, callsign_from: incident.callsign_from || prev.callsign_from }))
-              }
-              if (incident.callsign_to) {
-                setFormData(prev => ({ ...prev, callsign_to: incident.callsign_to || prev.callsign_to }))
-              }
-              if (incident.source) {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  source: prev.source 
-                    ? `${prev.source}, ${incident.source}` 
-                    : incident.source 
-                }))
-              }
-            }}
-            className="mb-3"
-          />
-          
-          {/* Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Natural Language Input</span>
-            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-          </div>
-          
-          {/* AI Parsing Instructions */}
-          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            💡 Type incident details and press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> or click <span className="text-blue-600 dark:text-blue-400">✨</span> to auto-fill structured fields
-          </div>
-          
-          <div className="relative">
-            <QuickAddInput 
-              aiSource={quickAddAISource} 
-              onQuickAdd={async (val: string) => { 
-                console.log('🎯 QuickAddInput onQuickAdd called with:', val);
-                await handleQuickAdd(val); 
-              }} 
-              onParsedData={handleParsedData}
-              isProcessing={isQuickAddProcessing} 
-              showParseButton={true}
-              autoParseOnEnter={true}
-              eventType={contextEventType}
-              homeTeam={eventData?.home_team}
-              awayTeam={eventData?.away_team}
-              onChangeValue={(value: string) => {
-                // Clear auto-populated fields when user starts typing new text
-                if (value.trim() && value.trim() !== formData.occurrence) {
-                  setFormData(prev => ({
-                    ...prev,
-                    incident_type: initialIncidentType || '',
-                    callsign_from: '',
-                    callsign_to: 'Event Control',
-                    priority: 'medium',
-                    // Don't clear location - let AI parsing populate it
-                    action_taken: '',
-                    outcome: '',
-                    // Clear structured fields that were auto-populated
-                    facts_observed: '',
-                    actions_taken: '',
-                    headline: '',
-                    source: ''
-                  }))
-                }
-              }}
-            />
-            <div aria-live="polite" className="sr-only">
-              {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
-            </div>
-            
-          </div>
-
-          {/* Voice Transcript Display */}
-          <AnimatePresence>
-            {transcript && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <MicrophoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Voice Input:</span>
-                  </div>
-                                     {isListening && (
-                     <div className="flex items-center gap-2">
-                       <div className="flex items-center gap-1">
-                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                         <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
-                       </div>
-                       <button
-                         onClick={() => {
-                           if (recognition && isListening) {
-                             recognition.isManuallyStopping = true;
-                             recognition.stop();
-                           }
-                         }}
-                         className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                         title="Stop listening"
-                       >
-                         Stop
-                       </button>
-                     </div>
-                   )}
-                   {transcript && !isListening && (
-                     <div className="flex items-center gap-1">
-                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs text-blue-600 dark:text-blue-400">Ready to submit</span>
-                     </div>
-                   )}
-                   {isRetrying && (
-                     <div className="flex items-center gap-1">
-                       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs text-yellow-600 dark:text-yellow-400">Retrying...</span>
-                     </div>
-                   )}
-                </div>
-                <p className="text-sm text-blue-800 dark:text-blue-200">{transcript}</p>
-                
-                {/* Manual Submit Button */}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
-                      if (cleanTranscript) {
-                        handleQuickAdd(cleanTranscript);
-                        setTranscript('');
-                      }
-                    }}
-                    className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Use This Text
-                  </button>
-                  <button
-                    onClick={() => setTranscript('')}
-                    className="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Voice Error Display */}
-          <AnimatePresence>
-            {voiceError && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Voice Recognition Error</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">{voiceError}</p>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => setVoiceError(null)}
-                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
-                      >
-                        Dismiss
-                      </button>
-                      <button
-                        onClick={() => {
-                          setVoiceError(null);
-                          startListening();
-                        }}
-                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
-                      >
-                        Try Again
-                      </button>
-                      {voiceError.includes('permission') && (
-                        <button
-                          onClick={() => {
-                            // Open browser settings help
-                            window.open('https://support.google.com/chrome/answer/2693767?hl=en', '_blank');
-                          }}
-                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
-                        >
-                          Fix Permissions
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Offline Status Indicator */}
-          <AnimatePresence>
-            {isOfflineMode && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
-              >
-                <div className="flex items-center gap-3">
-                  <WifiIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Offline Mode</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      You&apos;re currently offline. Incidents will be saved locally and synced when you&apos;re back online.
-                    </p>
-                  </div>
-                  <motion.button
-                    type="button"
-                    onClick={() => offlineActions.triggerManualSync()}
-                    disabled={offlineState.isSyncInProgress}
-                    className="p-2 bg-yellow-100 dark:bg-yellow-800 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors duration-200 touch-target"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <ArrowPathIcon className={`h-4 w-4 text-yellow-600 dark:text-yellow-400 ${offlineState.isSyncInProgress ? 'animate-spin' : ''}`} />
-                  </motion.button>
-                </div>
-                
-                {/* Sync Progress */}
-                {offlineState.isSyncInProgress && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-xs text-yellow-600 dark:text-yellow-400 mb-1">
-                      <span>Syncing...</span>
-                      <span>{offlineState.syncProgress.completed}/{offlineState.syncProgress.total}</span>
-                    </div>
-                    <div className="w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-2">
-                      <motion.div
-                        className="bg-yellow-500 h-2 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ 
-                          width: offlineState.syncProgress.total > 0 
-                            ? `${(offlineState.syncProgress.completed / offlineState.syncProgress.total) * 100}%` 
-                            : 0 
-                        }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
         {/* 🔹 Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto pb-80">
             {/* Left Column - Incident Type Categories (Sidebar) */}
             <aside className="col-span-12 lg:col-span-2 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
               <div className="flex items-center gap-2 mb-4 flex-shrink-0">
@@ -5775,7 +4522,11 @@ export default function IncidentCreationModal({
                 formData={formData} 
                 onApplySuggestion={(field, value) => {
                   setFormData(prev => ({ ...prev, [field]: value }));
-                }} 
+                }}
+                onUpdateFactsObserved={(updatedText) => {
+                  setFormData(prev => ({ ...prev, facts_observed: updatedText }));
+                }}
+                guidedActionsApplied={guidedActionsGenerated || !hasGuidedActions(formData.incident_type)}
               />
               {/* Green Guide Best Practices */}
               <GreenGuideBestPracticesCard
@@ -5812,34 +4563,232 @@ export default function IncidentCreationModal({
             </aside>
           </div>
 
-        {/* 🔹 Sticky Footer */}
-        <footer className="sticky bottom-0 z-20 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4 sm:px-8 flex items-center justify-end space-x-4 shadow-sm">
-          {/* Use existing handlers – do not change onClick or data flow */}
+        {/* 🔹 Fixed Bottom Input Bar (ChatGPT/Gemini Style) - Starts from middle, extends to right */}
+        <div className="fixed bottom-0 left-1/2 right-0 z-30 bg-white/90 dark:bg-[#1a2a57]/95 backdrop-blur-md border-t border-l border-slate-200 dark:border-[#2d437a] shadow-lg rounded-tl-2xl">
+          <div className="max-w-4xl px-4 py-4 sm:px-6 flex flex-col gap-3">
+            
+            {/* Recent Radio Messages - Compact */}
+            {selectedEventId && (
+              <div className="mb-1">
+          <RecentRadioMessages 
+            eventId={selectedEventId || currentEventFallback?.id}
+            onSelectMessage={(incident) => {
+              if (incident.occurrence) {
+                handleQuickAdd(incident.occurrence)
+              }
+              if (incident.callsign_from) {
+                setFormData(prev => ({ ...prev, callsign_from: incident.callsign_from || prev.callsign_from }))
+              }
+              if (incident.callsign_to) {
+                setFormData(prev => ({ ...prev, callsign_to: incident.callsign_to || prev.callsign_to }))
+              }
+              if (incident.source) {
+                setFormData(prev => ({ 
+                  ...prev, 
+                  source: prev.source 
+                    ? `${prev.source}, ${incident.source}` 
+                    : incident.source 
+                }))
+              }
+            }}
+                  className="mb-1"
+                />
+          </div>
+            )}
+
+            {/* QuickAddInput - Main Input */}
+          <div className="relative">
+            <QuickAddInput 
+              aiSource={quickAddAISource} 
+              onQuickAdd={async (val: string) => { 
+                console.log('🎯 QuickAddInput onQuickAdd called with:', val);
+                await handleQuickAdd(val); 
+              }} 
+              onParsedData={handleParsedData}
+              isProcessing={isQuickAddProcessing} 
+              showParseButton={true}
+              autoParseOnEnter={true}
+              eventType={contextEventType}
+              homeTeam={eventData?.home_team}
+              awayTeam={eventData?.away_team}
+              onChangeValue={(value: string) => {
+                if (value.trim() && value.trim() !== formData.occurrence) {
+                  setFormData(prev => ({
+                    ...prev,
+                    incident_type: initialIncidentType || '',
+                    callsign_from: '',
+                    callsign_to: 'Event Control',
+                    priority: 'medium',
+                    action_taken: '',
+                    outcome: '',
+                    facts_observed: '',
+                    actions_taken: '',
+                    headline: '',
+                    source: ''
+                  }))
+                }
+              }}
+            />
+            <div aria-live="polite" className="sr-only">
+              {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
+            </div>
+          </div>
+
+            {/* Voice Transcript Display - Compact */}
+          <AnimatePresence>
+            {transcript && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                  className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg"
+              >
+                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                      <MicrophoneIcon className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Voice Input</span>
+                  </div>
+                                     {isListening && (
+                     <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                         <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
+                       <button
+                         onClick={() => {
+                           if (recognition && isListening) {
+                             recognition.isManuallyStopping = true;
+                             recognition.stop();
+                           }
+                         }}
+                          className="px-2 py-0.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                       >
+                         Stop
+                       </button>
+                     </div>
+                   )}
+                     </div>
+                  <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">{transcript}</p>
+                  <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
+                      if (cleanTranscript) {
+                        handleQuickAdd(cleanTranscript);
+                        setTranscript('');
+                      }
+                    }}
+                      className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                  >
+                    Use This Text
+                  </button>
+                  <button
+                    onClick={() => setTranscript('')}
+                      className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+            {/* Voice Error Display - Compact */}
+          <AnimatePresence>
+            {voiceError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                  className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg"
+              >
+                  <div className="flex items-start gap-2">
+                    <svg className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  <div className="flex-1">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400 mb-2">{voiceError}</p>
+                      <div className="flex gap-2">
+                      <button
+                        onClick={() => setVoiceError(null)}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 underline"
+                      >
+                        Dismiss
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVoiceError(null);
+                          startListening();
+                        }}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 underline"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+            {/* Offline Status Indicator - Compact */}
+          <AnimatePresence>
+            {isOfflineMode && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                  className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg"
+              >
+                  <div className="flex items-center gap-2">
+                    <WifiIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex-1">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                        Offline mode - syncing when online
+                    </p>
+                  </div>
+                  <motion.button
+                    type="button"
+                    onClick={() => offlineActions.triggerManualSync()}
+                    disabled={offlineState.isSyncInProgress}
+                      className="p-1.5 bg-yellow-100 dark:bg-yellow-800 rounded hover:bg-yellow-200 transition-colors"
+                  >
+                      <ArrowPathIcon className={`h-3 w-3 text-yellow-600 dark:text-yellow-400 ${offlineState.isSyncInProgress ? 'animate-spin' : ''}`} />
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+            {/* Action Row - Below Input */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                  AI Online
+                </span>
+              </div>
+                
+              <div className="flex items-center gap-3">
           <button
             onClick={() => {
               resetForm()
               onClose()
             }}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 rounded-md transition-colors font-medium font-sans"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] transition-colors font-medium font-sans"
+                  disabled={loading}
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save as Draft
+                  Log Incident <PaperAirplaneIcon className="w-4 h-4" />
           </button>
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-3 text-sm bg-[#3B82F6] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] rounded-md shadow-sm transition-colors flex items-center justify-center gap-2 font-medium font-sans"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Log Incident
-          </button>
-        </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+                
       </div>
     </div>
 

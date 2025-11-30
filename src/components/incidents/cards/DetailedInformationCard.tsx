@@ -119,8 +119,8 @@ export default function DetailedInformationCard({
         <div className="space-y-5">
           
           {/* Facts Observed */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
+          <div className="space-y-1.5 relative group">
+            <div className="flex justify-between items-end mb-1">
                <label htmlFor="facts" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Facts Observed</label>
                {factualValidationWarnings.length > 0 && (
                  <span className="text-[10px] text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -138,7 +138,7 @@ export default function DetailedInformationCard({
                 onFactualValidationWarningsChange(validation.warnings)
               }}
               placeholder="Describe exactly what was observed (who, what, where). Avoid opinions."
-              className={textareaClass}
+              className={`${textareaClass} focus:ring-2 focus:ring-purple-500/20`}
               rows={3}
             />
             {/* Validation Warnings */}

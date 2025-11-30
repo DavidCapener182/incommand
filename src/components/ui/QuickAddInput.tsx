@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline'
-import VoiceInputButton from '../VoiceInputButton'
+import { SparklesIcon, PaperAirplaneIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import ParsedFieldsPreview from './ParsedFieldsPreview'
 import { detectMatchFlowType } from '@/utils/matchFlowParser'
 
@@ -253,7 +252,16 @@ export default function QuickAddInput({
 
   return (
     <div className="space-y-3">
-      <div className="relative" data-tour="quick-add-ai">
+      <div className="relative flex items-center w-full shadow-2xl rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all" data-tour="quick-add-ai">
+        {/* Sparkle icon on left */}
+        <div className="absolute left-4 text-slate-400">
+          {isProcessing || isParsing ? (
+            <ArrowPathIcon className="w-5 h-5 animate-spin text-blue-500" />
+          ) : (
+            <SparklesIcon className="w-5 h-5" />
+          )}
+        </div>
+        
         <input
           ref={inputRef}
           type="text"
@@ -265,36 +273,26 @@ export default function QuickAddInput({
             }
           }}
           onKeyPress={handleKeyPress}
-          placeholder="Type incident details and press Enter or click ✨ to parse... (e.g., Medical at main stage, A1 responding)"
-          className={`w-full px-4 py-3 pr-24 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base ${className}`}
+          placeholder={isProcessing || isParsing ? "AI is thinking..." : "✨ Ask AI to log details... (e.g. 'Medical at main stage')"}
+          className={`w-full pl-12 pr-14 py-4 bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400 text-base ${className}`}
           disabled={isProcessing || isParsing}
         />
         
-        {/* Action buttons */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-          {/* Parse button */}
-          {showParseButton && value.trim() && (
-            <button
-              onClick={() => parseIncident(value)}
-              disabled={isParsing || isProcessing}
-              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
-              title={isParsing ? "Parsing with AI..." : "Parse with AI (or press Enter)"}
-            >
-              {isParsing ? (
-                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <SparklesIcon className="w-5 h-5" />
-              )}
-            </button>
-          )}
-          
-          {/* Voice input button */}
-          <VoiceInputButton
-            onTranscript={handleVoiceTranscript}
-            size="small"
-            continuous={true}
-          />
-        </div>
+        {/* Send button on right */}
+        <button
+          onClick={() => {
+            if (showParseButton && value.trim()) {
+              parseIncident(value)
+            } else {
+              submit()
+            }
+          }}
+          disabled={isParsing || isProcessing || !value.trim()}
+          className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isParsing || isProcessing ? "Processing..." : "Send"}
+        >
+          <PaperAirplaneIcon className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Parsed data preview */}

@@ -1272,7 +1272,7 @@ export default function IncidentTable({
                   isMatchFlowLog 
                     ? 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75 border-gray-300 dark:border-gray-600' 
                     : isHighPriorityAndOpen(incident)
-                    ? 'ring-2 ring-red-400 shadow-xl shadow-red-500/50 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
+                    ? 'ring-2 ring-red-400 border-red-300 z-20 animate-pulse-bg motion-reduce:animate-none'
                     : 'border-gray-200 dark:border-[#2d437a] active:border-blue-400 dark:active:border-blue-500'
                 }`}
                 style={{
@@ -1476,7 +1476,7 @@ export default function IncidentTable({
                         isMatchFlowLog 
                           ? 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50 border-gray-300 dark:border-gray-600' 
                           : isHighPriorityAndOpen(incident)
-                          ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300 hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300'
+                          ? 'ring-2 ring-red-400 border-red-300 z-20 animate-pulse-bg motion-reduce:animate-none hover:-translate-y-1 transition-all duration-300'
                           : 'hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-500'
                       }`}
                       onClick={(e) => {
