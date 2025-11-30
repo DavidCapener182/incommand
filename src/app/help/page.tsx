@@ -239,12 +239,12 @@ const HelpPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] font-sans pb-24">
-      
+        
       {/* Hero Header */}
       <div className="bg-[#23408e] text-white pt-10 pb-20 px-6 sm:px-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl animate-pulse delay-700" />
-        
+          
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
@@ -258,16 +258,16 @@ const HelpPage = () => {
               </p>
             </div>
             <Button variant="secondary" asChild size="lg" className="hidden md:flex shadow-xl">
-              <Link href="/help/tutorial">
-                Start Interactive Tutorial
-              </Link>
-            </Button>
+                <Link href="/help/tutorial">
+                  Start Interactive Tutorial
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20 space-y-10">
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20 space-y-10">
+          
         {/* AI Assistant Section */}
         <AIOpsAssistant />
 
@@ -278,59 +278,59 @@ const HelpPage = () => {
               <InformationCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Platform Capabilities</h2>
-          </div>
-          
+            </div>
+            
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <FeatureCard 
-              icon={ExclamationTriangleIcon} 
-              title="Incident Tracking" 
+              <FeatureCard 
+                icon={ExclamationTriangleIcon} 
+                title="Incident Tracking" 
               desc="Report and track incidents in real time with detailed, timestamped logging."
               color="text-amber-500"
               bg="bg-amber-50"
               delay="0"
-            />
-            <FeatureCard 
-              icon={UsersIcon} 
-              title="Occupancy & Safety" 
+              />
+              <FeatureCard 
+                icon={UsersIcon} 
+                title="Occupancy & Safety" 
               desc="Monitor venue capacity, flow rates, and safety density metrics live." 
               color="text-blue-500"
               bg="bg-blue-50"
               delay="100"
-            />
-            <FeatureCard 
-              icon={DocumentTextIcon} 
-              title="Automated Reporting" 
+              />
+              <FeatureCard 
+                icon={DocumentTextIcon} 
+                title="Automated Reporting" 
               desc="Generate JESIP-compliant post-event reports instantly." 
               color="text-green-500"
               bg="bg-green-50"
               delay="200"
-            />
-            <FeatureCard 
-              icon={ChartBarIcon} 
+              />
+              <FeatureCard 
+                icon={ChartBarIcon} 
               title="Analytics Engine" 
               desc="Data-driven insights for staffing deployment and decision making." 
               color="text-purple-500"
               bg="bg-purple-50"
               delay="300"
-            />
-            <FeatureCard 
-              icon={CloudIcon} 
+              />
+              <FeatureCard 
+                icon={CloudIcon} 
               title="Cloud Synchronization" 
               desc="Secure, real-time database updates across all devices via Supabase." 
               color="text-sky-500"
               bg="bg-sky-50"
               delay="400"
-            />
-            <FeatureCard 
-              icon={LockClosedIcon} 
-              title="Secure Access" 
+              />
+              <FeatureCard 
+                icon={LockClosedIcon} 
+                title="Secure Access" 
               desc="Role-based authentication, audit logging, and data encryption." 
               color="text-indigo-500"
               bg="bg-indigo-50"
               delay="500"
-            />
+              />
+            </div>
           </div>
-        </div>
 
         {/* Logging Standards - Enhanced Visuals */}
         <div className="space-y-6">
@@ -339,7 +339,7 @@ const HelpPage = () => {
               <ClipboardDocumentListIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Logging Standards</h2>
-          </div>
+            </div>
 
           <div className="bg-white dark:bg-[#1a2a57] rounded-2xl shadow-lg border border-gray-200 dark:border-[#2d437a] overflow-hidden">
             {/* Banner */}
@@ -348,26 +348,26 @@ const HelpPage = () => {
                 <div className="hidden sm:flex h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/50 items-center justify-center flex-shrink-0">
                   <ShieldCheckIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
+                  <div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 font-serif italic">
-                    &ldquo;If it ain&apos;t written down, it didn&apos;t happen.&rdquo;
-                  </h3>
+                      &ldquo;If it ain&apos;t written down, it didn&apos;t happen.&rdquo;
+                    </h3>
                   <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed max-w-3xl">
-                    Incident logs are legal documents. They may be used in licensing reviews, investigations, or court. 
+                      Incident logs are legal documents. They may be used in licensing reviews, investigations, or court. 
                     Adhering to these standards ensures your logs are <strong>defensible</strong>, <strong>professional</strong>, and <strong>accurate</strong>.
-                  </p>
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-[#2d437a]">
-              
-              {/* Left: The Template */}
+                
+                {/* Left: The Template */}
               <div className="p-6 md:p-8">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <DocumentTextIcon className="h-5 w-5 text-blue-500" /> 
                   Structured Template
-                </h3>
+                  </h3>
                 <div className="space-y-4">
                   <TemplateField 
                     label="Headline" 
@@ -399,44 +399,44 @@ const HelpPage = () => {
                     example="Transported to medical tent. Incident closed." 
                     delay="400"
                   />
+                  </div>
                 </div>
-              </div>
 
-              {/* Right: Language Guide */}
+                {/* Right: Language Guide */}
               <div className="p-6 md:p-8 bg-gray-50/50 dark:bg-[#15192c]/50">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <PencilSquareIcon className="h-5 w-5 text-blue-500" /> 
                   Language Guidelines
-                </h3>
-                
+                  </h3>
+                  
                 <div className="space-y-8">
                   <div className="bg-white dark:bg-[#1a2a57] p-5 rounded-xl border border-green-100 dark:border-green-900/30 shadow-sm">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-xs font-bold mb-4 uppercase tracking-wider">
                       <CheckCircleIcon className="h-4 w-4" /> Best Practice
-                    </span>
+                      </span>
                     <ul className="space-y-3">
                       <GuidelineItem type="good" text="Specific times" example="15:03" />
                       <GuidelineItem type="good" text="Exact locations" example="North Gate Turnstile 2" />
                       <GuidelineItem type="good" text="Measurable facts" example="approx. 3 meters" />
-                    </ul>
-                  </div>
+                      </ul>
+                    </div>
 
                   <div className="bg-white dark:bg-[#1a2a57] p-5 rounded-xl border border-red-100 dark:border-red-900/30 shadow-sm">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold mb-4 uppercase tracking-wider">
                       <ExclamationTriangleIcon className="h-4 w-4" /> Avoid
-                    </span>
+                      </span>
                     <ul className="space-y-3">
                       <GuidelineItem type="bad" text="Emotional words" example="Chaotic, Terrible" />
                       <GuidelineItem type="bad" text="Opinions" example="I think, Unfortunately" />
                       <GuidelineItem type="bad" text="Vague terms" example="Huge, A while ago" />
-                    </ul>
+                      </ul>
                   </div>
                 </div>
               </div>
 
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Glossary Section */}
         <div className="space-y-6">
@@ -446,26 +446,26 @@ const HelpPage = () => {
                 <BookOpenIcon className="h-6 w-6 text-teal-600 dark:text-teal-400" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Glossary</h2>
-            </div>
-            
+              </div>
+              
             {/* Animated Search Bar */}
             <div className="relative w-full md:w-80 group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-              </div>
-              <input
-                type="text"
+                </div>
+                <input
+                  type="text"
                 placeholder="Search definitions..."
                 className="block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-[#2d437a] rounded-xl bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm group-hover:shadow-md"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredGlossary.length > 0 ? (
-              filteredGlossary.map((item, idx) => (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredGlossary.length > 0 ? (
+                filteredGlossary.map((item, idx) => (
                 <AccordionItem
                   key={idx}
                   title={item.title}
@@ -475,11 +475,11 @@ const HelpPage = () => {
                 >
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">{item.description}</p>
-                    {getExpandedContent(item.title)}
+                              {getExpandedContent(item.title)}
                   </div>
                 </AccordionItem>
-              ))
-            ) : (
+                ))
+              ) : (
               <div className="col-span-full py-16 text-center bg-gray-50 dark:bg-[#1a2a57] rounded-2xl border-2 border-dashed border-gray-200 dark:border-[#2d437a]">
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-[#233566] mb-4">
                   <MagnifyingGlassIcon className="h-6 w-6 text-gray-400" />
@@ -487,15 +487,15 @@ const HelpPage = () => {
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">No matches found</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search terms.</p>
                 <button 
-                  onClick={() => setSearchTerm('')}
+                    onClick={() => setSearchTerm('')}
                   className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-500"
-                >
-                  Clear search
+                  >
+                    Clear search
                 </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
       </div>
     </div>

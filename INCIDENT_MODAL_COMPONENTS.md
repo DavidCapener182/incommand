@@ -11,8 +11,9 @@ Located in `src/components/incidents/cards/`:
 3. **`IncidentConfigurationCard.tsx`** - Priority, entry type, timestamps
 4. **`DetailedInformationCard.tsx`** - Headline, source, facts, actions, outcome
 5. **`GreenGuideBestPracticesCard.tsx`** - Green Guide best practices display
-6. **`LocationAndActionsCard.tsx`** - Location fields and actions taken
-7. **`AdditionalOptionsCard.tsx`** - Photos, tags, special fields
+6. **`IncidentQualityCard.tsx`** - AI-powered incident log quality auditor with risk assessment
+7. **`LocationAndActionsCard.tsx`** - Location fields and actions taken
+8. **`AdditionalOptionsCard.tsx`** - Photos, tags, special fields
 
 ## Supporting Components
 
@@ -29,6 +30,7 @@ Located in `src/components/incidents/cards/`:
 ### AI & Smart Features
 - **`src/components/GuidedActionsModal.tsx`** - Guided actions suggestions
 - **`src/components/SOPModal.tsx`** - Standard Operating Procedures modal
+- **`src/components/incidents/cards/IncidentQualityCard.tsx`** - OpenAI-powered quality auditor (score, risk level, suggestions)
 
 ### UI Components
 - **`src/components/ui/CursorTracker.tsx`** - Real-time cursor tracking
@@ -58,6 +60,12 @@ IncidentCreationModal (main)
 │   ├── LocationAndActionsCard
 │   └── AdditionalOptionsCard
 │
+├── Right Column - AI Tools & Metadata
+│   ├── IncidentQualityCard (OpenAI-powered)
+│   ├── GreenGuideBestPracticesCard
+│   ├── LocationAndActionsCard
+│   └── AdditionalOptionsCard
+│
 ├── VoiceInputButton / VoiceInputField
 ├── RecentRadioMessages
 ├── IncidentDependencySelector
@@ -68,5 +76,13 @@ IncidentCreationModal (main)
 └── TypingIndicator
 ```
 
-## Total TSX Files: 19 components
+## Total TSX Files: 20 components
+
+## Recent Updates
+
+### OpenAI Integration
+- **IncidentQualityCard** now uses OpenAI instead of Gemini for quality auditing
+- Uses `/api/openai/chat` endpoint with GPT-4o-mini model
+- Provides real-time quality scores (0-100), risk level assessment, and actionable suggestions
+- Debounced analysis (2s delay) to prevent API spam
 

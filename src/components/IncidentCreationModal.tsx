@@ -57,6 +57,7 @@ import GreenGuideBestPracticesCard from './incidents/cards/GreenGuideBestPractic
 import LocationAndActionsCard from './incidents/cards/LocationAndActionsCard'
 import AdditionalOptionsCard from './incidents/cards/AdditionalOptionsCard'
 import IncidentCreationModalHeader from './incidents/cards/IncidentCreationModalHeader'
+import IncidentQualityCard from './incidents/cards/IncidentQualityCard'
 
 interface Props {
   isOpen: boolean
@@ -4671,7 +4672,7 @@ export default function IncidentCreationModal({
         {/* 🔹 Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto">
             {/* Left Column - Incident Type Categories (Sidebar) */}
-            <aside className="col-span-3 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
+            <aside className="col-span-12 lg:col-span-2 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
               <div className="flex items-center gap-2 mb-4 flex-shrink-0">
                 <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
                   <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4691,7 +4692,7 @@ export default function IncidentCreationModal({
             </aside>
 
             {/* Middle Column - Main Form Section */}
-            <section className="col-span-6 space-y-6">
+            <section className="col-span-12 lg:col-span-4 space-y-6">
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
               {/* Callsign Information Card */}
               <CallsignInformationCard
@@ -4751,9 +4752,16 @@ export default function IncidentCreationModal({
               </div>
             </section>
 
-            {/* Right Column - Right-hand Panel */}
-            <aside className="col-span-3 space-y-6">
+            {/* Right Column 1 - AI Tools & Quality */}
+            <aside className="col-span-12 lg:col-span-3 space-y-6">
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
+              {/* Incident Quality Auditor */}
+              <IncidentQualityCard 
+                formData={formData} 
+                onApplySuggestion={(field, value) => {
+                  setFormData(prev => ({ ...prev, [field]: value }));
+                }} 
+              />
               {/* Green Guide Best Practices */}
               <GreenGuideBestPracticesCard
                 incidentType={formData.incident_type}
@@ -4768,16 +4776,12 @@ export default function IncidentCreationModal({
                   actions_taken: (prev.actions_taken ? prev.actions_taken + '\n' : '') + text
                 }))}
               />
-              {/* Location & Actions Card */}
-              <LocationAndActionsCard
-                location={formData.location}
-                onLocationChange={handleLocationChange}
-                shouldRenderMap={shouldRenderMap}
-                mapCoordinates={mapCoordinates}
-                mapLocationQuery={mapLocationQuery}
-                onMapLocationChange={handleMapLocationChange}
-              />
+              </div>
+            </aside>
 
+            {/* Right Column 2 - Additional Options */}
+            <aside className="col-span-12 lg:col-span-3 space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
               {/* Additional Options Card */}
               <AdditionalOptionsCard
                 isClosed={formData.is_closed}

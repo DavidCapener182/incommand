@@ -380,9 +380,9 @@ export default function TutorialPage() {
                         <ChevronRightIcon className="w-3 h-3 ml-auto text-white/70" />
                       )}
                     </a>
-                  </li>
-                ))}
-              </ul>
+                </li>
+              ))}
+            </ul>
             </div>
           </nav>
 
@@ -398,19 +398,19 @@ export default function TutorialPage() {
               <div className="prose prose-blue dark:prose-invert max-w-none">
                 <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
                   InCommand is a comprehensive platform for live event control, combining incident logging, team coordination,
-                  analytics, and real‑time risk awareness. This tutorial guides new users through the core features
-                  and operational best practices.
-                </p>
+                analytics, and real‑time risk awareness. This tutorial guides new users through the core features
+                and operational best practices.
+              </p>
                 <div className="flex flex-wrap gap-3">
                   <Button asChild size="sm">
-                    <Link href="/settings/events">Create Event</Link>
-                  </Button>
+                  <Link href="/settings/events">Create Event</Link>
+                </Button>
                   <Button asChild variant="secondary" size="sm">
-                    <Link href="/incidents">Log Incident</Link>
-                  </Button>
+                  <Link href="/incidents">Log Incident</Link>
+                </Button>
                   <Button asChild variant="ghost" size="sm">
-                    <Link href="/">View Dashboard</Link>
-                  </Button>
+                  <Link href="/">View Dashboard</Link>
+                </Button>
                 </div>
               </div>
             </Section>
@@ -519,7 +519,7 @@ export default function TutorialPage() {
                     height={450}
                     className="rounded-xl border border-gray-200 dark:border-[#2d437a] shadow-md w-full" 
                   />
-                </div>
+              </div>
               </div>
             </Section>
 
