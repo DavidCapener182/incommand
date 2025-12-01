@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceSupabaseClient()
 
-    // Fetch recent incidents for AI summary
-    const { data: incidents, error: incidentError } = await supabase
+    // Fetch all incidents for the event
+    // We'll filter out Attendance, Sit Rep, and match flow types in JavaScript
+    const { data: allIncidents, error: incidentError } = await supabase
       .from('incident_logs')
       .select(`
         id,
@@ -38,14 +39,46 @@ export async function GET(request: NextRequest) {
       `)
       .eq('event_id', eventId)
       .order('created_at', { ascending: false })
-      .limit(20)
 
     if (incidentError) {
-      console.error("Error fetching incidents for AI summary:", incidentError.message)
+      console.error("Error fetching incidents for AI summary:", incidentError)
       return NextResponse.json({ 
-        error: 'Unable to fetch AI summary data' 
+        error: 'Unable to fetch AI summary data',
+        details: incidentError.message 
       }, { status: 500 })
     }
+
+    if (!allIncidents || allIncidents.length === 0) {
+      return NextResponse.json({ 
+        summary: 'No recent incidents to summarize.',
+        totalIncidents: 0,
+        openIncidents: 0,
+        highPriorityIncidents: 0,
+        lastUpdated: new Date().toISOString()
+      })
+    }
+
+    // Filter out non-countable incidents:
+    // - Attendance (operational logs)
+    // - Sit Rep (operational logs)
+    // - Match flow types (informational logs)
+    const excludedTypes = [
+      'Attendance',
+      'Sit Rep',
+      'Kick-Off (First Half)',
+      'Half-Time',
+      'Kick-Off (Second Half)',
+      'Full-Time',
+      'Home Goal',
+      'Away Goal',
+      'Match Flow'
+    ]
+    
+    // Filter incidents to exclude non-countable types
+    const incidents = allIncidents.filter((incident: any) => {
+      const incidentType = incident?.incident_type
+      return incidentType && !excludedTypes.includes(incidentType)
+    })
 
     if (!incidents || incidents.length === 0) {
       return NextResponse.json({ 
@@ -57,7 +90,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Analyze incidents
+    // Get total count (excluding match_log) - this is the actual total count
     const totalIncidents = incidents.length
     const openIncidents = incidents.filter(i => (i.status || '').toLowerCase() === 'open').length
     const highPriorityIncidents = incidents.filter(i => (i.priority || '').toLowerCase() === 'high').length
@@ -73,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     // Get most common incident types
     const topIncidentTypes = Object.entries(incidentTypes)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
       .slice(0, 3)
       .map(([type, count]) => `${type} (${count})`)
       .join(', ')
@@ -104,8 +137,12 @@ ${openIncidents === 0 ? '✅ **All incidents resolved** - Event running smoothly
 
   } catch (error) {
     console.error('Error in AI summary endpoint:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    console.error('Error details:', { errorMessage, errorStack })
     return NextResponse.json({ 
-      error: 'Internal server error' 
+      error: 'Internal server error',
+      message: errorMessage
     }, { status: 500 })
   }
 }

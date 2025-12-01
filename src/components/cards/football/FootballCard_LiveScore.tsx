@@ -76,25 +76,78 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
     } catch (e) {}
   }, [eventId, previousScore])
 
-  // Fetch attendance from stand occupancy
+  // Fetch attendance from both attendance_records and stand occupancy, use the latest
   const fetchAttendance = useCallback(async () => {
-    if (!context) return
+    if (!eventId) return
     try {
-      const res = await fetch(`/api/football/stands?company_id=${context.companyId}&event_id=${context.eventId}`)
-      if (res.ok) {
-        const payload = await res.json()
-        if (payload.standsSetup?.stands) {
-          const totalAttendance = payload.standsSetup.stands.reduce(
-            (sum: number, stand: any) => sum + (stand.current || 0),
-            0
-          )
-          setAttendance(totalAttendance)
+      let attendanceFromRecords: { count: number; timestamp: string } | null = null
+      let attendanceFromStands: { count: number; timestamp: string } | null = null
+
+      // Fetch from attendance_records table
+      try {
+        const { data: recordsData, error: recordsError } = await supabase
+          .from('attendance_records')
+          .select('count, timestamp')
+          .eq('event_id', eventId)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (!recordsError && recordsData) {
+          attendanceFromRecords = {
+            count: recordsData.count,
+            timestamp: recordsData.timestamp
+          }
         }
+      } catch (e) {
+        console.warn('Failed to fetch attendance from records:', e)
+      }
+
+      // Fetch from stand occupancy
+      if (context) {
+        try {
+          const res = await fetch(`/api/football/stands?company_id=${context.companyId}&event_id=${context.eventId}`)
+          if (res.ok) {
+            const payload = await res.json()
+            if (payload.standsSetup?.stands) {
+              const totalAttendance = payload.standsSetup.stands.reduce(
+                (sum: number, stand: any) => sum + (stand.current || 0),
+                0
+              )
+              if (totalAttendance > 0) {
+                attendanceFromStands = {
+                  count: totalAttendance,
+                  timestamp: new Date().toISOString() // Stand occupancy is current time
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to fetch attendance from stands:', e)
+        }
+      }
+
+      // Use whichever is latest
+      if (attendanceFromRecords && attendanceFromStands) {
+        const recordsTime = new Date(attendanceFromRecords.timestamp).getTime()
+        const standsTime = new Date(attendanceFromStands.timestamp).getTime()
+        if (standsTime > recordsTime) {
+          setAttendance(attendanceFromStands.count)
+        } else {
+          setAttendance(attendanceFromRecords.count)
+        }
+      } else if (attendanceFromRecords) {
+        setAttendance(attendanceFromRecords.count)
+      } else if (attendanceFromStands) {
+        setAttendance(attendanceFromStands.count)
+      } else {
+        setAttendance(null)
       }
     } catch (e) {
       console.error('Failed to fetch attendance:', e)
+      setAttendance(null)
     }
-  }, [context])
+  }, [eventId, context])
 
   useEffect(() => {
     fetchAttendance()
@@ -103,6 +156,32 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
       return () => clearInterval(id)
     }
   }, [fetchAttendance, autoRefresh])
+
+  // Subscribe to attendance_records changes for real-time updates
+  useEffect(() => {
+    if (!eventId) return
+
+    const attendanceChannel = supabase
+      .channel(`attendance_${eventId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance_records',
+          filter: `event_id=eq.${eventId}`,
+        },
+        () => {
+          // Refresh attendance when records change
+          fetchAttendance()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      attendanceChannel.unsubscribe()
+    }
+  }, [eventId, fetchAttendance])
 
   useEffect(() => {
     let mounted = true
