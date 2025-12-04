@@ -26,19 +26,25 @@ interface UseIncidentsReturn {
   refreshIncidents: () => Promise<void>;
 }
 
-export const useIncidents = (eventId: string): UseIncidentsReturn => {
+export const useIncidents = (eventId: string | null): UseIncidentsReturn => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   const fetchIncidents = useCallback(async () => {
+    if (!eventId) {
+      setIncidents([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('incidents')
+        .from('incident_logs')
         .select('*')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -49,17 +55,17 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
 
       setIncidents(
         (data || []).map(incident => ({
-          id: incident.id.toString(),
+          id: incident.id?.toString?.() || incident.id || '',
           event_id: incident.event_id || '',
           type: incident.incident_type || '',
-          description: incident.description || '',
+          description: incident.occurrence || incident.description || '',
           status: incident.status || 'open',
-          is_closed: incident.is_closed || false,
-          callsigns: [incident.callsign_from, incident.callsign_to].filter(callsign => callsign !== null),
+          is_closed: Boolean(incident.is_closed),
+          callsigns: [incident.callsign_from, incident.callsign_to].filter(Boolean),
           created_at: incident.created_at || '',
           updated_at: incident.updated_at || '',
-          created_by: incident.created_by || '',
-          priority: incident.priority,
+          created_by: incident.logged_by_user_id || '',
+          priority: incident.priority || 'medium',
           location: (incident as any).location || null
         }))
       );
@@ -148,15 +154,19 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
   useEffect(() => {
     fetchIncidents();
 
+    if (!eventId) {
+      return;
+    }
+
     // Set up real-time subscription
     const channel = supabase
-      .channel(`incidents-${eventId}`)
+      .channel(`incident_logs-${eventId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'incidents',
+          table: 'incident_logs',
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
