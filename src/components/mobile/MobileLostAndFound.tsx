@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { createFoundItem, fetchFoundItems, updateFoundItemStatus } from '@/services/lostAndFoundService'
 import type { FoundItem } from '@/types/lostAndFound'
 import { useToast } from '@/components/Toast'
@@ -17,7 +17,7 @@ export default function MobileLostAndFound() {
     storage_location: '',
   })
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true)
     try {
       const data = await fetchFoundItems()
@@ -31,11 +31,11 @@ export default function MobileLostAndFound() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [addToast])
 
   useEffect(() => {
     loadItems()
-  }, [])
+  }, [loadItems])
 
   const filteredItems = useMemo(() => {
     if (!query.trim()) return items

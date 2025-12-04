@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/Toast'
 import { getIncidentTypesForEvent } from '@/config/incidentTypes'
 import { useEventContext } from '@/contexts/EventContext'
+import type { Database } from '@/types/supabase'
 
 type Priority = 'low' | 'medium' | 'high' | 'urgent'
 
@@ -66,21 +67,26 @@ export default function MobileIncidentForm({ eventId, onSuccess, onCancel }: Mob
     try {
       const logNumber = await generateNextLogNumber(eventId, eventData?.event_name || 'INC')
       const now = new Date().toISOString()
-      const payload = {
+
+      const payload: Database['public']['Tables']['incident_logs']['Insert'] = {
         event_id: eventId,
         logged_by_user_id: user.id,
+        logged_by_callsign: user.user_metadata?.callsign || 'Mobile User',
         callsign_from: user.user_metadata?.callsign || 'Mobile User',
         callsign_to: 'Event Control',
         incident_type: incidentType,
         occurrence: description,
         priority,
-        location,
+        location: location || null,
         status: 'open',
         is_closed: false,
         time_of_occurrence: now,
         time_logged: now,
+        timestamp: now,
         entry_type: 'contemporaneous',
         log_number: logNumber,
+        action_taken: '',
+        source: 'mobile',
       }
 
       const { error } = await supabase.from('incident_logs').insert([payload])
