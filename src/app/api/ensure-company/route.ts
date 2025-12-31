@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
       const companyName = profile.company || user.user_metadata?.company || `${user.email?.split('@')[0]}'s Company`
       
-      const { data: newCompany, error: companyError } = await serviceSupabase
+      const { data: newCompany, error: companyError } = await (serviceSupabase as any)
         .from('companies')
         .insert({
           name: companyName,

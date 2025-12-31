@@ -32,23 +32,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Knowledge document not found' }, { status: 404 })
       }
 
-      if (knowledge.storage_path == null) {
+      const knowledgeData = knowledge as any;
+
+      if (knowledgeData.storage_path == null) {
         return NextResponse.json({ error: 'No stored file found for this document' }, { status: 400 })
       }
 
-      if (knowledge.status === 'ingesting') {
+      if (knowledgeData.status === 'ingesting') {
         return NextResponse.json({ error: 'Document is already ingesting' }, { status: 409 })
       }
 
-      if (knowledge.organization_id && context.highestRole !== 'super_admin') {
-        if (!context.organizationMemberships.includes(knowledge.organization_id)) {
+      if (knowledgeData.organization_id && context.highestRole !== 'super_admin') {
+        if (!context.organizationMemberships.includes(knowledgeData.organization_id)) {
           return NextResponse.json({ error: 'Access denied' }, { status: 403 })
         }
       }
 
       const download = await supabase.storage
         .from(STORAGE_BUCKET)
-        .download(knowledge.storage_path)
+        .download(knowledgeData.storage_path)
 
       if (download.error || !download.data) {
         console.error('Failed to download stored file:', download.error)
@@ -58,30 +60,30 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await download.data.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
-      const uploaderId = knowledge.uploader_id || context.user.id
+      const uploaderId = knowledgeData.uploader_id || context.user.id
 
       const result = await ingestDocument({
         file: buffer,
-        title: knowledge.title,
+        title: knowledgeData.title,
         uploaderId,
-        organizationId: knowledge.organization_id || undefined,
-        eventId: knowledge.event_id || undefined,
-        tags: knowledge.tags || [],
-        type: (knowledge.type as any) || undefined,
-        knowledgeId: knowledge.id,
-        originalFilename: knowledge.original_filename || undefined,
-        storagePath: knowledge.storage_path || undefined
+        organizationId: knowledgeData.organization_id || undefined,
+        eventId: knowledgeData.event_id || undefined,
+        tags: knowledgeData.tags || [],
+        type: (knowledgeData.type as any) || undefined,
+        knowledgeId: knowledgeData.id,
+        originalFilename: knowledgeData.original_filename || undefined,
+        storagePath: knowledgeData.storage_path || undefined
       })
 
         await recordAdminAudit(context.serviceClient, {
-          organizationId: knowledge.organization_id ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
+          organizationId: knowledgeData.organization_id ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
         action: 'ingest_knowledge',
         resourceType: 'knowledge_base',
         resourceId: knowledgeId,
         changes: {
-          title: knowledge.title,
-          type: knowledge.type,
+          title: knowledgeData.title,
+          type: knowledgeData.type,
           chunksCreated: result.chunksCreated,
           bytes: result.bytes
         }

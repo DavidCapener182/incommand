@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   try {
     const supabase = getServiceSupabaseClient()
 
-    const { data: vendor, error: vendorError } = await supabase
+    const { data: vendor, error: vendorError } = await (supabase as any)
       .from('vendors')
       .insert([{ business_name, contact_email, notes: notes ?? null, ...rest }])
       .select('*')
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const inductionToken = crypto.randomUUID()
 
-    const { data: accreditation, error: accreditationError } = await supabase
+    const { data: accreditation, error: accreditationError } = await (supabase as any)
       .from('vendor_accreditations')
       .insert([
         {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         access_level_id
       }))
 
-      const { error: joinError } = await supabase
+      const { error: joinError } = await (supabase as any)
         .from('vendor_accreditation_access_levels')
         .insert(rows)
 
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         text: `Hi ${rest.contact_name || business_name},\n\nThank you for submitting your accreditation request for ${business_name}.\n\nPlease complete the induction using the link below to continue:\n${inductionLink}\n\nWe look forward to working with you.\n\ninCommand Accreditation Team`
       })
 
-      await supabase
+      await (supabase as any)
         .from('vendor_induction_events')
         .insert({
           accreditation_id: accreditation.id,
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         })
     } catch (error) {
       console.error('Failed to send induction email', error)
-      await supabase
+      await (supabase as any)
         .from('vendor_induction_events')
         .insert({
           accreditation_id: accreditation.id,

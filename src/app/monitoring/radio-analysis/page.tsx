@@ -30,14 +30,14 @@ export default function RadioAnalysisPage() {
       setEventId(contextEventId)
     } else {
       const fetchCurrentEvent = async () => {
-        const { data: event } = await supabase
+        const { data: event } = await (supabase as any)
           .from('events')
           .select('id')
           .eq('is_current', true)
           .single()
         
         if (event) {
-          setEventId(event.id)
+          setEventId((event as any).id)
         }
       }
       fetchCurrentEvent()

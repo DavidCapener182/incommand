@@ -52,15 +52,16 @@ export default function LogReviewReminder({
   useEffect(() => {
     if (user) {
       // Get user role from profile
-      supabase
+      (supabase as any)
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
-        .then(({ data, error }) => {
-          if (data && !error) {
-            setUserRole(data.role)
-            setIsSilverCommander(data.role === 'silver_commander' || data.role === 'admin')
+        .then(({ data, error }: any) => {
+          const profileData = data as any;
+          if (profileData && !error) {
+            setUserRole(profileData.role)
+            setIsSilverCommander(profileData.role === 'silver_commander' || profileData.role === 'admin')
           }
         })
     }
@@ -76,22 +77,23 @@ export default function LogReviewReminder({
       const now = new Date().toISOString()
 
       // Get current event
-      const { data: currentEvent } = await supabase
+      const { data: currentEvent } = await (supabase as any)
         .from('events')
         .select('id')
         .eq('is_active', true)
         .single()
 
-      if (!currentEvent) {
+      const eventData = currentEvent as any;
+      if (!eventData) {
         setIsLoading(false)
         return
       }
 
       // Get logs from last 30 minutes
-      const { data: recentLogs, error } = await supabase
+      const { data: recentLogs, error } = await (supabase as any)
         .from('incident_logs')
         .select('id, created_at, entry_type, is_amended, time_logged')
-        .eq('event_id', currentEvent.id)
+        .eq('event_id', eventData.id)
         .gte('created_at', thirtyMinutesAgo)
         .lte('created_at', now)
         .order('created_at', { ascending: false })
@@ -102,16 +104,17 @@ export default function LogReviewReminder({
         return
       }
 
-      const totalLogs = recentLogs?.length || 0
-      const newLogs = recentLogs?.filter(log => 
+      const recentLogsArray = (recentLogs || []) as any[];
+      const totalLogs = recentLogsArray.length
+      const newLogs = recentLogsArray.filter((log: any) => 
         new Date(log.created_at) > new Date(lastReminderTime)
-      ).length || 0
+      ).length
       
-      const retrospectiveLogs = recentLogs?.filter(log => 
+      const retrospectiveLogs = recentLogsArray.filter((log: any) => 
         log.entry_type === 'retrospective'
-      ).length || 0
+      ).length
       
-      const amendedLogs = recentLogs?.filter(log => 
+      const amendedLogs = recentLogsArray.filter((log: any) => 
         log.is_amended === true
       ).length || 0
 

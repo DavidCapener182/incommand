@@ -24,7 +24,7 @@ export async function recordAdminAudit(
     changes: params.changes ?? null,
   }
 
-  const { error: auditError } = await client.from('audit_log' as any).insert(payload)
+  const { error: auditError } = await (client as any).from('audit_log').insert(payload)
   if (auditError) {
     logger.error('Failed to record audit log entry', auditError, payload)
   }

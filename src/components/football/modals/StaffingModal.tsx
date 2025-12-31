@@ -67,13 +67,14 @@ export function StaffingActual({ onSave }: StaffingTabProps) {
         const eventJson = await eventRes.json()
         const eventId = eventJson?.event?.id
         if (!eventId) return
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .single()
-        if (!profile?.company_id) return
-        setContext({ companyId: profile.company_id, eventId })
+        const profileData = profile as any;
+        if (!profileData?.company_id) return
+        setContext({ companyId: profileData.company_id, eventId })
       } catch (error) {
         console.error('Failed to resolve staffing context', error)
       } finally {
@@ -286,13 +287,14 @@ export function StaffingDeployment({ onSave }: StaffingTabProps) {
         const eventJson = await eventRes.json()
         const eventId = eventJson?.event?.id
         if (!eventId) return
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .single()
-        if (!profile?.company_id) return
-        setContext({ companyId: profile.company_id, eventId })
+        const profileData = profile as any;
+        if (!profileData?.company_id) return
+        setContext({ companyId: profileData.company_id, eventId })
       } catch (error) {
         console.error('Failed to resolve staffing context', error)
       } finally {

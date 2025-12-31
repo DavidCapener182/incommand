@@ -123,7 +123,7 @@ const StaffList = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile, error } = await supabase
+      const { data: profile, error } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
@@ -131,8 +131,9 @@ const StaffList = () => {
 
       if (error) throw error;
 
-      if (profile?.company_id) {
-        setUserCompanyId(profile.company_id);
+      const profileData = profile as any;
+      if (profileData?.company_id) {
+        setUserCompanyId(profileData.company_id);
       }
     } catch (error) {
       console.error("Error fetching user company:", error);
@@ -169,7 +170,7 @@ const StaffList = () => {
     try {
       if (currentStaff.id) {
         // Update existing staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .update({
             full_name: currentStaff.full_name,
@@ -184,7 +185,7 @@ const StaffList = () => {
         if (error) throw error;
       } else {
         // Create new staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .insert({
             full_name: currentStaff.full_name,
@@ -504,19 +505,20 @@ export default function StaffCommandCentre() {
       setEventLoading(true);
       setEventError(null);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("events")
           .select("id, event_name")
           .eq("is_current", true)
           .single();
         if (error) throw error;
-        if (!data) {
+        const eventData = data as any;
+        if (!eventData) {
           setEventError("No current event found. Please set a current event in Settings.");
           setEventId(null);
           setEventName("");
         } else {
-          setEventId(data.id);
-          setEventName(data.event_name || "");
+          setEventId(eventData.id);
+          setEventName(eventData.event_name || "");
         }
       } catch (err: any) {
         setEventError("Error loading event: " + (err.message || err.toString()));
@@ -535,12 +537,12 @@ export default function StaffCommandCentre() {
     const loadRolesAndAssignments = async () => {
       setSaveStatus("Loading saved callsigns...");
       // Load roles
-      const { data: roles, error: rolesError } = await supabase
+      const { data: roles, error: rolesError } = await (supabase as any)
         .from("callsign_positions")
         .select("id, area, short_code, callsign, position")
         .eq("event_id", eventId);
       // Load assignments
-      const { data: assignmentsData, error: assignmentsError } = await supabase
+      const { data: assignmentsData, error: assignmentsError } = await (supabase as any)
         .from("callsign_assignments")
         .select("callsign_role_id, assigned_name")
         .eq("event_id", eventId);
@@ -548,11 +550,12 @@ export default function StaffCommandCentre() {
         setSaveStatus("Error loading saved data");
         return;
       }
-      if (roles && roles.length > 0) {
+      const rolesArray = (roles || []) as any[];
+      if (rolesArray.length > 0) {
         // Group roles by area
         const grouped: typeof groups = [];
         const areaMap: Record<string, any[]> = {};
-        roles.forEach((r) => {
+        rolesArray.forEach((r: any) => {
           if (r.area) {
             if (!areaMap[r.area]) areaMap[r.area] = [];
             areaMap[r.area].push({
@@ -570,10 +573,11 @@ export default function StaffCommandCentre() {
       } else {
         setGroups(initialGroups);
       }
-      if (assignmentsData && assignmentsData.length > 0) {
+      const assignmentsArray = (assignmentsData || []) as any[];
+      if (assignmentsArray.length > 0) {
         // Map assignments by callsign_role_id
         const assignMap: Record<string, string> = {};
-        assignmentsData.forEach((a) => {
+        assignmentsArray.forEach((a: any) => {
           if (a.callsign_role_id && a.assigned_name) {
             assignMap[a.callsign_role_id] = a.assigned_name;
           }
@@ -591,13 +595,14 @@ export default function StaffCommandCentre() {
   useEffect(() => {
     if (!eventId) return;
     const fetchPreviousNames = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("callsign_assignments")
         .select("assigned_name")
         .eq("event_id", eventId)
         .not("assigned_name", "is", null);
-      if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
+      const dataArray = (data || []) as any[];
+      if (!error && dataArray.length > 0) {
+        const names = Array.from(new Set(dataArray.map((r: any) => r.assigned_name).filter((name: any) => name !== null)));
         setAllPreviousNames(names);
         // Group by first letter for better organization
         const grouped: Record<string, string[]> = {};
@@ -615,12 +620,13 @@ export default function StaffCommandCentre() {
   // Load all previous names across all events for global autocomplete
   useEffect(() => {
     const fetchAllNames = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("callsign_assignments")
         .select("assigned_name")
         .not("assigned_name", "is", null);
-      if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
+      const dataArray = (data || []) as any[];
+      if (!error && dataArray.length > 0) {
+        const names = Array.from(new Set(dataArray.map((r: any) => r.assigned_name).filter((name: any) => name !== null)));
         setAllPreviousNames(names);
       }
     };
@@ -797,7 +803,7 @@ export default function StaffCommandCentre() {
         position: p.position,
       })));
 
-        const { error: rolesError } = await supabase.from("callsign_positions").insert(rolesToInsert);
+        const { error: rolesError } = await (supabase as any).from("callsign_positions").insert(rolesToInsert);
       if (rolesError) throw rolesError;
 
       // Insert assignments
@@ -808,7 +814,7 @@ export default function StaffCommandCentre() {
       }));
 
       if (assignmentsToInsert.length > 0) {
-        const { error: assignmentsError } = await supabase.from("callsign_assignments").insert(assignmentsToInsert);
+        const { error: assignmentsError } = await (supabase as any).from("callsign_assignments").insert(assignmentsToInsert);
         if (assignmentsError) throw assignmentsError;
       }
 

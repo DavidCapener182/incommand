@@ -148,13 +148,13 @@ const TimeCard: React.FC<TimeCardProps> = ({
                       isHighlighted ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50 border border-transparent"
                     )}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                        <div className={cn(
                          "h-1.5 w-1.5 rounded-full shrink-0",
                          isActive ? "bg-blue-600 animate-pulse" : "bg-slate-300"
                        )} />
                        <span className={cn(
-                         "text-sm font-medium truncate",
+                         "text-sm font-medium break-words",
                          isHighlighted || isActive ? "text-slate-900" : "text-slate-600"
                        )}>
                          {timing.title}

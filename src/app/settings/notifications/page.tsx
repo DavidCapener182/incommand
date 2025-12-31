@@ -212,7 +212,7 @@ export default function NotificationSettingsPage() {
           [dbField]: value,
         };
 
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('notification_settings')
           .upsert(updateData);
 

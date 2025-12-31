@@ -46,12 +46,13 @@ export default function GlobalEscalationToast() {
 
   const fetchCurrentEvent = useCallback(async () => {
     try {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('events')
         .select('id')
         .eq('is_current', true)
         .single();
-      setCurrentEventId(data?.id ?? null);
+      const eventData = data as any;
+      setCurrentEventId(eventData?.id ?? null);
     } catch (error) {
       console.error('Error fetching current event:', error);
       setCurrentEventId(null);
@@ -161,10 +162,10 @@ export default function GlobalEscalationToast() {
   const onMoveToInProgress = async () => {
     if (!incident) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('incident_logs')
         .update({ status: 'in-progress' })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (error) throw error;
       // Refresh selection
       if (currentEventId) fetchNextEscalatingIncident(currentEventId);
@@ -179,24 +180,25 @@ export default function GlobalEscalationToast() {
     if (!note || !note.trim()) return;
     try {
       // Append note to both occurrence and action_taken so it shows clearly on the log
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('incident_logs')
         .select('occurrence, action_taken')
-        .eq('id', incident.id)
+        .eq('id', (incident as any).id)
         .single();
       if (error) throw error;
-      const prevOccurrence = (data?.occurrence as string) || '';
-      const prevActions = (data?.action_taken as string) || '';
+      const dataTyped = data as any;
+      const prevOccurrence = (dataTyped?.occurrence as string) || '';
+      const prevActions = (dataTyped?.action_taken as string) || '';
 
       const normalizedNote = note.trim().replace(/\s+/g, ' ');
       const updatedOccurrence = `${prevOccurrence ? prevOccurrence.replace(/\.$/, '') + '. ' : ''}Update: ${normalizedNote}.`;
       const appendedAction = `Update: ${normalizedNote}.`;
       const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
 
-      const { error: updErr } = await supabase
+      const { error: updErr } = await (supabase as any)
         .from('incident_logs')
         .update({ occurrence: updatedOccurrence, action_taken: updatedActions })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (updErr) throw updErr;
       // Local reflect
       setIncident({ ...incident, occurrence: updatedOccurrence });
@@ -208,10 +210,10 @@ export default function GlobalEscalationToast() {
   const onCloseLog = async () => {
     if (!incident) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('incident_logs')
         .update({ is_closed: true, status: 'closed' })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (error) throw error;
       // Refresh selection
       if (currentEventId) fetchNextEscalatingIncident(currentEventId);

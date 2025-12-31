@@ -233,7 +233,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     if (!inputValue.trim() || selectedGroup === 'ai') return;
     // Replace 'You' with actual user id if available
     const userId = 'You';
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('event_chat_messages')
       .insert([
         {

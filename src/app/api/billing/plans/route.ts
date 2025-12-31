@@ -16,8 +16,8 @@ const createPlanSchema = z.object({
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'billing_manager', async (context) => {
     // Try to fetch from database first
-    const { data: dbPlans, error } = await context.serviceClient
-      .from('subscription_plans' as any)
+    const { data: dbPlans, error } = await (context.serviceClient as any)
+      .from('subscription_plans')
       .select('*')
       .eq('is_active', true)
       .eq('deprecated', false)
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
 
     // Insert if table exists; otherwise return mock
     try {
-      const { data, error } = await context.serviceClient
-        .from('plans' as any)
+      const { data, error } = await (context.serviceClient as any)
+        .from('plans')
         .insert({
           name: parsed.data.name,
           code: parsed.data.code,

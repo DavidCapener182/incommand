@@ -80,7 +80,7 @@ export async function POST(
 
     // Create invite record using service client to bypass RLS
     const serviceSupabase = getServiceSupabaseClient();
-    const { data: invite, error: inviteError } = await serviceSupabase
+    const { data: invite, error: inviteError } = await (serviceSupabase as any)
       .from('event_invites')
       .insert({
         event_id: eventId,
@@ -112,7 +112,7 @@ export async function POST(
     }
 
     // Log invite creation using service client
-    await serviceSupabase.from('audit_log').insert({
+    await (serviceSupabase as any).from('audit_log').insert({
       table_name: 'event_invites',
       record_id: invite.id,
       action: 'create_invite',
@@ -299,7 +299,7 @@ export async function DELETE(
       actionType = 'delete_invite';
     } else {
       // Revoke the invite (soft delete)
-      const { error: revokeError } = await serviceSupabase
+      const { error: revokeError } = await (serviceSupabase as any)
         .from('event_invites')
         .update({ status: 'revoked' })
         .eq('id', inviteId)
@@ -321,7 +321,7 @@ export async function DELETE(
     }
 
     // Log the operation
-    await serviceSupabase.from('audit_log').insert({
+    await (serviceSupabase as any).from('audit_log').insert({
       table_name: 'event_invites',
       record_id: inviteId,
       action: actionType,

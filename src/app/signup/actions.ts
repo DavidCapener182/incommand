@@ -19,7 +19,7 @@ export async function createCompanyWithPlan(
     const planFeatures = getPlanFeatures(planCode)
     
     // Create company with plan
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await (supabase as any)
       .from('companies')
       .insert({
         name: companyName,
@@ -36,10 +36,11 @@ export async function createCompanyWithPlan(
     }
 
     // Update profile with company_id
-    const { error: profileError } = await supabase
+    const companyData = company as any;
+    const { error: profileError } = await (supabase as any)
       .from('profiles')
       .update({
-        company_id: company.id,
+        company_id: companyData.id,
         role: 'company_admin',
       })
       .eq('id', userId)

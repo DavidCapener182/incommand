@@ -60,7 +60,7 @@ export default function RadioAlertsWidget({
       // Fetch critical/high priority incidents from incident_logs (last hour)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
       
-    const { data: highPriorityIncidents, error: incidentsError } = await supabase
+    const { data: highPriorityIncidents, error: incidentsError } = await (supabase as any)
           .from('incident_logs')
         .select('id, occurrence, incident_type, priority, callsign_from, callsign_to, created_at, time_of_occurrence, source, is_closed')
         .eq('event_id', eventId)
@@ -74,14 +74,15 @@ export default function RadioAlertsWidget({
         throw incidentsError
       }
 
-      if (highPriorityIncidents && highPriorityIncidents.length > 0) {
+      const highPriorityArray = (highPriorityIncidents || []) as any[];
+      if (highPriorityArray.length > 0) {
         // Filter for high/urgent/critical priority incidents
-        const criticalIncidents = highPriorityIncidents.filter((inc) => {
+        const criticalIncidents = highPriorityArray.filter((inc: any) => {
           const priority = (inc.priority || '').toLowerCase()
           return priority === 'critical' || priority === 'high' || priority === 'urgent'
         })
 
-        criticalIncidents.forEach((incident) => {
+        criticalIncidents.forEach((incident: any) => {
           const priority = (incident.priority || '').toLowerCase()
           const severity = priority === 'critical' || priority === 'urgent' ? 'critical' : 'high'
           

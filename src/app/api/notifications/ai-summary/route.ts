@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     const incidents = allIncidents.filter((incident: any) => {
       const incidentType = incident?.incident_type
       return incidentType && !excludedTypes.includes(incidentType)
-    })
+    }) as any[]
 
     if (!incidents || incidents.length === 0) {
       return NextResponse.json({ 

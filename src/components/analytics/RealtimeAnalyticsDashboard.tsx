@@ -74,16 +74,16 @@ export default function RealtimeAnalyticsDashboard({
         throw assignmentError
       }
 
-      const incidentList = incidents || []
-      const assignmentList = assignments || []
+      const incidentList = (incidents || []) as any[]
+      const assignmentList = (assignments || []) as any[]
 
-      const activeIncidents = incidentList.filter((incident) => {
+      const activeIncidents = incidentList.filter((incident: any) => {
         const status = String(incident.status || '').toLowerCase()
         return status !== 'closed' && status !== 'resolved' && status !== 'logged'
       })
 
       const incidentsWithResponse = incidentList.filter(
-        (incident) => incident.created_at && incident.updated_at
+        (incident: any) => incident.created_at && incident.updated_at
       )
 
       const avgResponseMinutes =
@@ -101,7 +101,7 @@ export default function RealtimeAnalyticsDashboard({
       const hourlyBuckets = Array.from({ length: monitoringHours }).map((_, index) => {
         const start = windowStart + index * 60 * 60 * 1000
         const end = start + 60 * 60 * 1000
-        const count = incidentList.filter((incident) => {
+        const count = incidentList.filter((incident: any) => {
           const created = new Date(incident.created_at as string).getTime()
           return created >= start && created < end
         }).length

@@ -279,7 +279,7 @@ export default function QuickAddInput({
         />
         
         {/* Send button on right */}
-        <button
+            <button
           onClick={() => {
             if (showParseButton && value.trim()) {
               parseIncident(value)
@@ -290,9 +290,9 @@ export default function QuickAddInput({
           disabled={isParsing || isProcessing || !value.trim()}
           className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={isParsing || isProcessing ? "Processing..." : "Send"}
-        >
+            >
           <PaperAirplaneIcon className="w-4 h-4" />
-        </button>
+            </button>
       </div>
 
       {/* Parsed data preview */}

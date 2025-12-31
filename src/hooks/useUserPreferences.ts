@@ -53,7 +53,7 @@ export const useUpdatePreference = () => {
     const debouncedUpdate = async () => {
       try {
         // Update database
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('user_preferences')
           .upsert({
             user_id: user.id,

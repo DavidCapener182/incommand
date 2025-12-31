@@ -43,7 +43,7 @@ export const useIncidents = (eventId: string | null): UseIncidentsReturn => {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await (supabase as any)
         .from('incident_logs')
         .select('*')
         .eq('event_id', eventId)
@@ -53,8 +53,9 @@ export const useIncidents = (eventId: string | null): UseIncidentsReturn => {
         throw fetchError;
       }
 
+      const dataArray = (data || []) as any[];
       setIncidents(
-        (data || []).map(incident => ({
+        dataArray.map((incident: any) => ({
           id: String(incident.id ?? ''),
           event_id: incident.event_id || '',
           type: incident.incident_type || '',
@@ -90,7 +91,7 @@ export const useIncidents = (eventId: string | null): UseIncidentsReturn => {
         )
       );
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('incidents')
         .update(updates)
         .eq('id', id);

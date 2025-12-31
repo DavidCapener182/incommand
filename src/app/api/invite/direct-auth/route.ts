@@ -54,19 +54,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite code' }, { status: 404 });
     }
 
+    const inviteData = invite as any;
+
     // Check if email matches intended email (if specified)
-    if (invite.intended_email && invite.intended_email.toLowerCase() !== body.email.toLowerCase()) {
+    if (inviteData.intended_email && inviteData.intended_email.toLowerCase() !== body.email.toLowerCase()) {
       return NextResponse.json({ error: 'Email does not match intended recipient' }, { status: 403 });
     }
 
     // Check if invite has expired
-    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-      await supabase.from('event_invites').update({ status: 'expired' }).eq('id', invite.id);
+    if (inviteData.expires_at && new Date(inviteData.expires_at) < new Date()) {
+      await (supabase as any).from('event_invites').update({ status: 'expired' }).eq('id', inviteData.id);
       return NextResponse.json({ error: 'Invite has expired' }, { status: 400 });
     }
 
     // Check if invite has reached max uses
-    if ((invite.used_count || 0) >= (invite.max_uses || 1) && !invite.allow_multiple) {
+    if ((inviteData.used_count || 0) >= (inviteData.max_uses || 1) && !inviteData.allow_multiple) {
       return NextResponse.json({ error: 'Invite has reached its maximum uses' }, { status: 400 });
     }
 
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update profile
-    const { error: profileError } = await supabase
+    const { error: profileError } = await (supabase as any)
       .from('profiles')
       .upsert({
         id: userId,
@@ -132,15 +134,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update event membership
-    const { error: memberError } = await supabase
+    const { error: memberError } = await (supabase as any)
       .from('event_members')
       .upsert({
-        event_id: invite.event_id,
+        event_id: inviteData.event_id,
         user_id: userId,
-        invite_id: invite.id,
+        invite_id: inviteData.id,
         full_name: body.name,
         email: body.email,
-        role: invite.role,
+        role: inviteData.role,
         is_temporary: true,
       }, { onConflict: 'event_id,user_id' });
 
@@ -149,26 +151,26 @@ export async function POST(request: NextRequest) {
         component: 'DirectAuthAPI',
         action: 'upsertEventMember',
         userId,
-        eventId: invite.event_id
+        eventId: inviteData.event_id
       });
       return NextResponse.json({ error: 'Failed to create event membership' }, { status: 500 });
     }
 
     // Update invite usage
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('event_invites')
       .update({
-        used_count: (invite.used_count || 0) + 1,
+        used_count: (inviteData.used_count || 0) + 1,
         last_used_at: new Date().toISOString(),
-        status: invite.allow_multiple ? 'active' : 'locked'
+        status: inviteData.allow_multiple ? 'active' : 'locked'
       })
-      .eq('id', invite.id);
+      .eq('id', inviteData.id);
 
     if (updateError) {
       logger.error('Error updating invite usage', updateError, {
         component: 'DirectAuthAPI',
         action: 'updateInviteUsage',
-        inviteId: invite.id
+        inviteId: inviteData.id
       });
     }
 
@@ -191,16 +193,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Log successful authentication
-    await supabase.from('audit_log').insert({
+    await (supabase as any).from('audit_log').insert({
       table_name: 'profiles',
       record_id: userId,
       action: 'direct_auth_success',
       action_type: 'authentication',
       user_id: userId,
-      event_id: invite.event_id,
+      event_id: inviteData.event_id,
       details: {
-        invite_id: invite.id,
-        role: invite.role,
+        invite_id: inviteData.id,
+        role: inviteData.role,
         is_new_user: isNewUser
       }
     });

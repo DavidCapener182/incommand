@@ -89,7 +89,7 @@ export default function MobileIncidentForm({ eventId, onSuccess, onCancel }: Mob
         source: 'mobile',
       }
 
-      const { error } = await supabase.from('incident_logs').insert([payload])
+      const { error } = await (supabase as any).from('incident_logs').insert([payload])
       if (error) {
         throw error
       }

@@ -25,17 +25,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Knowledge document not found' }, { status: 404 })
       }
 
-      if (knowledge.organization_id && context.highestRole !== 'super_admin') {
-        if (!context.organizationMemberships.includes(knowledge.organization_id)) {
+      const knowledgeData = knowledge as any;
+
+      if (knowledgeData.organization_id && context.highestRole !== 'super_admin') {
+        if (!context.organizationMemberships.includes(knowledgeData.organization_id)) {
           return NextResponse.json({ error: 'Access denied' }, { status: 403 })
         }
       }
 
-      if (knowledge.status !== 'ingesting') {
+      if (knowledgeData.status !== 'ingesting') {
         return NextResponse.json({ error: 'Document is not currently ingesting' }, { status: 400 })
       }
 
-      const { error: updateError } = await context.serviceClient
+      const { error: updateError } = await (context.serviceClient as any)
         .from('knowledge_base')
         .update({
           status: 'failed',
@@ -50,14 +52,14 @@ export async function POST(request: NextRequest) {
       }
 
         await recordAdminAudit(context.serviceClient, {
-          organizationId: knowledge.organization_id ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
+          organizationId: knowledgeData.organization_id ?? context.defaultOrganizationId ?? '00000000-0000-0000-0000-000000000000',
         actorId: context.user.id,
         action: 'cancel_ingest_knowledge',
         resourceType: 'knowledge_base',
         resourceId: knowledgeId,
         changes: {
-          title: knowledge.title,
-          previousStatus: knowledge.status,
+          title: knowledgeData.title,
+          previousStatus: knowledgeData.status,
           newStatus: 'failed'
         }
       })

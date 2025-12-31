@@ -153,7 +153,9 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
         return false;
       }
 
-      const normalizedStatus = String(incident.status ?? '').toLowerCase();
+      // Normalize status by removing hyphens, spaces, and underscores, then lowercasing
+      // Handles: 'in_progress', 'in progress', 'in-progress', 'In-Progress'
+      const normalizedStatus = String(incident.status ?? '').toLowerCase().replace(/[-\s_]/g, '_');
 
       switch (status) {
         case 'open':
@@ -162,7 +164,7 @@ export const CollaborationBoard: React.FC<CollaborationBoardProps> = ({
             (normalizedStatus === 'open' || normalizedStatus === 'logged' || normalizedStatus === '')
           );
         case 'in_progress':
-          return !incident.is_closed && (normalizedStatus === 'in_progress' || normalizedStatus === 'in progress');
+          return !incident.is_closed && (normalizedStatus === 'in_progress' || normalizedStatus === 'inprogress');
         case 'closed':
           return incident.is_closed || normalizedStatus === 'closed' || normalizedStatus === 'resolved';
         default:

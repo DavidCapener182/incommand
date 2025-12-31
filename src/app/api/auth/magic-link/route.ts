@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the email matches the invite
-    const { data: invite, error: inviteError } = await serviceSupabase
+    const { data: invite, error: inviteError } = await (serviceSupabase as any)
       .from('event_invites')
       .select('intended_email, status')
       .eq('id', inviteId)
@@ -46,18 +46,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid invite' }, { status: 404 });
     }
 
+    const inviteData = invite as any
+
     // Check if invite is still active
-    if (invite.status !== 'active') {
+    if (inviteData.status !== 'active') {
       return NextResponse.json({ error: 'Invite is no longer active' }, { status: 400 });
     }
 
     // Check if email matches the intended email (if specified)
-    if (invite.intended_email && invite.intended_email.toLowerCase() !== email.toLowerCase()) {
+    if (inviteData.intended_email && inviteData.intended_email.toLowerCase() !== email.toLowerCase()) {
       logger.warn('Email does not match intended recipient', {
         component: 'MagicLinkAuthAPI',
         action: 'emailMismatch',
         inviteId,
-        intendedEmail: invite.intended_email,
+        intendedEmail: inviteData.intended_email,
         providedEmail: email
       });
       return NextResponse.json({ error: 'Email does not match the invited email address' }, { status: 403 });
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create or update profile
-    const { error: profileError } = await serviceSupabase
+    const { error: profileError } = await (serviceSupabase as any)
       .from('profiles')
       .upsert({
         id: user.id,
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update event membership
-    const { error: memberError } = await serviceSupabase
+    const { error: memberError } = await (serviceSupabase as any)
       .from('event_members')
       .upsert({
         event_id: eventId,
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log successful authentication
-    await serviceSupabase.from('audit_log').insert({
+    await (serviceSupabase as any).from('audit_log').insert({
       table_name: 'profiles',
       record_id: user.id,
       action: 'magic_link_auth_success',

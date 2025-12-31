@@ -89,14 +89,15 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('All incidents for event:', allIncidents);
 
       // Filter out attendance and sit rep incidents like the analytics page does
-      const filteredIncidents = allIncidents?.filter(
-        (incident) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
-      ) || [];
+      const allIncidentsArray = (allIncidents || []) as any[];
+      const filteredIncidents = allIncidentsArray.filter(
+        (incident: any) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
+      );
 
       console.log('Filtered incidents:', filteredIncidents);
 
       // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
+      const latestOpen = filteredIncidents.find((incident: any) => 
         !incident.is_closed && incident.status !== 'Logged'
       );
 
@@ -150,14 +151,15 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
       console.log('All incidents for event:', allIncidents);
 
       // Filter out attendance and sit rep incidents like the analytics page does
-      const filteredIncidents = allIncidents?.filter(
-        (incident) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
-      ) || [];
+      const allIncidentsArray = (allIncidents || []) as any[];
+      const filteredIncidents = allIncidentsArray.filter(
+        (incident: any) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
+      );
 
       console.log('Filtered incidents:', filteredIncidents);
 
       // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
+      const latestOpen = filteredIncidents.find((incident: any) => 
         !incident.is_closed && incident.status !== 'Logged'
       );
 

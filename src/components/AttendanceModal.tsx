@@ -92,13 +92,13 @@ export default function AttendanceModal({ isOpen, onClose, currentEventId }: Att
     if (!isOpen || !currentEventId) return;
     setLoading(true);
     (async () => {
-      const { data: event } = await supabase
+      const { data: event } = await (supabase as any)
         .from('events')
         .select('doors_open_time, main_act_start_time, event_date, expected_attendance, curfew_time, venue_capacity')
         .eq('id', currentEventId)
         .single();
-      setEventDetails(event as EventRecord);
-      const { data: records } = await supabase
+      setEventDetails((event as any) as EventRecord);
+      const { data: records } = await (supabase as any)
         .from('attendance_records')
         .select('count, timestamp')
         .eq('event_id', currentEventId)

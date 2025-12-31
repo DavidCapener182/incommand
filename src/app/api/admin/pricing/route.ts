@@ -199,8 +199,8 @@ export async function PATCH(request: NextRequest) {
 
           if (currentPlan) {
             const currentPlanRecord = currentPlan as Record<string, any>
-            const { data: newVersion, error: insertError } = await context.serviceClient
-              .from('subscription_plans' as any)
+            const { data: newVersion, error: insertError } = await (context.serviceClient as any)
+              .from('subscription_plans')
               .insert({
                 code,
                 display_name: currentPlanRecord.display_name,
@@ -238,8 +238,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update existing plan
-    const { data: updatedPlan, error: updateError } = await context.serviceClient
-      .from('subscription_plans' as any)
+    const { data: updatedPlan, error: updateError } = await (context.serviceClient as any)
+      .from('subscription_plans')
       .update(updatePayload)
       .eq('code', code)
       .eq('is_active', true)

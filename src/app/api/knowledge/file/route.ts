@@ -25,19 +25,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Knowledge document not found' }, { status: 404 })
     }
 
-    if (!knowledge.storage_path) {
+    const knowledgeData = knowledge as any;
+
+    if (!knowledgeData.storage_path) {
       return NextResponse.json({ error: 'No stored file for this document' }, { status: 400 })
     }
 
-    if (knowledge.organization_id && context.highestRole !== 'super_admin') {
-      if (!context.organizationMemberships.includes(knowledge.organization_id)) {
+    if (knowledgeData.organization_id && context.highestRole !== 'super_admin') {
+      if (!context.organizationMemberships.includes(knowledgeData.organization_id)) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
     }
 
     const { data: signedUrlData, error: signedUrlError } = await context.serviceClient.storage
       .from(STORAGE_BUCKET)
-      .createSignedUrl(knowledge.storage_path, 60)
+      .createSignedUrl(knowledgeData.storage_path, 60)
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('Failed to generate signed URL:', signedUrlError)
@@ -46,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       url: signedUrlData.signedUrl,
-      filename: knowledge.original_filename ?? 'document'
+      filename: knowledgeData.original_filename ?? 'document'
     })
   })
 }

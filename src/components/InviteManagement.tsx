@@ -55,19 +55,20 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
     const fetchCurrentEvent = async () => {
       if (!currentEventId) {
         try {
-          const { data: currentEvent, error } = await supabase
+          const { data: currentEvent, error } = await (supabase as any)
             .from('events')
             .select('id')
             .eq('is_current', true)
             .single();
           
-          if (error || !currentEvent) {
+          const eventData = currentEvent as any;
+          if (error || !eventData) {
             setError('No current event found');
             setLoading(false);
             return;
           }
           
-          setCurrentEventId(currentEvent.id);
+          setCurrentEventId(eventData.id);
         } catch (err) {
           setError('Failed to fetch current event');
           setLoading(false);

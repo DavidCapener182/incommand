@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       return resolvedOrg
     }
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('ledger_entries')
       .insert({
         organization_id: resolvedOrg,

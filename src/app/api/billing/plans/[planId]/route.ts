@@ -36,8 +36,8 @@ export async function PATCH(
     if (parsed.data.metadata) payload.metadata = parsed.data.metadata
     if (parsed.data.isActive !== undefined) payload.is_active = parsed.data.isActive
 
-    const { data, error } = await context.serviceClient
-      .from('plans' as any)
+    const { data, error } = await (context.serviceClient as any)
+      .from('plans')
       .update(payload)
       .eq('id', params.planId)
       .select('*')

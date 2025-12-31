@@ -33,7 +33,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 })
     }
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('support_tickets')
       .update(updates)
       .eq('id', params.ticketId)

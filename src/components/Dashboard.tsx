@@ -944,7 +944,11 @@ export default function Dashboard() {
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
-    // No need to force refresh - real-time subscription will handle the update
+    // Force refresh as fallback - real-time subscription should handle it, but this ensures it appears
+    // Use a small delay to allow the database insert to complete
+    setTimeout(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 500);
   };
 
   // Helper function to reset to Total view (no filters)
@@ -979,65 +983,70 @@ export default function Dashboard() {
   }
 
   return (
-    <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
-      <PageWrapper>
-        {/* Accessibility: Skip Links */}
-        <SkipLinks />
-      
-      {/* Accessibility: Keyboard Shortcuts Help */}
-      <KeyboardShortcutsHelp 
-        isOpen={showKeyboardShortcuts} 
-        onClose={() => setShowKeyboardShortcuts(false)} 
-      />
-      
-      {/* Event Header - Sticky */}
-      <div>
-        {/* Desktop view */}
-        <section className="hidden md:block rounded-2xl p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-            <div className="flex flex-col h-full">
-              <CurrentEvent
-                currentTime={currentTime}
-                currentEvent={currentEvent}
-                loading={loadingCurrentEvent}
-                error={error}
-                onEventCreated={fetchCurrentEvent}
-                eventTimings={eventTimings}
-              />
-            </div>
-
-            <div className="flex flex-col h-full">
-              {loadingCurrentEvent ? (
-                <TimeCardSkeleton />
-              ) : (
-                <TimeCard
-                  companyId={companyId}
-                  currentTime={currentTime}
-                  eventTimings={eventTimings}
-                  nextEvent={nextEvent}
-                  countdown={countdown}
-                  currentSlot={currentSlot}
-                  timeSinceLastIncident={timeSinceLastIncident}
-                />
-              )}
-            </div>
-
-            <div className="flex flex-col h-full">
-              <IncidentSummaryBar
-                onFilter={handleSummaryFilter}
-                activeStatus={activeSummaryStatus}
-                className="h-full"
-              />
-            </div>
-
-            <div className="flex flex-col h-full">
-              <ReadinessIndexCard eventId={currentEventId} className="h-full" />
-            </div>
+    <>
+      {/* Desktop view - Bento Layout */}
+      <section className="hidden md:block rounded-2xl p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* CurrentEvent - Large card, spans 4 columns */}
+          <div className="flex flex-col h-full lg:col-span-4">
+            <CurrentEvent
+              currentTime={currentTime}
+              currentEvent={currentEvent}
+              loading={loadingCurrentEvent}
+              error={error}
+              onEventCreated={fetchCurrentEvent}
+              eventTimings={eventTimings}
+            />
           </div>
-        </section>
 
-        {/* Mobile view */}
-        <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
+          {/* TimeCard - Medium card, spans 4 columns */}
+          <div className="flex flex-col h-full lg:col-span-4">
+            {loadingCurrentEvent ? (
+              <TimeCardSkeleton />
+            ) : (
+              <TimeCard
+                companyId={companyId}
+                currentTime={currentTime}
+                eventTimings={eventTimings}
+                nextEvent={nextEvent}
+                countdown={countdown}
+                currentSlot={currentSlot}
+                timeSinceLastIncident={timeSinceLastIncident}
+              />
+            )}
+          </div>
+
+          {/* ReadinessIndexCard - Medium card, spans 2 columns */}
+          <div className="flex flex-col h-full lg:col-span-2">
+            <ReadinessIndexCard eventId={currentEventId} className="h-full" />
+          </div>
+
+          {/* IncidentSummaryBar - Medium card, spans 2 columns */}
+          <div className="flex flex-col h-full lg:col-span-2">
+            <IncidentSummaryBar
+              onFilter={handleSummaryFilter}
+              activeStatus={activeSummaryStatus}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </section>
+      
+      <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
+        <PageWrapper>
+          {/* Accessibility: Skip Links */}
+          <SkipLinks />
+        
+        {/* Accessibility: Keyboard Shortcuts Help */}
+        <KeyboardShortcutsHelp 
+          isOpen={showKeyboardShortcuts} 
+          onClose={() => setShowKeyboardShortcuts(false)} 
+        />
+        
+        {/* Event Header - Sticky */}
+        <div>
+          {/* Mobile view */}
+          <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
           {!isFullyReady && <p className="p-3">Loading event...</p>}
           {isFullyReady && currentEvent && (
             <div>
@@ -1837,5 +1846,6 @@ export default function Dashboard() {
 
     </PageWrapper>
     </FeatureGate>
+    </>
   )
 }

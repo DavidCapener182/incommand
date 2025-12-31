@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     const shouldBeLogged = operationalLogTypes.includes(body.incident_type) || body.priority === 'low';
 
     // Create incident
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('incident_logs')
       .insert({
         log_number: `LOG-${Date.now()}`, // Generate unique log number

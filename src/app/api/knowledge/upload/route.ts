@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Update record with storage path
-        await supabase
-          .from('knowledge_base' as any)
+        await (supabase as any)
+          .from('knowledge_base')
         .update({
           storage_path: storagePath,
           status: 'pending',

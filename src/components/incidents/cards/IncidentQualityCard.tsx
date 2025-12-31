@@ -23,6 +23,7 @@ interface IncidentQualityCardProps {
   onApplySuggestion?: (field: string, value: string) => void;
   onUpdateFactsObserved?: (updatedText: string) => void;
   guidedActionsApplied?: boolean;
+  onScoreChange?: (score: number | undefined) => void;
 }
 
 interface AnalysisResult {
@@ -35,7 +36,8 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
   formData, 
   onApplySuggestion,
   onUpdateFactsObserved,
-  guidedActionsApplied = true // Default to true to allow audit if prop not provided
+  guidedActionsApplied = true, // Default to true to allow audit if prop not provided
+  onScoreChange
 }) => {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -46,6 +48,9 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
   const [dismissedHashes, setDismissedHashes] = useState<Set<string>>(new Set());
   const [addressedKeywords, setAddressedKeywords] = useState<Set<string>>(new Set());
   const [lastFactsLength, setLastFactsLength] = useState<number>(0);
+  const [lastAuditedContent, setLastAuditedContent] = useState<string>('');
+  const [hasShownModalForIncident, setHasShownModalForIncident] = useState<boolean>(false);
+  const [incidentKey, setIncidentKey] = useState<string>('');
 
   // Detect when user adds information that addresses suggestions (even if not through modal)
   // Check all three fields: facts_observed, actions_taken, and outcome
@@ -349,22 +354,26 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
         
         setAnalysis(result);
         setLastAnalysisHash(analysisHash);
+        if (onScoreChange) onScoreChange(result.score);
         
         // Show modal only if:
-        // 1. Score is less than 85
+        // 1. Score is less than 75
         // 2. There are suggestions
         // 3. It's a new analysis (different suggestions)
         // 4. This specific set of suggestions hasn't been dismissed yet
         // 5. Similar topics haven't been addressed already
+        // 6. We haven't shown the modal for this incident yet (only show once per incident)
         const hasBeenDismissed = dismissedHashes.has(suggestionsHash);
-        const shouldShowModal = result.score < 85 && 
+        const shouldShowModal = result.score < 75 && 
                                result.suggestions.length > 0 && 
                                isNewAnalysis &&
                                !hasBeenDismissed &&
-                               !hasAddressedSimilar;
+                               !hasAddressedSimilar &&
+                               !hasShownModalForIncident;
         
         if (shouldShowModal) {
           setShowModal(true);
+          setHasShownModalForIncident(true);
         }
       }
     } catch (e) {
@@ -387,10 +396,43 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     lastAnalysisHash,
   ]);
 
+  // Track incident key to detect new incidents
+  useEffect(() => {
+    const newIncidentKey = formData.incident_type || '';
+    if (newIncidentKey !== incidentKey) {
+      // New incident detected - reset modal state
+      setIncidentKey(newIncidentKey);
+      setHasShownModalForIncident(false);
+      setLastAuditedContent('');
+      setAnalysis(null);
+      setDismissedHashes(new Set());
+      setAddressedKeywords(new Set());
+      if (onScoreChange) onScoreChange(undefined);
+    }
+  }, [formData.incident_type, incidentKey]);
+
   // Debounced analysis to avoid API spam
+  // Only trigger ONCE when facts_observed, actions_taken, or outcome are first populated
   // Don't start audit until guided actions are applied (if applicable)
   useEffect(() => {
     if (!guidedActionsApplied) {
+      return;
+    }
+
+    // Create a content hash from only the three fields we care about
+    const currentContent = [
+      formData.facts_observed || '',
+      formData.actions_taken || '',
+      formData.outcome || ''
+    ].join('|');
+
+    // Only proceed if content actually changed AND we haven't audited this content yet
+    if (currentContent === lastAuditedContent) {
+      return;
+    }
+
+    // Only run analysis if we haven't shown modal for this incident yet
+    if (hasShownModalForIncident) {
       return;
     }
 
@@ -403,27 +445,28 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
 
     if (!hasContent) {
       setAnalysis(null);
+      setLastAuditedContent('');
+      if (onScoreChange) onScoreChange(undefined);
       return;
     }
 
     const timer = setTimeout(() => {
       if (!analyzing) {
         analyzeIncidentQuality();
+        setLastAuditedContent(currentContent);
       }
     }, 2000); // 2s debounce
 
     return () => clearTimeout(timer);
   }, [
-    formData.occurrence, 
     formData.facts_observed, 
-    formData.incident_type, 
-    formData.priority,
     formData.actions_taken,
     formData.outcome,
-    formData.headline,
+    formData.incident_type,
     guidedActionsApplied,
-    analyzeIncidentQuality,
-    analyzing
+    lastAuditedContent,
+    analyzing,
+    hasShownModalForIncident
   ]);
 
   const handleApplySuggestions = () => {
@@ -533,6 +576,7 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
     setShowModal(false);
   };
 
+  // Don't show "Auditing..." constantly - only show when we have a result or are doing initial analysis
   if (!analysis && !analyzing) return null;
 
   return (
@@ -542,9 +586,9 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
           <h3 className="font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2 text-sm">
             <SparklesIcon className="w-4 h-4 text-indigo-500" /> Log Quality Score
           </h3>
-          {analyzing ? (
+          {analyzing && !hasShownModalForIncident ? (
             <span className="text-xs text-indigo-400 animate-pulse">Auditing...</span>
-          ) : (
+          ) : analysis ? (
             <span 
               className={`text-lg font-black ${
                 (analysis?.score || 0) > 80 
@@ -556,7 +600,7 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
             >
               {analysis?.score}/100
             </span>
-          )}
+          ) : null}
         </div>
 
         {analysis && (
@@ -586,7 +630,7 @@ const IncidentQualityCard: React.FC<IncidentQualityCardProps> = ({
 
       {/* Quality Improvement Modal */}
       <AnimatePresence>
-        {showModal && analysis && analysis.score < 85 && (
+        {showModal && analysis && analysis.score < 75 && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}

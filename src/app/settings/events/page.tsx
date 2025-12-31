@@ -77,17 +77,18 @@ export default function EventsSettingsPage() {
     }
 
     console.log('[EventsPage] Fetching profile for user', { userId: effectiveUserId });
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('company_id')
       .eq('id', effectiveUserId)
       .single();
 
-    if (profileError || !profile?.company_id) {
+    const profileData = profile as any;
+    if (profileError || !profileData?.company_id) {
       console.error('[EventsPage] Failed to fetch profile', {
         error: profileError?.message,
-        hasProfile: !!profile,
-        companyId: profile?.company_id
+        hasProfile: !!profileData,
+        companyId: profileData?.company_id
       });
       setError('Failed to load user profile or company association');
       setCurrentEvent(null);
@@ -103,43 +104,44 @@ export default function EventsSettingsPage() {
 
     console.log('[EventsPage] Profile loaded, fetching events', {
       userId: effectiveUserId,
-      companyId: profile.company_id
+      companyId: profileData.company_id
     });
 
     // Fetch current events with company_id filter
-    const { data: current, error: currentError } = await supabase
+    const { data: current, error: currentError } = await (supabase as any)
       .from('events')
       .select('*')
       .eq('is_current', true)
-      .eq('company_id', profile.company_id);
+      .eq('company_id', profileData.company_id);
       
+    const currentArray = (current || []) as any[];
     console.log('[EventsPage] Current events fetched', {
-      count: current?.length || 0,
+      count: currentArray.length,
       error: currentError?.message,
-      events: current?.map(e => ({ id: e.id, name: e.event_name }))
+      events: currentArray.map((e: any) => ({ id: e.id, name: e.event_name }))
     });
     
     if (currentError) {
       setError(currentError.message);
       setCurrentEvent(null);
       setSelectedEvent(null);
-    } else if (!current || current.length === 0) {
+    } else if (currentArray.length === 0) {
       setCurrentEvent(null);
       setSelectedEvent(null);
-    } else if (current.length > 1) {
+    } else if (currentArray.length > 1) {
       setError('Multiple current events found. Please resolve in admin.');
       setCurrentEvent(null);
       setSelectedEvent(null);
     } else {
-      setCurrentEvent(current[0]);
-      setSelectedEvent(current[0]);
+      setCurrentEvent(currentArray[0]);
+      setSelectedEvent(currentArray[0]);
     }
     // Fetch past events with company_id filter
-    const { data: past, error: pastError } = await supabase
+    const { data: past, error: pastError } = await (supabase as any)
       .from('events')
       .select('*')
       .eq('is_current', false)
-      .eq('company_id', profile.company_id)
+      .eq('company_id', profileData.company_id)
       .order('event_date', { ascending: false });
       
     console.log('[EventsPage] Past events fetched', {

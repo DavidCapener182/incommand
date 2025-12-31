@@ -46,7 +46,7 @@ export default function IncidentDependencySelector({
     setError(null);
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('incident_logs')
         .select(`
           id,
@@ -66,9 +66,10 @@ export default function IncidentDependencySelector({
       }
 
       // Filter out current incident if editing
+      const dataArray = (data || []) as any[];
       const filteredData = currentIncidentId 
-        ? data?.filter(incident => incident.id !== (currentIncidentId as any)) || []
-        : data || [];
+        ? dataArray.filter((incident: any) => incident.id !== (currentIncidentId as any))
+        : dataArray;
 
       setIncidents(filteredData as any);
       setFilteredIncidents(filteredData as any);

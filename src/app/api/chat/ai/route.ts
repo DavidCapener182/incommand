@@ -133,14 +133,14 @@ export async function POST(request: NextRequest) {
     
     if (eventId) {
       try {
-        const { data: event } = await supabase
+        const { data: event } = await (supabase as any)
           .from('events')
           .select('event_type')
           .eq('id', eventId)
           .single()
         
-        if (event?.event_type) {
-          eventType = event.event_type
+        if ((event as any)?.event_type) {
+          eventType = (event as any).event_type
           // Import event strategies dynamically
           const { getEventStrategy } = await import('@/lib/strategies/eventStrategies')
           const strategy = getEventStrategy(eventType)
@@ -264,7 +264,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     console.log('🔍 Fetching comprehensive incident data for event:', eventId)
 
     // Fetch main incidents from incident_logs table
-    const { data: incidents, error: incidentError } = await supabase
+    const { data: incidents, error: incidentError } = await (supabase as any)
       .from('incident_logs')
       .select(`
         id,
@@ -298,7 +298,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     const occurrences: any[] = []
 
     console.log(`✅ Found ${incidents.length} incidents, ${updates.length} updates, ${actions.length} actions, ${occurrences.length} occurrences`)
-    console.log('🔍 Incident status breakdown:', incidents.reduce((acc: Record<string, number>, i) => {
+    console.log('🔍 Incident status breakdown:', (incidents as any[]).reduce((acc: Record<string, number>, i: any) => {
       const status = i.status || 'NULL'
       acc[status] = (acc[status] || 0) + 1
       return acc
@@ -312,7 +312,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     }
 
     // Separate actual incidents from operational logs
-    const actualIncidents = incidents.filter(i => {
+    const actualIncidents = ((incidents as any[]) || []).filter((i: any) => {
       const type = (i.incident_type || '').toLowerCase()
       const occurrence = (i.occurrence || '').toLowerCase()
       const status = (i.status || '').toLowerCase()
@@ -339,7 +339,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     console.log(`🔍 Filtered results: ${actualIncidents.length} actual incidents, ${openIncidents.length} open, ${closedIncidents.length} closed`)
     console.log('🔍 Open incidents:', openIncidents.map(i => `${i.incident_type} (${i.status})`))
     
-    const operationalLogs = incidents.filter(i => {
+    const operationalLogs = (incidents as any[]).filter((i: any) => {
       const type = (i.incident_type || '').toLowerCase()
       const occurrence = (i.occurrence || '').toLowerCase()
       
@@ -493,14 +493,14 @@ function analyzeIncidents(incidents: any[]): string {
   }, {})
 
   // Count by status
-  const statusCounts = incidents.reduce((acc, incident) => {
+  const statusCounts = (incidents as any[]).reduce((acc: any, incident: any) => {
     const status = incident.status || 'Unknown'
     acc[status] = (acc[status] || 0) + 1
     return acc
   }, {})
 
   // Count by priority
-  const priorityCounts = incidents.reduce((acc, incident) => {
+  const priorityCounts = (incidents as any[]).reduce((acc: any, incident: any) => {
     const priority = incident.priority || 'Unknown'
     acc[priority] = (acc[priority] || 0) + 1
     return acc
@@ -509,18 +509,18 @@ function analyzeIncidents(incidents: any[]): string {
   // Get recent incidents (last 24 hours)
   const now = new Date()
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const recentIncidents = incidents.filter(incident => {
+  const recentIncidents = (incidents as any[]).filter((incident: any) => {
     const incidentTime = new Date(incident.timestamp || incident.created_at)
     return incidentTime > yesterday
   })
 
   // Get open incidents
-  const openIncidents = incidents.filter(incident => 
+  const openIncidents = (incidents as any[]).filter((incident: any) => 
     incident.status === 'open' || incident.status === 'in_progress'
   )
 
   // Get high priority incidents
-  const highPriorityIncidents = incidents.filter(incident => 
+  const highPriorityIncidents = (incidents as any[]).filter((incident: any) => 
     incident.priority === 'high' || incident.priority === 'critical'
   )
 

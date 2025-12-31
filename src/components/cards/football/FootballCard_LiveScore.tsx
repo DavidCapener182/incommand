@@ -85,7 +85,7 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
 
       // Fetch from attendance_records table
       try {
-        const { data: recordsData, error: recordsError } = await supabase
+        const { data: recordsData, error: recordsError } = await (supabase as any)
           .from('attendance_records')
           .select('count, timestamp')
           .eq('event_id', eventId)
@@ -93,10 +93,11 @@ export default function FootballCard_LiveScore({ className, onOpenModal }: Footb
           .limit(1)
           .maybeSingle()
 
-        if (!recordsError && recordsData) {
+        const recordsDataTyped = recordsData as any;
+        if (!recordsError && recordsDataTyped) {
           attendanceFromRecords = {
-            count: recordsData.count,
-            timestamp: recordsData.timestamp
+            count: recordsDataTyped.count,
+            timestamp: recordsDataTyped.timestamp
           }
         }
       } catch (e) {

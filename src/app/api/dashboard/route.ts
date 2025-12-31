@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
         .eq('organization_id', resolvedOrg)
         .order('created_at', { ascending: false })
         .limit(12),
-      context.serviceClient
-        .from<any, any>('invoices')
+      (context.serviceClient as any)
+        .from('invoices')
         .select('*')
         .eq('organization_id', resolvedOrg)
         .order('issued_date', { ascending: false })

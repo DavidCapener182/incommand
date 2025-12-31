@@ -91,6 +91,14 @@ interface Incident {
   logged_by_callsign?: string
   is_amended?: boolean
   original_entry_id?: string
+  // AI-generated fields
+  ai_tags?: string[]
+  risk_matrix_scores?: any
+  log_quality_score?: number
+  ethane_reports?: any
+  generated_radio_script?: string
+  translated_text?: string
+  chronology?: any[]
 }
 
 export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Props) {
@@ -114,6 +122,7 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
   const [revisionCount, setRevisionCount] = useState(0)
   const [currentUserName, setCurrentUserName] = useState('Event Control')
   const [showDecisionLogger, setShowDecisionLogger] = useState(false)
+  const [selectedField, setSelectedField] = useState<'occurrence' | 'action_taken' | null>(null)
 
   // --- 1. Logic & Effects (Unchanged) ---
 
@@ -292,6 +301,20 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
       await supabase.from('incident_updates').insert({ incident_id: parseInt(incident.id), update_text: `Incident status changed to ${newStatus ? 'Closed' : 'Open'}`, updated_by: currentUserName });
       await fetchIncidentDetails();
     } catch (err) { setError('Failed to update incident status'); }
+  };
+
+  const handleTagClick = (tag: string, field: 'occurrence' | 'action_taken') => {
+    if (!incident) return;
+    setSelectedField(field);
+    const currentValue = field === 'occurrence' 
+      ? (editedIncident.occurrence || incident.occurrence || '') 
+      : (editedIncident.action_taken || incident.action_taken || '');
+    const tagToAdd = tag.startsWith('#') ? tag.substring(1) : tag;
+    const newValue = currentValue.trim() ? `${currentValue.trim()} ${tagToAdd}` : tagToAdd;
+    
+    setEditedIncident({ ...editedIncident, [field]: newValue });
+    setEditMode(true);
+    setTimeout(() => setSelectedField(null), 500);
   };
 
   useEffect(() => {
@@ -560,7 +583,157 @@ export default function IncidentDetailsModal({ isOpen, onClose, incidentId }: Pr
                     </h3>
                  </div>
                  
-                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white">
+                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white space-y-4">
+                    {/* AI-Generated Tags */}
+                    {incident?.ai_tags && incident.ai_tags.length > 0 && (
+                      <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">AI Tags</h4>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {incident.ai_tags.map((tag, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleTagClick(tag, 'occurrence')}
+                                className={cn(
+                                  "px-2 py-1 text-[10px] font-medium rounded-md transition-colors cursor-pointer border",
+                                  selectedField === 'occurrence' 
+                                    ? "bg-blue-200 text-blue-800 border-blue-300" 
+                                    : "bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800 border-blue-200"
+                                )}
+                                title="Click to add to Occurrence"
+                              >
+                                #{tag}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTagClick(tag, 'action_taken');
+                                }}
+                                className={cn(
+                                  "px-1.5 py-0.5 text-[9px] font-medium rounded transition-colors cursor-pointer border",
+                                  selectedField === 'action_taken'
+                                    ? "bg-green-200 text-green-800 border-green-300"
+                                    : "bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800 border-green-200"
+                                )}
+                                title="Add to Actions Taken"
+                              >
+                                +A
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-400 italic">
+                          Click tag to add to Occurrence, or +A to add to Actions Taken
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Risk Matrix */}
+                    {incident?.risk_matrix_scores && (
+                      <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Risk Matrix</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-600">Level:</span>
+                            <span className={cn(
+                              "text-xs font-bold px-2 py-0.5 rounded",
+                              incident.risk_matrix_scores.level === 'High' ? 'bg-red-100 text-red-700' :
+                              incident.risk_matrix_scores.level === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            )}>
+                              {incident.risk_matrix_scores.level}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-600">Score:</span>
+                            <span className="text-xs font-semibold text-slate-800">{incident.risk_matrix_scores.score || 'N/A'}</span>
+                          </div>
+                          {incident.risk_matrix_scores.likelihood && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">Likelihood:</span>
+                              <span className="text-xs text-slate-700">{incident.risk_matrix_scores.likelihood}/5</span>
+                            </div>
+                          )}
+                          {incident.risk_matrix_scores.impact && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">Impact:</span>
+                              <span className="text-xs text-slate-700">{incident.risk_matrix_scores.impact}/5</span>
+                            </div>
+                          )}
+                          {incident.risk_matrix_scores.reasoning && (
+                            <div className="mt-2 pt-2 border-t border-slate-200">
+                              <p className="text-[10px] text-slate-500 leading-relaxed">{incident.risk_matrix_scores.reasoning}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ETHANE Report */}
+                    {incident?.ethane_reports && (
+                      <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">ETHANE Report</h4>
+                        <div className="space-y-1.5 text-[10px]">
+                          {incident.ethane_reports.E && (
+                            <div>
+                              <span className="font-bold text-slate-600">E:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.E}</span>
+                            </div>
+                          )}
+                          {incident.ethane_reports.T && (
+                            <div>
+                              <span className="font-bold text-slate-600">T:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.T}</span>
+                            </div>
+                          )}
+                          {incident.ethane_reports.H && (
+                            <div>
+                              <span className="font-bold text-slate-600">H:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.H}</span>
+                            </div>
+                          )}
+                          {incident.ethane_reports.A && (
+                            <div>
+                              <span className="font-bold text-slate-600">A:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.A}</span>
+                            </div>
+                          )}
+                          {incident.ethane_reports.N && (
+                            <div>
+                              <span className="font-bold text-slate-600">N:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.N}</span>
+                            </div>
+                          )}
+                          {incident.ethane_reports.E_services && (
+                            <div>
+                              <span className="font-bold text-slate-600">E-Services:</span>
+                              <span className="text-slate-700 ml-1">{incident.ethane_reports.E_services}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Log Quality Score */}
+                    {incident?.log_quality_score !== undefined && (
+                      <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Log Quality</h4>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full transition-all",
+                                incident.log_quality_score >= 85 ? 'bg-green-500' :
+                                incident.log_quality_score >= 75 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              )}
+                              style={{ width: `${incident.log_quality_score}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-slate-700">{incident.log_quality_score}/100</span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Revisions Block */}
                     {incident && <IncidentRevisionHistory incidentId={String(incident.id)} incident={incident as any} />}
 

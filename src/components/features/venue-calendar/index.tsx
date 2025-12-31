@@ -66,25 +66,27 @@ export default function VenueCalendar() {
 
     try {
       // Get company_id from user profile
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .single()
 
-      if (!profile?.company_id) {
+      const profileData = profile as any;
+      if (!profileData?.company_id) {
         setLoading(false)
         return
       }
 
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
         .from('events')
         .select('id, event_name, venue_name, start_datetime, end_datetime, event_type')
-        .eq('company_id', profile.company_id)
+        .eq('company_id', profileData.company_id)
         .order('start_datetime', { ascending: true })
 
         if (error) throw error
-        const normalized = (data || []).map((event) => ({
+        const dataArray = (data || []) as any[];
+        const normalized = dataArray.map((event: any) => ({
           ...event,
           start_datetime: event.start_datetime || new Date().toISOString(),
           end_datetime: event.end_datetime || event.start_datetime || new Date().toISOString(),

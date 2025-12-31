@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization context required for content creation' }, { status: 400 })
     }
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('knowledge_base')
       .insert({
         organization_id: organizationId,
@@ -120,7 +120,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Build query to find failed items
-    let query = context.serviceClient
+    let query = (context.serviceClient as any)
       .from('knowledge_base')
       .select('id, organization_id, storage_path')
       .eq('status', 'failed')
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Remove stored files if present
-    const storagePaths = failedItems
+    const storagePaths = (failedItems as any[])
       .map(item => item.storage_path as string | null)
       .filter((path): path is string => Boolean(path))
 
@@ -164,8 +164,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete failed items (cascade will handle knowledge_embeddings)
-    const idsToDelete = failedItems.map(item => item.id)
-    const { error: deleteError } = await context.serviceClient
+    const idsToDelete = (failedItems as any[]).map(item => item.id)
+    const { error: deleteError } = await (context.serviceClient as any)
       .from('knowledge_base')
       .delete()
       .in('id', idsToDelete)

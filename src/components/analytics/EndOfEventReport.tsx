@@ -230,13 +230,14 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
         throw new Error('No authenticated user found');
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.user.id)
         .single();
 
-      if (profileError || !profile?.company_id) {
+      const profileData = profile as any;
+      if (profileError || !profileData?.company_id) {
         throw new Error('Failed to fetch user profile or company association');
       }
 
@@ -250,7 +251,8 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
         throw eventError
       }
 
-      if (event?.company_id && event.company_id !== profile.company_id) {
+      const eventData = event as any;
+      if (eventData?.company_id && eventData.company_id !== profileData.company_id) {
         throw new Error('You do not have access to this event')
       }
 
@@ -396,7 +398,7 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
 
       // Fetch latest attendance (Venue Occupancy)
       try {
-        const { data: attendanceData, error: attendanceError } = await supabase
+        const { data: attendanceData, error: attendanceError } = await (supabase as any)
           .from('attendance_records')
           .select('count')
           .eq('event_id', eventId)
@@ -404,8 +406,9 @@ export default function EndOfEventReport({ eventId, className = '', readiness }:
           .limit(1)
           .maybeSingle()
 
-        if (!attendanceError && attendanceData && typeof attendanceData.count === 'number') {
-          setCurrentAttendance(attendanceData.count)
+        const attendanceDataTyped = attendanceData as any;
+        if (!attendanceError && attendanceDataTyped && typeof attendanceDataTyped.count === 'number') {
+          setCurrentAttendance(attendanceDataTyped.count)
         } else {
           setCurrentAttendance(null)
         }
@@ -506,7 +509,7 @@ Format as JSON with keys: strengths, improvements, recommendations, confidence`
         // Generate overall AI summary
         const summaryPrompt = `Provide a concise executive summary for this event:
 
-Event: ${event.name}
+Event: ${eventData?.event_name || eventData?.name || 'Event'}
 Incidents: ${filteredIncidents.length} (${resolvedCount} resolved incl. "logged")
 Staff Performance: ${staffAssignmentsResult.data?.length || 0} positions
 Response Time: ${summary?.avgResponseTime?.toFixed(1) || 'N/A'} minutes average

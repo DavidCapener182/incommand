@@ -57,24 +57,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired invite token' }, { status: 404 });
     }
 
+    const inviteData = invite as any;
+
     // Check if invite is expired
-    if (new Date(invite.expires_at) < new Date()) {
+    if (new Date(inviteData.expires_at) < new Date()) {
       // Mark as expired
-      await supabase
+      await (supabase as any)
         .from('event_invites')
         .update({ status: 'expired' })
-        .eq('id', invite.id);
+        .eq('id', inviteData.id);
 
       return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });
     }
 
     // Check if invite has reached max uses
-    if ((invite.used_count || 0) >= (invite.max_uses || 1)) {
+    if ((inviteData.used_count || 0) >= (inviteData.max_uses || 1)) {
       return NextResponse.json({ error: 'Invite has reached maximum uses' }, { status: 410 });
     }
 
     // Check if email matches intended email (if specified)
-    if (invite.intended_email && invite.intended_email.toLowerCase() !== body.email.toLowerCase()) {
+    if (inviteData.intended_email && inviteData.intended_email.toLowerCase() !== body.email.toLowerCase()) {
       return NextResponse.json({ error: 'Email does not match intended recipient' }, { status: 403 });
     }
 
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
           component: 'InviteRedeemAPI',
           action: 'createUser',
           email: body.email,
-          inviteId: invite.id
+          inviteId: inviteData.id
         });
         return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
       }
@@ -118,7 +120,7 @@ export async function POST(request: NextRequest) {
     const { data: existingMember, error: memberError } = await supabase
       .from('event_members')
       .select('id, status')
-      .eq('event_id', invite.event_id)
+      .eq('event_id', inviteData.event_id)
       .eq('user_id', userId)
       .single();
 
@@ -126,7 +128,7 @@ export async function POST(request: NextRequest) {
       logger.error('Error checking existing membership', memberError, {
         component: 'InviteRedeemAPI',
         action: 'checkMembership',
-        eventId: invite.event_id,
+        eventId: inviteData.event_id,
         userId
       });
       return NextResponse.json({ error: 'Failed to check membership status' }, { status: 500 });
@@ -137,24 +139,24 @@ export async function POST(request: NextRequest) {
 
     // Create or update event membership
     const memberData = {
-      event_id: invite.event_id,
+      event_id: inviteData.event_id,
       user_id: userId,
-      invite_id: invite.id,
+      invite_id: inviteData.id,
       full_name: body.name,
       email: body.email,
-      role: invite.role,
+      role: inviteData.role,
       is_temporary: true,
-      expires_at: invite.expires_at,
+      expires_at: inviteData.expires_at,
       status: 'active' as const
     };
 
     let memberId: string;
     if (existingMember) {
       // Update existing membership
-      const { data: updatedMember, error: updateError } = await supabase
+      const { data: updatedMember, error: updateError } = await (supabase as any)
         .from('event_members')
         .update(memberData)
-        .eq('id', existingMember.id)
+        .eq('id', (existingMember as any).id)
         .select('id')
         .single();
 
@@ -162,7 +164,7 @@ export async function POST(request: NextRequest) {
         logger.error('Failed to update event membership', updateError, {
           component: 'InviteRedeemAPI',
           action: 'updateMembership',
-          eventId: invite.event_id,
+          eventId: inviteData.event_id,
           userId
         });
         return NextResponse.json({ error: 'Failed to update membership' }, { status: 500 });
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
       memberId = updatedMember.id;
     } else {
       // Create new membership
-      const { data: newMember, error: createError } = await supabase
+      const { data: newMember, error: createError } = await (supabase as any)
         .from('event_members')
         .insert(memberData)
         .select('id')
@@ -181,7 +183,7 @@ export async function POST(request: NextRequest) {
         logger.error('Failed to create event membership', createError, {
           component: 'InviteRedeemAPI',
           action: 'createMembership',
-          eventId: invite.event_id,
+          eventId: inviteData.event_id,
           userId
         });
         return NextResponse.json({ error: 'Failed to create membership' }, { status: 500 });
@@ -191,19 +193,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Update invite usage count
-    const { error: updateInviteError } = await supabase
+    const { error: updateInviteError } = await (supabase as any)
       .from('event_invites')
       .update({
-        used_count: (invite.used_count || 0) + 1,
+        used_count: (inviteData.used_count || 0) + 1,
         last_used_at: new Date().toISOString()
       })
-      .eq('id', invite.id);
+      .eq('id', inviteData.id);
 
     if (updateInviteError) {
       logger.error('Failed to update invite usage', updateInviteError, {
         component: 'InviteRedeemAPI',
         action: 'updateInviteUsage',
-        inviteId: invite.id
+        inviteId: inviteData.id
       });
     }
 
@@ -212,7 +214,7 @@ export async function POST(request: NextRequest) {
           type: 'magiclink',
           email: body.email,
           options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/incidents?event=${invite.event_id}`
+            redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/incidents?event=${inviteData.event_id}`
           }
         });
 
@@ -227,16 +229,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Log invite redemption
-    await supabase.from('audit_log').insert({
+    await (supabase as any).from('audit_log').insert({
       table_name: 'event_invites',
-      record_id: invite.id,
+      record_id: inviteData.id,
       action: 'redeem_invite',
       action_type: 'redemption',
       user_id: userId,
-      event_id: invite.event_id,
+      event_id: inviteData.event_id,
       resource_type: 'event_invite',
       details: {
-        role: invite.role,
+        role: inviteData.role,
         is_new_user: isNewUser,
         member_id: memberId
       }
@@ -245,10 +247,10 @@ export async function POST(request: NextRequest) {
     logger.info('Invite redeemed successfully', {
       component: 'InviteRedeemAPI',
       action: 'redeemInvite',
-      eventId: invite.event_id,
-      inviteId: invite.id,
+      eventId: inviteData.event_id,
+      inviteId: inviteData.id,
       userId,
-      role: invite.role,
+      role: inviteData.role,
       isNewUser
     });
 

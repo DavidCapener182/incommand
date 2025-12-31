@@ -90,7 +90,7 @@ export default function UserActivityDashboard({ startDate, endDate, eventId }: U
             amended: number
           }>()
 
-          logs.forEach(log => {
+          logs.forEach((log: any) => {
             if (!log.logged_by_user_id) return
 
             if (!userMap.has(log.logged_by_user_id)) {

@@ -44,20 +44,21 @@ export function useCompanyEventContext(preferredEventId?: string | null) {
           return
         }
 
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .maybeSingle()
 
-        if (profileError || !profile?.company_id) {
+        const profileData = profile as any;
+        if (profileError || !profileData?.company_id) {
           if (isMounted) setContext(null)
           return
         }
 
         if (isMounted) {
           setContext({
-            companyId: profile.company_id,
+            companyId: profileData.company_id,
             eventId: resolvedEventId,
           })
         }

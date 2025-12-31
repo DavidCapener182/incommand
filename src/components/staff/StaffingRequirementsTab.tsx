@@ -44,12 +44,12 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
       setError(null)
       try {
         const [{ data: roleRows, error: rolesError }, { data: actualRows, error: actualsError }] = await Promise.all([
-          supabase
+          (supabase as any)
             .from('staffing_roles')
             .select('id, discipline, planned_count')
             .eq('company_id', companyId)
             .eq('event_id', eventId),
-          supabase
+          (supabase as any)
             .from('staffing_actuals')
             .select('role_id, actual_count')
             .eq('company_id', companyId)
@@ -59,8 +59,10 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
         if (rolesError) throw rolesError
         if (actualsError) throw actualsError
 
-        const actualMap = new Map((actualRows ?? []).map((row) => [row.role_id, row.actual_count ?? 0]))
-        const existingRoles = (roleRows ?? []).map((role) => {
+        const actualRowsArray = (actualRows ?? []) as any[];
+        const roleRowsArray = (roleRows ?? []) as any[];
+        const actualMap = new Map(actualRowsArray.map((row: any) => [row.role_id, row.actual_count ?? 0]))
+        const existingRoles = roleRowsArray.map((role: any) => {
           const discipline = (role.discipline as StaffingDiscipline) || 'security'
           return {
             id: role.id,
@@ -111,16 +113,16 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
     setError(null)
     try {
       if (role.id) {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await (supabase as any)
           .from('staffing_roles')
           .update({ planned_count: value })
-          .eq('id', role.id)
+          .eq('id', (role as any).id)
           .eq('company_id', companyId)
           .eq('event_id', eventId)
 
         if (updateError) throw updateError
       } else {
-        const { data: inserted, error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await (supabase as any)
           .from('staffing_roles')
           .insert({
             company_id: companyId,
@@ -157,33 +159,34 @@ export function StaffingRequirementsTab({ eventId, companyId, eventType }: Staff
         throw new Error('Role ID is required')
       }
 
-      const { data: existing, error: selectError } = await supabase
+      const { data: existing, error: selectError } = await (supabase as any)
         .from('staffing_actuals')
         .select('id')
         .eq('company_id', companyId)
         .eq('event_id', eventId)
-        .eq('role_id', role.id)
+        .eq('role_id', (role as any).id)
         .maybeSingle()
 
       if (selectError && selectError.code !== 'PGRST116') {
         throw selectError
       }
 
-      if (existing) {
-        const { error: updateError } = await supabase
+      const existingData = existing as any;
+      if (existingData) {
+        const { error: updateError } = await (supabase as any)
           .from('staffing_actuals')
           .update({ actual_count: value, recorded_at: new Date().toISOString() })
-          .eq('id', existing.id)
+          .eq('id', existingData.id)
 
         if (updateError) throw updateError
       } else {
         if (!companyId) {
           throw new Error('Company ID is required')
         }
-        const { error: insertError } = await supabase.from('staffing_actuals').insert({
+        const { error: insertError } = await (supabase as any).from('staffing_actuals').insert({
           company_id: companyId,
           event_id: eventId,
-          role_id: role.id,
+          role_id: (role as any).id,
           actual_count: value,
           recorded_by: 'staffing-centre',
         })

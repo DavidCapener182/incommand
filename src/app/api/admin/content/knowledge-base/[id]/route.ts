@@ -45,7 +45,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 })
     }
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('knowledge_base')
       .update(updates)
       .eq('id', params.id)
@@ -74,7 +74,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   return withAdminAuth(request, 'content_editor', async (context) => {
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('knowledge_base')
       .update({ status: 'archived' })
       .eq('id', params.id)

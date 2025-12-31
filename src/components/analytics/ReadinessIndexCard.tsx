@@ -54,11 +54,11 @@ const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; a
 
 const ReadinessBar = ({ label, score, colorClass }: { label: string; score: number; colorClass: string }) => (
   <div className="w-full">
-    <div className="flex justify-between items-center mb-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-      <span className={cn("text-xs font-bold", colorClass.replace('bg-', 'text-'))}>{score}%</span>
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className={cn("text-[11px] font-bold", colorClass.replace('bg-', 'text-'))}>{score}%</span>
     </div>
-    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+    <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
       <div 
         className={cn("h-full rounded-full transition-all duration-700 ease-out", colorClass)} 
         style={{ width: `${score}%` }} 
@@ -177,9 +177,9 @@ export default function ReadinessIndexCard({
       <CardFrame className={className} onClick={() => setShowDetails(true)}>
         <CardHeader icon={ShieldCheckIcon} title="Readiness Score" action />
         
-        <div className="flex items-center gap-5">
+        <div className="flex flex-col items-center gap-4">
            {/* Radial Progress Chart */}
-           <div className="relative flex h-24 w-24 flex-none items-center justify-center">
+           <div className="relative flex h-20 w-20 items-center justify-center">
               {/* Track */}
               <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
                 <circle
@@ -202,13 +202,13 @@ export default function ReadinessIndexCard({
               
               {/* Center Text */}
               <div className="flex flex-col items-center">
-                 <span className={cn("text-2xl font-bold leading-none", statusColors.text)}>{score}</span>
-                 <div className="mt-1">{getTrendIcon()}</div>
+                 <span className={cn("text-xl font-bold leading-none", statusColors.text)}>{score}</span>
+                 <div className="mt-0.5">{getTrendIcon()}</div>
               </div>
            </div>
            
            {/* Metrics List */}
-           <div className="flex-1 space-y-3 min-w-0">
+           <div className="w-full space-y-2.5">
               <ReadinessBar 
                 label="Staffing" 
                 score={readiness.component_scores.staffing.score} 

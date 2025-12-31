@@ -189,7 +189,7 @@ export default function SupportPage() {
     startTransition(async () => {
       try {
         // Create ticket
-        const { data: ticketData, error: ticketError } = await supabase
+        const { data: ticketData, error: ticketError } = await (supabase as any)
           .from('support_tickets')
           .insert({
             user_id: user.id,

@@ -80,7 +80,15 @@ import DetailedInformationCard from './incidents/cards/DetailedInformationCard'
 import GreenGuideBestPracticesCard from './incidents/cards/GreenGuideBestPracticesCard'
 import LocationAndActionsCard from './incidents/cards/LocationAndActionsCard'
 import AdditionalOptionsCard from './incidents/cards/AdditionalOptionsCard'
-import IncidentQualityCard from './incidents/cards/IncidentQualityCard'
+import AIToolsPanel from './incidents/cards/AIToolsPanel'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface Props {
   isOpen: boolean
@@ -2155,6 +2163,18 @@ export default function IncidentCreationModal({
     outcome: '',
     use_structured_template: true
   });
+  
+  // State to collect AI-generated data
+  const [aiGeneratedData, setAiGeneratedData] = useState<{
+    tags?: string[]
+    riskMatrix?: any
+    logQualityScore?: number
+    dispatchAdvisor?: any
+    ethaneReport?: any
+    radioScript?: string
+    translatedText?: string
+    chronology?: any[]
+  }>({});
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
     description: '',
@@ -2225,6 +2245,7 @@ export default function IncidentCreationModal({
   const [mapCoordinates, setMapCoordinates] = useState<Coordinates | null>(null);
   const [mapCoordinatesSource, setMapCoordinatesSource] = useState<'geocoded' | 'manual' | null>(null);
   const [showSOPModal, setShowSOPModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { steps: sopSteps, isLoading: sopLoading, error: sopError } = useIncidentSOP(formData.incident_type || null);
   const { hasGuidedActions } = useGuidedActions();
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
@@ -3478,10 +3499,68 @@ export default function IncidentCreationModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitClick = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔵 handleSubmitClick called, showing confirmation dialog');
+    console.log('🔵 Current state:', { showConfirmDialog, isOpen, loading });
+    
+    // Validate required fields before showing dialog
+    if (!formData.incident_type) {
+      addToast({
+        type: 'error',
+        title: 'Incident Type Required',
+        message: 'Please select an incident type before logging.',
+        duration: 5000
+      });
+      return;
+    }
+    
+    if (!formData.occurrence || !formData.occurrence.trim()) {
+      addToast({
+        type: 'error',
+        title: 'Incident Details Required',
+        message: 'Please provide incident details before logging.',
+        duration: 5000
+      });
+      return;
+    }
+    
+    // Show confirmation dialog instead of directly submitting
+    setShowConfirmDialog(true);
+    console.log('🔵 Set showConfirmDialog to true');
+  };
+
+  const handleConfirmSubmit = async () => {
+    console.log('🔵 handleConfirmSubmit called - confirming and submitting');
+    try {
+      setShowConfirmDialog(false);
+      console.log('🔵 Dialog closed, calling performSubmit');
+      await performSubmit();
+      console.log('🔵 performSubmit completed');
+    } catch (error) {
+      console.error('❌ Error in handleConfirmSubmit:', error);
+      // Ensure dialog closes even on error
+      setShowConfirmDialog(false);
+    }
+  };
+
+  const performSubmit = async () => {
     setLoading(true);
     setError(null);
+    
+    console.log('🔵 performSubmit called', { 
+      loading, 
+      formData: {
+        incident_type: formData.incident_type,
+        occurrence: formData.occurrence?.substring(0, 50),
+        hasOccurrence: !!formData.occurrence,
+        hasActionTaken: !!formData.action_taken
+      }
+    });
 
 
     try {
@@ -3680,7 +3759,16 @@ export default function IncidentCreationModal({
         ...(resolvedCoordinates && {
           latitude: resolvedCoordinates.lat,
           longitude: resolvedCoordinates.lng
-        })
+        }),
+        // AI-generated data
+        ai_tags: aiGeneratedData.tags || null,
+        risk_matrix_scores: aiGeneratedData.riskMatrix || null,
+        log_quality_score: aiGeneratedData.logQualityScore || null,
+        dispatch_advisor: aiGeneratedData.dispatchAdvisor || null,
+        ethane_reports: aiGeneratedData.ethaneReport || null,
+        generated_radio_script: aiGeneratedData.radioScript || null,
+        translated_text: aiGeneratedData.translatedText || null,
+        chronology: aiGeneratedData.chronology || null
       };
 
       // First, check if the log number already exists
@@ -3731,16 +3819,18 @@ export default function IncidentCreationModal({
       // Insert the incident
       console.log('About to insert incident with logged_by_user_id:', user.id);
       let insertedIncident: { id: number } | null = null;
+      console.log('🔵 Inserting incident into database:', { logNumber, eventId: effectiveEvent.id, incidentType: resolvedType });
       const { data: insertReturn, error: insertError } = await supabase
         .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .insert([incidentData])
         .select('id')
         .maybeSingle();
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('❌ Insert error:', insertError);
         throw new Error((insertError as any)?.message || 'Insert failed');
       }
       insertedIncident = insertReturn as any;
+      console.log('✅ Incident inserted successfully:', { id: insertedIncident?.id, logNumber });
       if (!insertedIncident?.id) {
         // Some RLS policies disable returning representation; fetch by unique log_number as fallback
         const { data: fetchedByLog, error: fetchByLogError } = await supabase
@@ -3885,8 +3975,18 @@ export default function IncidentCreationModal({
         }
       }
 
+      // Show success toast
+      addToast({
+        type: 'success',
+        title: 'Incident Created',
+        message: `Incident ${logNumber} has been logged successfully.`,
+        duration: 5000
+      });
+
       // Call onIncidentCreated callback with the created incident and close modal
+      console.log('🔵 Calling onIncidentCreated callback');
       await onIncidentCreated(insertedIncident);
+      console.log('🔵 onIncidentCreated completed, closing modal');
       onClose();
 
       let photoUrl = null;
@@ -3904,7 +4004,14 @@ export default function IncidentCreationModal({
     } catch (error) {
       console.error('Error creating incident:', error);
       const message = (error as any)?.message || (error instanceof Error ? error.message : null) || 'Failed to create incident. Please try again.';
-      alert(message);
+      setError(message);
+      // Show toast error message
+      addToast({
+        type: 'error',
+        title: 'Failed to Create Incident',
+        message: message,
+        duration: 8000
+      });
     } finally {
       setLoading(false);
     }
@@ -4383,7 +4490,7 @@ export default function IncidentCreationModal({
                 Cancel
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={handleSubmitClick}
                 disabled={loading}
                 className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target min-h-[44px] text-base font-medium"
               >
@@ -4432,31 +4539,21 @@ export default function IncidentCreationModal({
         />
 
         {/* 🔹 Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto pb-80">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 py-6 sm:px-8 flex-grow overflow-y-auto pb-32">
             {/* Left Column - Incident Type Categories (Sidebar) */}
-            <aside className="col-span-12 lg:col-span-2 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
-              <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Incident Type</h3>
+            <aside className="hidden lg:block col-span-3">
+              <div className="bg-gray-100/50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-4 h-full max-h-[calc(100vh-200px)] overflow-y-auto sticky top-0">
+                <IncidentTypeCategories
+                  selectedType={formData.incident_type}
+                  onTypeSelect={handleIncidentTypeSelect}
+                  usageStats={incidentTypeUsageStats}
+                  availableTypes={incidentTypes}
+                />
               </div>
-                
-
-              <IncidentTypeCategories
-                selectedType={formData.incident_type}
-                onTypeSelect={handleIncidentTypeSelect}
-                usageStats={incidentTypeUsageStats}
-                availableTypes={incidentTypes}
-              />
             </aside>
 
             {/* Middle Column - Main Form Section */}
-            <section className="col-span-12 lg:col-span-4 space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
-              {/* Callsign Information Card */}
+            <section className="col-span-12 lg:col-span-6 space-y-6 pb-8">
               <CallsignInformationCard
                 callsignFrom={formData.callsign_from}
                 callsignTo={formData.callsign_to}
@@ -4468,7 +4565,6 @@ export default function IncidentCreationModal({
                 updateTyping={updateTyping}
               />
 
-              {/* Incident Configuration Card */}
               <IncidentConfigurationCard
                 priority={formData.priority}
                 entryType={formData.entry_type}
@@ -4484,9 +4580,9 @@ export default function IncidentCreationModal({
                 onShowAdvancedTimestampsChange={setShowAdvancedTimestamps}
                 entryTypeWarnings={entryTypeWarnings}
                 onEntryTypeWarningsChange={setEntryTypeWarnings}
+                description={formData.facts_observed}
               />
 
-              {/* Detailed Information Card */}
               <DetailedInformationCard
                 headline={formData.headline}
                 source={formData.source}
@@ -4511,54 +4607,47 @@ export default function IncidentCreationModal({
                 onShowGuidedActions={() => setShowGuidedActions(true)}
                 guidedActionsGenerated={guidedActionsGenerated}
               />
-              </div>
+
+              <LocationAndActionsCard
+                location={formData.location}
+                onLocationChange={(value) => setFormData({ ...formData, location: value })}
+                shouldRenderMap={shouldRenderMap}
+                mapCoordinates={mapCoordinates}
+                mapLocationQuery={mapLocationQuery}
+                onMapLocationChange={handleMapLocationChange}
+              />
             </section>
 
-            {/* Right Column 1 - AI Tools & Quality */}
-            <aside className="col-span-12 lg:col-span-3 space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
-              {/* Incident Quality Auditor */}
-              <IncidentQualityCard 
-                formData={formData} 
-                onApplySuggestion={(field, value) => {
-                  setFormData(prev => ({ ...prev, [field]: value }));
-                }}
-                onUpdateFactsObserved={(updatedText) => {
-                  setFormData(prev => ({ ...prev, facts_observed: updatedText }));
-                }}
-                guidedActionsApplied={guidedActionsGenerated || !hasGuidedActions(formData.incident_type)}
-              />
-              {/* Green Guide Best Practices */}
-              <GreenGuideBestPracticesCard
-                incidentType={formData.incident_type}
-                showBestPracticeHints={showBestPracticeHints}
-                onShowBestPracticeHintsChange={setShowBestPracticeHints}
-                onOccurrenceAppend={(text) => setFormData(prev => ({
-                  ...prev,
-                  occurrence: (prev.occurrence ? prev.occurrence + '\n' : '') + text
-                }))}
-                onActionsTakenAppend={(text) => setFormData(prev => ({
-                  ...prev,
-                  actions_taken: (prev.actions_taken ? prev.actions_taken + '\n' : '') + text
-                }))}
-              />
-              </div>
-            </aside>
-
-            {/* Right Column 2 - Additional Options */}
-            <aside className="col-span-12 lg:col-span-3 space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
-              {/* Additional Options Card */}
-              <AdditionalOptionsCard
-                isClosed={formData.is_closed}
-                incidentType={formData.incident_type}
-                onIsClosedChange={(value) => setFormData({ ...formData, is_closed: value })}
-                shouldAutoClose={shouldAutoClose}
-                getAutoCloseReason={getAutoCloseReason}
-                photoPreviewUrl={photoPreviewUrl}
-                photoError={photoError}
-                onPhotoChange={handlePhotoChange}
-              />
+            {/* Right Column - AI Tools Panel */}
+            <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full max-h-[calc(100vh-200px)]">
+              <div className="flex-1 min-h-0">
+                <AIToolsPanel
+                  formData={formData}
+                  onApplySuggestion={(field, value) => {
+                    setFormData(prev => ({ ...prev, [field]: value }));
+                  }}
+                  onUpdateFactsObserved={(updatedText) => {
+                    setFormData(prev => ({ ...prev, facts_observed: updatedText }));
+                  }}
+                  guidedActionsApplied={guidedActionsGenerated || !hasGuidedActions(formData.incident_type)}
+                  incidentType={formData.incident_type}
+                  showBestPracticeHints={showBestPracticeHints}
+                  onShowBestPracticeHintsChange={setShowBestPracticeHints}
+                  onOccurrenceAppend={(text) => setFormData(prev => {
+                    const current = prev.occurrence || ''
+                    // Append with space if there's existing content, otherwise just add the text
+                    const newText = current.trim() ? `${current.trim()} ${text}` : text
+                    return { ...prev, occurrence: newText }
+                  })}
+                  onActionsTakenAppend={(text) => setFormData(prev => {
+                    const current = prev.actions_taken || ''
+                    // Append with space if there's existing content, otherwise just add the text
+                    const newText = current.trim() ? `${current.trim()} ${text}` : text
+                    return { ...prev, actions_taken: newText }
+                  })}
+                  onAIDataChange={(data) => setAiGeneratedData(data)}
+                  onPriorityChange={(priority) => setFormData(prev => ({ ...prev, priority }))}
+                />
               </div>
             </aside>
           </div>
@@ -4778,7 +4867,7 @@ export default function IncidentCreationModal({
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
+            onClick={handleSubmitClick}
                   disabled={loading}
                   className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -4811,6 +4900,73 @@ export default function IncidentCreationModal({
         onCopyStep={handleApplySopStep}
         onCopyAll={(steps) => steps.forEach(handleApplySopStep)}
       />
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={(open) => {
+        console.log('🔵 Dialog onOpenChange called:', open, 'showConfirmDialog:', showConfirmDialog);
+        setShowConfirmDialog(open);
+      }}>
+        <DialogContent className="sm:max-w-md !z-[10000]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <DocumentPlusIcon className="h-6 w-6 text-blue-600" />
+              Confirm Incident Creation
+            </DialogTitle>
+            <DialogDescription className="mt-2">
+              Are you sure you want to create this incident? This will add it to the incident log.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-2">
+            {formData.incident_type && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Type:</span>
+                <span className="text-sm text-gray-900 dark:text-white">{formData.incident_type}</span>
+              </div>
+            )}
+            {formData.occurrence && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Details:</span>
+                <span className="text-sm text-gray-900 dark:text-white line-clamp-3">
+                  {formData.occurrence.substring(0, 150)}{formData.occurrence.length > 150 ? '...' : ''}
+                </span>
+              </div>
+            )}
+            {formData.priority && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Priority:</span>
+                <span className="text-sm text-gray-900 dark:text-white capitalize">{formData.priority}</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <button
+              onClick={() => setShowConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmSubmit}
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Confirm & Create
+                </>
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Guided Actions Modal */}
       <GuidedActionsModal

@@ -181,7 +181,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
   const fetchOccupancyDataDirect = useCallback(async () => {
     try {
       // Get attendance history for analysis
-      let attendanceQuery = supabase
+      let attendanceQuery = (supabase as any)
         .from('attendance_records')
         .select('count, timestamp')
         .order('timestamp', { ascending: true });
@@ -194,55 +194,58 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       }
       
       const { data: attendanceData, error: attendanceError } = await attendanceQuery;
+      const attendanceArray = (attendanceData || []) as any[];
 
       if (attendanceError) {
         console.warn('Error fetching attendance data:', attendanceError);
         setConnectionError(null);
-      } else if (attendanceData && attendanceData.length > 0) {
-        setAttendanceHistory(attendanceData);
-        setCurrentOccupancy(attendanceData[attendanceData.length - 1].count || 0);
+      } else if (attendanceArray.length > 0) {
+        setAttendanceHistory(attendanceArray);
+        setCurrentOccupancy(attendanceArray[attendanceArray.length - 1].count || 0);
         
-        const flowRateData = calculateFlowRate(attendanceData);
+        const flowRateData = calculateFlowRate(attendanceArray);
         setFlowRate(flowRateData);
         
-        const density = calculateCrowdDensity(attendanceData[attendanceData.length - 1].count, maxCapacity);
+        const density = calculateCrowdDensity(attendanceArray[attendanceArray.length - 1].count, maxCapacity);
         setCrowdDensity(density);
         
         const evacuationTimeMinutes = calculateEvacuationTime(
-          attendanceData[attendanceData.length - 1].count, 
+          attendanceArray[attendanceArray.length - 1].count, 
           maxCapacity, 
           flowRateData
         );
         setEvacuationTime(evacuationTimeMinutes);
       }
 
-      let eventQuery = supabase
+      let eventQuery = (supabase as any)
         .from('events')
         .select('expected_attendance');
       
       try {
         const { data: eventData, error: eventError } = await eventQuery.eq('id', eventId).single();
+        const eventDataTyped = eventData as any;
         if (eventError) {
           console.warn('Error fetching event data:', eventError);
           setMaxCapacity(25000);
-        } else if (eventData && eventData.expected_attendance) {
-          setMaxCapacity(eventData.expected_attendance);
+        } else if (eventDataTyped && eventDataTyped.expected_attendance) {
+          setMaxCapacity(eventDataTyped.expected_attendance);
           
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+          if (attendanceArray && attendanceArray.length > 0) {
+            const predictions = generatePredictions(attendanceArray, eventDataTyped.expected_attendance);
             setPredictions(predictions);
           }
         }
       } catch (e) {
         console.warn('id column not found in events, fetching first event');
         const { data: eventData, error: eventError } = await eventQuery.limit(1).single();
+        const eventDataTyped2 = eventData as any;
         if (eventError) {
           console.warn('Error fetching event data:', eventError);
           setMaxCapacity(25000);
-        } else if (eventData && eventData.expected_attendance) {
-          setMaxCapacity(eventData.expected_attendance);
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+        } else if (eventDataTyped2 && eventDataTyped2.expected_attendance) {
+          setMaxCapacity(eventDataTyped2.expected_attendance);
+          if (attendanceArray && attendanceArray.length > 0) {
+            const predictions = generatePredictions(attendanceArray, eventDataTyped2.expected_attendance);
             setPredictions(predictions);
           }
         }
@@ -339,7 +342,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
   const fetchOccupancyData = useCallback(async () => {
     try {
       // Get attendance history for analysis
-      let attendanceQuery = supabase
+      let attendanceQuery = (supabase as any)
         .from('attendance_records')
         .select('count, timestamp')
         .order('timestamp', { ascending: true });
@@ -353,24 +356,25 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       }
       
       const { data: attendanceData, error: attendanceError } = await attendanceQuery;
+      const attendanceArray = (attendanceData || []) as any[];
 
       if (attendanceError) {
         console.warn('Error fetching attendance data:', attendanceError);
         // Don't set connection error for data fetch issues - just use defaults
         setConnectionError(null);
-      } else if (attendanceData && attendanceData.length > 0) {
-        setAttendanceHistory(attendanceData);
-        setCurrentOccupancy(attendanceData[attendanceData.length - 1].count || 0);
+      } else if (attendanceArray.length > 0) {
+        setAttendanceHistory(attendanceArray);
+        setCurrentOccupancy(attendanceArray[attendanceArray.length - 1].count || 0);
         
         // Calculate derived metrics
-        const flowRateData = calculateFlowRate(attendanceData);
+        const flowRateData = calculateFlowRate(attendanceArray);
         setFlowRate(flowRateData);
         
-        const density = calculateCrowdDensity(attendanceData[attendanceData.length - 1].count, maxCapacity);
+        const density = calculateCrowdDensity(attendanceArray[attendanceArray.length - 1].count, maxCapacity);
         setCrowdDensity(density);
         
         const evacuationTimeMinutes = calculateEvacuationTime(
-          attendanceData[attendanceData.length - 1].count, 
+          attendanceArray[attendanceArray.length - 1].count, 
           maxCapacity, 
           flowRateData
         );
@@ -378,7 +382,7 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
       }
 
       // Get expected capacity from events table
-      let eventQuery = supabase
+      let eventQuery = (supabase as any)
         .from('events')
         .select('expected_attendance');
       
@@ -393,8 +397,8 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
           setMaxCapacity(eventData.expected_attendance);
           
           // Generate predictions after setting capacity
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+          if (attendanceArray && attendanceArray.length > 0) {
+            const predictions = generatePredictions(attendanceArray, eventData.expected_attendance);
             setPredictions(predictions);
           }
         }
@@ -410,8 +414,8 @@ export default function VenueCapacityWidget({ eventId }: VenueCapacityWidgetProp
           setMaxCapacity(eventData.expected_attendance);
           
           // Generate predictions after setting capacity
-          if (attendanceData && attendanceData.length > 0) {
-            const predictions = generatePredictions(attendanceData, eventData.expected_attendance);
+          if (attendanceArray && attendanceArray.length > 0) {
+            const predictions = generatePredictions(attendanceArray, eventData.expected_attendance);
             setPredictions(predictions);
           }
         }

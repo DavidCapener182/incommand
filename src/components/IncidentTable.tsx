@@ -219,6 +219,7 @@ export default function IncidentTable({
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
   const onToastRef = useRef(onToast)
   const onDataLoadedRef = useRef(onDataLoaded)
+  const fetchIncidentsRef = useRef<(() => Promise<void>) | null>(null)
   
   // Keep refs in sync with props/callbacks
   useEffect(() => {
@@ -228,7 +229,7 @@ export default function IncidentTable({
   useEffect(() => {
     onDataLoadedRef.current = onDataLoaded
   }, [onDataLoaded])
-  
+
   useEffect(() => {
     manualStatusChangesRef.current = manualStatusChanges
   }, [manualStatusChanges])
@@ -244,7 +245,7 @@ export default function IncidentTable({
         .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*')
         .eq('event_id', eventId)
-        .order('timestamp', { ascending: false });
+        .order('log_number', { ascending: false });
 
       if (error) throw error;
       const mappedIncidents = (data || []).map(incident => ({
@@ -274,6 +275,11 @@ export default function IncidentTable({
       setLoading(false);
     }
   }, [effectiveEventId, trackError])
+
+  // Set the ref after fetchIncidents is defined
+  useEffect(() => {
+    fetchIncidentsRef.current = fetchIncidents
+  }, [fetchIncidents])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -417,13 +423,37 @@ export default function IncidentTable({
           setIncidents(prev => {
           let newIncidents: Incident[] = [];
           if (payload.eventType === 'INSERT') {
-              // Ensure type and category fields are included for new incidents
-              const newIncident = {
-                ...(payload.new as Incident),
-                type: (payload.new as any).type || 'incident',
-                category: (payload.new as any).category || undefined,
+              // Map all fields to match fetchIncidents structure
+              const newIncidentData = payload.new as any;
+              const newIncident: Incident = {
+                ...newIncidentData,
+                status: newIncidentData.status || 'open',
+                entry_type: newIncidentData.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+                retrospective_justification: newIncidentData.retrospective_justification || undefined,
+                logged_by_user_id: newIncidentData.logged_by_user_id || undefined,
+                logged_by_callsign: newIncidentData.logged_by_callsign ?? undefined,
+                is_amended: newIncidentData.is_amended ?? undefined,
+                original_entry_id: newIncidentData.original_entry_id?.toString() || undefined,
+                type: newIncidentData.type || 'incident',
+                category: newIncidentData.category || undefined,
               };
-              newIncidents = [newIncident, ...prev];
+              
+              // Check if this incident already exists (prevent duplicates)
+              const exists = prev.some(inc => inc.id === newIncident.id);
+              if (!exists) {
+                newIncidents = [newIncident, ...prev];
+              } else {
+                // If it exists, update it instead of adding duplicate
+                newIncidents = prev.map(inc => inc.id === newIncident.id ? newIncident : inc);
+              }
+              
+              // Trigger a refetch to ensure we have the latest data (debounced)
+              // This handles cases where real-time events might arrive out of order or be missed
+              if (fetchIncidentsRef.current) {
+                setTimeout(() => {
+                  fetchIncidentsRef.current?.();
+                }, 500);
+              }
               
               // Show toast for new incident using global callback
               const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
@@ -808,8 +838,28 @@ export default function IncidentTable({
 
   // Filter incidents based on the filter prop and search query
   // Separate match flow logs from regular incidents for filtering
-  const regularIncidents = incidents.filter(incident => incident.type !== 'match_log')
-  const matchFlowLogs = incidents.filter(incident => incident.type === 'match_log')
+  const regularIncidents = incidents.filter(incident => (incident.type || 'incident') !== 'match_log')
+  const matchFlowLogs = incidents.filter(incident => (incident.type || 'incident') === 'match_log')
+  
+  // Debug: Log incident counts and specific log numbers
+  useEffect(() => {
+    if (incidents.length > 0) {
+      const logNumbers = incidents.map(i => i.log_number).sort((a, b) => 
+        b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })
+      )
+      const has082 = incidents.some(i => i.log_number.includes('082'))
+      const has083 = incidents.some(i => i.log_number.includes('083'))
+      const has084 = incidents.some(i => i.log_number.includes('084'))
+      logger.debug('Incident counts', { 
+        total: incidents.length, 
+        regular: regularIncidents.length, 
+        matchFlow: matchFlowLogs.length,
+        topLogs: logNumbers.slice(0, 5),
+        has082, has083, has084,
+        filters: safeFilters
+      })
+    }
+  }, [incidents.length, regularIncidents.length, matchFlowLogs.length, safeFilters])
   
   // Filter regular incidents
   const filteredRegularIncidents: Incident[] = filterIncidents<Incident>(regularIncidents, { ...safeFilters, query: searchQuery })
@@ -821,6 +871,24 @@ export default function IncidentTable({
     }
     return filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
   }, [matchFlowLogs, safeFilters, searchQuery, showMatchFlowLogs])
+  
+  // Debug: Log filtered counts
+  useEffect(() => {
+    if (filteredRegularIncidents.length > 0 || filteredMatchFlowLogs.length > 0) {
+      const filteredLogNumbers = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
+        .map(i => i.log_number)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
+      const has082Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('082'))
+      const has083Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('083'))
+      const has084Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('084'))
+      logger.debug('Filtered incident counts', { 
+        filteredRegular: filteredRegularIncidents.length,
+        filteredMatchFlow: filteredMatchFlowLogs.length,
+        topFilteredLogs: filteredLogNumbers.slice(0, 5),
+        has082Filtered, has083Filtered, has084Filtered
+      })
+    }
+  }, [filteredRegularIncidents.length, filteredMatchFlowLogs.length])
   
   // Combine filtered incidents (match flow logs appear after regular incidents)
   const filteredIncidents: Incident[] = useMemo(
@@ -853,18 +921,25 @@ export default function IncidentTable({
     return isHighPriority && isOpenStatus
   }
 
-  // Sort incidents: Pin open high priority incidents to the top, then chronological order
+  // Sort incidents: Strictly by log number descending (highest to lowest)
+  // Handle both "LOG-XXX" and "event-XXX" formats by extracting the numeric part
   const sortedIncidents = [...filteredIncidents].sort((a, b) => {
-    const aIsHighPriorityOpen = isHighPriorityAndOpen(a);
-    const bIsHighPriorityOpen = isHighPriorityAndOpen(b);
-
-    // If both are high priority and open, or both are not, sort by timestamp (newest first)
-    if (aIsHighPriorityOpen === bIsHighPriorityOpen) {
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    // Extract numeric part from log_number (handles both "LOG-082" and "event-082" formats)
+    const extractNumber = (logNum: string): number => {
+      const match = logNum.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    
+    const numA = extractNumber(a.log_number);
+    const numB = extractNumber(b.log_number);
+    
+    // If both have valid numbers, sort numerically
+    if (numA > 0 && numB > 0) {
+      return numB - numA; // Descending order
     }
-
-    // High priority open incidents go to the top
-    return aIsHighPriorityOpen ? -1 : 1;
+    
+    // Fallback to string comparison if numbers can't be extracted
+    return b.log_number.localeCompare(a.log_number, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   // Determine if we should use virtualized table (for large datasets)
@@ -873,8 +948,8 @@ export default function IncidentTable({
   }, [sortedIncidents.length])
 
   const chronologicalIncidents = useMemo(() => {
-    return [...filteredIncidents].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    return [...filteredIncidents].sort((a, b) => 
+      a.log_number.localeCompare(b.log_number, undefined, { numeric: true, sensitivity: 'base' })
     );
   }, [filteredIncidents]);
 

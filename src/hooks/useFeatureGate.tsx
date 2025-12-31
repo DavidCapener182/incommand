@@ -33,14 +33,15 @@ export function useFeatureGate() {
       
       // Try to get plan from user's company
       try {
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .single()
 
-        if (profile?.company_id) {
-          const plan = await getPlanCodeFromCompany(profile.company_id)
+        const profileData = profile as any;
+        if (profileData?.company_id) {
+          const plan = await getPlanCodeFromCompany(profileData.company_id)
           setUserPlan(plan || 'starter')
         } else {
           setUserPlan('starter') // Default fallback

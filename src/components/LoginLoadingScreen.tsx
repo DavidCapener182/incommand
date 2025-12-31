@@ -140,7 +140,8 @@ export default function LoginLoadingScreen() {
           top: 0;
           left: 0;
           width: 100%;
-          height: 100%;
+          height: 100vh; /* Fallback for older browsers */
+          height: 100dvh; /* Dynamic viewport height for mobile - accounts for browser chrome */
           background-color: #283593;
           display: flex;
           justify-content: center;
@@ -148,6 +149,7 @@ export default function LoginLoadingScreen() {
           z-index: 9999;
           transition: opacity 1s ease-out, visibility 1s linear;
           pointer-events: auto;
+          overflow: hidden; /* Prevent scrolling */
         }
         
         /* Ensure page content loads behind the overlay */
@@ -168,15 +170,37 @@ export default function LoginLoadingScreen() {
           justify-content: center;
           align-items: center;
           width: 100%;
+          padding: 0 1rem; /* Add horizontal padding for mobile */
         }
 
         .container {
           position: relative;
           display: flex;
           align-items: center;
+          justify-content: flex-start; /* Left-align content within container */
           height: 1.5em;
           max-width: 98vw;
+          width: auto;
+          margin: 0 auto; /* Center the container itself */
           padding-left: 0.3em;
+        }
+        
+        /* Mobile-specific adjustments */
+        @media (max-width: 768px) {
+          .logo-wrapper {
+            font-size: min(8vw, 60px);
+            padding: 0 1.5rem;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          
+          .container {
+            max-width: 90vw;
+            justify-content: flex-start; /* Keep left-aligned text */
+            margin: 0 auto; /* Ensure container is centered */
+          }
         }
 
         .icon-svg {

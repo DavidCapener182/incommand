@@ -306,13 +306,14 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .maybeSingle()
 
-      setCompanyId(profile?.company_id ?? null)
+      const profileData = profile as any;
+      setCompanyId(profileData?.company_id ?? null)
     }
 
     void fetchProfile()

@@ -63,14 +63,15 @@ export default function CustomDashboardBuilder({
 
         setUserId(user.id)
 
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .maybeSingle()
 
-        if (profile?.company_id) {
-          setCompanyId(profile.company_id)
+        const profileData = profile as any;
+        if (profileData?.company_id) {
+          setCompanyId(profileData.company_id)
         }
       } catch (error) {
         console.error('Error loading user info:', error)
@@ -145,16 +146,16 @@ export default function CustomDashboardBuilder({
 
       if (selectedDashboard) {
         // Update existing dashboard
-        const { error } = await supabase
-          .from('custom_dashboards' as any)
+        const { error } = await (supabase as any)
+          .from('custom_dashboards')
           .update(dashboardData)
-          .eq('id', selectedDashboard.id)
+          .eq('id', (selectedDashboard as any).id)
 
         if (error) throw error
       } else {
         // Create new dashboard
-        const { error } = await supabase
-          .from('custom_dashboards' as any)
+        const { error } = await (supabase as any)
+          .from('custom_dashboards')
           .insert(dashboardData)
 
         if (error) throw error

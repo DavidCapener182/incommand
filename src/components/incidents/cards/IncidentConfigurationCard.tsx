@@ -1,8 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import { ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import type { EntryType } from '../../../types/auditableLog'
 import { validateEntryType } from '../../../lib/auditableLogging'
+import { callOpenAI } from '@/services/incidentAIService'
 
 export interface IncidentConfigurationCardProps {
   priority: string
@@ -19,6 +21,7 @@ export interface IncidentConfigurationCardProps {
   onShowAdvancedTimestampsChange: (value: boolean) => void
   entryTypeWarnings: string[]
   onEntryTypeWarningsChange: (warnings: string[]) => void
+  description?: string
 }
 
 export default function IncidentConfigurationCard({
@@ -36,7 +39,53 @@ export default function IncidentConfigurationCard({
   onShowAdvancedTimestampsChange,
   entryTypeWarnings,
   onEntryTypeWarningsChange,
+  description,
 }: IncidentConfigurationCardProps) {
+  const [analyzing, setAnalyzing] = useState(false)
+
+  const handleAssessRisk = async () => {
+    if (!description) return
+    setAnalyzing(true)
+    try {
+      const systemPrompt = `You are a risk assessment analyst for event management. Analyze the incident description and suggest an appropriate priority level based on these criteria:
+
+PRIORITY GUIDELINES:
+- LOW: Minor incidents, routine matters, no immediate threat (e.g., lost property, minor noise complaints, general inquiries)
+- MEDIUM: Requires attention but not urgent, standard response needed (e.g., minor medical assistance, non-violent disputes, routine welfare checks, minor injuries like cuts/sprains)
+- HIGH: Significant risk, requires immediate attention, potential for escalation (e.g., aggressive behavior, crowd control issues, serious medical incidents requiring ambulance, security threats)
+- URGENT: Life-threatening or critical security breach, requires immediate response (e.g., cardiac arrest, major security incident, fire, active violence, mass casualty)
+
+MEDICAL INCIDENTS:
+- Minor injuries (cuts, bruises, sprains, twisted ankle, minor falls): MEDIUM
+- Serious injuries requiring ambulance (broken bones, head injuries, severe bleeding): HIGH
+- Life-threatening (cardiac arrest, unconscious, severe trauma): URGENT
+
+Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this priority), and "suggested_priority" (low/medium/high/urgent).`
+      const result = await callOpenAI(`Assess risk for: ${description}`, systemPrompt, true)
+      try {
+        const data = JSON.parse(result)
+        if (data.suggested_priority) {
+          onPriorityChange(data.suggested_priority)
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  const getColor = (p: string) => {
+    switch (p.toLowerCase()) {
+      case 'high':
+        return 'border-orange-200 bg-orange-50 text-orange-800'
+      case 'urgent':
+        return 'border-red-200 bg-red-50 text-red-800'
+      default:
+        return 'border-slate-200 bg-white dark:bg-slate-900'
+    }
+  }
+
   return (
     <div className={`${
       priority === 'high' ? 'border-l-4 border-l-red-500 pl-4' : ''
@@ -50,26 +99,39 @@ export default function IncidentConfigurationCard({
         </div>
         <h3 id="configuration-title" className="text-sm font-semibold text-gray-900 dark:text-white">Incident Configuration</h3>
       </div>
-      <div>
-        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
-        <div className="relative">
-          <select
-            id="priority"
-            value={priority}
-            onChange={(e) => onPriorityChange(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm appearance-none font-sans"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+      <div className={`rounded-xl border shadow-sm p-4 flex items-center justify-between transition-colors ${getColor(priority)}`}>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">Priority Level</span>
+          {description && (
+            <button
+              onClick={handleAssessRisk}
+              disabled={analyzing}
+              className="flex items-center gap-1 text-[10px] bg-white/50 border border-black/10 px-2 py-1 rounded-full hover:bg-white/80 transition-colors"
+            >
+              {analyzing ? (
+                <>
+                  <ArrowPathIcon className="w-3 h-3 animate-spin" />
+                  Assessing...
+                </>
+              ) : (
+                <>
+                  <ExclamationTriangleIcon className="w-3 h-3" />
+                  Assess
+                </>
+              )}
+            </button>
+          )}
         </div>
+        <select
+          value={priority}
+          onChange={(e) => onPriorityChange(e.target.value)}
+          className="rounded-lg border-black/10 bg-white/50 text-sm p-2 cursor-pointer font-semibold"
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
       </div>
       
       {/* Entry Type Section */}

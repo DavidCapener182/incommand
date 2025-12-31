@@ -24,13 +24,14 @@ export function useUserPlan(): PlanCode | null {
 
       try {
         // Get user's profile to find company_id
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await (supabase as any)
           .from('profiles')
           .select('company_id')
           .eq('id', user.id)
           .single()
 
-        if (profileError || !profile?.company_id) {
+        const profileData = profile as any;
+        if (profileError || !profileData?.company_id) {
           console.warn('No company found for user, defaulting to starter plan')
           setPlan('starter')
           setLoading(false)
@@ -38,10 +39,10 @@ export function useUserPlan(): PlanCode | null {
         }
 
         // Get company's subscription plan
-        const { data: company, error: companyError } = await supabase
+        const { data: company, error: companyError } = await (supabase as any)
           .from('companies')
           .select('subscription_plan')
-          .eq('id', profile.company_id)
+          .eq('id', profileData.company_id)
           .single()
 
         if (companyError || !company) {

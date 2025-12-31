@@ -33,7 +33,7 @@ export async function PATCH(
     if (parsed.data.paymentReference !== undefined) updates.payment_reference = parsed.data.paymentReference
     if (parsed.data.dueDate) updates.due_date = parsed.data.dueDate
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('invoices')
       .update(updates)
       .eq('id', params.invoiceId)
