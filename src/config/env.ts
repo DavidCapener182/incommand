@@ -37,11 +37,4 @@ if (process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
   )
 }
 
-// Ensure downstream consumers relying directly on process.env receive the resolved values
-process.env.SUPABASE_URL ??= env.SUPABASE_URL
-process.env.SUPABASE_SERVICE_ROLE_KEY ??= env.SUPABASE_SERVICE_ROLE_KEY
-process.env.SUPABASE_ANON_KEY ??= env.SUPABASE_ANON_KEY
-process.env.NEXT_PUBLIC_SUPABASE_URL ??= env.NEXT_PUBLIC_SUPABASE_URL
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
 export default env
