@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { logAIUsage } from '@/lib/supabaseServer';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { openaiClient } from '@/lib/openaiClient';
 
 export async function POST(request: Request) {
   try {
     const { input, location, callsign, interventionNeeded, redirectionMentioned, stableFlow, severeCrowding, monitoringSituation } = await request.json();
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
         { status: 500 }
@@ -41,7 +37,7 @@ Format your response as a JSON object with:
 Keep the language professional and focused on crowd management.
 If monitoring is mentioned, emphasize the proactive nature of the monitoring.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { openaiClient } from '@/lib/openaiClient';
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +17,7 @@ export async function POST(request: Request) {
       isSlipperyConditions
     } = await request.json();
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
         { status: 500 }
@@ -66,7 +62,7 @@ Keep the language professional and focused on safety and operational impacts.
 ${isUrgent ? 'Emphasize the urgency of the situation.' : ''}
 ${isLightning ? 'Include lightning safety protocols being implemented.' : ''}`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

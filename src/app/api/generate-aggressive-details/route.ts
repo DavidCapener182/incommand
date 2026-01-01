@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { openaiClient } from '@/lib/openaiClient';
 
 export async function POST(request: Request) {
   try {
     const { input, location, callsign, policeRequired, physicalViolence, verbalAbuse, securityIntervention } = await request.json();
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
         { status: 500 }
@@ -37,7 +33,7 @@ Format your response as a JSON object with:
 
 Keep the language professional and security-focused.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

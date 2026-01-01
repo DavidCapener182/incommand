@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  }
   html {
     font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
   }

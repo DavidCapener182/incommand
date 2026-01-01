@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { detectPriority } from '@/utils/priorityDetection';
+import { openaiClient } from '@/lib/openaiClient';
 
 function fallbackDetectCallsign(input: string): string {
   const text = input.toLowerCase();
@@ -24,10 +24,6 @@ function fallbackExtractLocation(input: string): string | undefined {
   return match ? match[2].trim() : undefined;
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 export async function POST(request: Request) {
   try {
     const { input, incidentTypes, extractCallsign = false, extractLocation = false, extractPriority = false } = await request.json();
@@ -39,7 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
@@ -52,7 +48,7 @@ export async function POST(request: Request) {
 Classify this incident into the single best matching type from the list. Only return the type, nothing else.
 Incident: "${input}"`;
 
-    const typeCompletion = await openai.chat.completions.create({
+    const typeCompletion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
@@ -72,7 +68,7 @@ Incident: "${input}"`;
     // Prompt for grammar/spelling correction
     const grammarPrompt = `Correct the spelling and grammar of the following incident description, but do not add or remove any information. Only return the corrected text.\n\n${input}`;
 
-    const grammarCompletion = await openai.chat.completions.create({
+    const grammarCompletion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
@@ -108,7 +104,7 @@ Requested keys: ${[
           extractPriority ? 'priority' : null
         ].filter(Boolean).join(', ')}`;
 
-        const fieldsCompletion = await openai.chat.completions.create({
+        const fieldsCompletion = await openaiClient.chat.completions.create({
           model: 'gpt-3.5-turbo',
           messages: [
             { role: 'system', content: 'You extract concise fields and respond in strict JSON.' },
@@ -142,7 +138,7 @@ Requested keys: ${[
     let ejectionRaw = null;
     if (incidentType === 'Ejection') {
       const extractPrompt = `Extract the following information from the incident description below. If a field is not present, return an empty string for it. Respond ONLY in strict JSON format with keys: location, description, reason.\n\nIncident: "${description}"\n\nFields to extract:\n- location: Location of ejection (e.g. Pit Area, Main Entrance)\n- description: Description of person(s) (e.g. Male wearing a red t-shirt)\n- reason: Reason for ejection (e.g. Fighting, Intoxication)\n\nExample output:\n{\n  \"location\": \"Pit Area\",\n  \"description\": \"Male wearing a red t-shirt\",\n  \"reason\": \"Fighting\"\n}`;
-      const extractCompletion = await openai.chat.completions.create({
+      const extractCompletion = await openaiClient.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
