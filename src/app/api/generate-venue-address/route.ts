@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { openaiClient } from '@/lib/openaiClient';
 
 // Debug logging for environment variables
 console.log('API Route (Venue) - Environment variables check:', {
   OPENAI_API_KEY_EXISTS: typeof process.env.OPENAI_API_KEY !== 'undefined',
   OPENAI_API_KEY_LENGTH: process.env.OPENAI_API_KEY?.length
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
 });
 
 export async function POST(request: Request) {
@@ -22,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
@@ -32,7 +28,7 @@ export async function POST(request: Request) {
 
     const prompt = `Please provide the full address for the venue "${venueName}". If this is a well-known venue, provide its actual address. If not certain about the exact address, provide a plausible address format that would be typical for this type of venue. Return ONLY the address with no additional context or explanation.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

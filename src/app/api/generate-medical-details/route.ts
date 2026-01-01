@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { chatCompletion, isOllamaAvailable } from '@/services/ollamaService';
 import { safeParseJson } from '@/lib/ai/json';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { openaiClient } from '@/lib/openaiClient';
 
 export async function POST(request: Request) {
   try {
@@ -19,9 +15,9 @@ export async function POST(request: Request) {
     const DEFAULT_ACTION = 'Medics dispatched to location.';
 
     // Try OpenAI primary
-    if (process.env.OPENAI_API_KEY) {
+    if (openaiClient) {
       try {
-        const completion = await openai.chat.completions.create({
+        const completion = await openaiClient.chat.completions.create({
           model: 'gpt-3.5-turbo',
           messages: [
             {

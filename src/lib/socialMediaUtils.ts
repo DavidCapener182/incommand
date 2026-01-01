@@ -1,7 +1,7 @@
 import { chatCompletion as ollamaChatCompletion, isOllamaAvailable, OllamaModelNotFoundError } from '@/services/ollamaService';
-import OpenAI from 'openai';
 import { extractJsonFromText } from '@/lib/ai/jsonUtils';
 import { getServiceClient } from './supabaseServer';
+import { openaiClient } from './openaiClient';
 
 // TypeScript interfaces
 export interface SocialPost {
@@ -89,10 +89,8 @@ export async function analyzeSentiment(posts: string[]): Promise<SentimentScore[
   // If everything was cached, return immediately
   if (uncachedPosts.length === 0) return results;
 
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-
   // If OpenAI key is missing, try Ollama; otherwise neutral
-  if (!openaiApiKey) {
+  if (!openaiClient) {
     try {
       const model = process.env.OLLAMA_MODEL_SENTIMENT;
       const available = await isOllamaAvailable(model);
@@ -143,15 +141,17 @@ export async function analyzeSentiment(posts: string[]): Promise<SentimentScore[
   return results;
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function analyzeBatch(posts: string[]): Promise<SentimentScore[]> {
   const systemPrompt = SENTIMENT_SYSTEM_PROMPT;
 
   const userPrompt = `Analyze these social media posts:\n${posts.map((post, i) => `${i + 1}. ${post}`).join('\n')}`;
 
   try {
-    const response = await openai.chat.completions.create({
+    if (!openaiClient) {
+      throw new Error('OpenAI client not configured');
+    }
+
+    const response = await openaiClient.chat.completions.create({
       model: process.env.OPENAI_SENTIMENT_MODEL || 'gpt-3.5-turbo',
       messages: [
         { role: 'system', content: systemPrompt },

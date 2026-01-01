@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { substituteTemplate, processUserAnswers } from '@/utils/templateSubstitution';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { openaiClient } from '@/lib/openaiClient';
 
 interface GuidedActionsRequest {
   incidentType: string;
@@ -63,7 +61,7 @@ export async function POST(request: Request) {
     const templateOutcome = substituteTemplate(template.outcome, context);
 
     // If OpenAI is not available, return template-only result
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       console.log('OpenAI API key not configured, using template-only fallback');
       return NextResponse.json<GuidedActionsResponse>({
         actions: templateActions,
@@ -97,7 +95,7 @@ Return ONLY valid JSON:
   "outcome": "<refined outcome>"
 }`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await openaiClient.chat.completions.create({
         model: process.env.OPENAI_INCIDENT_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
@@ -166,4 +164,3 @@ Return ONLY valid JSON:
     );
   }
 }
-

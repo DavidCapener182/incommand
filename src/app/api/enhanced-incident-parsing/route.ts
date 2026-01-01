@@ -57,7 +57,8 @@ function fallbackExtractLocation(input: string): string | null {
   return loc || null;
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
+const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 
 export async function POST(request: Request) {
   try {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     let aiResult: any = null;
     let aiSource: 'openai' | 'browser' | 'none' = 'none';
 
-    if (process.env.OPENAI_API_KEY) {
+    if (openai) {
       const INCIDENT_MODEL = process.env.OPENAI_INCIDENT_MODEL || 'gpt-4o-mini';
       const system = INCIDENT_EXTRACTION_SYSTEM;
       const user = buildIncidentExtractionUser(incidentTypes, input);
@@ -434,5 +435,4 @@ export async function POST(request: Request) {
     return NextResponse.json(errorResponse);
   }
 }
-
 

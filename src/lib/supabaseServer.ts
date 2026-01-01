@@ -9,8 +9,8 @@ type TypedSupabaseClient = SupabaseClient<Database>
 let serviceClient: TypedSupabaseClient | null = null
 let anonClient: TypedSupabaseClient | null = null
 
-function ensureEnv(key: string): string {
-  const value = process.env[key]
+function ensureEnv(key: keyof typeof env): string {
+  const value = env[key]
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`)
   }

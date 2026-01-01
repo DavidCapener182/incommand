@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { logAIUsage } from '@/lib/supabaseServer';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { openaiClient } from '@/lib/openaiClient';
 
 export async function POST(request: Request) {
   try {
     const { input, location, callsign } = await request.json();
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
         { status: 500 }
@@ -44,7 +40,7 @@ Input: "Response 1 – guest lost phone near toilets by Main Bar"
   "actionTaken": "Details taken – item not yet recovered. Area being checked by security team."
 }`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

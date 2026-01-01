@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { logAIUsage } from '@/lib/supabaseServer';
+import { openaiClient } from '@/lib/openaiClient';
 
 // Debug logging for environment variables
 console.log('API Route - Environment variables check:', {
   OPENAI_API_KEY_EXISTS: typeof process.env.OPENAI_API_KEY !== 'undefined',
   OPENAI_API_KEY_LENGTH: process.env.OPENAI_API_KEY?.length
-});
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
 });
 
 export async function POST(request: Request) {
@@ -57,7 +53,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!openaiClient) {
       console.error('OpenAI API key is missing');
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
@@ -120,7 +116,7 @@ export async function POST(request: Request) {
 
 Keep the brief to two paragraphs, suitable for use in an operational security handover or briefing document.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

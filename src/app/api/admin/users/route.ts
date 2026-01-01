@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 import { adminRoleArraySchema, adminRoleSchema, AdminRole, ROLE_PERMISSIONS } from '@/lib/security/roles'
