@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { 
   Sparkles, RotateCcw, AlertTriangle, BarChart3, TrendingUp, Users, Clock3, 
   PieChart, Activity, UserX, UserCheck, Eye, Zap, Target, Calendar,
@@ -217,8 +217,22 @@ export default function AnalyticsPage() {
   const [aiSummary, setAiSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(true)
-  const [activeTab, setActiveTab] = useState<AnalyticsTabKey>('operational')
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  
+  // Initialize activeTab from URL or default to 'operational'
+  const getInitialTab = (): AnalyticsTabKey => {
+    if (!searchParams) return 'operational'
+    const tabParam = searchParams.get('tab')
+    if (tabParam && (analyticsTabKeys as readonly string[]).includes(tabParam)) {
+      return tabParam as AnalyticsTabKey
+    }
+    return 'operational'
+  }
+  
+  const [activeTab, setActiveTab] = useState<AnalyticsTabKey>(getInitialTab)
+  const isUpdatingFromClick = useRef(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
@@ -248,12 +262,20 @@ export default function AnalyticsPage() {
     () => incidentData.filter((incident) => incident.status !== 'closed').length,
     [incidentData]
   )
-  // Sync active tab from URL param (?tab=...)
+  // Sync active tab from URL param (?tab=...) when URL changes externally (browser navigation, etc.)
   useEffect(() => {
-    if (!searchParams) return
+    if (!searchParams || isUpdatingFromClick.current) {
+      isUpdatingFromClick.current = false
+      return
+    }
     const tabParam = searchParams.get('tab')
-    if (tabParam && (analyticsTabKeys as readonly string[]).includes(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam as AnalyticsTabKey)
+    const currentTab = tabParam && (analyticsTabKeys as readonly string[]).includes(tabParam) 
+      ? (tabParam as AnalyticsTabKey)
+      : 'operational'
+    
+    // Only update if different to avoid unnecessary re-renders
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab)
     }
   }, [searchParams, activeTab])
 
@@ -1091,7 +1113,13 @@ Provide insights on patterns, areas for improvement, and recommendations. Keep i
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => {
+                    isUpdatingFromClick.current = true
+                    setActiveTab(tab.key)
+                    // Update URL without causing a full page refresh
+                    const newUrl = `${pathname}?tab=${tab.key}`
+                    router.replace(newUrl, { scroll: false })
+                  }}
                   className={`${tabButtonBaseClasses} ${isActive ? tab.activeClass : inactiveTabClass}`}
                 >
                   <div className="flex items-center justify-center gap-1.5 sm:gap-2">

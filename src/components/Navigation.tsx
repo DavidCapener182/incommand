@@ -400,20 +400,46 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
                           <ul className="grid w-[300px] gap-4 p-4">
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/analytics" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Analytics</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">View event analytics and insights.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/analytics';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/analytics';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Analytics</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">View event analytics and insights.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/analytics?tab=end-of-event" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">End of Event Report</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Generate comprehensive event reports.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/analytics?tab=end-of-event';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/analytics?tab=end-of-event';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">End of Event Report</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Generate comprehensive event reports.</div>
+                              </div>
                             </li>
                           </ul>
                         </NavigationMenuContent>
@@ -487,52 +513,130 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
                           <ul className="grid w-[300px] gap-4 p-4">
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Accreditation Management</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Manage Accreditation onboarding and access control.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/vendors';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/vendors';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Accreditation Management</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Manage Accreditation onboarding and access control.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/maintenance" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Maintenance & Assets</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Track assets, work orders, and schedules.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/maintenance';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/maintenance';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Maintenance & Assets</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Track assets, work orders, and schedules.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/lost-and-found" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Lost &amp; Found</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Reconcile guest reports with recovered items.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/lost-and-found';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/lost-and-found';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Lost &amp; Found</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Reconcile guest reports with recovered items.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/blog" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Blog</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Read our latest blog posts.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/blog';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/blog';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Blog</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Read our latest blog posts.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/careers" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Careers</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Join our team.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/careers';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/careers';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Careers</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Join our team.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/status" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Status</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Check system status and uptime.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/status';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/status';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Status</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Check system status and uptime.</div>
+                              </div>
                             </li>
                           </ul>
                         </NavigationMenuContent>
@@ -723,15 +827,25 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/analytics" 
-                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/analytics');
+                      setMobileMenuOpen(false);
+                    }}
                   >
                     Analytics
                   </Link>
                   <Link 
                     href="/analytics?tab=end-of-event" 
-                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/analytics?tab=end-of-event');
+                      setMobileMenuOpen(false);
+                    }}
                   >
                     End of Event Report
                   </Link>
@@ -771,12 +885,78 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               </button>
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
-                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Accreditation Management</Link>
-                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
-                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
-                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
-                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
+                  <Link 
+                    href="/vendors" 
+                    className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/vendors');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Accreditation Management
+                  </Link>
+                  <Link 
+                    href="/maintenance" 
+                    className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/maintenance');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Maintenance &amp; Assets
+                  </Link>
+                  <Link 
+                    href="/lost-and-found" 
+                    className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/lost-and-found');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Lost &amp; Found
+                  </Link>
+                  <Link 
+                    href="/blog" 
+                    className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/blog');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Blog
+                  </Link>
+                  <Link 
+                    href="/careers" 
+                    className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/careers');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Careers
+                  </Link>
+                  <Link 
+                    href="/status" 
+                    className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/status');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Status
+                  </Link>
                 </div>
               )}
             </div>
