@@ -244,7 +244,9 @@ export async function calculatePerformanceMetrics(
     const { data: logs, error } = await query
 
     if (error) throw error
-    if (!logs || logs.length === 0) {
+    const logList = (logs ?? []) as IncidentLog[]
+
+    if (logList.length === 0) {
       return {
         averageResponseTime: 0,
         averageResolutionTime: 0,
@@ -264,14 +266,14 @@ export async function calculatePerformanceMetrics(
     }
 
     // Filter out Attendance incidents from operational metrics
-    const operationalLogs = logs.filter(log => log.incident_type !== 'Attendance')
+    const operationalLogs = logList.filter(log => log.incident_type !== 'Attendance') as IncidentLog[]
 
     // Convert logs to match IncidentLog interface
     const convertedLogs = operationalLogs.map(log => ({
-      ...log,
-      id: log.id.toString(),
+      ...(log as Record<string, any>),
+      id: (log as any).id?.toString?.() ?? '',
       responded_at: log.responded_at ?? undefined
-    }))
+    })) as IncidentLog[]
 
     // Calculate response times (excluding Attendance incidents)
     const responseTimes = convertedLogs
@@ -351,10 +353,11 @@ export async function getResponseTimeDistribution(
     const { data: logs, error } = await query
 
     if (error) throw error
-    if (!logs || logs.length === 0) return []
+    const logList = (logs ?? []) as Array<{ created_at: string; responded_at: string | null }>
+    if (logList.length === 0) return []
 
     // Calculate response times
-    const responseTimes = logs.map(log => {
+    const responseTimes = logList.map(log => {
       const created = new Date(log.created_at)
       const responded = new Date(log.responded_at!)
       return (responded.getTime() - created.getTime()) / (1000 * 60) // minutes
@@ -420,4 +423,3 @@ export async function getPerformanceSummary(
     closureRate: Math.round(closureRate)
   }
 }
-

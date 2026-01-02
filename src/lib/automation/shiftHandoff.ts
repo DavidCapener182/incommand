@@ -91,44 +91,51 @@ export class ShiftHandoffAutomation {
 
       if (staffError) throw staffError
 
+      const incidentsList = (incidents ?? []) as Array<Record<string, any>>
+      const staffLogsList = (staffLogs ?? []) as Array<{ logged_by_callsign: string | null }>
+
       // Calculate metrics
-      const totalIncidents = incidents?.length || 0
-      const openIncidents = incidents?.filter(inc => !inc.is_closed).length || 0
+      const totalIncidents = incidentsList.length
+      const openIncidents = incidentsList.filter(inc => !inc.is_closed).length
       const closedIncidents = totalIncidents - openIncidents
 
       // Incidents by type
       const byType: Record<string, number> = {}
-      incidents?.forEach(inc => {
+      incidentsList.forEach(inc => {
         byType[inc.incident_type] = (byType[inc.incident_type] || 0) + 1
       })
 
       // Incidents by priority
       const byPriority: Record<string, number> = {}
-      incidents?.forEach(inc => {
+      incidentsList.forEach(inc => {
         byPriority[inc.priority] = (byPriority[inc.priority] || 0) + 1
       })
 
       // Key incidents (high priority or still open)
-      const keyIncidents = incidents?.filter(inc => 
+      const keyIncidents = incidentsList.filter(inc => 
         inc.priority === 'high' || inc.priority === 'critical' || !inc.is_closed
-      ).slice(0, 10) || []
+      ).slice(0, 10)
 
       // Staff metrics
-      const staffCallsigns = new Set(staffLogs?.map(log => log.logged_by_callsign).filter(callsign => callsign !== null))
+      const staffCallsigns = new Set(
+        staffLogsList
+          .map(log => log.logged_by_callsign)
+          .filter((callsign): callsign is string => Boolean(callsign))
+      )
       const operatorActivity = Array.from(staffCallsigns).map(callsign => ({
-        callsign: callsign!,
-        logCount: staffLogs?.filter(log => log.logged_by_callsign === callsign).length || 0
+        callsign,
+        logCount: staffLogsList.filter(log => log.logged_by_callsign === callsign).length || 0
       })).sort((a, b) => b.logCount - a.logCount)
 
       // Performance metrics
-      const responseTimes = incidents?.map(inc => {
+      const responseTimes = incidentsList.map(inc => {
         if (inc.responded_at && inc.timestamp) {
           return (new Date(inc.responded_at).getTime() - new Date(inc.timestamp).getTime()) / (1000 * 60)
         }
         return null
       }).filter(Boolean) || []
 
-      const resolutionTimes = incidents?.map(inc => {
+      const resolutionTimes = incidentsList.map(inc => {
         if (inc.resolved_at && inc.timestamp) {
           return (new Date(inc.resolved_at).getTime() - new Date(inc.timestamp).getTime()) / (1000 * 60)
         }
@@ -144,25 +151,25 @@ export class ShiftHandoffAutomation {
         : 0
 
       // Quality metrics
-      const qualityScores = incidents?.map(inc => {
+      const qualityScores = incidentsList.map(inc => {
         let score = 50
         if (inc.entry_type === 'contemporaneous') score += 20
         if (!inc.is_amended) score += 15
         if (inc.headline && inc.source && inc.facts_observed) score += 15
         return Math.min(100, score)
-      }) || []
+      })
 
       const qualityScore = qualityScores.length > 0
         ? qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length
         : 0
 
-      const complianceRate = incidents?.filter(inc => 
+      const complianceRate = incidentsList.filter(inc => 
         inc.entry_type === 'contemporaneous'
       ).length / Math.max(1, totalIncidents) * 100 || 0
 
       // Generate AI summary if enabled
       let aiSummary: string | undefined
-      if (includeAISummary && incidents && incidents.length > 0) {
+      if (includeAISummary && incidentsList.length > 0) {
         try {
           const staffActivity = operatorActivity.map(op => ({
             userId: op.callsign,
@@ -174,7 +181,7 @@ export class ShiftHandoffAutomation {
 
           const summary = summaryGenerator.generateAISummary({
             eventName: 'Shift Event',
-            incidents: incidents.map(inc => ({
+            incidents: incidentsList.map(inc => ({
               ...inc,
               logged_by_callsign: inc.logged_by_callsign || 'Unknown'
             })),
@@ -233,7 +240,7 @@ export class ShiftHandoffAutomation {
         },
         staff: {
           onDuty: staffCallsigns.size,
-          totalLogs: staffLogs?.length || 0,
+          totalLogs: staffLogsList.length,
           mostActiveOperators: operatorActivity.slice(0, 5)
         },
         performance: {

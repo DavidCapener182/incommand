@@ -72,7 +72,9 @@ export async function predictCrowdFlow(
       .gte('timestamp', twoHoursAgo)
       .order('timestamp', { ascending: true })
 
-    if (error || !attendanceRecords || attendanceRecords.length === 0) {
+    const attendanceRecordsList = (attendanceRecords ?? []) as Array<{ count: number; timestamp: string }>
+
+    if (error || attendanceRecordsList.length === 0) {
       // No historical data - return conservative predictions
       const latestRecord = await supabase
         .from('attendance_records')
@@ -82,7 +84,7 @@ export async function predictCrowdFlow(
         .limit(1)
         .maybeSingle()
 
-      const currentCount = latestRecord.data?.count || 0
+      const currentCount = (latestRecord.data as { count?: number } | null)?.count ?? 0
       
       return {
         currentCount,
@@ -93,8 +95,8 @@ export async function predictCrowdFlow(
       }
     }
 
-    const currentCount = attendanceRecords[attendanceRecords.length - 1].count
-    const predictions = calculatePredictions(attendanceRecords, capacity, timeWindowMinutes)
+    const currentCount = attendanceRecordsList[attendanceRecordsList.length - 1].count
+    const predictions = calculatePredictions(attendanceRecordsList, capacity, timeWindowMinutes)
     const peakPrediction = findPeakPrediction(predictions)
     const riskFactors = analyzeRiskFactors(predictions, capacity)
     const recommendations = generateRecommendations(predictions, capacity, riskFactors)
@@ -643,4 +645,3 @@ function deriveKickoffFromEvent(event: {
   }
   return null
 }
-

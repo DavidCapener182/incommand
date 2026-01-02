@@ -4,7 +4,7 @@ import { getServiceClient } from '@/lib/supabaseServer';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     // Get current event
     const { data: event, error: eventError } = await supabase
       .from('events')

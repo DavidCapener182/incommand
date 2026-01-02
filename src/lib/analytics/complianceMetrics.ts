@@ -195,10 +195,11 @@ async function checkAmendmentJustification(
         .in('incident_log_id', amendedLogs.map(l => parseInt(l.id)))
 
       if (!error && revisions) {
+        const revisionList = revisions as { incident_log_id: number | string; change_reason?: string | null }[]
         amendedLogs.forEach(log => {
           totalRequiringJustification++
-          const hasReason = revisions.some(
-            r => r.incident_log_id === parseInt(log.id) && r.change_reason?.trim()
+          const hasReason = revisionList.some(
+            r => Number(r.incident_log_id) === parseInt(log.id) && r.change_reason?.trim()
           )
           if (hasReason) {
             totalWithJustification++
@@ -311,9 +312,10 @@ export async function calculateComplianceMetrics(
       console.error('Compliance metrics query error:', error)
       throw error
     }
-    
-    console.log('Compliance metrics - Found logs:', logs?.length || 0, 'for period:', startDate.toISOString(), 'to', endDate.toISOString())
-    if (!logs || logs.length === 0) {
+    const logList = (logs ?? []) as IncidentLog[]
+
+    console.log('Compliance metrics - Found logs:', logList.length || 0, 'for period:', startDate.toISOString(), 'to', endDate.toISOString())
+    if (logList.length === 0) {
       return {
         overallCompliance: 0,
         auditTrailCompleteness: 0,
@@ -335,9 +337,9 @@ export async function calculateComplianceMetrics(
     }
 
     // Convert logs to have string IDs for compatibility
-    const convertedLogs = logs.map(log => ({
-      ...log,
-      id: log.id.toString()
+    const convertedLogs = logList.map(log => ({
+      ...(log as Record<string, any>),
+      id: (log as any).id?.toString?.() ?? ''
     }))
 
     // Calculate individual metrics
@@ -382,7 +384,7 @@ export async function calculateComplianceMetrics(
       amendmentJustificationRate: Math.round(justification.rate * 10) / 10,
       legalReadinessScore,
       recommendations,
-      totalIncidents: logs.length,
+      totalIncidents: logList.length,
       periodStart: startDate.toISOString(),
       periodEnd: endDate.toISOString(),
       details
@@ -468,4 +470,3 @@ export async function getComplianceSummary(
     urgentIssues
   }
 }
-

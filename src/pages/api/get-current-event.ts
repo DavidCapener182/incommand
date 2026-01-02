@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     // Get current event
     const { data, error } = await supabase
       .from('events')

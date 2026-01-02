@@ -58,6 +58,7 @@ export class FileSharing {
     onProgress?: (progress: FileUploadProgress) => void
   ): Promise<SharedFile | null> {
     const { file, eventId, incidentId, channelId, description, tags = [], sharedWith = [], expiresIn, isPublic = false } = options
+    const client = supabase as any
 
     try {
       // Validate file
@@ -80,7 +81,7 @@ export class FileSharing {
       const filePath = `${eventId || 'general'}/${fileName}`
 
       // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await client.storage
         .from('shared-files')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -98,7 +99,7 @@ export class FileSharing {
       })
 
       // Get public URL
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = client.storage
         .from('shared-files')
         .getPublicUrl(filePath)
 
@@ -114,7 +115,7 @@ export class FileSharing {
         : undefined
 
       // Store metadata in database
-      const { data: fileRecord, error: dbError } = await supabase
+      const { data: fileRecord, error: dbError } = await client
         .from('shared_files')
         .insert({
           name: file.name,
@@ -169,9 +170,10 @@ export class FileSharing {
    * Download file
    */
   async downloadFile(fileId: string, userId: string): Promise<void> {
+    const client = supabase as any
     try {
       // Get file metadata
-      const { data: file, error } = await supabase
+      const { data: file, error } = await client
         .from('shared_files')
         .select('*')
         .eq('id', fileId)
@@ -185,7 +187,7 @@ export class FileSharing {
       }
 
       // Increment download count
-      await supabase
+      await client
         .from('shared_files')
         .update({ download_count: (file.download_count || 0) + 1 })
         .eq('id', fileId)
@@ -202,9 +204,10 @@ export class FileSharing {
    * Delete file
    */
   async deleteFile(fileId: string, userId: string): Promise<boolean> {
+    const client = supabase as any
     try {
       // Get file
-      const { data: file, error: fetchError } = await supabase
+      const { data: file, error: fetchError } = await client
         .from('shared_files')
         .select('*')
         .eq('id', fileId)
@@ -219,12 +222,12 @@ export class FileSharing {
 
       // Delete from storage
       const filePath = file.url.split('/shared-files/')[1]
-      await supabase.storage
+      await client.storage
         .from('shared-files')
         .remove([filePath])
 
       // Delete from database
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await client
         .from('shared_files')
         .delete()
         .eq('id', fileId)
@@ -247,8 +250,9 @@ export class FileSharing {
     channelId?: string
     userId?: string
   }): Promise<SharedFile[]> {
+    const client = supabase as any
     try {
-      let query = supabase
+      let query = client
         .from('shared_files')
         .select('*')
         .order('created_at', { ascending: false })

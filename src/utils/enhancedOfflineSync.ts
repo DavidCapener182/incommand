@@ -5,6 +5,8 @@
 
 import { supabase } from '../lib/supabase'
 
+const supabaseClient = supabase as any
+
 interface QueuedOperation {
   id: string
   type: 'INSERT' | 'UPDATE' | 'DELETE'
@@ -144,14 +146,14 @@ class EnhancedOfflineSync {
   private async executeOperation(operation: QueuedOperation): Promise<void> {
     switch (operation.type) {
       case 'INSERT':
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseClient
           .from(operation.table as any)
           .insert(operation.data)
         if (insertError) throw insertError
         break
 
       case 'UPDATE':
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
           .from(operation.table as any)
           .update(operation.data)
           .eq('id', operation.data.id)
@@ -159,7 +161,7 @@ class EnhancedOfflineSync {
         break
 
       case 'DELETE':
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseClient
           .from(operation.table as any)
           .delete()
           .eq('id', operation.data.id)

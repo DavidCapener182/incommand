@@ -2,6 +2,7 @@ import { Dexie } from 'dexie';
 import { supabase } from './supabase';
 
 const isBrowser = typeof window !== 'undefined';
+const supabaseClient = supabase as any;
 
 export interface OfflineOperation {
   id?: number;
@@ -185,7 +186,7 @@ class OfflineSyncManager {
   private async processIncidentCreate(operation: OfflineOperation): Promise<void> {
     const { data } = operation;
     
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('incident_logs')
       .insert([data]);
 
@@ -198,7 +199,7 @@ class OfflineSyncManager {
   private async processIncidentUpdate(operation: OfflineOperation): Promise<void> {
     const { data } = operation;
     
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('incident_logs')
       .update(data.update)
       .eq('id', data.id);
@@ -220,7 +221,7 @@ class OfflineSyncManager {
 
     // Upload to Supabase Storage
     const fileName = `incidents/${Date.now()}_${photoData.file.name}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseClient.storage
       .from('incident-photos')
       .upload(fileName, photoData.file);
 
@@ -229,14 +230,14 @@ class OfflineSyncManager {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = supabaseClient.storage
       .from('incident-photos')
       .getPublicUrl(fileName);
 
     // Update incident with photo URL if needed
     if (metadata.incidentId) {
       // First get the current photos array
-      const { data: incidentData, error: fetchError } = await supabase
+      const { data: incidentData, error: fetchError } = await supabaseClient
         .from('incident_logs')
         .select('photos')
         .eq('id', metadata.incidentId)
@@ -250,7 +251,7 @@ class OfflineSyncManager {
       const currentPhotos = Array.isArray(incidentData?.photos) ? incidentData.photos : [];
       const updatedPhotos = [...currentPhotos, publicUrl];
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseClient
         .from('incident_logs')
         .update({ photos: updatedPhotos })
         .eq('id', metadata.incidentId);

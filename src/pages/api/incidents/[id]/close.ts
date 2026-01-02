@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const incidentId = params.id;
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     
     if (!incidentId) {
       return NextResponse.json(
@@ -125,7 +125,7 @@ export async function GET(
 ) {
   try {
     const incidentId = params.id;
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     
     if (!incidentId) {
       return NextResponse.json(

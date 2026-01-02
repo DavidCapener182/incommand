@@ -189,7 +189,7 @@ async function semanticSearch(
   queryEmbedding: number[],
   options: SearchOptions
   ): Promise<SearchHit[]> {
-    const supabase = getServiceSupabaseClient()
+    const supabase = getServiceSupabaseClient() as any
     const topK = Math.min(options.topK || 5, 20)
     
     try {
@@ -218,7 +218,7 @@ async function semanticSearch(
             .select('id, title, organization_id, event_id')
             .in('id', knowledgeIds)
           
-          const kbMap = new Map((kbEntries || []).map(kb => [kb.id, kb]))
+          const kbMap = new Map<string, any>((kbEntries || []).map((kb: any) => [kb.id, kb]))
           
           return rpcResults.map((r: any) => ({
             knowledgeId: r.knowledge_id,
@@ -252,22 +252,30 @@ async function semanticSearch(
     throw new Error(`Failed to fetch embeddings: ${error.message}`)
   }
   
-  if (!embeddings || embeddings.length === 0) {
+  const embeddingList = (embeddings ?? []) as Array<{
+    knowledge_id: string
+    chunk_index: number
+    content: string
+    embedding: number[]
+    metadata?: any
+  }>
+
+  if (embeddingList.length === 0) {
     return []
   }
   
   // Filter by organization/event if specified
-  const knowledgeIds = [...new Set(embeddings.map(e => e.knowledge_id))]
+  const knowledgeIds = [...new Set(embeddingList.map(e => e.knowledge_id))]
   const { data: kbEntries } = await supabase
     .from('knowledge_base')
     .select('id, title, organization_id, event_id, status')
     .in('id', knowledgeIds)
     .in('status', ['ingested', 'published'])
   
-  const kbMap = new Map((kbEntries || []).map(kb => [kb.id, kb]))
+  const kbMap = new Map<string, any>((kbEntries || []).map((kb: any) => [kb.id, kb]))
   
   // Filter embeddings by organization/event
-  const filteredEmbeddings = embeddings.filter(e => {
+  const filteredEmbeddings = embeddingList.filter(e => {
     const kb = kbMap.get(e.knowledge_id)
     if (!kb) return false
     // If organizationId is specified, only include matching documents
@@ -312,7 +320,7 @@ async function semanticSearch(
  * Perform keyword search as fallback
  */
 async function keywordSearch(options: SearchOptions): Promise<SearchHit[]> {
-  const supabase = getServiceSupabaseClient()
+  const supabase = getServiceSupabaseClient() as any
   const topK = Math.min(options.topK || 5, 20)
   const keyTerms = extractKeyTerms(options.query)
   
@@ -336,22 +344,29 @@ async function keywordSearch(options: SearchOptions): Promise<SearchHit[]> {
     throw new Error(`Keyword search failed: ${error.message}`)
   }
   
-  if (!results || results.length === 0) {
+  const resultList = (results ?? []) as Array<{
+    knowledge_id: string
+    chunk_index: number
+    content: string
+    metadata?: any
+  }>
+
+  if (resultList.length === 0) {
     return []
   }
   
   // Fetch knowledge_base metadata
-  const knowledgeIds = [...new Set(results.map(r => r.knowledge_id))]
+  const knowledgeIds = [...new Set(resultList.map(r => r.knowledge_id))]
   const { data: kbEntries } = await supabase
     .from('knowledge_base')
     .select('id, title, organization_id, event_id, status')
     .in('id', knowledgeIds)
     .in('status', ['ingested', 'published'])
   
-  const kbMap = new Map((kbEntries || []).map(kb => [kb.id, kb]))
+  const kbMap = new Map<string, any>((kbEntries || []).map((kb: any) => [kb.id, kb]))
   
   // Filter and score results
-  const scored = results
+  const scored = resultList
     .map((r: any) => {
       const kb = kbMap.get(r.knowledge_id)
       if (!kb) return null
@@ -448,4 +463,3 @@ export async function searchKnowledge(options: SearchOptions): Promise<SearchHit
   const keywordResults = await keywordSearch(options)
   return keywordResults.slice(0, topK)
 }
-

@@ -63,11 +63,12 @@ export class CrowdFlowPredictionEngine {
   }
 
   async predictCrowdFlow(): Promise<CrowdFlowPrediction[]> {
+    const client = supabase as any;
     try {
       logger.info('Starting crowd flow prediction', { eventId: this.eventId });
 
       // Fetch attendance data
-      const { data: attendanceRecords, error } = await supabase
+      const { data: attendanceRecords, error } = await client
         .from('attendance_records')
         .select('*')
         .eq('event_id', this.eventId)
@@ -81,7 +82,7 @@ export class CrowdFlowPredictionEngine {
       }
 
       // Get event details for capacity information
-      const { data: event } = await supabase
+      const { data: event } = await client
         .from('events')
         .select('max_capacity, current_attendance')
         .eq('id', this.eventId)
@@ -532,6 +533,7 @@ export class CrowdFlowPredictionEngine {
   }
 
   private async saveCrowdPredictions(predictions: CrowdFlowPrediction[]): Promise<void> {
+    const client = supabase as any;
     try {
       const predictionData = predictions.map(prediction => ({
         event_id: this.eventId,
@@ -545,7 +547,7 @@ export class CrowdFlowPredictionEngine {
         recommendations: prediction.recommendations
       }));
 
-      const { error } = await supabase
+      const { error } = await client
         .from('crowd_predictions')
         .upsert(predictionData as any);
 
@@ -579,8 +581,9 @@ export class CrowdFlowPredictionEngine {
   }
 
   async getCurrentOccupancy(): Promise<number> {
+    const client = supabase as any;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('events')
         .select('current_attendance')
         .eq('id', this.eventId)

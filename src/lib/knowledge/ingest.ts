@@ -441,7 +441,7 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
  * Ingest a document: extract, chunk, embed, and store
  */
 export async function ingestDocument(input: IngestInput): Promise<IngestResult> {
-  const supabase = getServiceSupabaseClient()
+  const supabase = getServiceSupabaseClient() as any
   const startTime = Date.now()
   const fallbackOrgId = '00000000-0000-0000-0000-000000000000'
   const organizationId = input.organizationId ?? fallbackOrgId
@@ -738,7 +738,7 @@ export async function reprocessKnowledgeBase(filter?: {
   eventId?: string
   knowledgeId?: string
 }): Promise<{ processed: number; errors: number }> {
-  const supabase = getServiceSupabaseClient()
+  const supabase = getServiceSupabaseClient() as any
   
   let query = supabase
     .from('knowledge_base')
@@ -798,4 +798,3 @@ export async function reprocessKnowledgeBase(filter?: {
   
   return { processed, errors }
 }
-

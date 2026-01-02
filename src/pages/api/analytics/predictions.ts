@@ -18,15 +18,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     // Get all incidents
     const { data, error } = await supabase
       .from('incident_logs')
       .select('incident_type, location, timestamp')
       .eq('event_id', eventId);
     if (error) return res.status(400).json({ error: error.message });
+    const incidents = (data ?? []) as Array<{ incident_type?: string; location?: string; timestamp?: string }>
     // Filter out Attendance and Sit Rep incidents
-    const filtered = (data || []).filter(i => i.incident_type !== 'Attendance' && i.incident_type !== 'Sit Rep');
+    const filtered = incidents.filter(i => i.incident_type !== 'Attendance' && i.incident_type !== 'Sit Rep');
     // Predict most likely next incident type, location, and hour
     const types = filtered.map(i => i.incident_type).filter(Boolean);
     const locations = filtered.map(i => i.location).filter(Boolean);

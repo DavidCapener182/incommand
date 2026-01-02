@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import type { FoundItem, LostFoundMatch, LostItem } from '@/types/lostAndFound'
 
+const supabaseClient = supabase as any
+
 interface CreateLostReportPayload {
   reporter_name?: string
   contact_email?: string
@@ -20,7 +22,7 @@ interface CreateFoundItemPayload {
 }
 
 export async function fetchLostItems(status?: string): Promise<LostItem[]> {
-  let query = supabase
+  let query = supabaseClient
     .from('lost_items')
     .select('*')
     .order('reported_at', { ascending: false })
@@ -39,7 +41,7 @@ export async function fetchLostItems(status?: string): Promise<LostItem[]> {
 }
 
 export async function fetchFoundItems(status?: string): Promise<FoundItem[]> {
-  let query = supabase
+  let query = supabaseClient
     .from('found_items')
     .select('*')
     .order('found_at', { ascending: false })
@@ -58,7 +60,7 @@ export async function fetchFoundItems(status?: string): Promise<FoundItem[]> {
 }
 
 export async function fetchLostFoundMatches(): Promise<LostFoundMatch[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('lost_found_matches')
     .select('*')
     .order('created_at', { ascending: false })
@@ -71,7 +73,7 @@ export async function fetchLostFoundMatches(): Promise<LostFoundMatch[]> {
 }
 
 export async function createLostReport(payload: CreateLostReportPayload) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('lost_items')
     .insert([{ ...payload }])
     .select('*')
@@ -85,7 +87,7 @@ export async function createLostReport(payload: CreateLostReportPayload) {
 }
 
 export async function createFoundItem(payload: CreateFoundItemPayload) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('found_items')
     .insert([{ ...payload }])
     .select('*')
@@ -99,7 +101,7 @@ export async function createFoundItem(payload: CreateFoundItemPayload) {
 }
 
 export async function confirmMatch(matchId: string, status: string, notes?: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('lost_found_matches')
     .update({ status, notes: notes || null, updated_at: new Date().toISOString() })
     .eq('id', matchId)
@@ -110,7 +112,7 @@ export async function confirmMatch(matchId: string, status: string, notes?: stri
 }
 
 export async function logMatch(lostItemId: string, foundItemId: string, score?: number) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('lost_found_matches')
     .insert([{ lost_item_id: lostItemId, found_item_id: foundItemId, match_score: score || null }])
     .select('*')
@@ -124,7 +126,7 @@ export async function logMatch(lostItemId: string, foundItemId: string, score?: 
 }
 
 export async function updateLostItemStatus(lostItemId: string, status: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('lost_items')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', lostItemId)
@@ -135,7 +137,7 @@ export async function updateLostItemStatus(lostItemId: string, status: string) {
 }
 
 export async function updateFoundItemStatus(foundItemId: string, status: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('found_items')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', foundItemId)

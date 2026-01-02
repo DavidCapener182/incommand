@@ -16,7 +16,9 @@ export async function fetchIncidentSOPSteps(incidentType: string): Promise<Incid
     throw new Error(error.message)
   }
 
-  return (data || []).map((step) => ({
+  const steps = (data ?? []) as IncidentSOPStep[]
+
+  return steps.map((step) => ({
     ...step,
     description: step?.description ?? ''
   })) as IncidentSOPStep[]

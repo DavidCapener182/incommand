@@ -19,7 +19,8 @@ export async function broadcastIncidentSummaryUpdate(
   channelName: string = 'incident-summary'
 ): Promise<void> {
   try {
-    const { data: incidents, error } = await supabase
+    const client = supabase as any
+    const { data: incidents, error } = await client
       .from('incident_logs')
       .select('is_closed, status')
       .eq('event_id', eventId)
@@ -34,7 +35,9 @@ export async function broadcastIncidentSummaryUpdate(
       return
     }
 
-    if (!incidents || incidents.length === 0) {
+    const incidentList = (incidents ?? []) as Array<{ is_closed?: boolean; status?: string }>
+
+    if (incidentList.length === 0) {
       // Broadcast empty counts
       websocketService.sendIncidentSummaryUpdate(channelName, {
         open: 0,
@@ -46,7 +49,7 @@ export async function broadcastIncidentSummaryUpdate(
       return
     }
 
-    const summary = incidents.reduce(
+    const summary = incidentList.reduce(
       (acc, incident) => {
         const status = String(incident?.status ?? '').toLowerCase()
         const isClosed = Boolean(incident?.is_closed) || status === 'closed' || status === 'resolved'
@@ -62,7 +65,7 @@ export async function broadcastIncidentSummaryUpdate(
         
         return acc
       },
-      { open: 0, in_progress: 0, closed: 0, total: incidents.length }
+      { open: 0, in_progress: 0, closed: 0, total: incidentList.length }
     )
     
     websocketService.sendIncidentSummaryUpdate(channelName, {
@@ -95,8 +98,9 @@ export async function broadcastIncidentSummaryUpdateByIncidentId(
   channelName: string = 'incident-summary'
 ): Promise<void> {
   try {
+    const client = supabase as any
     // First get the event_id from the incident
-    const { data: incident, error: incidentError } = await supabase
+    const { data: incident, error: incidentError } = await client
       .from('incident_logs')
       .select('event_id')
       .eq('id', parseInt(incidentId))

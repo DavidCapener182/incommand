@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import { logger } from './logger';
 
+const supabaseClient = supabase as any;
+
 export interface IncidentPattern {
   id: string;
   patternType: 'temporal' | 'spatial' | 'behavioral' | 'correlation' | 'seasonal' | 'anomaly';
@@ -100,7 +102,7 @@ export class PatternRecognitionEngine {
 
   async getHistoricalWeatherIncidents(): Promise<HistoricalWeatherIncident[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('incident_logs')
         .select('incident_type, weather_condition, risk_score')
         .eq('event_id', this.eventId);
@@ -152,7 +154,7 @@ export class PatternRecognitionEngine {
       logger.info('Starting incident pattern analysis', { eventId: this.eventId });
 
       // Fetch incident data
-      const { data: incidents, error } = await supabase
+      const { data: incidents, error } = await supabaseClient
         .from('incident_logs')
         .select('*')
         .eq('event_id', this.eventId)
@@ -552,7 +554,7 @@ export class PatternRecognitionEngine {
         updated_at: pattern.lastUpdated.toISOString()
       }));
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('incident_patterns')
         .upsert(patternData, { onConflict: 'event_id,pattern_name' });
 
@@ -640,7 +642,7 @@ export class PatternRecognitionEngine {
 
   async getHistoricalCrowdFlow(): Promise<any[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('attendance_records')
         .select('*')
         .eq('event_id', this.eventId)

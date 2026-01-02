@@ -11,8 +11,10 @@ import type {
 
 import { supabase } from '@/lib/supabase'
 
+const supabaseClient = supabase as any
+
 export async function fetchVendorProfiles(): Promise<VendorProfile[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendors')
     .select('*')
     .order('business_name', { ascending: true })
@@ -25,7 +27,7 @@ export async function fetchVendorProfiles(): Promise<VendorProfile[]> {
 }
 
 export async function fetchVendorAccessLevels(): Promise<VendorAccessLevel[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendor_access_levels')
     .select('*')
     .order('name', { ascending: true })
@@ -38,7 +40,7 @@ export async function fetchVendorAccessLevels(): Promise<VendorAccessLevel[]> {
 }
 
 export async function fetchVendorAccreditations(): Promise<VendorAccreditation[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendor_accreditations')
     .select('*')
     .order('submitted_at', { ascending: false })
@@ -54,7 +56,7 @@ export async function fetchVendorAccreditations(): Promise<VendorAccreditation[]
 
   const accreditationIds = accreditations.map((item) => item.id)
 
-  const { data: joinRows, error: joinError } = await supabase
+  const { data: joinRows, error: joinError } = await supabaseClient
     .from('vendor_accreditation_access_levels')
     .select('accreditation_id, access_level_id')
     .in('accreditation_id', accreditationIds)
@@ -63,7 +65,7 @@ export async function fetchVendorAccreditations(): Promise<VendorAccreditation[]
     throw new Error(joinError.message)
   }
 
-  const { data: levelRows, error: levelError } = await supabase
+  const { data: levelRows, error: levelError } = await supabaseClient
     .from('vendor_access_levels')
     .select('*')
 
@@ -71,10 +73,12 @@ export async function fetchVendorAccreditations(): Promise<VendorAccreditation[]
     throw new Error(levelError.message)
   }
 
-  const levelMap = new Map((levelRows || []).map((level) => [level.id, level as VendorAccessLevel]))
+  const joinList = (joinRows ?? []) as Array<{ accreditation_id: string; access_level_id: string }>
+  const levelList = (levelRows ?? []) as Array<VendorAccessLevel & { id: string }>
+  const levelMap = new Map(levelList.map((level) => [level.id, level as VendorAccessLevel]))
 
   return accreditations.map((accreditation) => {
-    const rows = (joinRows || []).filter((row) => row.accreditation_id === accreditation.id)
+    const rows = joinList.filter((row) => row.accreditation_id === accreditation.id)
     return {
       ...accreditation,
       access_levels: rows
@@ -85,7 +89,7 @@ export async function fetchVendorAccreditations(): Promise<VendorAccreditation[]
 }
 
 export async function fetchVendorInductions(vendorId: string): Promise<VendorInduction[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendor_inductions')
     .select('*')
     .eq('vendor_id', vendorId)
@@ -99,7 +103,7 @@ export async function fetchVendorInductions(vendorId: string): Promise<VendorInd
 }
 
 export async function fetchVendorAuditLog(accreditationId: string): Promise<VendorAccreditationAuditLog[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendor_accreditation_audit_logs')
     .select('*')
     .eq('accreditation_id', accreditationId)
@@ -113,7 +117,7 @@ export async function fetchVendorAuditLog(accreditationId: string): Promise<Vend
 }
 
 export async function fetchVendorInductionEvents(): Promise<VendorInductionEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendor_induction_events')
     .select(`
       id,
@@ -179,7 +183,7 @@ export async function updateVendorAccreditationStatus(
   feedback?: string,
   actorProfileId?: string
 ) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_accreditations')
     .update({ status, reviewed_at: new Date().toISOString(), feedback: feedback || null })
     .eq('id', accreditationId)
@@ -188,7 +192,7 @@ export async function updateVendorAccreditationStatus(
     throw new Error(error.message)
   }
 
-  await supabase
+  await supabaseClient
     .from('vendor_accreditation_audit_logs')
     .insert({
       accreditation_id: accreditationId,
@@ -206,7 +210,7 @@ export async function updateVendorAccreditationIdentity(
     id_document_reference?: string | null
   }
 ) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_accreditations')
     .update({
       accreditation_number: details.accreditation_number ?? null,
@@ -219,7 +223,7 @@ export async function updateVendorAccreditationIdentity(
     throw new Error(error.message)
   }
 
-  await supabase
+  await supabaseClient
     .from('vendor_accreditation_audit_logs')
     .insert({
       accreditation_id: accreditationId,
@@ -230,7 +234,7 @@ export async function updateVendorAccreditationIdentity(
 
 export async function recordVendorInductionCompletion(inductionId: string, profileId?: string) {
   const now = new Date().toISOString()
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_inductions')
     .update({ completed_at: now, completed_by: profileId || null })
     .eq('id', inductionId)
@@ -241,7 +245,7 @@ export async function recordVendorInductionCompletion(inductionId: string, profi
 }
 
 export async function issueVendorPass(accreditationId: string, passUrl: string, qrToken: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_accreditations')
     .update({ digital_pass_url: passUrl, qr_code_token: qrToken })
     .eq('id', accreditationId)
@@ -250,7 +254,7 @@ export async function issueVendorPass(accreditationId: string, passUrl: string, 
     throw new Error(error.message)
   }
 
-  await supabase
+  await supabaseClient
     .from('vendor_induction_events')
     .insert({
       accreditation_id: accreditationId,
@@ -259,7 +263,7 @@ export async function issueVendorPass(accreditationId: string, passUrl: string, 
 }
 
 export async function refreshVendorAccreditationAccessLevels(accreditationId: string, accessLevelIds: string[]) {
-  await supabase
+  await supabaseClient
     .from('vendor_accreditation_access_levels')
     .delete()
     .eq('accreditation_id', accreditationId)
@@ -273,7 +277,7 @@ export async function refreshVendorAccreditationAccessLevels(accreditationId: st
     access_level_id
   }))
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_accreditation_access_levels')
     .insert(rows)
 
@@ -283,7 +287,7 @@ export async function refreshVendorAccreditationAccessLevels(accreditationId: st
 }
 
 export async function deleteVendor(vendorId: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendors')
     .delete()
     .eq('id', vendorId)
@@ -294,7 +298,7 @@ export async function deleteVendor(vendorId: string) {
 }
 
 export async function deleteVendorAccreditation(accreditationId: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('vendor_accreditations')
     .delete()
     .eq('id', accreditationId)

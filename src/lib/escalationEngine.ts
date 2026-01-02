@@ -5,7 +5,7 @@ if (typeof window !== 'undefined') {
   throw new Error('escalationEngine must only be used server-side');
 }
 
-const supabase = getServiceClient();
+const supabase = getServiceClient() as any;
 
 export interface EscalationConfig {
   incident_type: string;
@@ -170,13 +170,13 @@ export async function getSupervisors(
       return [];
     }
 
-    return supervisors?.map(supervisor => ({
+    return (supervisors ?? []).map((supervisor: any) => ({
       id: supervisor.id,
       name: supervisor.name || 'Unknown',
       role: supervisor.role || 'Unknown',
       callsign: supervisor.callsign || 'Unknown',
       contact_methods: (supervisor.contact_methods as any) || []
-    })) || [];
+    }));
 
   } catch (error) {
     console.error('Error in getSupervisors:', error);
@@ -936,7 +936,7 @@ export async function getEscalationHistory(incidentId: string): Promise<Escalati
       return [];
     }
 
-    return escalations?.map(escalation => ({
+    return (escalations ?? []).map((escalation: any) => ({
       id: escalation.id,
       incident_id: escalation.incident_id?.toString() || '',
       escalation_level: escalation.escalation_level,
@@ -1060,7 +1060,8 @@ export async function getEscalationStats(eventId: string): Promise<{
     let totalResponseTime = 0;
     let responseTimeCount = 0;
 
-    escalations?.forEach(escalation => {
+    const escalationList = escalations ?? [];
+    escalationList.forEach((escalation: any) => {
       // Count by level
       escalationByLevel[escalation.escalation_level] = 
         (escalationByLevel[escalation.escalation_level] || 0) + 1;

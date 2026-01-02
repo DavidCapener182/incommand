@@ -1,8 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import type { WristbandType, AccreditationAccessLevel } from '@/types/wristband'
 
+const supabaseClient = supabase as any
+
 export async function fetchWristbandTypes(eventId: string): Promise<WristbandType[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('wristband_types')
     .select(`
       *,
@@ -16,13 +18,16 @@ export async function fetchWristbandTypes(eventId: string): Promise<WristbandTyp
 
   if (error) {
     console.warn('Error fetching wristband types with access levels:', error);
-    return (data || []).map(wristband => ({
+    const wristbands = (data ?? []) as any[]
+    return wristbands.map(wristband => ({
       ...(wristband && typeof wristband === 'object' ? wristband : {}),
       access_levels: []
     })) as unknown as WristbandType[];
   }
   
-  return (data || []).map(wristband => ({
+  const wristbands = (data ?? []) as any[]
+
+  return wristbands.map((wristband: any) => ({
     ...(wristband || {}),
     access_levels: Array.isArray(wristband?.wristband_access_levels) 
       ? wristband.wristband_access_levels.map((link: any) => link.accreditation_access_levels).filter(Boolean) 
@@ -31,7 +36,7 @@ export async function fetchWristbandTypes(eventId: string): Promise<WristbandTyp
 }
 
 export async function fetchAccreditationAccessLevels(eventId: string): Promise<AccreditationAccessLevel[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('accreditation_access_levels')
     .select('*')
     .eq('event_id', eventId)
@@ -52,7 +57,7 @@ export async function createWristbandType(data: {
   notes?: string | null
   access_level_ids: string[]
 }): Promise<void> {
-  const { data: wristband, error: wristbandError } = await supabase
+  const { data: wristband, error: wristbandError } = await supabaseClient
     .from('wristband_types')
     .insert({
       event_id: data.event_id,
@@ -75,7 +80,7 @@ export async function createWristbandType(data: {
       access_level_id: accessLevelId
     }))
 
-    const { error: linksError } = await supabase
+    const { error: linksError } = await supabaseClient
       .from('wristband_access_levels')
       .insert(accessLevelLinks)
 
@@ -92,7 +97,7 @@ export async function updateWristbandType(
   const { access_level_ids, ...wristbandData } = data
 
   // Update wristband type
-  const { error: wristbandError } = await supabase
+  const { error: wristbandError } = await supabaseClient
     .from('wristband_types')
     .update({
       ...wristbandData,
@@ -107,7 +112,7 @@ export async function updateWristbandType(
   // Update access level associations if provided
   if (access_level_ids !== undefined) {
     // Delete existing associations
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseClient
       .from('wristband_access_levels')
       .delete()
       .eq('wristband_type_id', id)
@@ -123,7 +128,7 @@ export async function updateWristbandType(
         access_level_id: accessLevelId
       }))
 
-      const { error: linksError } = await supabase
+      const { error: linksError } = await supabaseClient
         .from('wristband_access_levels')
         .insert(accessLevelLinks)
 
@@ -135,7 +140,7 @@ export async function updateWristbandType(
 }
 
 export async function deleteWristbandType(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('wristband_types')
     .delete()
     .eq('id', id)
@@ -150,7 +155,7 @@ export async function createAccreditationAccessLevel(data: {
   name: string
   description?: string | null
 }): Promise<AccreditationAccessLevel> {
-  const { data: accessLevel, error } = await supabase
+  const { data: accessLevel, error } = await supabaseClient
     .from('accreditation_access_levels')
     .insert({
       event_id: data.event_id,
@@ -171,7 +176,7 @@ export async function updateAccreditationAccessLevel(
   id: string,
   data: Partial<AccreditationAccessLevel>
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('accreditation_access_levels')
     .update(data)
     .eq('id', id)
@@ -182,7 +187,7 @@ export async function updateAccreditationAccessLevel(
 }
 
 export async function deleteAccreditationAccessLevel(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('accreditation_access_levels')
     .delete()
     .eq('id', id)

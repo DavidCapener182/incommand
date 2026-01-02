@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+const supabaseClient = supabase as any;
+
 // VAPID configuration - these should be environment variables
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'your-vapid-public-key';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'your-vapid-private-key';
@@ -170,7 +172,7 @@ export class PushNotificationManager {
   // Store subscription in Supabase
   private async storeSubscription(pushSubscription: globalThis.PushSubscription): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -190,7 +192,7 @@ export class PushNotificationManager {
         id: subscriptionData.id?.toString()
       };
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('push_subscriptions')
         .upsert(dataToInsert, { onConflict: 'user_id,endpoint' });
 
@@ -208,12 +210,12 @@ export class PushNotificationManager {
   // Remove subscription from Supabase
   private async removeSubscription(pushSubscription: globalThis.PushSubscription): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('push_subscriptions')
         .delete()
         .eq('user_id', user.id)

@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     // Always limit to 5 notifications max
     const limit = 5;
     const actions: RecentAction[] = [];
@@ -65,7 +65,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (incidentsError) {
       console.error('Error fetching incidents:', incidentsError);
     } else if (incidents) {
-      incidents.forEach(incident => {
+      const incidentList = incidents as Array<{
+        id?: string | number;
+        incident_type?: string;
+        log_number?: string;
+        occurrence?: string;
+        timestamp?: string;
+        is_closed?: boolean;
+        logged_by_user_id?: string;
+      }>;
+
+      incidentList.forEach((incident: any) => {
         const isHighPriority = [
           'Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour',
           'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm',
@@ -111,7 +121,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Table doesn't exist or other error - just skip audit logs
         console.warn('Audit logs not available:', auditError.message);
       } else if (auditLogs) {
-        auditLogs.forEach(log => {
+        const auditLogList = (auditLogs ?? []) as Array<{
+          id?: string | number;
+          action?: string;
+          table_name?: string;
+          record_id?: string | number | null;
+          created_at?: string;
+          performed_by?: string;
+        }>;
+
+        auditLogList.forEach((log: any) => {
           if (log.performed_by) {
             profileIds.add(log.performed_by);
           }
@@ -142,8 +161,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (profileError) {
           console.warn('Profile lookup failed for recent actions:', profileError.message)
         } else if (profiles) {
+          const profileList = profiles as Array<{
+            id: string;
+            display_name?: string | null;
+            full_name?: string | null;
+            callsign?: string | null;
+          }>;
           const profileMap = new Map<string, string>()
-          profiles.forEach((profile) => {
+          profileList.forEach((profile: any) => {
             profileMap.set(
               profile.id,
               profile.display_name || profile.full_name || profile.callsign || 'Team Member'
