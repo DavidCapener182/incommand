@@ -48,11 +48,15 @@ import Modal from 'react-modal'
 import what3words from '@what3words/api'
 import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
-import AttendanceModal from './AttendanceModal'
+// Lazy load AttendanceModal since it uses chart.js
+const AttendanceModal = dynamicImport(() => import('./AttendanceModal'), {
+  ssr: false
+})
 import { getIncidentTypeStyle } from '../utils/incidentStyles'
 import MultiSelectFilter from './ui/MultiSelectFilter'
 import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
+// Keep framer-motion as regular import - it's used for critical UI animations
 import { AnimatePresence, motion } from 'framer-motion'
 import NoEventSplash from './NoEventSplash'
 // import StaffDeploymentCard from './StaffDeploymentCard'
@@ -63,13 +67,33 @@ import { PageWrapper } from './layout/PageWrapper'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
-import AnalyticsKPICards from './analytics/AnalyticsKPICards'
-import MiniTrendChart from './MiniTrendChart'
+// Lazy load heavy chart components
+import dynamicImport from 'next/dynamic'
+
+const AnalyticsKPICards = dynamicImport(() => import('./analytics/AnalyticsKPICards'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded-lg" />
+})
+
+const MiniTrendChart = dynamicImport(() => import('./MiniTrendChart'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const ReadinessIndexCard = dynamicImport(() => import('./analytics/ReadinessIndexCard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const RadioAlertsWidget = dynamicImport(() => import('./monitoring/RadioAlertsWidget'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded-lg" />
+})
+
+// Keep lightweight components as regular imports
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
-import ReadinessIndexCard from './analytics/ReadinessIndexCard'
-import RadioAlertsWidget from './monitoring/RadioAlertsWidget'
 // Accessibility imports
 import SkipLinks from './SkipLinks'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'

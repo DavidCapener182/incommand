@@ -14,7 +14,7 @@ const ERROR_MESSAGES = {
 } as const
 
 /**
- * Apply comprehensive security headers to all responses
+ * Apply comprehensive security and performance headers to all responses
  */
 function applySecurityHeaders(res: NextResponse) {
   // Core security headers
@@ -23,6 +23,10 @@ function applySecurityHeaders(res: NextResponse) {
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()')
   res.headers.set('X-XSS-Protection', '1; mode=block')
+  
+  // Performance headers - compression hints
+  // Note: Actual compression is handled by the server/CDN, but we set Accept-Encoding hints
+  res.headers.set('Accept-Encoding', 'gzip, deflate, br')
   
   // Content Security Policy - relaxed for Next.js development
   const csp = [

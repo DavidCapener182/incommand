@@ -1,16 +1,21 @@
 import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '../contexts/AuthContext'
-import { EventProvider } from '../contexts/EventContext'
-import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContext'
-import { ToastProvider } from '../contexts/ToastContext'
-import { NightModeProvider } from '../contexts/NightModeContext'
-import { ThemeProvider } from '../contexts/ThemeContext'
+import AppProviders from '../providers/AppProviders'
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import OfflineIndicator from '../components/OfflineIndicator'
 import { defaultMetadata } from '../config/seo.config'
+
+// Optimize Inter font with next/font
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  preload: true,
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
+})
 
 export const metadata: Metadata = {
   ...defaultMetadata,
@@ -39,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className={`scroll-smooth ${inter.variable}`}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -55,11 +60,18 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icon.png" />
         <link rel="mask-icon" href="/icon.png" color="#2A3990" />
         
-        {/* Preconnect to external domains */}
-        <link rel="preconnect" href="https://api.supabase.co" />
+        {/* Resource hints for performance */}
+        <link rel="preconnect" href="https://api.supabase.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.supabase.co" />
+        <link rel="preconnect" href="https://va.vercel-scripts.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
+        {/* Google Fonts preconnect - required by next/font */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
       </head>
-      <body className={"bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 transition-colors duration-300"}>
+      <body className={`bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 transition-colors duration-300 ${inter.className}`}>
         {/* Skip to content link */}
         <a
           href="#main"
@@ -70,22 +82,12 @@ export default function RootLayout({
           Skip to main content
         </a>
 
-        <ThemeProvider>
-          <NightModeProvider>
-            <AuthProvider>
-              <EventProvider>
-                <NotificationDrawerProvider>
-                  <ToastProvider>
-              <MaintenanceBanner />
-              <OfflineIndicator />
-              {/* <PrintInitializer /> */}
-              <LayoutWrapper>{children}</LayoutWrapper>
-                  </ToastProvider>
-                </NotificationDrawerProvider>
-              </EventProvider>
-            </AuthProvider>
-        </NightModeProvider>
-        </ThemeProvider>
+        <AppProviders>
+          <MaintenanceBanner />
+          <OfflineIndicator />
+          {/* <PrintInitializer /> */}
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </AppProviders>
         <Analytics />
       </body>
     </html>

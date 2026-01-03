@@ -40,7 +40,7 @@ const nextConfig = {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', 'react-icons']
   },
   
-  // Bundle optimization - let Next.js handle vendor chunking by default
+  // Bundle optimization - aggressive code splitting
   webpack: (config, { dev, isServer }) => {
     // Mark optional DOCX parsing dependencies as externals to prevent build errors
     // These are only needed if DOCX support is required
@@ -54,7 +54,54 @@ const nextConfig = {
           'docxtemplater': 'commonjs docxtemplater',
         })
       }
-      
+    } else {
+      // Client-side optimizations for better code splitting
+      if (!dev) {
+        config.optimization = {
+          ...config.optimization,
+          splitChunks: {
+            chunks: 'all',
+            cacheGroups: {
+              default: false,
+              vendors: false,
+              // Vendor chunk for node_modules
+              vendor: {
+                name: 'vendor',
+                chunks: 'all',
+                test: /[\\/]node_modules[\\/]/,
+                priority: 20,
+              },
+              // Separate chunk for heavy libraries
+              chartjs: {
+                name: 'chartjs',
+                test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2|chartjs-)[\\/]/,
+                chunks: 'all',
+                priority: 30,
+              },
+              framerMotion: {
+                name: 'framer-motion',
+                test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+                chunks: 'all',
+                priority: 30,
+              },
+              three: {
+                name: 'three',
+                test: /[\\/]node_modules[\\/](three|ogl)[\\/]/,
+                chunks: 'all',
+                priority: 30,
+              },
+              // Common chunk for shared code
+              common: {
+                name: 'common',
+                minChunks: 2,
+                chunks: 'all',
+                priority: 10,
+                reuseExistingChunk: true,
+              },
+            },
+          },
+        };
+      }
     }
     return config;
   },
@@ -62,10 +109,12 @@ const nextConfig = {
   // Image optimization
   images: {
     formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60,
+    minimumCacheTTL: 3600, // Increased from 60 to 3600 seconds (1 hour)
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   
-  // Security headers
+  // Security and performance headers
   async headers() {
     return [
       {
@@ -82,6 +131,36 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+      {
+        // Cache static assets aggressively
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Cache images
+        source: '/:path*\\.(jpg|jpeg|png|gif|webp|avif|svg|ico)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Cache fonts
+        source: '/:path*\\.(woff|woff2|ttf|otf|eot)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },

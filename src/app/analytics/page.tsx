@@ -28,24 +28,92 @@ import {
   AreaChart
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import LogQualityDashboard from '@/components/analytics/LogQualityDashboard'
-import ComplianceDashboard from '@/components/analytics/ComplianceDashboard'
-import UserActivityDashboard from '@/components/analytics/UserActivityDashboard'
-import AIInsightsDashboard from '@/components/analytics/AIInsightsDashboard'
-import AIOperationalSummaryCard from '@/components/analytics/cards/ai-insights/AIOperationalSummaryCard'
-import ReadinessIndexCard from '@/components/analytics/ReadinessIndexCard'
-import ExportReportModal from '@/components/analytics/ExportReportModal'
+// Lazy load heavy analytics components for better performance
+import dynamicImport from 'next/dynamic'
+
+const LogQualityDashboard = dynamicImport(() => import('@/components/analytics/LogQualityDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const ComplianceDashboard = dynamicImport(() => import('@/components/analytics/ComplianceDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const UserActivityDashboard = dynamicImport(() => import('@/components/analytics/UserActivityDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const AIInsightsDashboard = dynamicImport(() => import('@/components/analytics/AIInsightsDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const AIOperationalSummaryCard = dynamicImport(() => import('@/components/analytics/cards/ai-insights/AIOperationalSummaryCard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const ReadinessIndexCard = dynamicImport(() => import('@/components/analytics/ReadinessIndexCard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const ExportReportModal = dynamicImport(() => import('@/components/analytics/ExportReportModal'), {
+  ssr: false
+})
+
+const CustomMetricBuilder = dynamicImport(() => import('@/components/analytics/CustomMetricBuilder'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const CustomDashboardBuilder = dynamicImport(() => import('@/components/analytics/CustomDashboardBuilder'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const BenchmarkingDashboard = dynamicImport(() => import('@/components/analytics/BenchmarkingDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const EndOfEventReport = dynamicImport(() => import('@/components/analytics/EndOfEventReport'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const RealtimeAnalyticsDashboard = dynamicImport(() => import('@/components/analytics/RealtimeAnalyticsDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const MobileAnalyticsCarousel = dynamicImport(() => import('@/components/analytics/MobileAnalyticsCarousel').then(mod => ({ default: mod.default })), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const ComparativeAnalytics = dynamicImport(() => import('@/components/analytics/ComparativeAnalytics'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+const MobileOptimizedChart = dynamicImport(() => import('@/components/MobileOptimizedChart'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
+})
+
+const AnalyticsDashboard = dynamicImport(() => import('@/components/AnalyticsDashboard'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded-lg" />
+})
+
+// Keep these as regular imports since they're lightweight or used immediately
 import RealtimeAlertBanner from '@/components/analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from '@/components/analytics/RealtimeStatusIndicator'
-import CustomMetricBuilder from '@/components/analytics/CustomMetricBuilder'
-import CustomDashboardBuilder from '@/components/analytics/CustomDashboardBuilder'
-import BenchmarkingDashboard from '@/components/analytics/BenchmarkingDashboard'
-import EndOfEventReport from '@/components/analytics/EndOfEventReport'
-import RealtimeAnalyticsDashboard from '@/components/analytics/RealtimeAnalyticsDashboard'
-import MobileAnalyticsCarousel, { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
-import ComparativeAnalytics from '@/components/analytics/ComparativeAnalytics'
-import MobileOptimizedChart from '@/components/MobileOptimizedChart'
-import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import { createAnalyticsCards } from '@/components/analytics/MobileAnalyticsCarousel'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Card } from '@/components/ui/card'
