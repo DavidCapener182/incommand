@@ -3,7 +3,7 @@
  * Provides live data streaming for analytics dashboards
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -92,6 +92,7 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
   const channelRef = useRef<RealtimeChannel | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const previousDataRef = useRef<RealtimeAnalyticsData | null>(null)
+  const updateCountRef = useRef(0)
 
   const {
     eventId,
@@ -99,6 +100,21 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
     enableAlerts = true,
     alertThresholds = DEFAULT_THRESHOLDS
   } = options
+
+  const resolvedAlertThresholds = useMemo(
+    () => ({
+      incidentVolume: alertThresholds.incidentVolume ?? DEFAULT_THRESHOLDS.incidentVolume,
+      responseTime: alertThresholds.responseTime ?? DEFAULT_THRESHOLDS.responseTime,
+      qualityScore: alertThresholds.qualityScore ?? DEFAULT_THRESHOLDS.qualityScore,
+      complianceRate: alertThresholds.complianceRate ?? DEFAULT_THRESHOLDS.complianceRate
+    }),
+    [
+      alertThresholds.complianceRate,
+      alertThresholds.incidentVolume,
+      alertThresholds.qualityScore,
+      alertThresholds.responseTime
+    ]
+  )
 
   // Fetch initial analytics data
   const fetchAnalyticsData = useCallback(async (): Promise<RealtimeAnalyticsData> => {
@@ -200,6 +216,8 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       // Calculate staff utilization (simplified)
       const uniqueStaff = new Set(incidentsArray.map((i: any) => i.logged_by_callsign)).size
       const staffUtilization = Math.min(100, (totalIncidents / Math.max(1, uniqueStaff)) * 10)
+      const nextUpdateCount = updateCountRef.current + 1
+      updateCountRef.current = nextUpdateCount
 
       return {
         totalIncidents,
@@ -216,13 +234,13 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
         averageResolutionTime,
         staffUtilization,
         lastUpdated: new Date().toISOString(),
-        updateCount: data.updateCount + 1
+        updateCount: nextUpdateCount
       }
     } catch (error) {
       logger.error('Error fetching analytics data', error)
       throw error
     }
-  }, [eventId, data.updateCount])
+  }, [eventId])
 
   // Generate alerts based on thresholds
   const generateAlerts = useCallback((newData: RealtimeAnalyticsData, previousData: RealtimeAnalyticsData | null) => {
@@ -231,7 +249,7 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
     const newAlerts: RealtimeAlert[] = []
 
     // Incident volume alert
-    if (newData.totalIncidents > previousData.totalIncidents + alertThresholds.incidentVolume!) {
+    if (newData.totalIncidents > previousData.totalIncidents + resolvedAlertThresholds.incidentVolume!) {
       newAlerts.push({
         id: `incident_volume_${Date.now()}`,
         type: 'threshold',
@@ -240,54 +258,54 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
         message: `Incident volume increased by ${newData.totalIncidents - previousData.totalIncidents} in the last update`,
         timestamp: new Date().toISOString(),
         value: newData.totalIncidents - previousData.totalIncidents,
-        threshold: alertThresholds.incidentVolume
+        threshold: resolvedAlertThresholds.incidentVolume
       })
     }
 
     // Response time alert
-    if (newData.averageResponseTime > alertThresholds.responseTime!) {
+    if (newData.averageResponseTime > resolvedAlertThresholds.responseTime!) {
       newAlerts.push({
         id: `response_time_${Date.now()}`,
         type: 'threshold',
         severity: 'high',
         title: 'Slow Response Times',
-        message: `Average response time is ${newData.averageResponseTime.toFixed(1)} minutes (threshold: ${alertThresholds.responseTime}min)`,
+        message: `Average response time is ${newData.averageResponseTime.toFixed(1)} minutes (threshold: ${resolvedAlertThresholds.responseTime}min)`,
         timestamp: new Date().toISOString(),
         value: newData.averageResponseTime,
-        threshold: alertThresholds.responseTime
+        threshold: resolvedAlertThresholds.responseTime
       })
     }
 
     // Quality score alert - only show if there are actual incidents
-    if (newData.totalIncidents > 0 && newData.averageQualityScore < alertThresholds.qualityScore!) {
+    if (newData.totalIncidents > 0 && newData.averageQualityScore < resolvedAlertThresholds.qualityScore!) {
       newAlerts.push({
         id: `quality_score_${Date.now()}`,
         type: 'quality',
         severity: 'medium',
         title: 'Quality Score Low',
-        message: `Average quality score is ${newData.averageQualityScore.toFixed(1)}/100 (threshold: ${alertThresholds.qualityScore})`,
+        message: `Average quality score is ${newData.averageQualityScore.toFixed(1)}/100 (threshold: ${resolvedAlertThresholds.qualityScore})`,
         timestamp: new Date().toISOString(),
         value: newData.averageQualityScore,
-        threshold: alertThresholds.qualityScore
+        threshold: resolvedAlertThresholds.qualityScore
       })
     }
 
     // Compliance rate alert - only show if there are actual incidents
-    if (newData.totalIncidents > 0 && newData.complianceScore < alertThresholds.complianceRate!) {
+    if (newData.totalIncidents > 0 && newData.complianceScore < resolvedAlertThresholds.complianceRate!) {
       newAlerts.push({
         id: `compliance_rate_${Date.now()}`,
         type: 'threshold',
         severity: 'high',
         title: 'Compliance Rate Low',
-        message: `Compliance score is ${newData.complianceScore.toFixed(1)}% (threshold: ${alertThresholds.complianceRate}%)`,
+        message: `Compliance score is ${newData.complianceScore.toFixed(1)}% (threshold: ${resolvedAlertThresholds.complianceRate}%)`,
         timestamp: new Date().toISOString(),
         value: newData.complianceScore,
-        threshold: alertThresholds.complianceRate
+        threshold: resolvedAlertThresholds.complianceRate
       })
     }
 
     return newAlerts
-  }, [enableAlerts, alertThresholds])
+  }, [enableAlerts, resolvedAlertThresholds])
 
   // Update analytics data
   const updateData = useCallback(async () => {

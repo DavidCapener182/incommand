@@ -229,24 +229,26 @@ export async function getEventMetadata(eventId: string): Promise<{
   competition?: string;
 } | null> {
   try {
+    // First check if columns exist by selecting all and checking what's available
     const { data, error } = await supabase
       .from('events')
-      .select('home_team, away_team, competition')
+      .select('*')
       .eq('id', eventId)
       .single();
 
     if (error) {
-      console.error('Error fetching event metadata:', error);
+      // Silently fail - these columns may not exist for all event types
       return null;
     }
 
+    // Return metadata only if columns exist (check for undefined/null)
     return {
-      homeTeam: data?.home_team || undefined,
-      awayTeam: data?.away_team || undefined,
-      competition: data?.competition || undefined,
+      homeTeam: (data as any)?.home_team || undefined,
+      awayTeam: (data as any)?.away_team || undefined,
+      competition: (data as any)?.competition || undefined,
     };
   } catch (error) {
-    console.error('Error getting event metadata:', error);
+    // Silently fail - these columns may not exist
     return null;
   }
 }

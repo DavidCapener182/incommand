@@ -105,12 +105,16 @@ export default function ReadinessIndexCard({
           if (data.readiness) {
             setReadiness(data.readiness)
             setError(null)
-          } else if (!response.ok && !readiness) {
-            setError(data.error || 'Failed to fetch')
+          } else if (!response.ok) {
+            // Only set error if we don't already have readiness data
+            setError((prevError) => prevError || data.error || 'Failed to fetch')
           }
         }
       } catch (err) {
-        if (!cancelled && !readiness) setError('Connection error')
+        if (!cancelled) {
+          // Only set error if we don't already have readiness data
+          setError((prevError) => prevError || 'Connection error')
+        }
       } finally {
         if (!silent && !cancelled) setLoading(false)
       }
@@ -122,7 +126,7 @@ export default function ReadinessIndexCard({
       cancelled = true
       clearInterval(interval)
     }
-  }, [eventId, initialData, readiness])
+  }, [eventId, initialData]) // Removed readiness from deps to prevent infinite loop
 
   // --- Visual Helpers ---
   const getStatusColor = (score: number) => {

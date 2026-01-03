@@ -47,6 +47,7 @@ export function useEventMembership() {
         }
 
         // Get user's membership for current event
+        // Silently handle 406 errors (Not Acceptable) - these can occur due to RLS policies
         const { data: membershipData, error: membershipError } = await (supabase as any)
           .from('event_members')
           .select(`
@@ -69,7 +70,12 @@ export function useEventMembership() {
           if (membershipError.code === 'PGRST116') {
             // No membership found - user is not a temporary member
             setMembership(null);
+          } else if (membershipError.code === 'PGRST301' || membershipError.status === 406) {
+            // RLS policy violation or Not Acceptable - user doesn't have access to this table
+            // This is expected for regular users, not an error
+            setMembership(null);
           } else {
+            // Only log non-RLS errors
             setError(membershipError.message);
           }
         } else {

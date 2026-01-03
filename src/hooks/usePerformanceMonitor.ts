@@ -34,7 +34,7 @@ const DEFAULT_THRESHOLDS: PerformanceThresholds = {
 export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}) {
   const {
     enabled = true,
-    thresholds = {},
+    thresholds,
     onThresholdExceeded,
     sampleRate = 1.0
   } = options
@@ -51,10 +51,23 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
   const renderStartTime = useRef<number>(0)
   const performanceObserver = useRef<PerformanceObserver | null>(null)
   const errorCount = useRef(0)
+  const onThresholdExceededRef = useRef<typeof onThresholdExceeded>(onThresholdExceeded)
+
+  useEffect(() => {
+    onThresholdExceededRef.current = onThresholdExceeded
+  }, [onThresholdExceeded])
 
   const finalThresholds = useMemo(
-    () => ({ ...DEFAULT_THRESHOLDS, ...thresholds }),
-    [thresholds]
+    () => ({
+      ...DEFAULT_THRESHOLDS,
+      ...(thresholds || {})
+    }),
+    [
+      thresholds?.maxRenderTime,
+      thresholds?.maxMemoryUsage,
+      thresholds?.maxNetworkLatency,
+      thresholds?.maxErrorCount
+    ]
   )
 
   // Measure render time
@@ -63,25 +76,28 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
     renderStartTime.current = performance.now()
   }, [isMonitoring, sampleRate])
 
-  const endRenderMeasurement = useCallback((componentName?: string) => {
-    if (!isMonitoring || !renderStartTime.current || Math.random() > sampleRate) return
+  const endRenderMeasurement = useCallback(
+    (componentName?: string) => {
+      if (!isMonitoring || !renderStartTime.current || Math.random() > sampleRate) return
 
-    const renderTime = performance.now() - renderStartTime.current
-    
-    setMetrics(prev => {
-      const newMetrics = { ...prev, renderTime, lastUpdate: new Date() }
+      const renderTime = performance.now() - renderStartTime.current
       
-      if (renderTime > finalThresholds.maxRenderTime) {
-        onThresholdExceeded?.('renderTime', renderTime, finalThresholds.maxRenderTime)
-        console.warn(`[Performance] ${componentName || 'Component'} render time exceeded threshold:`, {
-          renderTime,
-          threshold: finalThresholds.maxRenderTime
-        })
-      }
-      
-      return newMetrics
-    })
-  }, [isMonitoring, sampleRate, finalThresholds.maxRenderTime, onThresholdExceeded])
+      setMetrics(prev => {
+        const newMetrics = { ...prev, renderTime, lastUpdate: new Date() }
+        
+        if (renderTime > finalThresholds.maxRenderTime) {
+          onThresholdExceededRef.current?.('renderTime', renderTime, finalThresholds.maxRenderTime)
+          console.warn(`[Performance] ${componentName || 'Component'} render time exceeded threshold:`, {
+            renderTime,
+            threshold: finalThresholds.maxRenderTime
+          })
+        }
+        
+        return newMetrics
+      })
+    },
+    [finalThresholds.maxRenderTime, isMonitoring, sampleRate]
+  )
 
   // Measure memory usage
   const measureMemoryUsage = useCallback(() => {
@@ -95,7 +111,7 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
         const newMetrics = { ...prev, memoryUsage, lastUpdate: new Date() }
         
         if (memoryUsage > finalThresholds.maxMemoryUsage) {
-          onThresholdExceeded?.('memoryUsage', memoryUsage, finalThresholds.maxMemoryUsage)
+          onThresholdExceededRef.current?.('memoryUsage', memoryUsage, finalThresholds.maxMemoryUsage)
           console.warn('[Performance] Memory usage exceeded threshold:', {
             memoryUsage,
             threshold: finalThresholds.maxMemoryUsage,
@@ -107,62 +123,68 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
         return newMetrics
       })
     }
-  }, [isMonitoring, sampleRate, finalThresholds.maxMemoryUsage, onThresholdExceeded])
+  }, [finalThresholds.maxMemoryUsage, isMonitoring, sampleRate])
 
   // Measure network latency
-  const measureNetworkLatency = useCallback(async (url: string) => {
-    if (!isMonitoring || Math.random() > sampleRate) return Promise.resolve()
+  const measureNetworkLatency = useCallback(
+    async (url: string) => {
+      if (!isMonitoring || Math.random() > sampleRate) return Promise.resolve()
 
-    const startTime = performance.now()
-    
-    try {
-      const response = await fetch(url, { method: 'HEAD' })
-      const latency = performance.now() - startTime
+      const startTime = performance.now()
+      
+      try {
+        const response = await fetch(url, { method: 'HEAD' })
+        const latency = performance.now() - startTime
+        
+        setMetrics(prev => {
+          const newMetrics = { ...prev, networkLatency: latency, lastUpdate: new Date() }
+          
+          if (latency > finalThresholds.maxNetworkLatency) {
+            onThresholdExceededRef.current?.('networkLatency', latency, finalThresholds.maxNetworkLatency)
+            console.warn('[Performance] Network latency exceeded threshold:', {
+              latency,
+              threshold: finalThresholds.maxNetworkLatency,
+              url
+            })
+          }
+          
+          return newMetrics
+        })
+        
+        return latency
+      } catch (error) {
+        console.error('[Performance] Network latency measurement failed:', error)
+        return null
+      }
+    },
+    [finalThresholds.maxNetworkLatency, isMonitoring, sampleRate]
+  )
+
+  // Track errors
+  const trackError = useCallback(
+    (error: Error, context?: string) => {
+      if (!isMonitoring) return
+
+      errorCount.current += 1
       
       setMetrics(prev => {
-        const newMetrics = { ...prev, networkLatency: latency, lastUpdate: new Date() }
+        const newMetrics = { ...prev, errorCount: errorCount.current, lastUpdate: new Date() }
         
-        if (latency > finalThresholds.maxNetworkLatency) {
-          onThresholdExceeded?.('networkLatency', latency, finalThresholds.maxNetworkLatency)
-          console.warn('[Performance] Network latency exceeded threshold:', {
-            latency,
-            threshold: finalThresholds.maxNetworkLatency,
-            url
+        if (errorCount.current > finalThresholds.maxErrorCount) {
+          onThresholdExceededRef.current?.('errorCount', errorCount.current, finalThresholds.maxErrorCount)
+          console.warn('[Performance] Error count exceeded threshold:', {
+            errorCount: errorCount.current,
+            threshold: finalThresholds.maxErrorCount,
+            context,
+            error: error.message
           })
         }
         
         return newMetrics
       })
-      
-      return latency
-    } catch (error) {
-      console.error('[Performance] Network latency measurement failed:', error)
-      return null
-    }
-  }, [isMonitoring, sampleRate, finalThresholds.maxNetworkLatency, onThresholdExceeded])
-
-  // Track errors
-  const trackError = useCallback((error: Error, context?: string) => {
-    if (!isMonitoring) return
-
-    errorCount.current += 1
-    
-    setMetrics(prev => {
-      const newMetrics = { ...prev, errorCount: errorCount.current, lastUpdate: new Date() }
-      
-      if (errorCount.current > finalThresholds.maxErrorCount) {
-        onThresholdExceeded?.('errorCount', errorCount.current, finalThresholds.maxErrorCount)
-        console.warn('[Performance] Error count exceeded threshold:', {
-          errorCount: errorCount.current,
-          threshold: finalThresholds.maxErrorCount,
-          context,
-          error: error.message
-        })
-      }
-      
-      return newMetrics
-    })
-  }, [isMonitoring, finalThresholds.maxErrorCount, onThresholdExceeded])
+    },
+    [finalThresholds.maxErrorCount, isMonitoring]
+  )
 
   // Monitor long tasks
   useEffect(() => {

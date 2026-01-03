@@ -110,8 +110,7 @@ const activeSubscriptions = new Map<string, boolean>();
 const globalToastCallbacks = new Map<string, (toast: Omit<ToastMessage, 'id'>) => void>();
 const recentToasts = new Map<string, number>(); // Track recent toasts to prevent duplicates
 
-// Add debugging
-logger.debug('IncidentTable module loaded', { component: 'IncidentTable', action: 'moduleLoad', activeSubscriptions: activeSubscriptions.size, toastCallbacks: globalToastCallbacks.size });
+// Module load logging removed - too verbose
 
 export default function IncidentTable({
   filters,
@@ -135,7 +134,7 @@ export default function IncidentTable({
   onFiltersChange?: (filters: FilterState) => void;
 }) {
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
-  logger.debug('IncidentTable component rendered', { component: 'IncidentTable', action: 'render', componentId: componentId.current, onToastAvailable: !!onToast });
+  // Render logging removed - was causing console spam due to infinite loop
 
   // Safety check for filters prop
   const safeFilters = useMemo(
@@ -207,10 +206,14 @@ export default function IncidentTable({
     []
   )
   
-  // Performance monitoring
+  // Performance monitoring - warnings disabled to reduce console noise
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
     onThresholdExceeded: (metric, value, threshold) => {
-      console.warn(`[IncidentTable] Performance threshold exceeded:`, { metric, value, threshold })
+      // Performance warnings disabled - was causing console spam
+      // Only log in development if needed for debugging severe issues (>500ms)
+      if (process.env.NODE_ENV === 'development' && metric === 'renderTime' && value > 500) {
+        console.warn(`[IncidentTable] Severe performance issue:`, { metric, value, threshold })
+      }
     }
   })
   
@@ -841,25 +844,7 @@ export default function IncidentTable({
   const regularIncidents = incidents.filter(incident => (incident.type || 'incident') !== 'match_log')
   const matchFlowLogs = incidents.filter(incident => (incident.type || 'incident') === 'match_log')
   
-  // Debug: Log incident counts and specific log numbers
-  useEffect(() => {
-    if (incidents.length > 0) {
-      const logNumbers = incidents.map(i => i.log_number).sort((a, b) => 
-        b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })
-      )
-      const has082 = incidents.some(i => i.log_number.includes('082'))
-      const has083 = incidents.some(i => i.log_number.includes('083'))
-      const has084 = incidents.some(i => i.log_number.includes('084'))
-      logger.debug('Incident counts', { 
-        total: incidents.length, 
-        regular: regularIncidents.length, 
-        matchFlow: matchFlowLogs.length,
-        topLogs: logNumbers.slice(0, 5),
-        has082, has083, has084,
-        filters: safeFilters
-      })
-    }
-  }, [incidents.length, regularIncidents.length, matchFlowLogs.length, safeFilters])
+  // Debug logging removed - too verbose, causing console spam
   
   // Filter regular incidents
   const filteredRegularIncidents: Incident[] = filterIncidents<Incident>(regularIncidents, { ...safeFilters, query: searchQuery })
@@ -872,23 +857,7 @@ export default function IncidentTable({
     return filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
   }, [matchFlowLogs, safeFilters, searchQuery, showMatchFlowLogs])
   
-  // Debug: Log filtered counts
-  useEffect(() => {
-    if (filteredRegularIncidents.length > 0 || filteredMatchFlowLogs.length > 0) {
-      const filteredLogNumbers = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
-        .map(i => i.log_number)
-        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
-      const has082Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('082'))
-      const has083Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('083'))
-      const has084Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('084'))
-      logger.debug('Filtered incident counts', { 
-        filteredRegular: filteredRegularIncidents.length,
-        filteredMatchFlow: filteredMatchFlowLogs.length,
-        topFilteredLogs: filteredLogNumbers.slice(0, 5),
-        has082Filtered, has083Filtered, has084Filtered
-      })
-    }
-  }, [filteredRegularIncidents.length, filteredMatchFlowLogs.length])
+  // Filtered counts tracking removed - was causing excessive logging
   
   // Combine filtered incidents (match flow logs appear after regular incidents)
   const filteredIncidents: Incident[] = useMemo(

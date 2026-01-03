@@ -105,7 +105,7 @@ export default function FootballCard_StandOccupancy({ className, onOpenModal }: 
 
   // --- Carousel Logic ---
   const stands = standsSetup?.stands || []
-  const totalPages = Math.ceil(stands.length / ITEMS_PER_PAGE)
+  const totalPages = useMemo(() => Math.ceil(stands.length / ITEMS_PER_PAGE), [stands.length])
 
   useEffect(() => {
     if (totalPages <= 1 || isHovered) return

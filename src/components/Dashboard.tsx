@@ -171,6 +171,17 @@ export default function Dashboard() {
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
+  
+  // Listen for custom event to close incident modal (bypasses React state if stuck)
+  useEffect(() => {
+    const handleCloseIncidentModal = () => {
+      setIsIncidentModalOpen(false)
+    }
+    window.addEventListener('closeIncidentModal', handleCloseIncidentModal)
+    return () => {
+      window.removeEventListener('closeIncidentModal', handleCloseIncidentModal)
+    }
+  }, [])
   const [initialIncidentType, setInitialIncidentType] = useState<
     string | undefined
   >(undefined)
@@ -528,11 +539,38 @@ export default function Dashboard() {
   // Calculate time since last incident and update recent incidents
   useEffect(() => {
     if (incidents && incidents.length > 0) {
-      // Get the most recent incident
-      const mostRecentIncident = incidents[0]; // Assuming incidents are sorted by timestamp desc
-      const lastIncidentTime = new Date(mostRecentIncident.timestamp);
+      // Get the most recent incident - filter out non-countable incidents first, then get most recent
+      const countableIncidents = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type));
+      if (countableIncidents.length === 0) {
+        setTimeSinceLastIncident('No incidents');
+        return;
+      }
+      
+      // Sort by timestamp descending to get most recent (in case array isn't pre-sorted)
+      const sortedIncidents = [...countableIncidents].sort((a, b) => {
+        const timeA = new Date(a.timestamp || a.time_logged || a.created_at || 0).getTime();
+        const timeB = new Date(b.timestamp || b.time_logged || b.created_at || 0).getTime();
+        return timeB - timeA; // Descending order
+      });
+      
+      const mostRecentIncident = sortedIncidents[0];
+      // Try multiple timestamp fields to find the most recent valid one
+      const lastIncidentTime = new Date(
+        mostRecentIncident.timestamp || 
+        mostRecentIncident.time_logged || 
+        mostRecentIncident.time_of_occurrence || 
+        mostRecentIncident.created_at || 
+        Date.now()
+      );
       const now = new Date();
       const timeDiff = now.getTime() - lastIncidentTime.getTime();
+      
+      // If timeDiff is negative or suspiciously large (> 1 year), the timestamp might be wrong
+      if (timeDiff < 0 || timeDiff > 365 * 24 * 60 * 60 * 1000) {
+        console.warn('Suspicious time difference for last incident:', { timeDiff, lastIncidentTime, mostRecentIncident });
+        setTimeSinceLastIncident('Unknown');
+        return;
+      }
       
       // Calculate time since last incident
       const minutes = Math.floor(timeDiff / (1000 * 60));
@@ -552,14 +590,11 @@ export default function Dashboard() {
       
       setTimeSinceLastIncident(timeString);
       
-      // Update recent incidents (last 3, excluding Attendance and Sit Rep)
-      const recentFiltered = incidents
-        .filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type))
-        .slice(0, 3);
+      // Update recent incidents (last 3, excluding Attendance and Sit Rep) - use already sorted incidents
+      const recentFiltered = sortedIncidents.slice(0, 3);
       setRecentIncidents(recentFiltered);
       
-      // Dispatch incident summary to BottomNav
-      const countableIncidents = incidents.filter(inc => !['Attendance', 'Sit Rep'].includes(inc.incident_type));
+      // Dispatch incident summary to BottomNav - reuse countableIncidents already defined above
       const openIncidents = countableIncidents.filter(inc => !inc.is_closed).length;
       const totalIncidents = countableIncidents.length;
       const mostRecent = countableIncidents[0];
@@ -863,19 +898,19 @@ export default function Dashboard() {
   // This effect will run when the incident data is passed up from the table
   useEffect(() => {
     if (incidents) {
-      // Debug: Log some incident data to understand the structure
-      logger.debug('Sample incidents data', { 
-        component: 'Dashboard', 
-        action: 'incidentDataEffect',
-        sampleIncidents: incidents.slice(0, 3).map(inc => ({
-          id: inc.id,
-          log_number: inc.log_number,
-          incident_type: inc.incident_type,
-          is_closed: inc.is_closed,
-          status: inc.status,
-          occurrence: inc.occurrence?.substring(0, 50) + '...'
-        }))
-      });
+      // Debug logging removed - too verbose, causing console spam
+      // logger.debug('Sample incidents data', { 
+      //   component: 'Dashboard', 
+      //   action: 'incidentDataEffect',
+      //   sampleIncidents: incidents.slice(0, 3).map(inc => ({
+      //     id: inc.id,
+      //     log_number: inc.log_number,
+      //     incident_type: inc.incident_type,
+      //     is_closed: inc.is_closed,
+      //     status: inc.status,
+      //     occurrence: inc.occurrence?.substring(0, 50) + '...'
+      //   }))
+      // });
       
       // Always use unfiltered incidents for stats - StatCards should show total counts
       const isCountable = (incident: any) => {
